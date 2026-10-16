@@ -1,0 +1,140 @@
+package dev.lovelace.loveessential.condition;
+
+import dev.lovelace.loveessential.MainThread;
+import dev.lovelace.loveessential.api.*;
+import dev.lovelace.loveessential.api.LoveEssentialService.*;
+import dev.lovelace.loveessential.integration.LoveBridge;
+import dev.lovelace.loveessential.lang.Lang;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.*;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class ActionEngine {
+  private final Map<String, ActionProvider> providers = new ConcurrentHashMap<>();
+  private final JavaPlugin plugin;
+  private final Lang lang;
+
+  public ActionEngine(JavaPlugin plugin, Lang lang, LoveBridge love) {
+    this.plugin = plugin;
+    this.lang = lang;
+    register(
+        "charge",
+        (p, a) -> {
+          var e = love.economy();
+          long amount = Long.parseLong(a.get("amount"));
+          return love.authenticated(p)
+              && amount > 0
+              && amount <= plugin.getConfig().getLong("actions.max-economy-amount", 100000)
+              && e.isPresent()
+              && e.get().charge(p, amount);
+        });
+    register(
+        "give",
+        (p, a) -> {
+          var e = love.economy();
+          long amount = Long.parseLong(a.get("amount"));
+          if (!love.authenticated(p)
+              || amount <= 0
+              || amount > plugin.getConfig().getLong("actions.max-economy-amount", 100000)
+              || e.isEmpty()
+              || !e.get().canFit(p, amount)) return false;
+          e.get().give(p, amount);
+          return true;
+        });
+    register(
+        "message",
+        (p, a) -> {
+          love.notify(p, lang.render(a.get("key"), Map.of("player", p.getName())));
+          return true;
+        });
+    register(
+        "sound",
+        (p, a) -> {
+          p.playSound(
+              p.getLocation(),
+              Sound.valueOf(a.get("sound").toUpperCase(Locale.ROOT)),
+              Float.parseFloat(a.getOrDefault("volume", "1")),
+              Float.parseFloat(a.getOrDefault("pitch", "1")));
+          return true;
+        });
+    register(
+        "actionbar",
+        (p, a) -> {
+          p.sendActionBar(lang.render(a.get("key")));
+          return true;
+        });
+    register(
+        "reputation",
+        (p, a) -> {
+          var s = love.service(dev.lovelace.lovecore.api.social.ReputationOracle.class);
+          if (s.isEmpty()) return false;
+          s.get().modify(p.getUniqueId(), Integer.parseInt(a.get("delta")));
+          return true;
+        });
+    register(
+        "stat",
+        (p, a) -> {
+          var s = love.service(dev.lovelace.lovecore.api.stats.StatBus.class);
+          if (s.isEmpty()) return false;
+          s.get()
+              .record(
+                  p.getUniqueId(),
+                  a.get("metric"),
+                  Double.parseDouble(a.getOrDefault("amount", "1")));
+          return true;
+        });
+    register(
+        "command",
+        (p, a) -> {
+          String command = a.getOrDefault("value", "");
+          String root = command.split(" ", 2)[0].toLowerCase(Locale.ROOT);
+          if (!plugin.getConfig().getStringList("actions.allowed-player-commands").contains(root)
+              || command.contains("\n")
+              || command.contains("\r")) return false;
+          if (a.containsKey("plugin") && !love.installed(a.get("plugin"))) return false;
+          return p.performCommand(command.replace("{player}", p.getName()));
+        });
+  }
+
+  public Registration register(String id, ActionProvider provider) {
+    Objects.requireNonNull(provider);
+    if (providers.putIfAbsent(id, provider) != null)
+      throw new IllegalArgumentException("duplicate-action");
+    return () -> providers.remove(id, provider);
+  }
+
+  public boolean known(String id) {
+    return providers.containsKey(id);
+  }
+
+  public boolean execute(Player p, List<Action> actions) {
+    MainThread.require();
+    for (var a : actions) {
+      var provider = providers.get(a.type());
+      try {
+        if (provider == null || !provider.execute(p, a.args())) {
+          lang.send(p, "errors.action-unavailable", Map.of("type", a.type()));
+          return false;
+        }
+      } catch (RuntimeException e) {
+        plugin
+            .getLogger()
+            .warning(
+                lang.text("logs.action-failed")
+                    + " ["
+                    + a.type()
+                    + "] "
+                    + e.getClass().getSimpleName());
+        lang.send(p, "errors.action-unavailable", Map.of("type", a.type()));
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public List<String> types() {
+    return providers.keySet().stream().sorted().toList();
+  }
+}

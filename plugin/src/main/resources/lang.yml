@@ -1,0 +1,258 @@
+lang-version: 2
+common:
+  back: <gray>Назад
+  next: <green>Далее
+  save-draft: <yellow>Сохранить черновик
+  discard: <red>Отменить черновик
+  preview: <aqua>Предпросмотр
+  publish: <green>Опубликовать
+  done: <green>Готово.
+  saved: <green>Сохранено в SQLite.
+  reloaded: <green>Настройки перезагружены.
+errors:
+  permission: <red>Недостаточно прав.
+  access: <red>Взаимодействие сейчас недоступно.
+  player-only: <red>Команда доступна только в игре.
+  input: '<red>Неверный ввод. Справка: /le.'
+  starting: <yellow>Данные загружаются. Повторите команду позже.
+  storage: <red>Не удалось сохранить данные. Проверьте журнал сервера.
+  conflict: <red>Объект уже изменён. Откройте актуальную ревизию.
+  not-found: <red>Объект или игрок не найден.
+  territory: <red>Действие запрещено на этой территории либо сервис территорий недоступен.
+  module-disabled: <red>Модуль отключён.
+  module: <red>Неизвестный модуль.
+  action-unavailable: <red>Действие <type> недоступно.
+  dialog-expired: <red>Диалог устарел. Обратитесь к NPC снова.
+  teleport-blocked: '<red>Телепорт недоступен: авторизация, бой, территория или выгруженный мир.'
+  unsafe: <red>В точке назначения нет безопасного места.
+  home-limit: <red>Достигнут лимит домов.
+  inventory: <red>Освободите место в инвентаре.
+  config: <red>Некорректная конфигурация.
+  tab-engine: <red>Для этого режима установите TAB и PlaceholderAPI.
+validation:
+  npc: <red>Некорректное определение NPC.
+  id: '<red>ID: 1–48 символов a-z, 0-9, _ или -. Сначала задайте ID.'
+  lang: <red>Отсутствует ключ в lang.yml.
+  option: <red>Неизвестная настройка или значение вне допустимых границ.
+  points: <red>Достигнут лимит точек маршрута.
+  world-transition: <red>Обычный маршрут не может соединять разные миры.
+  dialog: <red>В диалоге есть некорректный узел, ответ или переход.
+  condition: <red>Условие не зарегистрировано или имеет неверную структуру.
+  action: <red>Действие не зарегистрировано.
+  unreachable: <red>В диалоге есть недостижимые узлы.
+  entity: <red>Этот тип NPC недоступен.
+  position: <red>Позиция вне допустимых границ мира.
+  limit: <red>Достигнут лимит NPC.
+logs:
+  ready: 'LoveEssential готов: SQLite, NPC, мастера и модули загружены.'
+  start-failed: Не удалось запустить LoveEssential.
+  action-failed: Ошибка выполнения действия NPC.
+  tab-failed: Ошибка обновления tablist.
+  draft-save-failed: Не удалось сохранить черновик NPC.
+  integration-failed: Несовместимая версия интеграции.
+  tab-conflict: 'Установлен TAB: выберите tab.engine: tab для совместного управления.'
+  npc-failed: Не удалось создать NPC; повтор через 10 секунд.
+help:
+  main:
+  - <gold>LoveEssential
+  - <gray>/npc wizard — мастер NPC
+  - <gray>/npc edit <id> — редактор
+  - <gray>/le module [имя] [enable|disable|info|reload]
+  - <gray>/le integrations — состояние сервисов Love
+  - <gray>/le tab export — экспорт настроек в TAB
+  - <gray>/le reload — перезагрузка
+  - <gray>/le backup — резервная копия SQLite
+  npc:
+  - <gold>Редактор NPC
+  - <gray>/npc wizard; /npc edit <id>
+  - <gray>/npc set <параметр> <значение>; /npc here
+  - <gray>/npc path add|mode|point|remove|move|record|tool|show|undo|redo
+  - <gray>/npc dialog node|answer|start|answer-condition|answer-actions
+  - <gray>/npc save; /npc publish; /npc preview
+  - <gray>/npc delete <id> confirm
+  tab: '<gray>Выберите tab.engine: tab, затем /le tab export и /le reload. TAB и PlaceholderAPI обязательны.'
+modules:
+  list: '<gray>Модули: <modules>'
+  state: '<gray><module>: <state>'
+integrations:
+  entry: '<gray><name>: <state>'
+npc:
+  entry: <gold><id> <gray>· <type> · ревизия <revision>
+  debug: '<gray>Состояние: <state>'
+  selected: '<gray>Выбран: <id>'
+  confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
+  names: {}
+wizard:
+  title: <gold>NPC · шаг <step>/<total>
+  value: '<gray>Значение: <white><value>'
+  changed: '<green>Изменено: <field>'
+  saved: <green>Черновик сохранён.
+  discarded: <gray>Черновик отменён.
+  published: <green>NPC <id> опубликован.
+  preview: <aqua>Личный предпросмотр на 20 секунд.
+  point-added: <green>Добавлена точка <point>.
+  recording: '<gray>Запись маршрута: <state>'
+  no-draft: <red>Сначала откройте /npc wizard.
+  existing-draft: <yellow>Уже открыт черновик. Сохраните или отмените его.
+  busy: <yellow>Дождитесь завершения сохранения.
+  no-prompt: <gray>Нет активного запроса ввода.
+  route-tool: <gold>Редактор маршрута — ПКМ добавляет вашу позицию
+  confirm-discard: <yellow>Введите DELETE для отмены черновика.
+  prompt-value: <yellow>Введите значение в чат или /le input <значение>.
+  prompt-mode: '<yellow>Режим: ONCE, LOOP, PING_PONG, RANDOM.'
+  prompt-point: '<yellow>Введите: номер поле значение. Поля: wait, speed, radius, position, condition, actions.'
+  prompt-node: '<yellow>Введите: id_узла текст реплики.'
+  prompt-answer: '<yellow>Введите: узел id_ответа следующий_узел|end текст ответа.'
+  prompt-start: <yellow>Введите ID начального узла.
+  prompt-answer-condition: '<yellow>Введите: узел id_ответа JSON_условия.'
+  prompt-answer-actions: '<yellow>Введите: узел id_ответа JSON_массива_действий.'
+  prompt-template: '<yellow>Шаблон: guard, guide, merchant, quest, decoration.'
+  fields:
+    template: <gold>Шаблон
+    id: <gold>Технический ID
+    name: <gold>Имя NPC
+    type: <gold>Тип сущности
+    spawn: <gold>Появление — текущая позиция
+    skin: <gold>Скин — имя или UUID
+    helmet: <gold>Шлем
+    main-hand: <gold>Предмет в руке
+    pose: <gold>Поза
+    scale: <gold>Размер
+    glowing: <gold>Свечение
+    name-visible: <gold>Видимость имени
+    personal: <gold>Персональный экземпляр
+    visibility: <gold>Условия видимости
+    access: <gold>Условия взаимодействия
+    require-auth: <gold>Требовать авторизацию
+    interaction-range: <gold>Дистанция взаимодействия
+    cooldown-ms: <gold>Задержка кликов, мс
+    movement: '<gold>Движение: route, follow, stationary'
+    speed: <gold>Скорость
+    look-at: <gold>Смотреть на игрока
+    look-range: <gold>Радиус взгляда
+    pause-on-interact: <gold>Остановка при диалоге
+    stuck-policy: '<gold>Застревание: PAUSE, SKIP, RETURN_HOME'
+    activation-range: <gold>Радиус активации
+    point-add: <gold>Добавить текущую позицию
+    point-mode: <gold>Режим маршрута
+    point-record: <gold>Записывать движение
+    point-tool: <gold>Получить инструмент
+    point-show: <gold>Подсветить точки
+    point-edit: <gold>Редактировать точку
+    point-undo: <gold>Отменить изменение
+    point-redo: <gold>Повторить изменение
+    dialog-node: <gold>Создать/изменить реплику
+    dialog-answer: <gold>Создать/изменить ответ
+    dialog-start: <gold>Начальный узел
+    dialog-condition: <gold>Условие ответа
+    dialog-actions: <gold>Действия ответа
+    actions: <gold>Действия по клику
+    enabled-hours: <gold>Работа по игровому времени
+    hour-from: <gold>Начало, тики
+    hour-to: <gold>Окончание, тики
+    enabled: <gold>NPC включён
+    collidable: <gold>Коллизия
+    gravity: <gold>Гравитация
+    invulnerable: <gold>Неуязвимость
+  condition-title: <gold>Добавить условие
+  action-title: <gold>Добавить действие
+  clear-conditions: <red>Удалить все условия
+  clear-actions: <red>Удалить все действия
+  prompt-text: <yellow>Введите текст сообщения. Он будет сохранён в lang.yml.
+  conditions:
+    authenticated: <gold>Авторизация
+    permission: <gold>Право доступа
+    world: <gold>Мир
+    reputation: <gold>Минимальная репутация
+    clan: <gold>Клан
+    territory: <gold>Доступная территория
+    not-in-combat: <gold>Вне боя
+    item: <gold>Предмет в инвентаре
+    time: <gold>Игровое время
+    weather: <gold>Погода
+    balance: <gold>Достаточно монет LoveEconomy
+  action-types:
+    message: <gold>Сообщение
+    actionbar: <gold>Строка над панелью
+    sound: <gold>Звук
+    reputation: <gold>Изменить репутацию
+    stat: <gold>Изменить статистику
+    command: <gold>Разрешённая команда игрока
+    lovecontracts_board: <gold>Доска контрактов
+    lovecontracts_player-board: <gold>Контракты игроков
+    lovecontracts_my: <gold>Мои контракты
+    loveshops_banker: <gold>Банкир LoveShops
+    charge: <gold>Списать монеты LoveEconomy
+    give: <gold>Выдать монеты LoveEconomy
+  parameters:
+    value: <yellow>Введите значение условия или разрешённую команду.
+    min: <yellow>Введите минимальную репутацию (0–100).
+    material: <yellow>Введите материал, например EMERALD.
+    amount: <yellow>Введите количество.
+    from: <yellow>Введите начальное игровое время (0–23999).
+    to: <yellow>Введите конечное игровое время (0–23999).
+    sound: <yellow>Введите ID звука, например ENTITY_VILLAGER_YES.
+    delta: <yellow>Введите изменение репутации, например 5 или -5.
+    metric: <yellow>Введите идентификатор метрики.
+dialog:
+  finished: <gray>Разговор завершён.
+home:
+  list: '<gold>Ваши дома: <white><homes>'
+vanish:
+  changed: '<gray>Невидимость: <state>'
+afk:
+  changed: <gray>Статус AFK изменён.
+  kick: <gray>Вы отключены за длительное бездействие.
+profile:
+  info:
+  - <gold><player>
+  - '<gray>Авторизация: <authenticated>'
+  - '<gray>Клан: <clan>'
+  - '<gray>Репутация: <reputation>'
+joinquit:
+  join: <gray>Путник <gold><player> <gray>прибыл в королевство.
+  quit: <gray>Путник <gold><player> <gray>покинул королевство.
+motd:
+  text: '<gold>Королевство Love</gold>
+
+    <gray>Приключения начинаются здесь.'
+teleport:
+  done: <green>Вы перемещены.
+  request: <yellow><player> отправил запрос телепортации. /tpaccept или /tpdeny.
+tab:
+  header:
+  - <gold><animation:kingdom>
+  - '<gray>Игроков: <white><visible_online>'
+  footer:
+  - '<gray>Клан: <clan> · Репутация: <reputation>'
+  - '<gray>Территория: <territory> · Ping: <ping>'
+  name: <player>
+  prefix: ''
+  suffix: ' <suffix><afk>'
+  objective: <gold>Связь
+  health: <red>Здоровье
+  ping: '<gray>Ping: <ping>'
+  bossbar: <gold>Добро пожаловать в королевство, <player>
+  exported: '<green>Настройки TAB экспортированы. Резервные копии: *.loveessential.bak.'
+  status:
+    afk: ' <gray>[Отошёл]'
+  animations:
+    kingdom:
+    - <gold>Королевство Love
+    - <yellow>Королевство Love
+  groups:
+    admin:
+      name: <red><player>
+      prefix: '<red>[Страж] '
+    knight:
+      name: <gold><player>
+      prefix: '<gold>[Рыцарь] '
+  sidebar:
+    title: <gold>Королевство
+    player: '<gray>Путник: <white><player>'
+    clan: '<gray>Клан: <white><clan>'
+    reputation: '<gray>Репутация: <white><reputation>'
+    online: '<gray>Игроков: <white><visible_online>'
+  layout:
+    title: <gold>Королевство Love
+    remaining: <gray>Ещё %s игроков

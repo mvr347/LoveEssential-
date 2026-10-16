@@ -1,0 +1,151 @@
+name: LoveEssential
+version: ${project.version}
+main: dev.lovelace.loveessential.LoveEssentialPlugin
+api-version: '26.2'
+authors:
+- Lovelace
+depend:
+- LoveCore
+softdepend:
+- PlaceholderAPI
+- TAB
+- LoveAuth
+- LoveBehavior
+- LoveSubnames
+- LoveClans
+- LoveClaims
+- LoveChat
+- LoveChatFilter
+- LoveContracts
+- LoveShop
+- LoveShops
+- LoveTrades
+- LoveActivities
+- LoveDuels
+- LoveHunt
+- LoveLeaderboards
+- LoveBrew
+- LoveAdaptation
+- LoveTweaks
+- LoveWebAdmin
+commands:
+  loveessential:
+    aliases:
+    - le
+    - лавэссеншиал
+  npc:
+    aliases:
+    - нпс
+  home:
+    aliases:
+    - дом
+    - домой
+  sethome:
+    aliases:
+    - установитьдом
+  delhome:
+    aliases:
+    - удалитьдом
+  homes:
+    aliases:
+    - дома
+  spawn:
+    aliases:
+    - спавн
+  setspawn:
+    aliases:
+    - установитьспавн
+  tpa:
+    aliases:
+    - тпа
+    - тпзапрос
+  tpahere:
+    aliases:
+    - тпасюда
+  tpaccept:
+    aliases:
+    - тпапринять
+  tpdeny:
+    aliases:
+    - тпаотклонить
+  back:
+    aliases:
+    - назад
+  vanish:
+    aliases:
+    - v
+    - невидимка
+    - скрыться
+    - тень
+  afk:
+    aliases:
+    - афк
+  skin:
+    aliases:
+    - скин
+    - облик
+  sit:
+    aliases:
+    - сесть
+  ride:
+    aliases:
+    - оседлать
+  profile:
+    aliases:
+    - профиль
+    - я
+  hologram:
+    aliases:
+    - голограмма
+    - голо
+  portal:
+    aliases:
+    - портал
+    - врата
+permissions:
+  loveessential.admin:
+    default: op
+    children:
+      loveessential.npc.view: true
+      loveessential.npc.create: true
+      loveessential.npc.edit: true
+      loveessential.npc.publish: true
+      loveessential.npc.delete: true
+      loveessential.npc.path: true
+      loveessential.npc.dialog: true
+      loveessential.npc.debug: true
+      loveessential.vanish: true
+      loveessential.vanish.see: true
+      loveessential.ride: true
+      loveessential.npc.import: true
+      loveessential.npc.export: true
+  loveessential.npc.view:
+    default: op
+  loveessential.npc.create:
+    default: op
+  loveessential.npc.edit:
+    default: op
+  loveessential.npc.publish:
+    default: op
+  loveessential.npc.delete:
+    default: op
+  loveessential.npc.path:
+    default: op
+  loveessential.npc.dialog:
+    default: op
+  loveessential.npc.debug:
+    default: op
+  loveessential.vanish:
+    default: op
+  loveessential.vanish.see:
+    default: op
+  loveessential.ride:
+    default: op
+  loveessential.ride.accept:
+    default: false
+  loveessential.afk.bypass:
+    default: op
+  loveessential.npc.import:
+    default: op
+  loveessential.npc.export:
+    default: op
