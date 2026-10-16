@@ -264,13 +264,23 @@ public class LoveEssentialPlugin extends JavaPlugin {
               }
             },
             io)
+        .thenCompose(v -> store.list("module", Boolean.class))
         .thenCompose(
-            v ->
+            saved ->
                 main.call(
                     () -> {
+                      boolean previousNpc = module("npc");
+                      for (String name : MODULES)
+                        modules.put(name, getConfig().getBoolean("modules." + name, true));
+                      for (var d : saved) {
+                        modules.put(d.id(), d.value());
+                        moduleRevisions.put(d.id(), d.revision());
+                      }
+                      if (previousNpc != module("npc")) npcs.enabled(module("npc"));
                       placeholders.clear();
                       tab.stop();
                       if (module("tab")) tab.start();
+                      gameplay.applyVanish();
                       return null;
                     }));
   }

@@ -162,10 +162,14 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public CompletableFuture<NpcDefinition> save(NpcDefinition npc, long expected) {
+    return save(npc, expected, "api");
+  }
+
+  public CompletableFuture<NpcDefinition> save(NpcDefinition npc, long expected, String actor) {
     MainThread.require();
     validate(npc);
     return store
-        .save("npc", npc.id(), expected, npc.revision(expected + 1), npc.owner().toString())
+        .save("npc", npc.id(), expected, npc.revision(expected + 1), actor)
         .thenCompose(
             rev ->
                 main.call(
@@ -199,8 +203,12 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public CompletableFuture<Void> delete(String id, long revision) {
+    return delete(id, revision, "api");
+  }
+
+  public CompletableFuture<Void> delete(String id, long revision, String actor) {
     return store
-        .delete("npc", id, revision, "api")
+        .delete("npc", id, revision, actor)
         .thenCompose(
             v ->
                 main.call(

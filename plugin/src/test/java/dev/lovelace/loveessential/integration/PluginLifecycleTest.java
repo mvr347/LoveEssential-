@@ -108,4 +108,15 @@ class PluginLifecycleTest {
         p.getOpenInventory().getTopInventory() == null
             || p.getOpenInventory().getTopInventory().getSize() != 54);
   }
+
+  @Test
+  void reloadAppliesConfigAndPreservesSqliteModuleOverrides() throws Exception {
+    plugin.getConfig().set("modules.home", false);
+    plugin.saveConfig();
+    await(plugin.reloadSettings());
+    assertFalse(plugin.module("home"));
+    await(plugin.module("home", true));
+    await(plugin.reloadSettings());
+    assertTrue(plugin.module("home"));
+  }
 }

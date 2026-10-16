@@ -544,7 +544,12 @@ public final class NpcWizard implements Listener, AutoCloseable {
                       }
                     },
                     pluginExecutor()))
-        .thenCompose(v -> main.call(() -> npcs.save(snapshot.npc(), snapshot.npc().revision())))
+        .thenCompose(
+            v ->
+                main.call(
+                    () ->
+                        npcs.save(
+                            snapshot.npc(), snapshot.npc().revision(), p.getUniqueId().toString())))
         .thenCompose(Function.identity())
         .thenCompose(n -> store.complete(publication).thenApply(v -> n))
         .whenComplete(

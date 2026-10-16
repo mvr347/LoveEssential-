@@ -304,7 +304,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
           lang.send(p, "npc.confirm-delete", Map.of("id", n.id()));
           break;
         }
-        complete(p, npcs.delete(n.id(), n.revision()), "common.done");
+        complete(p, npcs.delete(n.id(), n.revision(), p.getUniqueId().toString()), "common.done");
       }
       case "enable", "disable", "включить", "выключить" -> {
         permission(p, "publish");
@@ -328,7 +328,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
                     n.dialog(),
                     n.actions(),
                     value),
-                n.revision()),
+                n.revision(),
+                p.getUniqueId().toString()),
             "common.done");
       }
       default -> lang.send(p, "help.npc");
