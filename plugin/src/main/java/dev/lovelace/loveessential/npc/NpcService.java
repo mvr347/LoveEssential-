@@ -39,6 +39,11 @@ public final class NpcService implements Listener, AutoCloseable {
 
   private record Hook(int priority, InteractionProvider provider) {}
 
+  private enum Trigger {
+    RIGHT_CLICK,
+    LEFT_CLICK
+  }
+
   private final ExecutorService paths;
   private final NamespacedKey entityKey;
   private final Random random = new Random();
@@ -716,6 +721,10 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public void interact(Player p, Entity e) {
+    interact(p, e, Trigger.RIGHT_CLICK);
+  }
+
+  private void interact(Player p, Entity e, Trigger trigger) {
     String id = identify(e).orElse(null);
     if (id == null) return;
     var n = definitions.get(id);
@@ -724,8 +733,12 @@ public final class NpcService implements Listener, AutoCloseable {
     if (instance == null
         || instance.preview
         || (instance.viewer != null && !instance.viewer.equals(p.getUniqueId()))) return;
+    String mode = n.option("interaction-mode", "BOTH");
+    if (mode.equals("RIGHT_CLICK") && trigger != Trigger.RIGHT_CLICK
+        || mode.equals("LEFT_CLICK") && trigger != Trigger.LEFT_CLICK) return;
     if (!accessible(p, n)
         || !p.canSee(e)
+        || n.flag("line-of-sight", false) && !p.hasLineOfSight(e)
         || p.getLocation().distanceSquared(e.getLocation())
             > Math.pow(n.number("interaction-range", 4), 2)) {
       lang.send(p, "errors.access");
@@ -737,6 +750,18 @@ public final class NpcService implements Listener, AutoCloseable {
     var event = new NpcInteractEvent(p, n);
     Bukkit.getPluginManager().callEvent(event);
     if (event.isCancelled()) return;
+    String soundName = n.option("interaction-sound", "");
+    if (!soundName.isBlank()) {
+      try {
+        p.playSound(
+            e.getLocation(),
+            Sound.valueOf(soundName.toUpperCase(Locale.ROOT)),
+            (float) n.number("interaction-volume", 1),
+            (float) n.number("interaction-pitch", 1));
+      } catch (IllegalArgumentException ignored) {
+        plugin.getLogger().warning("Invalid interaction sound on NPC " + n.id());
+      }
+    }
     if (n.flag("pause-on-interact", true)) instance.pauseUntil = tick + 200;
     love.stat(p, "essential.npc.interactions", 1);
     for (var hook :
@@ -761,7 +786,8 @@ public final class NpcService implements Listener, AutoCloseable {
   public void click(PlayerInteractEntityEvent e) {
     if (identify(e.getRightClicked()).isPresent()) {
       e.setCancelled(true);
-      if (e.getHand() == EquipmentSlot.HAND) interact(e.getPlayer(), e.getRightClicked());
+      if (e.getHand() == EquipmentSlot.HAND)
+        interact(e.getPlayer(), e.getRightClicked(), Trigger.RIGHT_CLICK);
     }
   }
 
@@ -771,7 +797,7 @@ public final class NpcService implements Listener, AutoCloseable {
       var npc = identify(e.getEntity()).flatMap(this::get).orElse(null);
       if (npc == null || npc.flag("invulnerable", true)) e.setCancelled(true);
       if (e instanceof EntityDamageByEntityEvent by && by.getDamager() instanceof Player p)
-        interact(p, e.getEntity());
+        interact(p, e.getEntity(), Trigger.LEFT_CLICK);
     }
   }
 

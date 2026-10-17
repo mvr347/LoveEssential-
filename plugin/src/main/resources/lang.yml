@@ -115,17 +115,28 @@ wizard:
     spawn: <gold>Появление — текущая позиция
     skin: <gold>Скин — имя или UUID
     helmet: <gold>Шлем
+    chestplate: <gold>Нагрудник
+    leggings: <gold>Поножи
+    boots: <gold>Ботинки
     main-hand: <gold>Предмет в руке
+    off-hand: <gold>Предмет во второй руке
     pose: <gold>Поза
     scale: <gold>Размер
+    baby: <gold>Маленькая модель
     glowing: <gold>Свечение
     name-visible: <gold>Видимость имени
+    silent: <gold>Без звуков сущности
     personal: <gold>Персональный экземпляр
     visibility: <gold>Условия видимости
     access: <gold>Условия взаимодействия
     require-auth: <gold>Требовать авторизацию
     interaction-range: <gold>Дистанция взаимодействия
     cooldown-ms: <gold>Задержка кликов, мс
+    interaction-mode: '<gold>Взаимодействие: RIGHT_CLICK, LEFT_CLICK, BOTH'
+    line-of-sight: <gold>Требовать прямую видимость
+    interaction-sound: <gold>Звук взаимодействия — Sound или пусто
+    interaction-volume: <gold>Громкость звука (0–4)
+    interaction-pitch: <gold>Высота звука (0.5–2)
     movement: '<gold>Движение: route, follow, stationary'
     speed: <gold>Скорость
     look-at: <gold>Смотреть на игрока
@@ -154,6 +165,9 @@ wizard:
     collidable: <gold>Коллизия
     gravity: <gold>Гравитация
     invulnerable: <gold>Неуязвимость
+    avoid-water: <gold>Избегать воды на маршруте
+    can-open-doors: <gold>Открывать двери на маршруте
+    teleport-on-stuck: <gold>Возврат домой при застревании
   condition-title: <gold>Добавить условие
   action-title: <gold>Добавить действие
   clear-conditions: <red>Удалить все условия

@@ -893,8 +893,34 @@ public final class NpcWizard implements Listener, AutoCloseable {
     inv.setItem(51, button(Material.LIME_CONCRETE, "common.publish"));
     String[][] keys = {
       {"template", "id", "name", "type", "spawn"},
-      {"skin", "helmet", "main-hand", "pose", "scale", "glowing", "name-visible"},
-      {"personal", "visibility", "access", "require-auth", "interaction-range", "cooldown-ms"},
+      {
+        "skin",
+        "helmet",
+        "chestplate",
+        "leggings",
+        "boots",
+        "main-hand",
+        "off-hand",
+        "pose",
+        "scale",
+        "baby",
+        "glowing",
+        "name-visible",
+        "silent"
+      },
+      {
+        "personal",
+        "visibility",
+        "access",
+        "require-auth",
+        "interaction-range",
+        "cooldown-ms",
+        "interaction-mode",
+        "line-of-sight",
+        "interaction-sound",
+        "interaction-volume",
+        "interaction-pitch"
+      },
       {
         "movement",
         "speed",
@@ -922,7 +948,18 @@ public final class NpcWizard implements Listener, AutoCloseable {
         "dialog-actions",
         "actions"
       },
-      {"enabled-hours", "hour-from", "hour-to", "enabled", "collidable", "gravity", "invulnerable"}
+      {
+        "enabled-hours",
+        "hour-from",
+        "hour-to",
+        "enabled",
+        "collidable",
+        "gravity",
+        "invulnerable",
+        "avoid-water",
+        "can-open-doors",
+        "teleport-on-stuck"
+      }
     };
     for (int i = 0; i < keys[step].length; i++) {
       String key = keys[step][i];
@@ -1048,8 +1085,34 @@ public final class NpcWizard implements Listener, AutoCloseable {
       }
       String[][] keys = {
         {"template", "id", "name", "type", "spawn"},
-        {"skin", "helmet", "main-hand", "pose", "scale", "glowing", "name-visible"},
-        {"personal", "visibility", "access", "require-auth", "interaction-range", "cooldown-ms"},
+        {
+          "skin",
+          "helmet",
+          "chestplate",
+          "leggings",
+          "boots",
+          "main-hand",
+          "off-hand",
+          "pose",
+          "scale",
+          "baby",
+          "glowing",
+          "name-visible",
+          "silent"
+        },
+        {
+          "personal",
+          "visibility",
+          "access",
+          "require-auth",
+          "interaction-range",
+          "cooldown-ms",
+          "interaction-mode",
+          "line-of-sight",
+          "interaction-sound",
+          "interaction-volume",
+          "interaction-pitch"
+        },
         {
           "movement",
           "speed",
@@ -1084,7 +1147,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
           "enabled",
           "collidable",
           "gravity",
-          "invulnerable"
+          "invulnerable",
+          "avoid-water",
+          "can-open-doors",
+          "teleport-on-stuck"
         }
       };
       int index = slot - 10;
