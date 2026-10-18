@@ -139,6 +139,15 @@ public final class Gameplay implements Listener, AutoCloseable {
       }
   }
 
+  public List<String> names(Player p, String kind) {
+    String prefix = kind.equals("home") ? "home:" + p.getUniqueId() + ":" : kind + ":";
+    return places.keySet().stream()
+        .filter(k -> k.startsWith(prefix))
+        .map(k -> k.substring(prefix.length()))
+        .sorted()
+        .toList();
+  }
+
   public void command(Player p, String cmd, String[] args) {
     String name = args.length > 0 ? args[0] : "default";
     switch (cmd) {

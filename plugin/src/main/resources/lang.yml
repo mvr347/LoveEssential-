@@ -29,6 +29,7 @@ errors:
   inventory: <red>Освободите место в инвентаре.
   config: <red>Некорректная конфигурация.
   tab-engine: <red>Для этого режима установите TAB и PlaceholderAPI.
+  complex-setting: <red>Вложенные объекты этого списка редактируются в файле модуля.
 validation:
   npc: <red>Некорректное определение NPC.
   id: '<red>ID: 1–48 символов a-z, 0-9, _ или -. Сначала задайте ID.'
@@ -52,25 +53,35 @@ logs:
   integration-failed: Несовместимая версия интеграции.
   tab-conflict: 'Установлен TAB: выберите tab.engine: tab для совместного управления.'
   npc-failed: Не удалось создать NPC; повтор через 10 секунд.
+  npc-sound-failed: Некорректный звук взаимодействия NPC.
 help:
-  main:
-  - <gold>LoveEssential
-  - <gray>/npc wizard — мастер NPC
-  - <gray>/npc edit <id> — редактор
-  - <gray>/le module [имя] [enable|disable|info|reload]
-  - <gray>/le integrations — состояние сервисов Love
-  - <gray>/le tab export — экспорт настроек в TAB
-  - <gray>/le reload — перезагрузка
-  - <gray>/le backup — резервная копия SQLite
-  npc:
+  main: &id001
+  - <gold>LoveEssential <dark_gray>| <yellow>Команды
+  - <gray>/le — панель управления; /le help — все команды
+  - <gray>/le npc create <id>; /le npc edit <id>; /le npc delete <id> confirm
+  - <gray>/le home [имя]; /le sethome [имя]; /le delhome [имя]; /le homes
+  - <gray>/le skin <имя>; /le spawn [имя]; /le setspawn [имя]
+  - <gray>/le tpa <игрок>; /le tpahere <игрок>; /le tpaccept; /le tpdeny; /le back
+  - <gray>/le afk; /le vanish; /le sit; /le ride; /le profile
+  - <gray>/le portal; /le hologram — управление объектами
+  - <gray>/le module [имя] [enable|disable|settings|info|reload]
+  - <gray>/le tab — настройки; /le tab export — применить в TAB
+  - <gray>/le integrations; /le reload; /le backup
+  - <gray>Короткие команды и русские псевдонимы также доступны.
+  npc: &id002
   - <gold>Редактор NPC
+  - <gray>/le npc create <id>; /le npc delete <id> confirm
   - <gray>/npc wizard; /npc edit <id>
   - <gray>/npc set <параметр> <значение>; /npc here
   - <gray>/npc path add|mode|point|remove|move|record|tool|show|undo|redo
   - <gray>/npc dialog node|answer|start|answer-condition|answer-actions
   - <gray>/npc save; /npc publish; /npc preview
   - <gray>/npc delete <id> confirm
-  tab: '<gray>Выберите tab.engine: tab, затем /le tab export и /le reload. TAB и PlaceholderAPI обязательны.'
+  - <gray>/le npc — список, создание и удаление через меню
+  tab: '<gray>Настройки: modules/tab.yml; /le tab — GUI; /le tab export — применить в TAB. Для внешнего движка нужны TAB и PlaceholderAPI.'
+  overview: *id001
+  npc-commands: *id002
+  tab-settings: '<gray>Настройки: modules/tab.yml; /le tab — GUI; /le tab export — применить в TAB. Для внешнего движка нужны TAB и PlaceholderAPI.'
 modules:
   list: '<gray>Модули: <modules>'
   state: '<gray><module>: <state>'
@@ -83,7 +94,7 @@ npc:
   confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
   names: {}
 wizard:
-  title: <gold>NPC · шаг <step>/<total>
+  title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
   value: '<gray>Значение: <white><value>'
   changed: '<green>Изменено: <field>'
   saved: <green>Черновик сохранён.
@@ -115,17 +126,28 @@ wizard:
     spawn: <gold>Появление — текущая позиция
     skin: <gold>Скин — имя или UUID
     helmet: <gold>Шлем
+    chestplate: <gold>Нагрудник
+    leggings: <gold>Поножи
+    boots: <gold>Ботинки
     main-hand: <gold>Предмет в руке
+    off-hand: <gold>Предмет во второй руке
     pose: <gold>Поза
     scale: <gold>Размер
+    baby: <gold>Маленькая модель
     glowing: <gold>Свечение
     name-visible: <gold>Видимость имени
+    silent: <gold>Без звуков сущности
     personal: <gold>Персональный экземпляр
     visibility: <gold>Условия видимости
     access: <gold>Условия взаимодействия
     require-auth: <gold>Требовать авторизацию
     interaction-range: <gold>Дистанция взаимодействия
     cooldown-ms: <gold>Задержка кликов, мс
+    interaction-mode: '<gold>Взаимодействие: RIGHT_CLICK, LEFT_CLICK, BOTH'
+    line-of-sight: <gold>Требовать прямую видимость
+    interaction-sound: <gold>Звук взаимодействия — Sound или пусто
+    interaction-volume: <gold>Громкость звука (0–4)
+    interaction-pitch: <gold>Высота звука (0.5–2)
     movement: '<gold>Движение: route, follow, stationary'
     speed: <gold>Скорость
     look-at: <gold>Смотреть на игрока
@@ -154,6 +176,12 @@ wizard:
     collidable: <gold>Коллизия
     gravity: <gold>Гравитация
     invulnerable: <gold>Неуязвимость
+    avoid-water: <gold>Избегать воды на маршруте
+    can-open-doors: <gold>Открывать двери на маршруте
+    teleport-on-stuck: <gold>Возврат домой при застревании
+    follow-player: <gold>Игрок для сопровождения
+    follow-distance: <gold>Дистанция сопровождения
+    stuck-ticks: <gold>Ожидание при застревании, тики
   condition-title: <gold>Добавить условие
   action-title: <gold>Добавить действие
   clear-conditions: <red>Удалить все условия
@@ -194,6 +222,42 @@ wizard:
     sound: <yellow>Введите ID звука, например ENTITY_VILLAGER_YES.
     delta: <yellow>Введите изменение репутации, например 5 или -5.
     metric: <yellow>Введите идентификатор метрики.
+  sections-title: <gold>Разделы редактора
+  sections:
+    '0': <gold>Основное
+    '1': <gold>Внешность
+    '2': <gold>Взаимодействие
+    '3': <gold>Поведение
+    '4': <gold>Маршрут
+    '5': <gold>Диалоги
+    '6': <gold>Расписание и физика
+  choices:
+    AIR: <gray>Убрать предмет
+    NONE: <gray>Без звука
+    RIGHT_CLICK: <gold>Правая кнопка мыши
+    LEFT_CLICK: <gold>Левая кнопка мыши
+    BOTH: <gold>Обе кнопки мыши
+    route: <gold>По маршруту
+    follow: <gold>Следовать за игроком
+    stationary: <gold>Стоять на месте
+    PAUSE: <gold>Остановиться
+    SKIP: <gold>Пропустить точку
+    RETURN_HOME: <gold>Вернуться домой
+    guard: <gold>Страж
+    guide: <gold>Проводник
+    merchant: <gold>Торговец
+    quest: <gold>Квестодатель
+    decoration: <gold>Декорация
+    MANNEQUIN: <gold>Манекен
+    VILLAGER: <gold>Житель
+    WANDERING_TRADER: <gold>Странствующий торговец
+    ARMOR_STAND: <gold>Стойка для брони
+    ZOMBIE: <gold>Зомби
+    SKELETON: <gold>Скелет
+    CAT: <gold>Кошка
+    WOLF: <gold>Волк
+    IRON_GOLEM: <gold>Железный голем
+    ALLAY: <gold>Тихоня
 dialog:
   finished: <gray>Разговор завершён.
 home:
@@ -256,3 +320,752 @@ tab:
   layout:
     title: <gold>Королевство Love
     remaining: <gray>Ещё %s игроков
+gui:
+  title: <gold>LoveEssential <dark_gray>| <yellow>Управление
+  separator: <dark_gray><st>─────────────────────</st>
+  modules: <gold>Модули
+  npcs: <gold>Персонажи
+  tab: <gold>Список игроков
+  homes: <gold>Дома
+  spawns: <gold>Точки спавна
+  portals: <gold>Порталы
+  holograms: <gold>Голограммы
+  commands: <gold>Все команды
+  integrations: <gold>Интеграции Love
+  backup: <gold>Резервная копия
+  reload: <gold>Перезагрузить настройки
+  close: <red>Закрыть
+  previous: <gold>Предыдущая страница
+  page: <gold>Страница <white><page> <dark_gray>/ <white><pages>
+  enabled: <green>Включено
+  disabled: <gray>Отключено
+  locked: <red>Действие недоступно
+  permission: '<red>Причина: <gray>Недостаточно прав или модуль отключён.'
+  file: '<gray>Файл: <white><path>'
+  path: '<gray>Параметр: <white><path>'
+  value: '<gray>Значение: <white><value>'
+  label: <gold><name>
+  settings-title: <gold>Настройки <dark_gray>| <yellow><module>
+  list-title: <gold>Список <dark_gray>| <yellow><path>
+  list-count: 'Элементов:'
+  tab-export: <gold>Применить настройки в TAB
+  prompt-text: <yellow>Введите текст. Он будет сохранён в lang.yml. Разметка MiniMessage поддерживается.
+  prompt-value: <yellow>Введите значение в чат или /le input значение. Символ - очищает текстовое значение.
+  prompt-id: '<yellow>Введите ID: 1–48 символов a-z, 0-9, _ или -.'
+  prompt-cancel: '<gray>Для возврата в меню: <white>cancel <gray>или <white>/le input cancel<gray>. Время ввода — 3 минуты.'
+  add: <green>Добавить
+  remove: <red>Удалить
+  resume: <gold>Продолжить черновик
+  create-npc: <green>Создать NPC
+  delete-npc: <red>Удалить NPC
+  edit-npc: <gold>Редактировать NPC
+  path-npc: <gold>Маршрут NPC
+  dialog-npc: <gold>Диалог NPC
+  schedule-npc: <gold>Расписание NPC
+  debug-npc: <gold>Диагностика NPC
+  npc-id: '<gray>ID: <white><id>'
+  npc-title: <gold>NPC <dark_gray>| <yellow><id>
+  places-title: <gold>Объекты <dark_gray>| <yellow><kind>
+  place-title: <gold>Объект <dark_gray>| <yellow><id>
+  pos1: <gold>Первая точка портала
+  destination: <gold>Назначение — текущая позиция
+  move: <gold>Переместить сюда
+  add-line: <gold>Добавить строку
+  command-name: <gold>/<command>
+  confirm-warning: <red>Подтвердите действие для указанного объекта.
+  confirm: <green>Подтвердить
+  cancel: <red>Отмена
+  saved: <green>Изменения сохранены.
+  manual-input: <gold>Ввести значение
+  empty-settings: <gray>У этого модуля доступны переключатель и управление объектами.
+  restart-hint: <gray>Размер очереди SQLite и число потоков маршрутов применяются после перезапуска.
+  'true': Включено
+  'false': Отключено
+  click:
+    open: <green>ЛКМ <dark_gray>— <gray>открыть
+    close: <green>ЛКМ <dark_gray>— <gray>закрыть
+    edit: <green>ЛКМ <dark_gray>— <gray>изменить
+    run: <green>ЛКМ <dark_gray>— <gray>выполнить
+    settings: <green>ЛКМ <dark_gray>— <gray>настройки модуля
+    toggle: <gold>ПКМ <dark_gray>— <gray>включить или отключить
+    switch: <green>ЛКМ <dark_gray>— <gray>переключить
+    text: <gold>ПКМ <dark_gray>— <gray>изменить текст в lang.yml
+    remove: <gold>ПКМ <dark_gray>— <gray>удалить с подтверждением
+    select: <green>ЛКМ <dark_gray>— <gray>выбрать
+    blocked: <dark_gray>ЛКМ — действие заблокировано
+    delete: <green>ЛКМ <dark_gray>— <gray>удалить с подтверждением
+  module-labels:
+    nickname: Никнеймы
+    messages: Личные сообщения
+    inventory: Просмотр инвентаря
+    profile: Профили игроков
+    npc: Персонажи
+    tab: Список игроков
+    home: Дома
+    spawn: Спавн
+    teleport: Телепортация
+    vanish: Невидимость
+    afk: AFK
+    skin: Скины
+    sitride: Посадка и езда
+    nightskip: Пропуск ночи
+    portal: Порталы
+    hologram: Голограммы
+    traces: Следы
+    joinquit: Вход и выход
+    motd: Описание сервера
+  module-names:
+    nickname: <gold>Никнеймы
+    messages: <gold>Личные сообщения
+    inventory: <gold>Просмотр инвентаря
+    profile: <gold>Профили игроков
+    npc: <gold>Персонажи
+    tab: <gold>Список игроков
+    home: <gold>Дома
+    spawn: <gold>Спавн
+    teleport: <gold>Телепортация
+    vanish: <gold>Невидимость
+    afk: <gold>AFK
+    skin: <gold>Скины
+    sitride: <gold>Посадка и езда
+    nightskip: <gold>Пропуск ночи
+    portal: <gold>Порталы
+    hologram: <gold>Голограммы
+    traces: <gold>Следы
+    joinquit: <gold>Вход и выход
+    motd: <gold>Описание сервера
+  command-help:
+    nick: <gray>Изменить никнейм, цвет или градиент; сбросить к имени аккаунта.
+    msg: <gray>Личное сообщение или меню выбора получателя.
+    reply: <gray>Ответить последнему собеседнику.
+    ignore: <gray>Игнорировать игрока или открыть настройки личных сообщений.
+    msgtoggle: <gray>Включить или отключить личные сообщения.
+    invsee: <gray>Просмотр инвентаря; режим edit позволяет менять предметы при наличии права.
+    loveessential: <gray>Главная панель, модули и настройки.
+    npc: <gray>Создать, изменить или удалить персонажа.
+    home: <gray>Телепорт к своему дому.
+    homes: <gray>Меню сохранённых домов.
+    sethome: <gray>Сохранить текущую позицию как дом.
+    delhome: <gray>Удалить сохранённый дом.
+    spawn: <gray>Телепорт на спавн.
+    setspawn: <gray>Сохранить точку спавна. Требуются права администратора.
+    tpa: <gray>Отправить запрос телепорта к игроку.
+    tpahere: <gray>Пригласить игрока к себе.
+    tpaccept: <gray>Принять запрос телепорта.
+    tpdeny: <gray>Отклонить запрос телепорта.
+    back: <gray>Вернуться к предыдущей позиции.
+    vanish: <gray>Переключить невидимость. Требуется соответствующее право.
+    afk: <gray>Переключить статус AFK.
+    skin: <gray>Установить скин по имени игрока.
+    sit: <gray>Сесть на текущем месте.
+    ride: <gray>Сесть на ближайшую подходящую сущность.
+    profile: <gray>Посмотреть свой профиль Love.
+    hologram: <gray>Создать, переместить или удалить голограмму.
+    portal: <gray>Настроить область и назначение портала.
+  settings:
+    nickname:
+      min-length:
+        _label: <gold>Минимальная длина ника
+      max-length:
+        _label: <gold>Максимальная длина ника
+      prevent-impersonation:
+        _label: <gold>Защита от подмены чужого имени
+      default-color:
+        _label: <gold>Цвет по умолчанию, пусто — без цвета
+      apply-display-name:
+        _label: <gold>Использовать как отображаемое имя Bukkit
+      apply-to-tab:
+        _label: <gold>Использовать в TAB
+      apply-to-messages:
+        _label: <gold>Использовать в личных сообщениях
+      gradients:
+        _label: <gold>Наборы цветов градиента
+    messages:
+      max-length:
+        _label: <gold>Максимальная длина сообщения
+      cooldown-ms:
+        _label: <gold>Задержка между сообщениями, мс
+      max-ignored:
+        _label: <gold>Лимит игнор-листа
+    inventory:
+      refresh-ticks:
+        _label: <gold>Обновление инвентаря, тики
+    profile:
+      refresh-ticks:
+        _label: <gold>Обновление информации, тики
+      persist-seconds:
+        _label: <gold>Сохранение снимка в SQLite, секунды
+      cards:
+        _label: <gold>Карточки досье
+        identity:
+          _label: <gold>Личность и облик
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        survival:
+          _label: <gold>Состояние
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        progress:
+          _label: <gold>Прогресс
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        statistics:
+          _label: <gold>Статистика
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        social:
+          _label: <gold>Связи
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        location:
+          _label: <gold>Местоположение
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+    nightskip:
+      max-multiplier:
+        _label: <gold>Максимальное ускорение ночи
+    hologram: {}
+    afk:
+      timeout-seconds:
+        _label: <gold>Время до AFK, секунды
+      kick-after-seconds:
+        _label: <gold>Время до отключения AFK, секунды
+    teleport: {}
+    traces: {}
+    spawn: {}
+    joinquit: {}
+    sitride: {}
+    skin: {}
+    vanish: {}
+    npc:
+      allowed-types:
+        _label: <gold>Допустимые типы NPC
+      max-definitions:
+        _label: <gold>Лимит определений NPC
+      max-active:
+        _label: <gold>Лимит активных NPC
+      max-route-points:
+        _label: <gold>Лимит точек маршрута
+      pathfinding:
+        _label: <gold>Поиск пути
+        threads:
+          _label: <gold>Потоки поиска пути
+        radius:
+          _label: <gold>Радиус поиска
+        max-nodes:
+          _label: <gold>Лимит узлов
+        plans-per-tick:
+          _label: <gold>Расчётов за тик
+      actions:
+        _label: <gold>Действия NPC
+        max-economy-amount:
+          _label: <gold>Лимит экономической операции
+        allowed-player-commands:
+          _label: <gold>Разрешённые команды
+    motd: {}
+    portal: {}
+    home:
+      default-limit:
+        _label: <gold>Базовый лимит домов
+    tab:
+      engine:
+        _label: <gold>Движок списка игроков
+      refresh-ticks:
+        _label: <gold>Интервал обновления, тики
+      respect-other-scoreboards:
+        _label: <gold>Уважать scoreboard других плагинов
+      sorting-enabled:
+        _label: <gold>Сортировка включена
+      sorting:
+        _label: <gold>Порядок сортировки
+      name-enabled:
+        _label: <gold>Форматировать имена
+      groups:
+        _label: <gold>Группы
+        admin:
+          _label: <gold>admin
+          permission:
+            _label: <gold>Право группы
+          priority:
+            _label: <gold>Приоритет
+          name-key:
+            _label: <gold>Ключ имени
+          prefix-key:
+            _label: <gold>Ключ префикса
+          suffix-key:
+            _label: <gold>Ключ суффикса
+        knight:
+          _label: <gold>knight
+          permission:
+            _label: <gold>Право группы
+          priority:
+            _label: <gold>Приоритет
+          name-key:
+            _label: <gold>Ключ имени
+          prefix-key:
+            _label: <gold>Ключ префикса
+          suffix-key:
+            _label: <gold>Ключ суффикса
+      nametag:
+        _label: <gold>Надпись над игроком
+        enabled:
+          _label: <gold>Включено
+        collision:
+          _label: <gold>Коллизия
+        visible:
+          _label: <gold>Видимость
+      header-footer:
+        _label: <gold>Заголовок и подвал
+        enabled:
+          _label: <gold>Включено
+        header-key:
+          _label: <gold>Ключ заголовка
+        footer-key:
+          _label: <gold>Ключ подвала
+        profiles:
+          _label: <gold>Профили
+      playerlist-objective:
+        _label: <gold>Показатель в списке
+        enabled:
+          _label: <gold>Включено
+        value:
+          _label: <gold>Значение
+        title-key:
+          _label: <gold>Ключ заголовка
+      below-name:
+        _label: <gold>Показатель под именем
+        enabled:
+          _label: <gold>Включено
+        value:
+          _label: <gold>Значение
+        title-key:
+          _label: <gold>Ключ заголовка
+      sidebar:
+        _label: <gold>Боковая панель
+        enabled:
+          _label: <gold>Включено
+        title-key:
+          _label: <gold>Ключ заголовка
+        line-keys:
+          _label: <gold>Ключи строк
+      bossbars:
+        _label: <gold>Полосы босса
+        kingdom:
+          _label: <gold>kingdom
+          enabled:
+            _label: <gold>Включено
+          text-key:
+            _label: <gold>Ключ текста
+          progress:
+            _label: <gold>Заполнение
+          color:
+            _label: <gold>Цвет
+          overlay:
+            _label: <gold>Деления
+      external:
+        _label: <gold>Настройки внешнего TAB
+        config:
+          _label: <gold>Конфигурация TAB
+          header-footer:
+            _label: <gold>Заголовок и подвал
+            enabled:
+              _label: <gold>Включено
+            designs:
+              _label: <gold>designs
+              default:
+                _label: <gold>default
+                header:
+                  _label: <gold>header
+                footer:
+                  _label: <gold>footer
+          tablist-name-formatting:
+            _label: <gold>tablist-name-formatting
+            enabled:
+              _label: <gold>Включено
+            disable-condition:
+              _label: <gold>disable-condition
+          scoreboard-teams:
+            _label: <gold>scoreboard-teams
+            enabled:
+              _label: <gold>Включено
+            enable-collision:
+              _label: <gold>enable-collision
+            invisible-nametags:
+              _label: <gold>invisible-nametags
+            sorting-types:
+              _label: <gold>sorting-types
+            case-sensitive-sorting:
+              _label: <gold>case-sensitive-sorting
+            can-see-friendly-invisibles:
+              _label: <gold>can-see-friendly-invisibles
+          playerlist-objective:
+            _label: <gold>Показатель в списке
+            enabled:
+              _label: <gold>Включено
+            value:
+              _label: <gold>Значение
+            fancy-value:
+              _label: <gold>fancy-value
+            title:
+              _label: <gold>title
+            render-type:
+              _label: <gold>render-type
+          belowname-objective:
+            _label: <gold>belowname-objective
+            enabled:
+              _label: <gold>Включено
+            value:
+              _label: <gold>Значение
+            fancy-value:
+              _label: <gold>fancy-value
+            fancy-value-default:
+              _label: <gold>fancy-value-default
+            title:
+              _label: <gold>title
+            view-distance:
+              _label: <gold>view-distance
+          bossbar:
+            _label: <gold>bossbar
+            enabled:
+              _label: <gold>Включено
+            remember-toggle-choice:
+              _label: <gold>remember-toggle-choice
+            bars:
+              _label: <gold>bars
+              kingdom:
+                _label: <gold>kingdom
+                style:
+                  _label: <gold>style
+                color:
+                  _label: <gold>Цвет
+                progress:
+                  _label: <gold>Заполнение
+                text:
+                  _label: <gold>text
+          scoreboard:
+            _label: <gold>scoreboard
+            enabled:
+              _label: <gold>Включено
+            remember-toggle-choice:
+              _label: <gold>remember-toggle-choice
+            scoreboards:
+              _label: <gold>scoreboards
+              kingdom:
+                _label: <gold>kingdom
+                title:
+                  _label: <gold>title
+                lines:
+                  _label: <gold>lines
+          layout:
+            _label: <gold>layout
+            enabled:
+              _label: <gold>Включено
+            direction:
+              _label: <gold>direction
+            enable-remaining-players-text:
+              _label: <gold>enable-remaining-players-text
+            remaining-players-text:
+              _label: <gold>remaining-players-text
+            empty-slot-ping-value:
+              _label: <gold>empty-slot-ping-value
+            layouts:
+              _label: <gold>layouts
+              default:
+                _label: <gold>default
+                slot-count:
+                  _label: <gold>slot-count
+                fixed-slots:
+                  _label: <gold>fixed-slots
+                groups:
+                  _label: <gold>Группы
+                  players:
+                    _label: <gold>players
+                    slots:
+                      _label: <gold>slots
+          ping-spoof:
+            _label: <gold>ping-spoof
+            enabled:
+              _label: <gold>Включено
+            value:
+              _label: <gold>Значение
+          global-playerlist:
+            _label: <gold>global-playerlist
+            enabled:
+              _label: <gold>Включено
+            display-others-as-spectators:
+              _label: <gold>display-others-as-spectators
+            display-vanished-players-as-spectators:
+              _label: <gold>display-vanished-players-as-spectators
+            isolate-unlisted-servers:
+              _label: <gold>isolate-unlisted-servers
+            update-latency:
+              _label: <gold>update-latency
+            server-groups:
+              _label: <gold>server-groups
+          placeholder-refresh-intervals:
+            _label: <gold>placeholder-refresh-intervals
+            default-refresh-interval:
+              _label: <gold>default-refresh-interval
+            '%loveessential_authenticated%':
+              _label: <gold>%loveessential_authenticated%
+            '%loveessential_vanished%':
+              _label: <gold>%loveessential_vanished%
+          assign-groups-by-permissions:
+            _label: <gold>assign-groups-by-permissions
+          primary-group-finding-list:
+            _label: <gold>primary-group-finding-list
+          permission-refresh-interval:
+            _label: <gold>permission-refresh-interval
+          mysql:
+            _label: <gold>mysql
+            enabled:
+              _label: <gold>Включено
+        groups:
+          _label: <gold>Группы
+          _DEFAULT_:
+            _label: <gold>_DEFAULT_
+            tabprefix:
+              _label: <gold>tabprefix
+            tagprefix:
+              _label: <gold>tagprefix
+            customtabname:
+              _label: <gold>customtabname
+            tabsuffix:
+              _label: <gold>tabsuffix
+            tagsuffix:
+              _label: <gold>tagsuffix
+          admin:
+            _label: <gold>admin
+            tabprefix:
+              _label: <gold>tabprefix
+            tagprefix:
+              _label: <gold>tagprefix
+          knight:
+            _label: <gold>knight
+            tabprefix:
+              _label: <gold>tabprefix
+            tagprefix:
+              _label: <gold>tagprefix
+        animations:
+          _label: <gold>Анимации
+  wizard-title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
+  locked-suffix: ' <dark_gray>| <red>Недоступно'
+  skin-title: <gold>Облик игрока
+  skin-name: <gold>Установить скин по имени
+  skin-reset: <gold>Вернуть собственный скин
+  prompt-skin: '<yellow>Введите имя владельца скина: латинские буквы, цифры и _, до 16 символов.'
+messages:
+  menu: <gold>Личные сообщения
+  settings: <gold>Настройки личных сообщений
+  enabled: <green>Личные сообщения включены
+  muted: <red>Личные сообщения отключены
+  saved: <green>Настройки личных сообщений сохранены.
+  loading: <yellow>Настройки загружаются или сохраняются. Повторите через секунду.
+  disabled: <red>Модуль личных сообщений отключён.
+  usage: '<yellow>/le msg <игрок> <сообщение> <gray>— отправить личное сообщение.'
+  reply-usage: '<yellow>/le reply <сообщение> <gray>— ответить собеседнику.'
+  ignore-usage: '<yellow>/le ignore [игрок] <gray>— переключить игнор или открыть настройки.'
+  no-reply: <red>Нет доступного собеседника для ответа.
+  self: <red>Выберите другого игрока.
+  ignore-limit: <red>Достигнут лимит игнор-листа.
+  cooldown: <yellow>Подождите немного перед следующим сообщением.
+  cancelled: <red>Сообщение отклонено фильтром чата.
+  own-disabled: <yellow>Сначала включите личные сообщения через /le msgtoggle.
+  unavailable: <red>Личные сообщения этому игроку недоступны.
+  invalid: <red>Сообщение пустое, слишком длинное или содержит управляющие символы.
+  outgoing: '<dark_gray>[<gold>Вы <gray>→ <gold><recipient><dark_gray>] <white><message>'
+  incoming: '<dark_gray>[<gold><sender> <gray>→ <gold>Вы<dark_gray>] <white><message>'
+  reply-hint: <gray>Нажмите, чтобы ответить этому игроку.
+  afk: <yellow><player> сейчас AFK и может ответить позже.
+  compose: <gold>Нажмите здесь, чтобы написать игроку <player>.
+  unignore: <green>ЛКМ <dark_gray>— <gray>убрать из игнор-листа
+inventory:
+  title: '<gold>Инвентарь <dark_gray>| <yellow><player>'
+  owner: <gold><player>
+  self: <yellow>Свой инвентарь откройте обычной клавишей инвентаря.
+  usage: '<yellow>/le invsee <игрок> [view|edit]'
+  layout:
+  - <gray>Ряды 1–3 — основной инвентарь.
+  - <gray>Ряд 4 — панель быстрого доступа.
+  - <gray>Ряд 5 — ботинки, поножи, нагрудник, шлем, вторая рука.
+  instructions: <gold>Управление предметами
+  controls-left: <gray>ЛКМ — взять, положить или обменять стек.
+  controls-right: <gray>ПКМ — взять половину или положить один предмет.
+  controls-restricted: <gray>Shift, цифры, двойной клик и перетаскивание отключены.
+  editing: <green>Редактирование включено
+  readonly: <gray>Только просмотр
+  toggle: <gray>ЛКМ — сменить режим. Для редактирования нужно отдельное право.
+  changed: <yellow>Игрок изменил этот слот. Экран обновлён — повторите действие.
+players:
+  menu: <gold>Мой профиль
+  title: '<gold>Досье <dark_gray>| <yellow><player>'
+  list-title: <gold>Выберите игрока
+  entry: <gold><player>
+  unavailable: <red>Игрок недоступен или не в сети.
+  message: <gold>Написать сообщение
+  ignore: <gold>Переключить игнор
+  inventory: <gold>Инвентарь игрока
+  refresh: <gold>Обновить досье
+  select-profile: <gray>Открыть подробное досье игрока.
+  select-msg: <gray>Написать личное сообщение.
+  select-ignore: <gray>Добавить или убрать игрока из игнор-листа.
+  select-invsee: <gray>Открыть живой просмотр инвентаря.
+  save-failed: Не удалось сохранить снимок информации об игроке.
+  gamemodes:
+    survival: Выживание
+    creative: Творческий
+    adventure: Приключение
+    spectator: Наблюдатель
+  cards:
+    identity:
+      title: <gold>Личность и облик
+      lore:
+      - '<gray>Имя: <white><player>'
+      - '<gray>Отображаемое имя: <white><display_name>'
+      - '<gray>UUID: <white><uuid>'
+      - '<gray>Первый вход (UTC): <white><first_join>'
+      - '<gray>Модель скина: <white><skin_model>'
+      - <gray>Голова использует текущий скин игрока.
+    survival:
+      title: <gold>Состояние
+      lore:
+      - '<gray>Здоровье: <white><health>/<max_health>'
+      - '<gray>Сытость: <white><food>/20'
+      - '<gray>Насыщение: <white><saturation>'
+      - '<gray>Режим: <white><gamemode_name>'
+      - '<gray>Задержка: <white><ping> мс'
+      - '<gray>AFK: <white><afk_state>'
+      - '<gray>В бою: <white><combat_state>'
+    progress:
+      title: <gold>Путь в королевстве
+      lore:
+      - '<gray>Уровень: <white><level>'
+      - '<gray>До следующего уровня: <white><exp>% прогресса'
+      - '<gray>Всего опыта: <white><total_exp>'
+      - '<gray>Время в игре: <white><playtime_hours> ч <playtime_minutes> мин'
+      - '<gray>Сохранённых домов: <white><homes>'
+    statistics:
+      title: <gold>Подвиги и испытания
+      lore:
+      - '<gray>Побед над игроками: <white><kills>'
+      - '<gray>Побед над мобами: <white><mob_kills>'
+      - '<gray>Смертей: <white><deaths>'
+      - '<gray>Прыжков: <white><jumps>'
+      - '<gray>Нанесено урона: <white><damage_dealt>'
+      - '<gray>Получено урона: <white><damage_taken>'
+      - '<gray>Пройдено пешком: <white><walk_km> км'
+    social:
+      title: <gold>Связи в королевстве
+      lore:
+      - '<gray>Клан: <white><clan>'
+      - '<gray>Репутация: <white><reputation>'
+      - '<gray>Монеты в инвентаре: <white><balance> <currency>'
+    location:
+      title: <gold>Местоположение и возможности
+      lore:
+      - '<gray>Мир: <white><world>'
+      - '<gray>Координаты: <white><x> <y> <z>'
+      - '<gray>Территория: <white><territory>'
+      - '<gray>Полёт разрешён: <white><flight_allowed_state>'
+      - '<gray>Летает: <white><flying_state>'
+      - '<gray>Невидимость: <white><vanished_state>'
+  'yes': Да
+  'no': Нет
+nick:
+  profile-name: '<gray>Никнейм: <nickname>'
+  title: <gold>Никнейм и оформление
+  set: <gold>Изменить никнейм
+  color: <gold>Один цвет
+  gradient: <gold>Градиент
+  clear-style: <gold>Сбросить цвет и градиент
+  reset: <gold>Вернуть имя аккаунта и стандартное оформление
+  custom-color: <gold>Свой HEX-цвет
+  custom-gradient: <gold>Свой градиент
+  preview: <gray>Так выглядит ваш никнейм сейчас.
+  real-name: '<gray>Имя аккаунта: <white><name>'
+  prompt-name: <yellow>Введите никнейм — буквы, цифры и _. Пробелы и теги не допускаются.
+  prompt-color: '<yellow>Введите HEX-цвет, например #ff6699, или название, например gold.'
+  prompt-gradient: '<yellow>Введите 2–5 цветов через пробел, например #ff6699 #55ffff.'
+  loading: <yellow>Никнейм загружается или сохраняется. Повторите через секунду.
+  saved: <green>Никнейм и оформление сохранены.
+  invalid-name: <red>Недопустимый никнейм. Используйте буквы, цифры и _ в пределах настроенной длины.
+  invalid-color: '<red>Неизвестный цвет. Пример: #ff6699 или gold.'
+  taken: <red>Это имя занято другим игроком.
+  usage:
+  - '<yellow>/le nick <gray>— открыть меню'
+  - '<yellow>/le nick set Имя <gray>— изменить никнейм'
+  - '<yellow>/le nick color gold <gray>— выбрать цвет, в том числе HEX'
+  - '<yellow>/le nick gradient #ff6699 #55ffff <gray>— градиент из 2–5 цветов'
+  - '<yellow>/le nick color reset <gray>— сбросить оформление, сохранив ник'
+  - '<yellow>/le nick reset <gray>— вернуть имя аккаунта и стандартное оформление'
+  - '<yellow>/le nick player Игрок set Имя <gray>— изменить чужой ник при наличии права'
+  gradients:
+    kingdom: <gold>Королевское золото
+    sunset: <gold>Закат
+    ocean: <gold>Океан
+    forest: <gold>Лес
+  colors:
+    black: Чёрный
+    dark_blue: Тёмно-синий
+    dark_green: Тёмно-зелёный
+    dark_aqua: Тёмно-бирюзовый
+    dark_red: Тёмно-красный
+    dark_purple: Тёмно-фиолетовый
+    gold: Золотой
+    gray: Серый
+    dark_gray: Тёмно-серый
+    blue: Синий
+    green: Зелёный
+    aqua: Бирюзовый
+    red: Красный
+    light_purple: Светло-фиолетовый
+    yellow: Жёлтый
+    white: Белый

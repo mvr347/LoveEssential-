@@ -33,7 +33,11 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "hologram",
           "traces",
           "joinquit",
-          "motd");
+          "motd",
+          "messages",
+          "inventory",
+          "profile",
+          "nickname");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -50,8 +54,13 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private volatile Lang lang;
   private NpcService npcs;
   private NpcWizard wizard;
+  private dev.lovelace.loveessential.gui.ControlMenus menus;
   private DialogService dialogs;
   private Gameplay gameplay;
+  private dev.lovelace.loveessential.module.Nicknames nicknames;
+  private dev.lovelace.loveessential.module.PrivateMessages messages;
+  private dev.lovelace.loveessential.module.InventoryInspector inventories;
+  private dev.lovelace.loveessential.module.PlayerProfiles profiles;
   private TabModule tab;
   private LoveExpansion expansion;
   private ConditionEngine conditions;
@@ -59,17 +68,45 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private LoveBridge love;
   private Placeholders placeholders;
   private boolean ready;
+  private dev.lovelace.loveessential.config.ModuleConfigs configFiles;
+  private volatile org.bukkit.configuration.file.YamlConfiguration settings;
+  private final java.util.concurrent.atomic.AtomicBoolean reloading =
+      new java.util.concurrent.atomic.AtomicBoolean();
+
+  @Override
+  public org.bukkit.configuration.file.FileConfiguration getConfig() {
+    return settings == null ? super.getConfig() : settings;
+  }
+
+  @Override
+  public void saveConfig() {
+    if (settings == null || configFiles == null) {
+      super.saveConfig();
+      return;
+    }
+    try {
+      configFiles.save(settings);
+    } catch (Exception e) {
+      throw new IllegalStateException("errors.config", e);
+    }
+  }
+
+  public CompletableFuture<Void> editSetting(
+      String module, String path, Object expected, Object value) {
+    return changeSettings(() -> configFiles.update(module, path, expected, value));
+  }
 
   private record Loaded(SqliteStore store, Lang lang) {}
 
   @Override
   public void onEnable() {
     main = new MainThread(this);
+    configFiles = new dev.lovelace.loveessential.config.ModuleConfigs(this);
     CompletableFuture.supplyAsync(
             () -> {
               try {
                 saveDefaultConfig();
-                validateConfig(getConfig());
+                settings = configFiles.load();
                 var language = new Lang(this);
                 var database =
                     new SqliteStore(
@@ -147,6 +184,21 @@ public class LoveEssentialPlugin extends JavaPlugin {
     gameplay = new Gameplay(this, main, store, lang, love, this::module);
     placeholders = new Placeholders(lang, love, gameplay::afk);
     gameplay.placeholders(placeholders);
+    nicknames = new dev.lovelace.loveessential.module.Nicknames(this, main, lang, store, love);
+    placeholders.nicknames(nicknames::display, nicknames::tabNames);
+    messages =
+        new dev.lovelace.loveessential.module.PrivateMessages(
+            this, main, lang, store, love, gameplay, nicknames);
+    inventories = new dev.lovelace.loveessential.module.InventoryInspector(this, lang, love);
+    profiles =
+        new dev.lovelace.loveessential.module.PlayerProfiles(
+            this, lang, love, gameplay, store, placeholders, messages, inventories);
+    placeholders.playerValues(
+        id -> {
+          var values = new HashMap<>(profiles.values(id));
+          values.putAll(nicknames.values(id));
+          return Map.copyOf(values);
+        });
     npcs.vanish(gameplay::vanished);
     tab = new TabModule(this, lang, placeholders, conditions);
     var api = new EssentialApi(npcs, conditions, actions, store);
@@ -166,7 +218,25 @@ public class LoveEssentialPlugin extends JavaPlugin {
     getServer()
         .getServicesManager()
         .register(LoveEssentialService.class, api, this, ServicePriority.Normal);
-    var commands = new Commands(this, main, lang, store, npcs, wizard, dialogs, gameplay, love);
+    menus =
+        new dev.lovelace.loveessential.gui.ControlMenus(
+            this, main, lang, love, npcs, wizard, gameplay, nicknames);
+    var commands =
+        new Commands(
+            this,
+            main,
+            lang,
+            store,
+            npcs,
+            wizard,
+            dialogs,
+            gameplay,
+            love,
+            menus,
+            messages,
+            inventories,
+            profiles,
+            nicknames);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -204,6 +274,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       if (module("npc")) npcs.start();
                       gameplay.start();
+                      nicknames.start();
+                      messages.start();
+                      inventories.start();
+                      profiles.start();
                       if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
                         expansion =
                             new LoveExpansion(
@@ -246,42 +320,141 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       if (name.equals("npc")) npcs.enabled(value);
                       gameplay.applyVanish();
+                      if (name.equals("nickname")) nicknames.refresh();
                       return null;
                     }));
   }
 
   public CompletableFuture<Void> reloadSettings() {
-    return CompletableFuture.runAsync(
+    return changeSettings(configFiles::load);
+  }
+
+  @FunctionalInterface
+  private interface SettingsLoad {
+    org.bukkit.configuration.file.YamlConfiguration load() throws Exception;
+  }
+
+  private CompletableFuture<Void> changeSettings(SettingsLoad loader) {
+    if (!reloading.compareAndSet(false, true))
+      return CompletableFuture.failedFuture(new IllegalArgumentException("wizard.busy"));
+    return CompletableFuture.supplyAsync(
             () -> {
               try {
-                var candidate = new org.bukkit.configuration.file.YamlConfiguration();
-                candidate.load(getDataFolder().toPath().resolve("config.yml").toFile());
-                validateConfig(candidate);
+                var candidate = loader.load();
                 lang.reload();
-                reloadConfig();
+                return candidate;
               } catch (Exception e) {
                 throw new CompletionException(e);
               }
             },
             io)
         .thenCompose(
-            v ->
-                main.call(
+            candidate ->
+                main.<Void>call(
                     () -> {
+                      settings = candidate;
+                      return null;
+                    }))
+        .thenCompose(v -> store.list("module", Boolean.class))
+        .thenCompose(
+            saved ->
+                main.<Void>call(
+                    () -> {
+                      boolean previousNpc = module("npc");
+                      for (String name : MODULES)
+                        modules.put(name, getConfig().getBoolean("modules." + name, true));
+                      for (var d : saved) {
+                        modules.put(d.id(), d.value());
+                        moduleRevisions.put(d.id(), d.revision());
+                      }
+                      if (previousNpc != module("npc")) npcs.enabled(module("npc"));
                       placeholders.clear();
                       tab.stop();
                       if (module("tab")) tab.start();
+                      gameplay.applyVanish();
+                      nicknames.refresh();
                       return null;
-                    }));
+                    }))
+        .whenComplete((v, error) -> reloading.set(false));
   }
 
-  public static void validateConfig(org.bukkit.configuration.file.FileConfiguration config) {
-    String engine = config.getString("tab.engine", "native");
-    if (!Set.of("native", "tab").contains(engine))
+  public static void validateConfig(org.bukkit.configuration.ConfigurationSection config) {
+    if (!Set.of("native", "tab").contains(config.getString("tab.engine", "native")))
       throw new IllegalArgumentException("errors.config");
-    if (config.getLong("tab.refresh-ticks", 10) < 2
-        || config.getInt("npc.max-route-points", 128) < 1
-        || config.getInt("storage.write-queue", 256) < 1)
+    bounded(config, "storage.write-queue", 1, 65536);
+    bounded(config, "nickname.min-length", 1, 32);
+    bounded(config, "nickname.max-length", 1, 32);
+    if (config.getInt("nickname.min-length", 3) > config.getInt("nickname.max-length", 24))
+      throw new IllegalArgumentException("errors.config");
+    String nickColor = config.getString("nickname.default-color", "");
+    if (!nickColor.isBlank()) dev.lovelace.loveessential.module.Nicknames.color(nickColor);
+    var gradients = config.getConfigurationSection("nickname.gradients");
+    if (gradients != null)
+      for (String key : gradients.getKeys(false)) {
+        var colors = gradients.getStringList(key);
+        if (colors.size() < 2 || colors.size() > 5)
+          throw new IllegalArgumentException("errors.config");
+        colors.forEach(dev.lovelace.loveessential.module.Nicknames::color);
+      }
+    bounded(config, "messages.max-length", 1, 4096);
+    bounded(config, "messages.cooldown-ms", 0, 60000);
+    bounded(config, "messages.max-ignored", 1, 10000);
+    bounded(config, "inventory.refresh-ticks", 1, 200);
+    bounded(config, "profile.refresh-ticks", 20, 1200);
+    bounded(config, "profile.persist-seconds", 60, 86400);
+    bounded(config, "tab.refresh-ticks", 2, 1200);
+    bounded(config, "npc.max-active", 0, 10000);
+    bounded(config, "npc.max-definitions", 1, 100000);
+    bounded(config, "npc.max-route-points", 1, 10000);
+    bounded(config, "npc.pathfinding.threads", 1, 4);
+    bounded(config, "npc.pathfinding.radius", 4, 24);
+    bounded(config, "npc.pathfinding.max-nodes", 1, 100000);
+    bounded(config, "npc.pathfinding.plans-per-tick", 1, 100);
+    bounded(config, "home.default-limit", 1, 1000);
+    bounded(config, "afk.timeout-seconds", 1, 31536000);
+    bounded(config, "afk.kick-after-seconds", 0, 31536000);
+    bounded(config, "night-skip.max-multiplier", 1, 1000);
+    bounded(config, "actions.max-economy-amount", 1, 1000000000);
+    if (config.contains("npc.allowed-types")) {
+      if (!(config.get("npc.allowed-types") instanceof java.util.List<?> types) || types.isEmpty())
+        throw new IllegalArgumentException("errors.config");
+      for (Object value : config.getList("npc.allowed-types")) {
+        try {
+          var type = org.bukkit.entity.EntityType.valueOf(value.toString());
+          if (!type.isAlive() || !type.isSpawnable())
+            throw new IllegalArgumentException("errors.config");
+        } catch (RuntimeException e) {
+          throw new IllegalArgumentException("errors.config", e);
+        }
+      }
+    }
+    var bars = config.getConfigurationSection("tab.bossbars");
+    if (bars != null)
+      for (String id : bars.getKeys(false)) {
+        try {
+          net.kyori.adventure.bossbar.BossBar.Color.valueOf(
+              bars.getString(id + ".color", "YELLOW"));
+          net.kyori.adventure.bossbar.BossBar.Overlay.valueOf(
+              bars.getString(id + ".overlay", "PROGRESS"));
+          double progress = bars.getDouble(id + ".progress", 1);
+          if (!Double.isFinite(progress) || progress < 0 || progress > 1)
+            throw new IllegalArgumentException();
+        } catch (RuntimeException e) {
+          throw new IllegalArgumentException("errors.config", e);
+        }
+      }
+  }
+
+  private static void bounded(
+      org.bukkit.configuration.ConfigurationSection config, String path, double min, double max) {
+    if (!config.contains(path)) return;
+    Object value = config.get(path);
+    if (!(value instanceof Number n)
+        || !Double.isFinite(n.doubleValue())
+        || n.doubleValue() < min
+        || n.doubleValue() > max
+        || (!path.equals("night-skip.max-multiplier")
+            && n.doubleValue() != Math.rint(n.doubleValue())))
       throw new IllegalArgumentException("errors.config");
   }
 
@@ -290,10 +463,15 @@ public class LoveEssentialPlugin extends JavaPlugin {
     ready = false;
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
+    if (menus != null) menus.close();
     if (wizard != null) wizard.close();
     if (dialogs != null) dialogs.close();
     if (npcs != null) npcs.close();
     if (tab != null) tab.close();
+    if (profiles != null) profiles.close();
+    if (inventories != null) inventories.close();
+    if (messages != null) messages.close();
+    if (nicknames != null) nicknames.close();
     if (gameplay != null) gameplay.close();
     if (store != null) store.close();
     io.shutdown();

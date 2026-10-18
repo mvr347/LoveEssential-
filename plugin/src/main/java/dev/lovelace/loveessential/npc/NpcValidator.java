@@ -22,7 +22,8 @@ public final class NpcValidator {
           "teleport-on-stuck",
           "enabled-hours",
           "personal",
-          "baby");
+          "baby",
+          "line-of-sight");
   public static final Map<String, double[]> NUMERIC_OPTIONS =
       Map.ofEntries(
           Map.entry("activation-range", new double[] {4, 192}),
@@ -34,7 +35,9 @@ public final class NpcValidator {
           Map.entry("stuck-ticks", new double[] {20, 1200}),
           Map.entry("hour-from", new double[] {0, 23999}),
           Map.entry("hour-to", new double[] {0, 23999}),
-          Map.entry("follow-distance", new double[] {1, 32}));
+          Map.entry("follow-distance", new double[] {1, 32}),
+          Map.entry("interaction-volume", new double[] {0, 4}),
+          Map.entry("interaction-pitch", new double[] {.5, 2}));
   private final Predicate<String> lang, condition, action;
 
   public NpcValidator(
@@ -59,7 +62,9 @@ public final class NpcValidator {
                 "leggings",
                 "boots",
                 "follow-player",
-                "description-key")
+                "description-key",
+                "interaction-mode",
+                "interaction-sound")
             .contains(k);
   }
 
@@ -77,6 +82,16 @@ public final class NpcValidator {
     }
     return switch (k) {
       case "movement" -> Set.of("route", "follow", "stationary").contains(v);
+      case "interaction-mode" -> Set.of("RIGHT_CLICK", "LEFT_CLICK", "BOTH").contains(v);
+      case "interaction-sound" -> {
+        if (v.isEmpty()) yield true;
+        try {
+          org.bukkit.Sound.valueOf(v.toUpperCase(Locale.ROOT));
+          yield true;
+        } catch (IllegalArgumentException e) {
+          yield false;
+        }
+      }
       case "stuck-policy" -> Set.of("PAUSE", "SKIP", "RETURN_HOME").contains(v);
       case "skin" -> {
         boolean valid = v.isEmpty() || v.matches("[a-zA-Z0-9_]{1,16}");

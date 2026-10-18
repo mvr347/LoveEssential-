@@ -92,6 +92,7 @@ commands:
     - оседлать
   profile:
     aliases:
+    - userinfo
     - профиль
     - я
   hologram:
@@ -102,10 +103,49 @@ commands:
     aliases:
     - портал
     - врата
+  nick:
+    aliases: [nickname, ник, никнейм]
+  msg:
+    aliases: [tell, w, pm, лс]
+  reply:
+    aliases: [r, ответ]
+  ignore:
+    aliases: [игнор]
+  msgtoggle:
+    aliases: [личка]
+  invsee:
+    aliases: [инвентарь]
 permissions:
+  loveessential.nick:
+    default: true
+  loveessential.nick.color:
+    default: true
+  loveessential.nick.gradient:
+    default: true
+  loveessential.nick.others:
+    default: op
+  loveessential.messages:
+    default: true
+  loveessential.profile:
+    default: true
+  loveessential.profile.location:
+    default: op
+  loveessential.invsee:
+    default: op
+  loveessential.invsee.edit:
+    default: op
   loveessential.admin:
     default: op
     children:
+      loveessential.nick: true
+      loveessential.nick.color: true
+      loveessential.nick.gradient: true
+      loveessential.nick.others: true
+      loveessential.messages: true
+      loveessential.profile: true
+      loveessential.profile.location: true
+      loveessential.invsee: true
+      loveessential.invsee.edit: true
       loveessential.npc.view: true
       loveessential.npc.create: true
       loveessential.npc.edit: true

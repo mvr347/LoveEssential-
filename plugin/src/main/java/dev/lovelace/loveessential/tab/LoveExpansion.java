@@ -4,7 +4,6 @@ import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
 import java.util.function.Predicate;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -42,6 +41,9 @@ public final class LoveExpansion extends PlaceholderExpansion {
 
   @Override
   public String onRequest(OfflinePlayer offline, @NotNull String params) {
+    if (offline == null) return "";
+    var values = placeholders.playerValues(offline.getUniqueId());
+    if (values.containsKey(params)) return values.get(params);
     if (!(offline instanceof Player p) || !p.isOnline()) return "";
     return switch (params) {
       case "afk" -> Boolean.toString(afk.test(p));
@@ -52,8 +54,11 @@ public final class LoveExpansion extends PlaceholderExpansion {
           love.reputation(p).isPresent() ? Integer.toString(love.reputation(p).getAsInt()) : "";
       default -> {
         if (params.startsWith("text_") && lang.contains(params.substring(5)))
-          yield LegacyComponentSerializer.legacySection()
-              .serialize(placeholders.render(params.substring(5), p, p));
+          yield dev.lovelace.loveessential.module.Nicknames.LEGACY.serialize(
+              params.equals("text_tab.name")
+                      || params.startsWith("text_tab.groups.") && params.endsWith(".name")
+                  ? placeholders.renderName(params.substring(5), p, p)
+                  : placeholders.render(params.substring(5), p, p));
         yield null;
       }
     };

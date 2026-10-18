@@ -39,6 +39,11 @@ public final class NpcService implements Listener, AutoCloseable {
 
   private record Hook(int priority, InteractionProvider provider) {}
 
+  private enum Trigger {
+    RIGHT_CLICK,
+    LEFT_CLICK
+  }
+
   private final ExecutorService paths;
   private final NamespacedKey entityKey;
   private final Random random = new Random();
@@ -162,10 +167,14 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public CompletableFuture<NpcDefinition> save(NpcDefinition npc, long expected) {
+    return save(npc, expected, "api");
+  }
+
+  public CompletableFuture<NpcDefinition> save(NpcDefinition npc, long expected, String actor) {
     MainThread.require();
     validate(npc);
     return store
-        .save("npc", npc.id(), expected, npc.revision(expected + 1), npc.owner().toString())
+        .save("npc", npc.id(), expected, npc.revision(expected + 1), actor)
         .thenCompose(
             rev ->
                 main.call(
@@ -199,8 +208,12 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public CompletableFuture<Void> delete(String id, long revision) {
+    return delete(id, revision, "api");
+  }
+
+  public CompletableFuture<Void> delete(String id, long revision, String actor) {
     return store
-        .delete("npc", id, revision, "api")
+        .delete("npc", id, revision, actor)
         .thenCompose(
             v ->
                 main.call(
@@ -293,8 +306,10 @@ public final class NpcService implements Listener, AutoCloseable {
       spawnFailures.put(n.id(), tick + 200);
       plugin
           .getLogger()
-          .warning(
-              lang.text("logs.npc-failed") + " [" + n.id() + "] " + e.getClass().getSimpleName());
+          .log(
+              java.util.logging.Level.WARNING,
+              lang.text("logs.npc-failed") + " [" + n.id() + "/" + n.entityType() + "]",
+              e);
       return null;
     }
   }
@@ -363,6 +378,10 @@ public final class NpcService implements Listener, AutoCloseable {
       if (n.flag("baby", false)) age.setBaby();
       else age.setAdult();
     }
+    equip(e, n);
+  }
+
+  static void equip(LivingEntity e, NpcDefinition n) {
     for (var slot :
         Map.of(
                 "main-hand",
@@ -382,7 +401,8 @@ public final class NpcService implements Listener, AutoCloseable {
       var mat = Material.matchMaterial(material);
       if (mat != null && e.getEquipment() != null) {
         e.getEquipment().setItem(slot.getValue(), new ItemStack(mat));
-        e.getEquipment().setDropChance(slot.getValue(), 0);
+        // Paper rejects drop chances on non-Mob entities (Mannequin / ArmorStand).
+        if (e instanceof Mob) e.getEquipment().setDropChance(slot.getValue(), 0);
       }
     }
   }
@@ -525,7 +545,7 @@ public final class NpcService implements Listener, AutoCloseable {
     Route.Point point = null;
     if (follow) {
       Player p =
-          n.settings().containsKey("follow-player")
+          !n.option("follow-player", "").isBlank()
               ? Bukkit.getPlayerExact(n.option("follow-player", ""))
               : target(l, n.number("activation-range", 48));
       if (p == null || !p.getWorld().equals(l.entity.getWorld())) return;
@@ -708,6 +728,10 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public void interact(Player p, Entity e) {
+    interact(p, e, Trigger.RIGHT_CLICK);
+  }
+
+  private void interact(Player p, Entity e, Trigger trigger) {
     String id = identify(e).orElse(null);
     if (id == null) return;
     var n = definitions.get(id);
@@ -716,8 +740,12 @@ public final class NpcService implements Listener, AutoCloseable {
     if (instance == null
         || instance.preview
         || (instance.viewer != null && !instance.viewer.equals(p.getUniqueId()))) return;
+    String mode = n.option("interaction-mode", "BOTH");
+    if (mode.equals("RIGHT_CLICK") && trigger != Trigger.RIGHT_CLICK
+        || mode.equals("LEFT_CLICK") && trigger != Trigger.LEFT_CLICK) return;
     if (!accessible(p, n)
         || !p.canSee(e)
+        || n.flag("line-of-sight", false) && !p.hasLineOfSight(e)
         || p.getLocation().distanceSquared(e.getLocation())
             > Math.pow(n.number("interaction-range", 4), 2)) {
       lang.send(p, "errors.access");
@@ -729,6 +757,18 @@ public final class NpcService implements Listener, AutoCloseable {
     var event = new NpcInteractEvent(p, n);
     Bukkit.getPluginManager().callEvent(event);
     if (event.isCancelled()) return;
+    String soundName = n.option("interaction-sound", "");
+    if (!soundName.isBlank()) {
+      try {
+        p.playSound(
+            e.getLocation(),
+            Sound.valueOf(soundName.toUpperCase(Locale.ROOT)),
+            (float) n.number("interaction-volume", 1),
+            (float) n.number("interaction-pitch", 1));
+      } catch (IllegalArgumentException ignored) {
+        plugin.getLogger().warning(lang.text("logs.npc-sound-failed") + " [" + n.id() + "]");
+      }
+    }
     if (n.flag("pause-on-interact", true)) instance.pauseUntil = tick + 200;
     love.stat(p, "essential.npc.interactions", 1);
     for (var hook :
@@ -753,7 +793,8 @@ public final class NpcService implements Listener, AutoCloseable {
   public void click(PlayerInteractEntityEvent e) {
     if (identify(e.getRightClicked()).isPresent()) {
       e.setCancelled(true);
-      if (e.getHand() == EquipmentSlot.HAND) interact(e.getPlayer(), e.getRightClicked());
+      if (e.getHand() == EquipmentSlot.HAND)
+        interact(e.getPlayer(), e.getRightClicked(), Trigger.RIGHT_CLICK);
     }
   }
 
@@ -763,7 +804,15 @@ public final class NpcService implements Listener, AutoCloseable {
       var npc = identify(e.getEntity()).flatMap(this::get).orElse(null);
       if (npc == null || npc.flag("invulnerable", true)) e.setCancelled(true);
       if (e instanceof EntityDamageByEntityEvent by && by.getDamager() instanceof Player p)
-        interact(p, e.getEntity());
+        interact(p, e.getEntity(), Trigger.LEFT_CLICK);
+    }
+  }
+
+  @EventHandler
+  public void death(EntityDeathEvent e) {
+    if (identify(e.getEntity()).isPresent()) {
+      e.getDrops().clear();
+      e.setDroppedExp(0);
     }
   }
 

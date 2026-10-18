@@ -3,6 +3,7 @@ package dev.lovelace.loveessential.wizard;
 import com.google.gson.Gson;
 import dev.lovelace.loveessential.*;
 import dev.lovelace.loveessential.api.*;
+import dev.lovelace.loveessential.gui.MenuStyle;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.npc.*;
@@ -51,6 +52,23 @@ public final class NpcWizard implements Listener, AutoCloseable {
     Inventory inventory;
 
     ActionMenu() {}
+
+    public Inventory getInventory() {
+      return inventory;
+    }
+  }
+
+  private static final class ChoiceMenu implements InventoryHolder {
+    Inventory inventory;
+    final String field;
+    final int page;
+    final List<String> values;
+
+    ChoiceMenu(String field, int page, List<String> values) {
+      this.field = field;
+      this.page = page;
+      this.values = List.copyOf(values);
+    }
 
     public Inventory getInventory() {
       return inventory;
@@ -113,7 +131,81 @@ public final class NpcWizard implements Listener, AutoCloseable {
     }
   }
 
-  private static final int LAST_STEP = 6;
+  private static final String[][] FIELDS = {
+    {"template", "id", "name", "type", "spawn"},
+    {
+      "skin",
+      "helmet",
+      "chestplate",
+      "leggings",
+      "boots",
+      "main-hand",
+      "off-hand",
+      "pose",
+      "scale",
+      "baby",
+      "glowing",
+      "name-visible",
+      "silent"
+    },
+    {
+      "personal",
+      "visibility",
+      "access",
+      "require-auth",
+      "interaction-range",
+      "cooldown-ms",
+      "interaction-mode",
+      "line-of-sight",
+      "interaction-sound",
+      "interaction-volume",
+      "interaction-pitch"
+    },
+    {
+      "movement",
+      "speed",
+      "look-at",
+      "look-range",
+      "pause-on-interact",
+      "stuck-policy",
+      "activation-range",
+      "follow-player",
+      "follow-distance",
+      "stuck-ticks"
+    },
+    {
+      "point-add",
+      "point-mode",
+      "point-record",
+      "point-tool",
+      "point-show",
+      "point-edit",
+      "point-undo",
+      "point-redo"
+    },
+    {
+      "dialog-node",
+      "dialog-answer",
+      "dialog-start",
+      "dialog-condition",
+      "dialog-actions",
+      "actions"
+    },
+    {
+      "enabled-hours",
+      "hour-from",
+      "hour-to",
+      "enabled",
+      "collidable",
+      "gravity",
+      "invulnerable",
+      "avoid-water",
+      "can-open-doors",
+      "teleport-on-stuck"
+    }
+  };
+
+  private static final int LAST_STEP = FIELDS.length - 1;
 
   public NpcWizard(
       JavaPlugin plugin,
@@ -130,6 +222,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
     this.love = love;
     toolKey = new NamespacedKey(plugin, "route-tool");
     Bukkit.getPluginManager().registerEvents(this, plugin);
+  }
+
+  public void cancelInput(Player p) {
+    prompts.remove(p.getUniqueId());
   }
 
   private boolean permitted(Player p) {
@@ -292,6 +388,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
     }
     if (!permitted(p)) return;
     try {
+      if (value.equalsIgnoreCase("cancel") || value.equalsIgnoreCase("отмена")) {
+        show(p);
+        return;
+      }
       prompt.consumer().accept(p, value);
       if (sessions.containsKey(p.getUniqueId()) && !prompts.containsKey(p.getUniqueId())) show(p);
     } catch (RuntimeException e) {
@@ -303,9 +403,12 @@ public final class NpcWizard implements Listener, AutoCloseable {
     p.closeInventory();
     prompts.put(p.getUniqueId(), new Prompt(System.currentTimeMillis() + 180000, consumer));
     lang.send(p, key);
+    lang.send(p, "gui.prompt-cancel");
   }
 
   public void set(Player p, String key, String value) {
+    if (Set.of("skin", "follow-player", "interaction-sound").contains(key)
+        && (value.equals("-") || value.equals("NONE"))) value = "";
     var w = require(p);
     var n = w.draft.npc();
     switch (key) {
@@ -544,7 +647,12 @@ public final class NpcWizard implements Listener, AutoCloseable {
                       }
                     },
                     pluginExecutor()))
-        .thenCompose(v -> main.call(() -> npcs.save(snapshot.npc(), snapshot.npc().revision())))
+        .thenCompose(
+            v ->
+                main.call(
+                    () ->
+                        npcs.save(
+                            snapshot.npc(), snapshot.npc().revision(), p.getUniqueId().toString())))
         .thenCompose(Function.identity())
         .thenCompose(n -> store.complete(publication).thenApply(v -> n))
         .whenComplete(
@@ -739,11 +847,14 @@ public final class NpcWizard implements Listener, AutoCloseable {
     require(p);
     var holder = new ConditionMenu(field);
     holder.inventory = Bukkit.createInventory(holder, 54, lang.render("wizard.condition-title"));
+    MenuStyle.frame(holder.inventory);
+    holder.inventory.setItem(52, button(Material.BARRIER, "gui.close"));
     for (int i = 0; i < CONDITION_TYPES.size(); i++)
       holder.inventory.setItem(
-          10 + i, button(Material.PAPER, "wizard.conditions." + CONDITION_TYPES.get(i)));
-    holder.inventory.setItem(45, button(Material.ARROW, "common.back"));
-    holder.inventory.setItem(49, button(Material.BARRIER, "wizard.clear-conditions"));
+          MenuStyle.slot(i, CONDITION_TYPES.size()),
+          button(Material.TRIPWIRE_HOOK, "wizard.conditions." + CONDITION_TYPES.get(i)));
+    holder.inventory.setItem(51, button(Material.ARROW, "common.back"));
+    holder.inventory.setItem(50, button(Material.BARRIER, "wizard.clear-conditions"));
     p.openInventory(holder.inventory);
   }
 
@@ -804,12 +915,14 @@ public final class NpcWizard implements Listener, AutoCloseable {
     require(p);
     var holder = new ActionMenu();
     holder.inventory = Bukkit.createInventory(holder, 54, lang.render("wizard.action-title"));
+    MenuStyle.frame(holder.inventory);
+    holder.inventory.setItem(52, button(Material.BARRIER, "gui.close"));
     for (int i = 0; i < ACTION_TYPES.size(); i++)
       holder.inventory.setItem(
           10 + i,
           button(Material.PAPER, "wizard.action-types." + ACTION_TYPES.get(i).replace(':', '_')));
-    holder.inventory.setItem(45, button(Material.ARROW, "common.back"));
-    holder.inventory.setItem(49, button(Material.BARRIER, "wizard.clear-actions"));
+    holder.inventory.setItem(51, button(Material.ARROW, "common.back"));
+    holder.inventory.setItem(50, button(Material.BARRIER, "wizard.clear-actions"));
     p.openInventory(holder.inventory);
   }
 
@@ -876,52 +989,24 @@ public final class NpcWizard implements Listener, AutoCloseable {
             holder,
             54,
             lang.render(
-                "wizard.title",
+                "gui.wizard-title",
                 Map.of(
                     "step", Integer.toString(step + 1), "total", Integer.toString(LAST_STEP + 1))));
     holder.inventory = inv;
-    inv.setItem(45, button(Material.ARROW, "common.back"));
-    inv.setItem(53, button(Material.ARROW, "common.next"));
-    inv.setItem(47, button(Material.WRITABLE_BOOK, "common.save-draft"));
-    inv.setItem(48, button(Material.BARRIER, "common.discard"));
-    inv.setItem(49, button(Material.ENDER_EYE, "common.preview"));
-    inv.setItem(51, button(Material.LIME_CONCRETE, "common.publish"));
-    String[][] keys = {
-      {"template", "id", "name", "type", "spawn"},
-      {"skin", "helmet", "main-hand", "pose", "scale", "glowing", "name-visible"},
-      {"personal", "visibility", "access", "require-auth", "interaction-range", "cooldown-ms"},
-      {
-        "movement",
-        "speed",
-        "look-at",
-        "look-range",
-        "pause-on-interact",
-        "stuck-policy",
-        "activation-range"
-      },
-      {
-        "point-add",
-        "point-mode",
-        "point-record",
-        "point-tool",
-        "point-show",
-        "point-edit",
-        "point-undo",
-        "point-redo"
-      },
-      {
-        "dialog-node",
-        "dialog-answer",
-        "dialog-start",
-        "dialog-condition",
-        "dialog-actions",
-        "actions"
-      },
-      {"enabled-hours", "hour-from", "hour-to", "enabled", "collidable", "gravity", "invulnerable"}
-    };
-    for (int i = 0; i < keys[step].length; i++) {
-      String key = keys[step][i];
-      var item = button(Material.PAPER, "wizard.fields." + key);
+    MenuStyle.frame(inv);
+    inv.setItem(2, button(Material.WRITABLE_BOOK, "common.save-draft"));
+    inv.setItem(3, button(Material.BARRIER, "common.discard"));
+    inv.setItem(5, button(Material.ENDER_EYE, "common.preview"));
+    inv.setItem(6, button(Material.BOOK, "wizard.sections-title"));
+    inv.setItem(0, button(Material.PLAYER_HEAD, "wizard.sections." + step));
+    if (step > 0) inv.setItem(36, button(Material.ARROW, "gui.previous"));
+    if (step < LAST_STEP) inv.setItem(44, button(Material.ARROW, "common.next"));
+    inv.setItem(50, button(Material.LIME_CONCRETE, "common.publish"));
+    inv.setItem(51, button(Material.ARROW, "common.back"));
+    inv.setItem(52, button(Material.BARRIER, "gui.close"));
+    for (int i = 0; i < FIELDS[step].length; i++) {
+      String key = FIELDS[step][i];
+      var item = button(fieldIcon(key), "wizard.fields." + key);
       var meta = item.getItemMeta();
       String value =
           w.draft
@@ -937,21 +1022,163 @@ public final class NpcWizard implements Listener, AutoCloseable {
                             .getOrDefault(
                                 w.draft.npc().nameKey(), lang.text(w.draft.npc().nameKey()));
                     case "type" -> w.draft.npc().entityType();
-                    default -> "";
+                    case "enabled" -> Boolean.toString(w.draft.npc().enabled());
+                    default -> NpcOptions.defaultValue(key);
                   });
-      meta.lore(List.of(lang.render("wizard.value", Map.of("value", value))));
+      meta.lore(
+          List.of(
+              lang.render("wizard.value", Map.of("value", value)),
+              lang.render("gui.separator"),
+              lang.render("gui.click.edit")));
+      meta.displayName(
+          lang.render("wizard.fields." + key)
+              .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+      meta.lore(
+          meta.lore().stream()
+              .map(c -> c.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
+              .toList());
       item.setItemMeta(meta);
-      inv.setItem(10 + i, item);
+      inv.setItem(MenuStyle.slot(i, FIELDS[step].length), item);
     }
     p.openInventory(inv);
   }
 
   private ItemStack button(Material material, String key) {
-    var item = new ItemStack(material);
-    var meta = item.getItemMeta();
-    meta.displayName(lang.render(key));
-    item.setItemMeta(meta);
-    return item;
+    return MenuStyle.button(lang, material, key, "gui.separator", "gui.click.open");
+  }
+
+  private Material fieldIcon(String key) {
+    if (NpcValidator.BOOLEAN_OPTIONS.contains(key) || key.equals("enabled")) return Material.LEVER;
+    if (NpcValidator.NUMERIC_OPTIONS.containsKey(key)) return Material.COMPARATOR;
+    if (NpcOptions.EQUIPMENT.contains(key))
+      return switch (key) {
+        case "helmet" -> Material.IRON_HELMET;
+        case "chestplate" -> Material.IRON_CHESTPLATE;
+        case "leggings" -> Material.IRON_LEGGINGS;
+        case "boots" -> Material.IRON_BOOTS;
+        case "off-hand" -> Material.SHIELD;
+        default -> Material.IRON_SWORD;
+      };
+    if (key.startsWith("point")) return Material.RAIL;
+    if (key.startsWith("dialog") || key.equals("actions")) return Material.WRITABLE_BOOK;
+    return switch (key) {
+      case "skin", "type", "name" -> Material.PLAYER_HEAD;
+      case "visibility", "access" -> Material.IRON_DOOR;
+      case "interaction-sound" -> Material.NOTE_BLOCK;
+      case "movement", "spawn", "follow-player" -> Material.COMPASS;
+      case "template" -> Material.BOOKSHELF;
+      default -> Material.NAME_TAG;
+    };
+  }
+
+  private static int fieldIndex(int slot, int count) {
+    for (int i = 0; i < count; i++) if (MenuStyle.slot(i, count) == slot) return i;
+    return -1;
+  }
+
+  private void choices(Player p, String field, int page) {
+    require(p);
+    List<String> values =
+        field.equals("sections")
+            ? java.util.stream.IntStream.rangeClosed(0, LAST_STEP)
+                .mapToObj(Integer::toString)
+                .toList()
+            : NpcOptions.choices(field, plugin.getConfig());
+    var m = new ChoiceMenu(field, page, values);
+    m.inventory =
+        Bukkit.createInventory(
+            m,
+            54,
+            lang.render(
+                field.equals("sections") ? "wizard.sections-title" : "wizard.fields." + field));
+    MenuStyle.frame(m.inventory);
+    int count = Math.min(21, values.size() - page * 21);
+    for (int i = 0; i < count; i++) {
+      String value = values.get(page * 21 + i);
+      Material material =
+          NpcOptions.EQUIPMENT.contains(field) ? Material.matchMaterial(value) : fieldIcon(field);
+      if (material == null || material.isAir()) material = Material.BARRIER;
+      String labelKey =
+          field.equals("sections") ? "wizard.sections." + value : "wizard.choices." + value;
+      var title =
+          lang.contains(labelKey)
+              ? lang.render(labelKey)
+              : lang.render("gui.label", Map.of("name", value));
+      if (NpcOptions.EQUIPMENT.contains(field) && !material.equals(Material.BARRIER))
+        title = net.kyori.adventure.text.Component.translatable(material.translationKey());
+      m.inventory.setItem(
+          MenuStyle.slot(i, count),
+          MenuStyle.item(
+              material,
+              title,
+              List.of(lang.render("gui.separator"), lang.render("gui.click.select"))));
+    }
+    if (page > 0) m.inventory.setItem(36, button(Material.ARROW, "gui.previous"));
+    if ((page + 1) * 21 < values.size())
+      m.inventory.setItem(44, button(Material.ARROW, "common.next"));
+    if (!field.equals("sections"))
+      m.inventory.setItem(50, button(Material.WRITABLE_BOOK, "gui.manual-input"));
+    m.inventory.setItem(51, button(Material.ARROW, "common.back"));
+    m.inventory.setItem(52, button(Material.BARRIER, "gui.close"));
+    p.openInventory(m.inventory);
+  }
+
+  @EventHandler
+  public void choiceClick(InventoryClickEvent e) {
+    if (!(e.getView().getTopInventory().getHolder() instanceof ChoiceMenu m)) return;
+    e.setCancelled(true);
+    if (!(e.getWhoClicked() instanceof Player p)) return;
+    int clickedSlot = e.getRawSlot();
+    Bukkit.getScheduler()
+        .runTask(
+            plugin,
+            () -> {
+              if (!p.isOnline()
+                  || p.getOpenInventory().getTopInventory() == null
+                  || p.getOpenInventory().getTopInventory().getHolder() != m) return;
+              try {
+                require(p);
+                int slot = clickedSlot;
+                if (slot == 52) {
+                  p.closeInventory();
+                  return;
+                }
+                if (slot == 51) {
+                  show(p);
+                  return;
+                }
+                if (slot == 36 && m.page > 0) {
+                  choices(p, m.field, m.page - 1);
+                  return;
+                }
+                if (slot == 44 && (m.page + 1) * 21 < m.values.size()) {
+                  choices(p, m.field, m.page + 1);
+                  return;
+                }
+                if (slot == 50 && !m.field.equals("sections")) {
+                  ask(
+                      p,
+                      "wizard.prompt-value",
+                      (who, v) -> {
+                        if (m.field.equals("template")) template(who, v);
+                        else set(who, m.field, v);
+                      });
+                  return;
+                }
+                int index = fieldIndex(slot, Math.min(21, m.values.size() - m.page * 21));
+                if (index < 0) return;
+                String value = m.values.get(m.page * 21 + index);
+                if (m.field.equals("sections")) {
+                  page(p, Integer.parseInt(value));
+                  return;
+                }
+                if (m.field.equals("template")) template(p, value);
+                else set(p, m.field, value);
+                show(p);
+              } catch (RuntimeException ex) {
+                lang.send(p, lang.contains(ex.getMessage()) ? ex.getMessage() : "errors.input");
+              }
+            });
   }
 
   @EventHandler
@@ -959,49 +1186,77 @@ public final class NpcWizard implements Listener, AutoCloseable {
     if (!(e.getView().getTopInventory().getHolder() instanceof ConditionMenu m)) return;
     e.setCancelled(true);
     if (!(e.getWhoClicked() instanceof Player p)) return;
-    try {
-      if (e.getRawSlot() == 45) {
-        show(p);
-        return;
-      }
-      if (e.getRawSlot() == 49) {
-        set(p, m.field, gson.toJson(Condition.always()));
-        show(p);
-        return;
-      }
-      int i = e.getRawSlot() - 10;
-      if (i >= 0 && i < CONDITION_TYPES.size()) {
-        buildCondition(p, m.field, CONDITION_TYPES.get(i));
-        if (!prompts.containsKey(p.getUniqueId())) show(p);
-      }
-    } catch (RuntimeException ex) {
-      lang.send(p, "errors.input");
-    }
+    int clickedSlot = e.getRawSlot();
+    Bukkit.getScheduler()
+        .runTask(
+            plugin,
+            () -> {
+              if (!p.isOnline()
+                  || p.getOpenInventory().getTopInventory() == null
+                  || p.getOpenInventory().getTopInventory().getHolder() != m) return;
+              try {
+                require(p);
+                if (clickedSlot == 52) {
+                  p.closeInventory();
+                  return;
+                }
+                if (clickedSlot == 51) {
+                  show(p);
+                  return;
+                }
+                if (clickedSlot == 50) {
+                  set(p, m.field, gson.toJson(Condition.always()));
+                  show(p);
+                  return;
+                }
+                int i = fieldIndex(clickedSlot, CONDITION_TYPES.size());
+                if (i >= 0 && i < CONDITION_TYPES.size()) {
+                  buildCondition(p, m.field, CONDITION_TYPES.get(i));
+                  if (!prompts.containsKey(p.getUniqueId())) show(p);
+                }
+              } catch (RuntimeException ex) {
+                lang.send(p, "errors.input");
+              }
+            });
   }
 
   @EventHandler
   public void actionClick(InventoryClickEvent e) {
-    if (!(e.getView().getTopInventory().getHolder() instanceof ActionMenu)) return;
+    if (!(e.getView().getTopInventory().getHolder() instanceof ActionMenu m)) return;
     e.setCancelled(true);
     if (!(e.getWhoClicked() instanceof Player p)) return;
-    try {
-      if (e.getRawSlot() == 45) {
-        show(p);
-        return;
-      }
-      if (e.getRawSlot() == 49) {
-        set(p, "actions", "[]");
-        show(p);
-        return;
-      }
-      int i = e.getRawSlot() - 10;
-      if (i >= 0 && i < ACTION_TYPES.size()) {
-        buildAction(p, ACTION_TYPES.get(i));
-        if (!prompts.containsKey(p.getUniqueId())) show(p);
-      }
-    } catch (RuntimeException ex) {
-      lang.send(p, "errors.input");
-    }
+    int clickedSlot = e.getRawSlot();
+    Bukkit.getScheduler()
+        .runTask(
+            plugin,
+            () -> {
+              if (!p.isOnline()
+                  || p.getOpenInventory().getTopInventory() == null
+                  || p.getOpenInventory().getTopInventory().getHolder() != m) return;
+              try {
+                require(p);
+                if (clickedSlot == 52) {
+                  p.closeInventory();
+                  return;
+                }
+                if (clickedSlot == 51) {
+                  show(p);
+                  return;
+                }
+                if (clickedSlot == 50) {
+                  set(p, "actions", "[]");
+                  show(p);
+                  return;
+                }
+                int i = fieldIndex(clickedSlot, ACTION_TYPES.size());
+                if (i >= 0 && i < ACTION_TYPES.size()) {
+                  buildAction(p, ACTION_TYPES.get(i));
+                  if (!prompts.containsKey(p.getUniqueId())) show(p);
+                }
+              } catch (RuntimeException ex) {
+                lang.send(p, "errors.input");
+              }
+            });
   }
 
   @EventHandler
@@ -1010,127 +1265,136 @@ public final class NpcWizard implements Listener, AutoCloseable {
     e.setCancelled(true);
     if (!(e.getWhoClicked() instanceof Player p) || e.getRawSlot() < 0 || e.getRawSlot() >= 54)
       return;
-    try {
-      int slot = e.getRawSlot();
-      if (slot == 45) {
-        page(p, menu.step - 1);
-        return;
-      }
-      if (slot == 53) {
-        page(p, menu.step + 1);
-        return;
-      }
-      if (slot == 47) {
-        save(p);
-        return;
-      }
-      if (slot == 48) {
-        ask(
-            p,
-            "wizard.confirm-discard",
-            (who, v) -> {
-              if (v.equalsIgnoreCase("DELETE")) discard(who);
+    int clickedSlot = e.getRawSlot();
+    Bukkit.getScheduler()
+        .runTask(
+            plugin,
+            () -> {
+              if (!p.isOnline()
+                  || p.getOpenInventory().getTopInventory() == null
+                  || p.getOpenInventory().getTopInventory().getHolder() != menu) return;
+              try {
+                require(p);
+                int slot = clickedSlot;
+                if (slot == 52) {
+                  p.closeInventory();
+                  return;
+                }
+                if (slot == 51) {
+                  Bukkit.dispatchCommand(p, "loveessential:loveessential npc");
+                  return;
+                }
+                if (slot == 6) {
+                  choices(p, "sections", 0);
+                  return;
+                }
+                if (slot == 36) {
+                  page(p, menu.step - 1);
+                  return;
+                }
+                if (slot == 44) {
+                  page(p, menu.step + 1);
+                  return;
+                }
+                if (slot == 2) {
+                  save(p);
+                  return;
+                }
+                if (slot == 3) {
+                  ask(
+                      p,
+                      "wizard.confirm-discard",
+                      (who, v) -> {
+                        if (v.equalsIgnoreCase("DELETE")) discard(who);
+                      });
+                  return;
+                }
+                if (slot == 5) {
+                  preview(p);
+                  return;
+                }
+                if (slot == 50) {
+                  publish(p);
+                  return;
+                }
+
+                int index = fieldIndex(slot, FIELDS[menu.step].length);
+                if (index < 0 || index >= FIELDS[menu.step].length) return;
+                String key = FIELDS[menu.step][index];
+                if (NpcValidator.BOOLEAN_OPTIONS.contains(key) || key.equals("enabled")) {
+                  var n = require(p).draft.npc();
+                  boolean value =
+                      key.equals("enabled")
+                          ? n.enabled()
+                          : n.flag(key, Boolean.parseBoolean(NpcOptions.defaultValue(key)));
+                  set(p, key, Boolean.toString(!value));
+                  show(p);
+                  return;
+                }
+                if (!NpcOptions.choices(key, plugin.getConfig()).isEmpty()) {
+                  choices(p, key, 0);
+                  return;
+                }
+                switch (key) {
+                  case "spawn" -> {
+                    spawnHere(p);
+                    show(p);
+                  }
+                  case "visibility", "access" -> showConditions(p, key);
+                  case "actions" -> showActions(p);
+                  case "point-add" -> {
+                    addPoint(p);
+                    show(p);
+                  }
+                  case "point-record", "point-tool", "point-show", "point-undo", "point-redo" ->
+                      path(p, key.substring(6), new String[0]);
+                  case "point-mode" ->
+                      ask(p, "wizard.prompt-mode", (who, v) -> path(who, "mode", new String[] {v}));
+                  case "point-edit" ->
+                      ask(
+                          p,
+                          "wizard.prompt-point",
+                          (who, v) -> path(who, "point", v.split(" ", 3)));
+                  case "dialog-node" ->
+                      ask(
+                          p,
+                          "wizard.prompt-node",
+                          (who, v) -> dialog(who, "node", v.split(" ", 2)));
+                  case "dialog-answer" ->
+                      ask(
+                          p,
+                          "wizard.prompt-answer",
+                          (who, v) -> dialog(who, "answer", v.split(" ", 4)));
+                  case "dialog-start" ->
+                      ask(
+                          p,
+                          "wizard.prompt-start",
+                          (who, v) -> dialog(who, "start", new String[] {v}));
+                  case "dialog-condition" ->
+                      ask(
+                          p,
+                          "wizard.prompt-answer-condition",
+                          (who, v) -> dialog(who, "answer-condition", v.split(" ", 3)));
+                  case "dialog-actions" ->
+                      ask(
+                          p,
+                          "wizard.prompt-answer-actions",
+                          (who, v) -> dialog(who, "answer-actions", v.split(" ", 3)));
+                  case "template" -> ask(p, "wizard.prompt-template", this::template);
+                  default -> ask(p, "wizard.prompt-value", (who, v) -> set(who, key, v));
+                }
+              } catch (RuntimeException ex) {
+                lang.send(p, lang.contains(ex.getMessage()) ? ex.getMessage() : "errors.input");
+              }
             });
-        return;
-      }
-      if (slot == 49) {
-        preview(p);
-        return;
-      }
-      if (slot == 51) {
-        publish(p);
-        return;
-      }
-      String[][] keys = {
-        {"template", "id", "name", "type", "spawn"},
-        {"skin", "helmet", "main-hand", "pose", "scale", "glowing", "name-visible"},
-        {"personal", "visibility", "access", "require-auth", "interaction-range", "cooldown-ms"},
-        {
-          "movement",
-          "speed",
-          "look-at",
-          "look-range",
-          "pause-on-interact",
-          "stuck-policy",
-          "activation-range"
-        },
-        {
-          "point-add",
-          "point-mode",
-          "point-record",
-          "point-tool",
-          "point-show",
-          "point-edit",
-          "point-undo",
-          "point-redo"
-        },
-        {
-          "dialog-node",
-          "dialog-answer",
-          "dialog-start",
-          "dialog-condition",
-          "dialog-actions",
-          "actions"
-        },
-        {
-          "enabled-hours",
-          "hour-from",
-          "hour-to",
-          "enabled",
-          "collidable",
-          "gravity",
-          "invulnerable"
-        }
-      };
-      int index = slot - 10;
-      if (index < 0 || index >= keys[menu.step].length) return;
-      String key = keys[menu.step][index];
-      switch (key) {
-        case "spawn" -> {
-          spawnHere(p);
-          show(p);
-        }
-        case "visibility", "access" -> showConditions(p, key);
-        case "actions" -> showActions(p);
-        case "point-add" -> {
-          addPoint(p);
-          show(p);
-        }
-        case "point-record", "point-tool", "point-show", "point-undo", "point-redo" ->
-            path(p, key.substring(6), new String[0]);
-        case "point-mode" ->
-            ask(p, "wizard.prompt-mode", (who, v) -> path(who, "mode", new String[] {v}));
-        case "point-edit" ->
-            ask(p, "wizard.prompt-point", (who, v) -> path(who, "point", v.split(" ", 3)));
-        case "dialog-node" ->
-            ask(p, "wizard.prompt-node", (who, v) -> dialog(who, "node", v.split(" ", 2)));
-        case "dialog-answer" ->
-            ask(p, "wizard.prompt-answer", (who, v) -> dialog(who, "answer", v.split(" ", 4)));
-        case "dialog-start" ->
-            ask(p, "wizard.prompt-start", (who, v) -> dialog(who, "start", new String[] {v}));
-        case "dialog-condition" ->
-            ask(
-                p,
-                "wizard.prompt-answer-condition",
-                (who, v) -> dialog(who, "answer-condition", v.split(" ", 3)));
-        case "dialog-actions" ->
-            ask(
-                p,
-                "wizard.prompt-answer-actions",
-                (who, v) -> dialog(who, "answer-actions", v.split(" ", 3)));
-        case "template" -> ask(p, "wizard.prompt-template", this::template);
-        default -> ask(p, "wizard.prompt-value", (who, v) -> set(who, key, v));
-      }
-    } catch (RuntimeException ex) {
-      lang.send(p, lang.contains(ex.getMessage()) ? ex.getMessage() : "errors.input");
-    }
   }
 
   @EventHandler
   public void drag(InventoryDragEvent e) {
     if (e.getView().getTopInventory().getHolder() instanceof Menu
         || e.getView().getTopInventory().getHolder() instanceof ConditionMenu
-        || e.getView().getTopInventory().getHolder() instanceof ActionMenu) e.setCancelled(true);
+        || e.getView().getTopInventory().getHolder() instanceof ActionMenu
+        || e.getView().getTopInventory().getHolder() instanceof ChoiceMenu) e.setCancelled(true);
   }
 
   @EventHandler(priority = EventPriority.LOWEST)
