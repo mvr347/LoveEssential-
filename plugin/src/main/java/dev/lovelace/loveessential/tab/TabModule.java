@@ -151,7 +151,7 @@ public final class TabModule implements Listener, AutoCloseable {
         var formatted =
             placeholders
                 .render(g.prefix(), target, target)
-                .append(placeholders.render(g.name(), target, target))
+                .append(placeholders.renderName(g.name(), target, target))
                 .append(placeholders.render(g.suffix(), target, target));
         if (!formatted.equals(target.playerListName())) target.playerListName(formatted);
       }

@@ -103,6 +103,8 @@ commands:
     aliases:
     - портал
     - врата
+  nick:
+    aliases: [nickname, ник, никнейм]
   msg:
     aliases: [tell, w, pm, лс]
   reply:
@@ -114,6 +116,14 @@ commands:
   invsee:
     aliases: [инвентарь]
 permissions:
+  loveessential.nick:
+    default: true
+  loveessential.nick.color:
+    default: true
+  loveessential.nick.gradient:
+    default: true
+  loveessential.nick.others:
+    default: op
   loveessential.messages:
     default: true
   loveessential.profile:
@@ -127,6 +137,10 @@ permissions:
   loveessential.admin:
     default: op
     children:
+      loveessential.nick: true
+      loveessential.nick.color: true
+      loveessential.nick.gradient: true
+      loveessential.nick.others: true
       loveessential.messages: true
       loveessential.profile: true
       loveessential.profile.location: true

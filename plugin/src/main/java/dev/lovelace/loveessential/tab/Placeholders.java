@@ -35,6 +35,23 @@ public final class Placeholders {
     return lang.lines(key).stream().map(line -> renderText(line, viewer, target, 0)).toList();
   }
 
+  private java.util.function.Function<Player, Component> nickname =
+      p -> Component.text(p.getName());
+  private java.util.function.BooleanSupplier nicknameTab = () -> false;
+
+  public void nicknames(
+      java.util.function.Function<Player, Component> provider,
+      java.util.function.BooleanSupplier tab) {
+    nickname = provider;
+    nicknameTab = tab;
+  }
+
+  public Component renderName(String key, Player viewer, Player target) {
+    String template = lang.text(key);
+    if (nicknameTab.getAsBoolean()) template = template.replace("<player>", "<nickname>");
+    return renderText(template, viewer, target, 0);
+  }
+
   private final MiniMessage mm = MiniMessage.miniMessage();
 
   public Placeholders(Lang lang, LoveBridge love, Predicate<Player> afk) {
@@ -88,6 +105,8 @@ public final class Placeholders {
         .apply(target.getUniqueId())
         .forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
     variables.forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
+    b.resolver(Placeholder.component("nickname", nickname.apply(target)));
+    b.resolver(Placeholder.unparsed("real_name", target.getName()));
     b.resolver(
         Placeholder.component(
             "afk", afk.test(target) ? lang.render("tab.status.afk") : Component.empty()));

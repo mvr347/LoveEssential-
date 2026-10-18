@@ -233,7 +233,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     capture(target);
     m.inventory.setItem(
         0,
-        head(target, lang.render("players.title", Map.of("player", target.getName())), List.of()));
+        head(
+            target,
+            lang.render("players.title", Map.of("player", target.getName())),
+            List.of(placeholders.render("nick.profile-name", viewer, target))));
     var cards = plugin.getConfig().getConfigurationSection("profile.cards");
     if (cards != null) {
       var keys =

@@ -24,6 +24,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private final NpcWizard wizard;
   private final DialogService dialogs;
   private final Gameplay gameplay;
+  private final dev.lovelace.loveessential.module.Nicknames nicknames;
   private final dev.lovelace.loveessential.module.PrivateMessages messages;
   private final dev.lovelace.loveessential.module.InventoryInspector inventories;
   private final dev.lovelace.loveessential.module.PlayerProfiles profiles;
@@ -43,7 +44,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
       dev.lovelace.loveessential.gui.ControlMenus menus,
       dev.lovelace.loveessential.module.PrivateMessages messages,
       dev.lovelace.loveessential.module.InventoryInspector inventories,
-      dev.lovelace.loveessential.module.PlayerProfiles profiles) {
+      dev.lovelace.loveessential.module.PlayerProfiles profiles,
+      dev.lovelace.loveessential.module.Nicknames nicknames) {
     this.plugin = plugin;
     this.main = main;
     this.lang = lang;
@@ -57,6 +59,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.messages = messages;
     this.inventories = inventories;
     this.profiles = profiles;
+    this.nicknames = nicknames;
   }
 
   @Override
@@ -207,6 +210,22 @@ public final class Commands implements CommandExecutor, TabCompleter {
         if (cmd.equals("msg") && args.length == 0) profiles.players(p, "msg", 0);
         else if (cmd.equals("ignore") && args.length == 0) profiles.preferences(p, 0);
         else messages.command(p, cmd, args);
+        return true;
+      }
+      if (cmd.equals("nick")) {
+        if (args.length == 0) menus.direct(p, () -> menus.nickname(p));
+        else {
+          Player target = p;
+          String[] options = args;
+          if (args[0].equalsIgnoreCase("player")) {
+            if (!p.hasPermission("loveessential.nick.others"))
+              throw new IllegalArgumentException("errors.permission");
+            if (args.length < 3) throw new IllegalArgumentException("nick.usage");
+            target = messages.target(p, args[1]);
+            options = slice(args, 2);
+          }
+          complete(p, nicknames.change(p, target, options), "nick.saved");
+        }
         return true;
       }
       if (cmd.equals("profile")) {

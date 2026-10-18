@@ -395,6 +395,7 @@ gui:
     blocked: <dark_gray>ЛКМ — действие заблокировано
     delete: <green>ЛКМ <dark_gray>— <gray>удалить с подтверждением
   module-labels:
+    nickname: Никнеймы
     messages: Личные сообщения
     inventory: Просмотр инвентаря
     profile: Профили игроков
@@ -414,6 +415,7 @@ gui:
     joinquit: Вход и выход
     motd: Описание сервера
   module-names:
+    nickname: <gold>Никнеймы
     messages: <gold>Личные сообщения
     inventory: <gold>Просмотр инвентаря
     profile: <gold>Профили игроков
@@ -433,6 +435,7 @@ gui:
     joinquit: <gold>Вход и выход
     motd: <gold>Описание сервера
   command-help:
+    nick: <gray>Изменить никнейм, цвет или градиент; сбросить к имени аккаунта.
     msg: <gray>Личное сообщение или меню выбора получателя.
     reply: <gray>Ответить последнему собеседнику.
     ignore: <gray>Игнорировать игрока или открыть настройки личных сообщений.
@@ -460,6 +463,23 @@ gui:
     hologram: <gray>Создать, переместить или удалить голограмму.
     portal: <gray>Настроить область и назначение портала.
   settings:
+    nickname:
+      min-length:
+        _label: <gold>Минимальная длина ника
+      max-length:
+        _label: <gold>Максимальная длина ника
+      prevent-impersonation:
+        _label: <gold>Защита от подмены чужого имени
+      default-color:
+        _label: <gold>Цвет по умолчанию, пусто — без цвета
+      apply-display-name:
+        _label: <gold>Использовать как отображаемое имя Bukkit
+      apply-to-tab:
+        _label: <gold>Использовать в TAB
+      apply-to-messages:
+        _label: <gold>Использовать в личных сообщениях
+      gradients:
+        _label: <gold>Наборы цветов градиента
     messages:
       max-length:
         _label: <gold>Максимальная длина сообщения
@@ -999,3 +1019,53 @@ players:
       - '<gray>Невидимость: <white><vanished_state>'
   'yes': Да
   'no': Нет
+nick:
+  profile-name: '<gray>Никнейм: <nickname>'
+  title: <gold>Никнейм и оформление
+  set: <gold>Изменить никнейм
+  color: <gold>Один цвет
+  gradient: <gold>Градиент
+  clear-style: <gold>Сбросить цвет и градиент
+  reset: <gold>Вернуть имя аккаунта и стандартное оформление
+  custom-color: <gold>Свой HEX-цвет
+  custom-gradient: <gold>Свой градиент
+  preview: <gray>Так выглядит ваш никнейм сейчас.
+  real-name: '<gray>Имя аккаунта: <white><name>'
+  prompt-name: <yellow>Введите никнейм — буквы, цифры и _. Пробелы и теги не допускаются.
+  prompt-color: '<yellow>Введите HEX-цвет, например #ff6699, или название, например gold.'
+  prompt-gradient: '<yellow>Введите 2–5 цветов через пробел, например #ff6699 #55ffff.'
+  loading: <yellow>Никнейм загружается или сохраняется. Повторите через секунду.
+  saved: <green>Никнейм и оформление сохранены.
+  invalid-name: <red>Недопустимый никнейм. Используйте буквы, цифры и _ в пределах настроенной длины.
+  invalid-color: '<red>Неизвестный цвет. Пример: #ff6699 или gold.'
+  taken: <red>Это имя занято другим игроком.
+  usage:
+  - '<yellow>/le nick <gray>— открыть меню'
+  - '<yellow>/le nick set Имя <gray>— изменить никнейм'
+  - '<yellow>/le nick color gold <gray>— выбрать цвет, в том числе HEX'
+  - '<yellow>/le nick gradient #ff6699 #55ffff <gray>— градиент из 2–5 цветов'
+  - '<yellow>/le nick color reset <gray>— сбросить оформление, сохранив ник'
+  - '<yellow>/le nick reset <gray>— вернуть имя аккаунта и стандартное оформление'
+  - '<yellow>/le nick player Игрок set Имя <gray>— изменить чужой ник при наличии права'
+  gradients:
+    kingdom: <gold>Королевское золото
+    sunset: <gold>Закат
+    ocean: <gold>Океан
+    forest: <gold>Лес
+  colors:
+    black: Чёрный
+    dark_blue: Тёмно-синий
+    dark_green: Тёмно-зелёный
+    dark_aqua: Тёмно-бирюзовый
+    dark_red: Тёмно-красный
+    dark_purple: Тёмно-фиолетовый
+    gold: Золотой
+    gray: Серый
+    dark_gray: Тёмно-серый
+    blue: Синий
+    green: Зелёный
+    aqua: Бирюзовый
+    red: Красный
+    light_purple: Светло-фиолетовый
+    yellow: Жёлтый
+    white: Белый

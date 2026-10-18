@@ -36,7 +36,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "motd",
           "messages",
           "inventory",
-          "profile");
+          "profile",
+          "nickname");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -56,6 +57,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.gui.ControlMenus menus;
   private DialogService dialogs;
   private Gameplay gameplay;
+  private dev.lovelace.loveessential.module.Nicknames nicknames;
   private dev.lovelace.loveessential.module.PrivateMessages messages;
   private dev.lovelace.loveessential.module.InventoryInspector inventories;
   private dev.lovelace.loveessential.module.PlayerProfiles profiles;
@@ -182,14 +184,21 @@ public class LoveEssentialPlugin extends JavaPlugin {
     gameplay = new Gameplay(this, main, store, lang, love, this::module);
     placeholders = new Placeholders(lang, love, gameplay::afk);
     gameplay.placeholders(placeholders);
+    nicknames = new dev.lovelace.loveessential.module.Nicknames(this, main, lang, store, love);
+    placeholders.nicknames(nicknames::display, nicknames::tabNames);
     messages =
         new dev.lovelace.loveessential.module.PrivateMessages(
-            this, main, lang, store, love, gameplay);
+            this, main, lang, store, love, gameplay, nicknames);
     inventories = new dev.lovelace.loveessential.module.InventoryInspector(this, lang, love);
     profiles =
         new dev.lovelace.loveessential.module.PlayerProfiles(
             this, lang, love, gameplay, store, placeholders, messages, inventories);
-    placeholders.playerValues(profiles::values);
+    placeholders.playerValues(
+        id -> {
+          var values = new HashMap<>(profiles.values(id));
+          values.putAll(nicknames.values(id));
+          return Map.copyOf(values);
+        });
     npcs.vanish(gameplay::vanished);
     tab = new TabModule(this, lang, placeholders, conditions);
     var api = new EssentialApi(npcs, conditions, actions, store);
@@ -211,7 +220,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
         .register(LoveEssentialService.class, api, this, ServicePriority.Normal);
     menus =
         new dev.lovelace.loveessential.gui.ControlMenus(
-            this, main, lang, love, npcs, wizard, gameplay);
+            this, main, lang, love, npcs, wizard, gameplay, nicknames);
     var commands =
         new Commands(
             this,
@@ -226,7 +235,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
             menus,
             messages,
             inventories,
-            profiles);
+            profiles,
+            nicknames);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -264,6 +274,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       if (module("npc")) npcs.start();
                       gameplay.start();
+                      nicknames.start();
                       messages.start();
                       inventories.start();
                       profiles.start();
@@ -309,6 +320,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       if (name.equals("npc")) npcs.enabled(value);
                       gameplay.applyVanish();
+                      if (name.equals("nickname")) nicknames.refresh();
                       return null;
                     }));
   }
@@ -360,6 +372,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       tab.stop();
                       if (module("tab")) tab.start();
                       gameplay.applyVanish();
+                      nicknames.refresh();
                       return null;
                     }))
         .whenComplete((v, error) -> reloading.set(false));
@@ -369,6 +382,20 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (!Set.of("native", "tab").contains(config.getString("tab.engine", "native")))
       throw new IllegalArgumentException("errors.config");
     bounded(config, "storage.write-queue", 1, 65536);
+    bounded(config, "nickname.min-length", 1, 32);
+    bounded(config, "nickname.max-length", 1, 32);
+    if (config.getInt("nickname.min-length", 3) > config.getInt("nickname.max-length", 24))
+      throw new IllegalArgumentException("errors.config");
+    String nickColor = config.getString("nickname.default-color", "");
+    if (!nickColor.isBlank()) dev.lovelace.loveessential.module.Nicknames.color(nickColor);
+    var gradients = config.getConfigurationSection("nickname.gradients");
+    if (gradients != null)
+      for (String key : gradients.getKeys(false)) {
+        var colors = gradients.getStringList(key);
+        if (colors.size() < 2 || colors.size() > 5)
+          throw new IllegalArgumentException("errors.config");
+        colors.forEach(dev.lovelace.loveessential.module.Nicknames::color);
+      }
     bounded(config, "messages.max-length", 1, 4096);
     bounded(config, "messages.cooldown-ms", 0, 60000);
     bounded(config, "messages.max-ignored", 1, 10000);
@@ -444,6 +471,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (profiles != null) profiles.close();
     if (inventories != null) inventories.close();
     if (messages != null) messages.close();
+    if (nicknames != null) nicknames.close();
     if (gameplay != null) gameplay.close();
     if (store != null) store.close();
     io.shutdown();

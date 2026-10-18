@@ -29,6 +29,7 @@ public final class PrivateMessages implements Listener, AutoCloseable {
   private final SqliteStore store;
   private final LoveBridge love;
   private final Gameplay gameplay;
+  private final Nicknames nicknames;
   private final Map<UUID, State> states = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> replies = new ConcurrentHashMap<>();
   private final Map<UUID, Long> sent = new HashMap<>();
@@ -40,13 +41,15 @@ public final class PrivateMessages implements Listener, AutoCloseable {
       Lang lang,
       SqliteStore store,
       LoveBridge love,
-      Gameplay gameplay) {
+      Gameplay gameplay,
+      Nicknames nicknames) {
     this.plugin = plugin;
     this.main = main;
     this.lang = lang;
     this.store = store;
     this.love = love;
     this.gameplay = gameplay;
+    this.nicknames = nicknames;
   }
 
   public void start() {
@@ -221,17 +224,25 @@ public final class PrivateMessages implements Listener, AutoCloseable {
     }
     checkDelivery(sender, recipient);
     validate(event.getMessage());
+    boolean useNick =
+        plugin.module("nickname")
+            && plugin.getConfig().getBoolean("nickname.apply-to-messages", true);
     var values =
         Map.of(
             "sender",
-            sender.getName(),
+                useNick
+                    ? nicknames.display(sender)
+                    : net.kyori.adventure.text.Component.text(sender.getName()),
             "recipient",
-            recipient.getName(),
-            "message",
-            event.getMessage());
-    sender.sendMessage(lang.render("messages.outgoing", values));
+                useNick
+                    ? nicknames.display(recipient)
+                    : net.kyori.adventure.text.Component.text(recipient.getName()),
+            "sender_name", net.kyori.adventure.text.Component.text(sender.getName()),
+            "recipient_name", net.kyori.adventure.text.Component.text(recipient.getName()),
+            "message", net.kyori.adventure.text.Component.text(event.getMessage()));
+    sender.sendMessage(lang.rich("messages.outgoing", values));
     recipient.sendMessage(
-        lang.render("messages.incoming", values)
+        lang.rich("messages.incoming", values)
             .clickEvent(ClickEvent.suggestCommand("/le msg " + sender.getName() + " "))
             .hoverEvent(lang.render("messages.reply-hint")));
     replies.put(sender.getUniqueId(), recipient.getUniqueId());

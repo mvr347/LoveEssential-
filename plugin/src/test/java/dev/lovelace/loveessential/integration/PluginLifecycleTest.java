@@ -343,7 +343,10 @@ class PluginLifecycleTest {
     waitFor(
         () -> {
           try {
-            for (var p : players) messages.preferences(p);
+            for (var p : players) {
+              messages.preferences(p);
+              for (var other : players) if (!p.canSee(other)) return false;
+            }
             return true;
           } catch (IllegalArgumentException e) {
             return false;
@@ -682,5 +685,192 @@ class PluginLifecycleTest {
     first.closeInventory();
     second.closeInventory();
     assertNull(target.getInventory().getItem(9));
+  }
+
+  dev.lovelace.loveessential.module.Nicknames nickReady(PlayerMock p) throws Exception {
+    var nick = internal("nicknames", dev.lovelace.loveessential.module.Nicknames.class);
+    waitFor(
+        () -> {
+          try {
+            nick.settings(p);
+            return true;
+          } catch (IllegalArgumentException e) {
+            return false;
+          }
+        });
+    return nick;
+  }
+
+  @Test
+  void nicknameColorGradientAndBothResetsPersistWithoutChangingIdentity() throws Exception {
+    var p = server.addPlayer("Alice");
+    var nick = nickReady(p);
+    server.dispatchCommand(p, "le ник Аура");
+    waitFor(() -> nick.settings(p).name().equals("Аура"));
+    assertEquals("Alice", p.getName());
+    server.dispatchCommand(p, "le nick gradient #123456 #abcdef");
+    waitFor(() -> nick.settings(p).colors().size() == 2);
+    assertEquals("gradient", nick.values(p.getUniqueId()).get("nickname_style"));
+    assertTrue(nick.values(p.getUniqueId()).get("nickname").contains("§x§1§2§3§4§5§6"));
+    var store = internal("store", dev.lovelace.loveessential.storage.SqliteStore.class);
+    assertEquals(
+        "Аура",
+        await(
+                store.get(
+                    "nickname",
+                    p.getUniqueId().toString(),
+                    dev.lovelace.loveessential.module.Nicknames.Settings.class))
+            .orElseThrow()
+            .value()
+            .name());
+    p.disconnect();
+    p.reconnect();
+    nickReady(p);
+    assertEquals("Аура", nick.settings(p).name());
+    assertEquals(2, nick.settings(p).colors().size());
+    server.dispatchCommand(p, "le nick gradient reset");
+    waitFor(() -> nick.settings(p).colors().isEmpty());
+    assertEquals("Аура", nick.settings(p).name());
+    server.dispatchCommand(p, "le nick color gold");
+    waitFor(() -> nick.settings(p).colors().equals(java.util.List.of("#ffaa00")));
+    server.dispatchCommand(p, "le nick reset");
+    waitFor(() -> nick.settings(p).name().isEmpty() && nick.settings(p).colors().isEmpty());
+    assertEquals("Alice", nick.values(p.getUniqueId()).get("nickname_plain"));
+    assertEquals(net.kyori.adventure.text.Component.text("Alice"), p.displayName());
+  }
+
+  @Test
+  void nicknameRejectsTagsInvalidColorsImpersonationAndUnauthorizedChanges() throws Exception {
+    var p = server.addPlayer("Alice");
+    var other = server.addPlayer("Bob");
+    var nick = nickReady(p);
+    nickReady(other);
+    waitFor(() -> p.canSee(other));
+    for (String bad :
+        java.util.List.of("set <red>Alice", "set Bob", "set AA", "color #123", "gradient red")) {
+      server.dispatchCommand(p, "le nick " + bad);
+      assertTrue(nick.settings(p).name().isEmpty());
+      assertTrue(nick.settings(p).colors().isEmpty());
+    }
+    server.dispatchCommand(p, "le nick player Bob set Impostor");
+    assertTrue(nick.settings(other).name().isEmpty());
+    var permission = p.addAttachment(plugin, "loveessential.nick.gradient", false);
+    server.dispatchCommand(p, "le nick gradient red blue");
+    assertTrue(nick.settings(p).colors().isEmpty());
+    assertFalse(suggestions(p, "loveessential", "nick", "").contains("gradient"));
+    p.removeAttachment(permission);
+    var admin = admin();
+    nickReady(admin);
+    server.dispatchCommand(admin, "le nick player Bob set Knight");
+    waitFor(() -> nick.settings(other).name().equals("Knight"));
+    assertTrue(suggestions(admin, "loveessential", "nick", "player", "").contains("Bob"));
+    assertTrue(
+        suggestions(p, "loveessential", "nick", "color", "")
+            .containsAll(java.util.List.of("gold", "reset")));
+  }
+
+  @Test
+  void nicknameGuiColorPresetAndConfirmedResetWork() throws Exception {
+    var p = server.addPlayer("Alice");
+    var nick = nickReady(p);
+    server.dispatchCommand(p, "le nick");
+    assertLayout(p);
+    click(p, 19);
+    server.dispatchCommand(p, "le input Princess");
+    waitFor(() -> nick.settings(p).name().equals("Princess"));
+    assertLayout(p);
+    click(p, 21);
+    assertLayout(p);
+    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(0, 16));
+    waitFor(() -> nick.settings(p).colors().size() == 1);
+    click(p, 23);
+    assertLayout(p);
+    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(0, 4));
+    waitFor(() -> nick.settings(p).colors().size() >= 2);
+    click(p, 25);
+    waitFor(() -> nick.settings(p).colors().isEmpty());
+    assertEquals("Princess", nick.settings(p).name());
+    click(p, 31);
+    assertLayout(p);
+    assertEquals("Princess", nick.settings(p).name());
+    click(p, 20);
+    waitFor(() -> nick.settings(p).name().isEmpty());
+  }
+
+  @Test
+  void nicknamePlaceholdersAndTabPreserveGradientAndRealName() throws Exception {
+    var p = server.addPlayer("Alice");
+    var nick = nickReady(p);
+    await(nick.change(p, p, "set", "Aurora"));
+    await(nick.change(p, p, "gradient", "#123456", "#abcdef"));
+    var ph = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    var lang = internal("lang", dev.lovelace.loveessential.lang.Lang.class);
+    lang.putAll(java.util.Map.of("nick.test", "<nickname>|<nickname_plain>|<real_name>"));
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    assertEquals("Aurora|Aurora|Alice", plain.serialize(ph.render("nick.test", p, p)));
+    assertEquals("Aurora", plain.serialize(ph.renderName("tab.name", p, p)));
+    var expansion =
+        new dev.lovelace.loveessential.tab.LoveExpansion(
+            ph,
+            lang,
+            internal("love", dev.lovelace.loveessential.integration.LoveBridge.class),
+            q -> false,
+            q -> false);
+    String value =
+        CompletableFuture.supplyAsync(() -> expansion.onRequest(p, "nickname"))
+            .get(1, TimeUnit.SECONDS);
+    assertTrue(value.contains("§x§1§2§3§4§5§6"));
+    assertEquals("Aurora", expansion.onRequest(p, "nickname_plain"));
+    assertEquals("Alice", expansion.onRequest(p, "real_name"));
+    assertTrue(expansion.onRequest(p, "text_tab.name").contains("§x§1§2§3§4§5§6"));
+    plugin.getConfig().set("nickname.apply-to-tab", false);
+    assertEquals("Alice", plain.serialize(ph.renderName("tab.name", p, p)));
+    await(plugin.module("nickname", false));
+    assertEquals(net.kyori.adventure.text.Component.text("Alice"), p.displayName());
+    assertEquals("Alice", expansion.onRequest(p, "nickname_plain"));
+    await(plugin.module("nickname", true));
+    assertEquals("Aurora", expansion.onRequest(p, "nickname_plain"));
+  }
+
+  @Test
+  void messagesUseNicknameButRepliesStillTargetRealAccount() throws Exception {
+    var alice = server.addPlayer("Alice");
+    var bob = server.addPlayer("Bob");
+    messageReady(alice, bob);
+    var nick = nickReady(alice);
+    nickReady(bob);
+    await(nick.change(alice, alice, "set", "Aurora"));
+    server.dispatchCommand(alice, "le msg Bob hello");
+    String incoming = drain(bob);
+    assertTrue(incoming.contains("Aurora"));
+    server.dispatchCommand(bob, "le reply answer");
+    assertTrue(drain(alice).contains("answer"));
+    assertTrue(suggestions(bob, "loveessential", "msg", "").contains("Alice"));
+    assertFalse(suggestions(bob, "loveessential", "msg", "").contains("Aurora"));
+  }
+
+  @Test
+  void concurrentNicknameSavesCannotClaimSameNameAndResetUsesConfiguredDefault() throws Exception {
+    var alice = server.addPlayer("Alice");
+    var bob = server.addPlayer("Bob");
+    var nick = nickReady(alice);
+    nickReady(bob);
+    var pending = nick.change(alice, alice, "set", "Aurora");
+    assertThrows(IllegalArgumentException.class, () -> nick.change(bob, bob, "set", "aurora"));
+    await(pending);
+    assertTrue(nick.settings(bob).name().isEmpty());
+    await(plugin.editSetting("nickname", "default-color", "", "#445566"));
+    await(nick.change(alice, alice, "color", "red"));
+    await(nick.change(alice, alice, "color", "reset"));
+    assertEquals("Aurora", nick.values(alice.getUniqueId()).get("nickname_plain"));
+    assertEquals(
+        net.kyori.adventure.text.format.TextColor.color(0x445566), nick.display(alice).color());
+    await(nick.change(alice, alice, "reset"));
+    assertEquals(
+        net.kyori.adventure.text.Component.text(
+            "Alice", net.kyori.adventure.text.format.TextColor.color(0x445566)),
+        nick.display(alice));
+    await(plugin.reloadSettings());
+    assertEquals("#445566", plugin.getConfig().getString("nickname.default-color"));
   }
 }

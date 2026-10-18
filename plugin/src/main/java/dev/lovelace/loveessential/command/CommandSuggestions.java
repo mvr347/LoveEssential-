@@ -104,6 +104,35 @@ public final class CommandSuggestions {
       if (op.equals("tab") && args.length == 2) return List.of("export");
       return List.of();
     }
+    if (command.equals("nick")) {
+      if (!plugin.module("nickname") || !sender.hasPermission("loveessential.nick"))
+        return List.of();
+      int offset = 0;
+      if (args.length > 0 && args[0].equalsIgnoreCase("player")) {
+        if (!sender.hasPermission("loveessential.nick.others")) return List.of();
+        if (args.length == 2) return players(sender);
+        if (args.length > 2) offset = 2;
+      }
+      if (args.length <= offset + 1) {
+        var out = new ArrayList<>(List.of("set", "reset"));
+        if (sender.hasPermission("loveessential.nick.color")) out.add("color");
+        if (sender.hasPermission("loveessential.nick.gradient")) out.add("gradient");
+        if (offset == 0 && sender.hasPermission("loveessential.nick.others")) out.add("player");
+        return out;
+      }
+      String op = args[offset].toLowerCase(Locale.ROOT);
+      if (Set.of("color", "gradient").contains(op)) {
+        var out = new ArrayList<String>();
+        if (args.length == offset + 2) out.add("reset");
+        if (sender.hasPermission("loveessential.nick." + op)
+            && (op.equals("color") ? args.length == offset + 2 : args.length <= offset + 6)) {
+          out.addAll(net.kyori.adventure.text.format.NamedTextColor.NAMES.keys());
+          out.addAll(List.of("#ff6699", "#ffcc66", "#55ffff"));
+        }
+        return out;
+      }
+      return List.of();
+    }
     if (command.equals("npc")) {
       if (!plugin.module("npc")) return List.of();
       if (args.length <= 1)

@@ -29,6 +29,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   private final NpcService npcs;
   private final NpcWizard wizard;
   private final Gameplay gameplay;
+  private final dev.lovelace.loveessential.module.Nicknames nicknames;
   private final Map<UUID, Prompt> prompts = new ConcurrentHashMap<>();
   private final Map<UUID, String> roots = new HashMap<>();
   private final Set<UUID> direct = new HashSet<>(), dispatching = new HashSet<>();
@@ -71,7 +72,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
       LoveBridge love,
       NpcService npcs,
       NpcWizard wizard,
-      Gameplay gameplay) {
+      Gameplay gameplay,
+      dev.lovelace.loveessential.module.Nicknames nicknames) {
     this.plugin = plugin;
     this.main = main;
     this.lang = lang;
@@ -79,6 +81,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     this.npcs = npcs;
     this.wizard = wizard;
     this.gameplay = gameplay;
+    this.nicknames = nicknames;
     Bukkit.getPluginManager().registerEvents(this, plugin);
   }
 
@@ -170,10 +173,12 @@ public final class ControlMenus implements Listener, AutoCloseable {
     put(m, 24, Material.ENDER_PEARL, "gui.portals", "gui.click.open", c -> places(p, "portal", 0));
     put(m, 25, Material.OAK_SIGN, "gui.holograms", "gui.click.open", c -> places(p, "hologram", 0));
     put(m, 28, Material.BOOK, "gui.commands", "gui.click.open", c -> commands(p, 0));
-    put(m, 38, Material.PLAYER_HEAD, "players.menu", "gui.click.open", c -> command(p, "profile"));
-    put(m, 40, Material.WRITABLE_BOOK, "messages.menu", "gui.click.open", c -> command(p, "msg"));
-    put(m, 42, Material.CHEST, "players.inventory", "gui.click.open", c -> command(p, "invsee"));
-    if (!p.hasPermission("loveessential.invsee")) locked(m, 42);
+    put(m, 37, Material.PLAYER_HEAD, "players.menu", "gui.click.open", c -> command(p, "profile"));
+    put(m, 41, Material.WRITABLE_BOOK, "messages.menu", "gui.click.open", c -> command(p, "msg"));
+    put(m, 43, Material.CHEST, "players.inventory", "gui.click.open", c -> command(p, "invsee"));
+    if (!p.hasPermission("loveessential.invsee")) locked(m, 43);
+    put(m, 39, Material.NAME_TAG, "nick.title", "gui.click.open", c -> nickname(p));
+    if (!nicknames.canUse(p)) locked(m, 39);
     put(
         m,
         30,
@@ -678,6 +683,156 @@ public final class ControlMenus implements Listener, AutoCloseable {
     p.openInventory(m.inventory);
   }
 
+  public void nickname(Player p) {
+    nicknames.settings(p);
+    var m = menu(p, "nick.title", Map.of(), nicknames::canUse);
+    m.inventory.setItem(
+        4,
+        dev.lovelace.loveessential.module.PlayerProfiles.head(
+            p,
+            nicknames.display(p),
+            List.of(
+                lang.render("nick.real-name", Map.of("name", p.getName())),
+                lang.render("nick.preview"))));
+    put(
+        m,
+        19,
+        Material.NAME_TAG,
+        "nick.set",
+        "gui.click.edit",
+        c ->
+            ask(
+                p,
+                "nick.prompt-name",
+                nicknames::canUse,
+                value -> nicknameChange(p, "set", value),
+                () -> nickname(p)));
+    put(m, 21, Material.YELLOW_DYE, "nick.color", "gui.click.open", c -> nicknameColors(p));
+    put(
+        m,
+        23,
+        Material.FIREWORK_STAR,
+        "nick.gradient",
+        "gui.click.open",
+        c -> nicknameGradients(p, 0));
+    put(
+        m,
+        25,
+        Material.MILK_BUCKET,
+        "nick.clear-style",
+        "gui.click.run",
+        c -> nicknameChange(p, "color", "reset"));
+    put(
+        m,
+        31,
+        Material.BARRIER,
+        "nick.reset",
+        "gui.click.run",
+        c ->
+            confirm(
+                p,
+                "nick.reset",
+                () -> nicknameChange(p, "reset"),
+                () -> nickname(p),
+                nicknames::canUse));
+    if (!p.hasPermission("loveessential.nick.color")) locked(m, 21);
+    if (!p.hasPermission("loveessential.nick.gradient")) locked(m, 23);
+    navigation(m, p, 0, 0, n -> {}, () -> home(p));
+    p.openInventory(m.inventory);
+  }
+
+  private void nicknameChange(Player p, String... args) {
+    complete(p, nicknames.change(p, p, args), () -> nickname(p), false);
+  }
+
+  private void nicknameColors(Player p) {
+    Predicate<Player> allowed =
+        who -> nicknames.canUse(who) && who.hasPermission("loveessential.nick.color");
+    var m = menu(p, "nick.color", Map.of(), allowed);
+    var colors =
+        net.kyori.adventure.text.format.NamedTextColor.NAMES.keys().stream().sorted().toList();
+    for (int i = 0; i < colors.size(); i++) {
+      String color = colors.get(i);
+      entry(
+          m,
+          MenuStyle.slot(i, colors.size()),
+          Material.WHITE_DYE,
+          lang.render("nick.colors." + color)
+              .color(dev.lovelace.loveessential.module.Nicknames.color(color)),
+          List.of(
+              dev.lovelace.loveessential.module.Nicknames.render(
+                  nicknames.values(p.getUniqueId()).getOrDefault("nickname_plain", p.getName()),
+                  List.of(color)),
+              lang.render("gui.separator"),
+              lang.render("gui.click.run")),
+          c -> nicknameChange(p, "color", color));
+    }
+    put(
+        m,
+        50,
+        Material.WRITABLE_BOOK,
+        "nick.custom-color",
+        "gui.click.edit",
+        c ->
+            ask(
+                p,
+                "nick.prompt-color",
+                allowed,
+                value -> nicknameChange(p, "color", value),
+                () -> nicknameColors(p)));
+    navigation(m, p, 0, 0, n -> {}, () -> nickname(p));
+    p.openInventory(m.inventory);
+  }
+
+  private void nicknameGradients(Player p, int page) {
+    Predicate<Player> allowed =
+        who -> nicknames.canUse(who) && who.hasPermission("loveessential.nick.gradient");
+    var m = menu(p, "nick.gradient", Map.of(), allowed);
+    var section = plugin.getConfig().getConfigurationSection("nickname.gradients");
+    var keys =
+        section == null ? List.<String>of() : section.getKeys(false).stream().sorted().toList();
+    int count = Math.max(0, Math.min(21, keys.size() - page * 21));
+    for (int i = 0; i < count; i++) {
+      String key = keys.get(page * 21 + i);
+      var colors = section.getStringList(key);
+      String plain = nicknames.values(p.getUniqueId()).getOrDefault("nickname_plain", p.getName());
+      var preview = dev.lovelace.loveessential.module.Nicknames.render(plain, colors);
+      entry(
+          m,
+          MenuStyle.slot(i, count),
+          Material.FIREWORK_STAR,
+          lang.contains("nick.gradients." + key)
+              ? lang.render("nick.gradients." + key)
+              : lang.render("gui.label", Map.of("name", key)),
+          List.of(preview, lang.render("gui.separator"), lang.render("gui.click.run")),
+          c -> {
+            var args = new ArrayList<String>();
+            args.add("gradient");
+            args.addAll(colors);
+            nicknameChange(p, args.toArray(String[]::new));
+          });
+    }
+    put(
+        m,
+        50,
+        Material.WRITABLE_BOOK,
+        "nick.custom-gradient",
+        "gui.click.edit",
+        c ->
+            ask(
+                p,
+                "nick.prompt-gradient",
+                allowed,
+                value -> {
+                  var args = new ArrayList<>(List.of("gradient"));
+                  args.addAll(Arrays.asList(value.trim().split("\\s+")));
+                  nicknameChange(p, args.toArray(String[]::new));
+                },
+                () -> nicknameGradients(p, page)));
+    navigation(m, p, page, keys.size(), n -> nicknameGradients(p, n), () -> nickname(p));
+    p.openInventory(m.inventory);
+  }
+
   public void commands(Player p, int page) {
     var names = plugin.getDescription().getCommands().keySet().stream().sorted().toList();
     var m = menu(p, "gui.commands", Map.of(), who -> true);
@@ -717,6 +872,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               }
               case "portal", "hologram" -> places(p, name, 0);
               case "skin" -> skin(p);
+              case "nick" -> nickname(p);
               case "tpa", "tpahere", "sethome", "setspawn", "reply" ->
                   ask(
                       p,
