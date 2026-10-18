@@ -24,6 +24,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private final NpcWizard wizard;
   private final DialogService dialogs;
   private final Gameplay gameplay;
+  private final dev.lovelace.loveessential.module.PrivateMessages messages;
+  private final dev.lovelace.loveessential.module.InventoryInspector inventories;
+  private final dev.lovelace.loveessential.module.PlayerProfiles profiles;
   private final LoveBridge love;
   private final dev.lovelace.loveessential.gui.ControlMenus menus;
 
@@ -37,7 +40,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
       DialogService dialogs,
       Gameplay gameplay,
       LoveBridge love,
-      dev.lovelace.loveessential.gui.ControlMenus menus) {
+      dev.lovelace.loveessential.gui.ControlMenus menus,
+      dev.lovelace.loveessential.module.PrivateMessages messages,
+      dev.lovelace.loveessential.module.InventoryInspector inventories,
+      dev.lovelace.loveessential.module.PlayerProfiles profiles) {
     this.plugin = plugin;
     this.main = main;
     this.lang = lang;
@@ -48,6 +54,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.gameplay = gameplay;
     this.love = love;
     this.menus = menus;
+    this.messages = messages;
+    this.inventories = inventories;
+    this.profiles = profiles;
   }
 
   @Override
@@ -194,6 +203,30 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       Player p = player(sender);
       if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
+      if (Set.of("msg", "reply", "ignore", "msgtoggle").contains(cmd)) {
+        if (cmd.equals("msg") && args.length == 0) profiles.players(p, "msg", 0);
+        else if (cmd.equals("ignore") && args.length == 0) profiles.preferences(p, 0);
+        else messages.command(p, cmd, args);
+        return true;
+      }
+      if (cmd.equals("profile")) {
+        if (args.length > 1) throw new IllegalArgumentException("errors.input");
+        if (args.length == 1 && args[0].equalsIgnoreCase("list")) profiles.players(p, "profile", 0);
+        else profiles.profile(p, args.length == 0 ? p : messages.target(p, args[0]));
+        return true;
+      }
+      if (cmd.equals("invsee")) {
+        if (args.length == 0) profiles.players(p, "invsee", 0);
+        else {
+          if (args.length > 2
+              || args.length == 2
+                  && !Set.of("edit", "view").contains(args[1].toLowerCase(Locale.ROOT)))
+            throw new IllegalArgumentException("inventory.usage");
+          inventories.open(
+              p, messages.target(p, args[0]), args.length == 2 && args[1].equalsIgnoreCase("edit"));
+        }
+        return true;
+      }
       if (cmd.equals("npc")) {
         npc(p, args);
         return true;
@@ -452,7 +485,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
   public List<String> onTabComplete(
       CommandSender sender, Command cmd, String alias, String[] args) {
     var candidates =
-        new CommandSuggestions(plugin, npcs, gameplay, love).complete(sender, cmd.getName(), args);
+        new CommandSuggestions(plugin, npcs, gameplay, love, messages)
+            .complete(sender, cmd.getName(), args);
     String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
     return candidates.stream()
         .filter(v -> v.toLowerCase(Locale.ROOT).startsWith(prefix))

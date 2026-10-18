@@ -42,6 +42,9 @@ public final class LoveExpansion extends PlaceholderExpansion {
 
   @Override
   public String onRequest(OfflinePlayer offline, @NotNull String params) {
+    if (offline == null) return "";
+    var values = placeholders.playerValues(offline.getUniqueId());
+    if (values.containsKey(params)) return values.get(params);
     if (!(offline instanceof Player p) || !p.isOnline()) return "";
     return switch (params) {
       case "afk" -> Boolean.toString(afk.test(p));

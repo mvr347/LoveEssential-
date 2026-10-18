@@ -1,0 +1,4 @@
+enabled: true
+max-length: 512
+cooldown-ms: 750
+max-ignored: 200

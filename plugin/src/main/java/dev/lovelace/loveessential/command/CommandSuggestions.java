@@ -15,6 +15,7 @@ public final class CommandSuggestions {
   private final NpcService npcs;
   private final Gameplay gameplay;
   private final LoveBridge love;
+  private final dev.lovelace.loveessential.module.PrivateMessages messages;
   private static final Map<String, String> NPC_PERMISSIONS =
       Map.ofEntries(
           Map.entry("menu", "view"),
@@ -61,11 +62,16 @@ public final class CommandSuggestions {
           Map.entry("выключить", "disable"));
 
   public CommandSuggestions(
-      LoveEssentialPlugin plugin, NpcService npcs, Gameplay gameplay, LoveBridge love) {
+      LoveEssentialPlugin plugin,
+      NpcService npcs,
+      Gameplay gameplay,
+      LoveBridge love,
+      dev.lovelace.loveessential.module.PrivateMessages messages) {
     this.plugin = plugin;
     this.npcs = npcs;
     this.gameplay = gameplay;
     this.love = love;
+    this.messages = messages;
   }
 
   public List<String> complete(CommandSender sender, String command, String[] args) {
@@ -79,7 +85,10 @@ public final class CommandSuggestions {
         if (sender.hasPermission("loveessential.admin"))
           out.addAll(List.of("module", "reload", "integrations", "backup", "tab"));
         for (String name : plugin.getDescription().getCommands().keySet())
-          if (!name.equals("loveessential") && !name.equals("npc")) out.add(name);
+          if (!name.equals("loveessential")
+              && !name.equals("npc")
+              && (!name.equals("invsee") || sender.hasPermission("loveessential.invsee")))
+            out.add(name);
         return out;
       }
       String op = args[0].toLowerCase(Locale.ROOT);
@@ -150,6 +159,25 @@ public final class CommandSuggestions {
       return List.of();
     }
     if (!(sender instanceof Player p)) return List.of();
+    if (Set.of("msg", "ignore", "profile", "invsee").contains(command)) {
+      String module =
+          command.equals("invsee")
+              ? "inventory"
+              : command.equals("profile") ? "profile" : "messages";
+      String permission = command.equals("invsee") ? "invsee" : module;
+      if (!plugin.module(module) || !p.hasPermission("loveessential." + permission))
+        return List.of();
+      if (command.equals("invsee") && args.length == 2)
+        return p.hasPermission("loveessential.invsee.edit")
+            ? List.of("view", "edit")
+            : List.of("view");
+      if (args.length == 1) {
+        var out = new ArrayList<>(players(sender));
+        if (command.equals("profile")) out.add("list");
+        if (command.equals("ignore")) out.addAll(messages.ignoredNames(p));
+        return out;
+      }
+    }
     if (Set.of("tpa", "tpahere").contains(command) && args.length == 1 && plugin.module("teleport"))
       return players(sender);
     if (command.equals("skin") && args.length == 1 && plugin.module("skin")) {

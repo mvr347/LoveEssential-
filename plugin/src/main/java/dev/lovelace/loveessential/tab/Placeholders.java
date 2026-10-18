@@ -21,6 +21,20 @@ public final class Placeholders {
   private final Predicate<Player> afk;
   private final Cache<String, String> cache =
       Caffeine.newBuilder().maximumSize(4096).expireAfterWrite(Duration.ofMillis(200)).build();
+  private java.util.function.Function<UUID, Map<String, String>> playerValues = id -> Map.of();
+
+  public void playerValues(java.util.function.Function<UUID, Map<String, String>> provider) {
+    playerValues = provider;
+  }
+
+  public Map<String, String> playerValues(UUID id) {
+    return playerValues.apply(id);
+  }
+
+  public List<Component> renderLines(String key, Player viewer, Player target) {
+    return lang.lines(key).stream().map(line -> renderText(line, viewer, target, 0)).toList();
+  }
+
   private final MiniMessage mm = MiniMessage.miniMessage();
 
   public Placeholders(Lang lang, LoveBridge love, Predicate<Player> afk) {
@@ -30,6 +44,10 @@ public final class Placeholders {
   }
 
   public String papi(Player viewer, Player target, String placeholder) {
+    if (placeholder.startsWith("%loveessential_") && placeholder.endsWith("%"))
+      return playerValues
+          .apply(target.getUniqueId())
+          .getOrDefault(placeholder.substring(15, placeholder.length() - 1), "");
     if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")
         || placeholder.contains("%loveessential_")) return "";
     return cache.get(
@@ -66,6 +84,9 @@ public final class Placeholders {
                 love.reputation(target).isPresent()
                     ? Integer.toString(love.reputation(target).getAsInt())
                     : ""));
+    playerValues
+        .apply(target.getUniqueId())
+        .forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
     variables.forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
     b.resolver(
         Placeholder.component(

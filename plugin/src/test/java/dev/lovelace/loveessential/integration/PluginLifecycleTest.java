@@ -331,4 +331,356 @@ class PluginLifecycleTest {
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile())
             .getBoolean("sorting-enabled"));
   }
+
+  <T> T internal(String field, Class<T> type) throws Exception {
+    var f = LoveEssentialPlugin.class.getDeclaredField(field);
+    f.setAccessible(true);
+    return type.cast(f.get(plugin));
+  }
+
+  void messageReady(PlayerMock... players) throws Exception {
+    var messages = internal("messages", dev.lovelace.loveessential.module.PrivateMessages.class);
+    waitFor(
+        () -> {
+          try {
+            for (var p : players) messages.preferences(p);
+            return true;
+          } catch (IllegalArgumentException e) {
+            return false;
+          }
+        });
+    plugin.getConfig().set("messages.cooldown-ms", 0);
+    for (var p : players) drain(p);
+  }
+
+  String drain(PlayerMock player) {
+    var out = new StringBuilder();
+    String next;
+    while ((next = player.nextMessage()) != null) out.append(next).append('\n');
+    return out.toString();
+  }
+
+  @Test
+  void privateMessagesReplyAndEscapePlayerText() throws Exception {
+    var alice = server.addPlayer("Alice");
+    var bob = server.addPlayer("Bob");
+    messageReady(alice, bob);
+    server.dispatchCommand(alice, "le tell Bob <red>привет</red>");
+    assertTrue(
+        drain(bob).contains("<red>привет</red>"),
+        "message text must not become MiniMessage markup");
+    server.dispatchCommand(bob, "le r ответ");
+    assertTrue(drain(alice).contains("ответ"));
+    assertTrue(suggestions(alice, "loveessential", "msg", "B").contains("Bob"));
+    assertFalse(suggestions(alice, "loveessential", "").contains("invsee"));
+  }
+
+  @Test
+  void ignoreAndTogglePersistAndPreventDelivery() throws Exception {
+    var alice = server.addPlayer("Alice");
+    var bob = server.addPlayer("Bob");
+    messageReady(alice, bob);
+    var messages = internal("messages", dev.lovelace.loveessential.module.PrivateMessages.class);
+    server.dispatchCommand(bob, "le ignore Alice");
+    waitFor(() -> messages.preferences(bob).ignored().containsKey(alice.getUniqueId().toString()));
+    var store = internal("store", dev.lovelace.loveessential.storage.SqliteStore.class);
+    var prefs =
+        await(
+                store.get(
+                    "message-preferences",
+                    bob.getUniqueId().toString(),
+                    dev.lovelace.loveessential.module.PrivateMessages.Preferences.class))
+            .orElseThrow()
+            .value();
+    assertEquals("Alice", prefs.ignored().get(alice.getUniqueId().toString()));
+    drain(bob);
+    server.dispatchCommand(alice, "le msg Bob blocked-message");
+    assertFalse(drain(bob).contains("blocked-message"));
+    server.dispatchCommand(bob, "le ignore Alice");
+    waitFor(() -> messages.preferences(bob).ignored().isEmpty());
+    server.dispatchCommand(bob, "le msgtoggle");
+    waitFor(() -> !messages.preferences(bob).enabled());
+    drain(bob);
+    server.dispatchCommand(alice, "le msg Bob muted-message");
+    assertFalse(drain(bob).contains("muted-message"));
+    assertFalse(
+        await(
+                store.get(
+                    "message-preferences",
+                    bob.getUniqueId().toString(),
+                    dev.lovelace.loveessential.module.PrivateMessages.Preferences.class))
+            .orElseThrow()
+            .value()
+            .enabled());
+    bob.disconnect();
+    bob.reconnect();
+    messageReady(bob);
+    assertFalse(messages.preferences(bob).enabled());
+  }
+
+  @Test
+  void moderationCancellationDoesNotCreateReplyAndHiddenPlayersStayHidden() throws Exception {
+    var alice = server.addPlayer("Alice");
+    var bob = server.addPlayer("Bob");
+    messageReady(alice, bob);
+    var listener = new org.bukkit.event.Listener() {};
+    server
+        .getPluginManager()
+        .registerEvent(
+            PrivateMessageEvent.class,
+            listener,
+            org.bukkit.event.EventPriority.NORMAL,
+            (l, e) -> ((PrivateMessageEvent) e).setCancelled(true),
+            plugin);
+    server.dispatchCommand(alice, "le msg Bob rejected");
+    assertFalse(drain(bob).contains("rejected"));
+    server.dispatchCommand(bob, "le reply test");
+    assertTrue(drain(bob).contains("Нет доступного собеседника"));
+    org.bukkit.event.HandlerList.unregisterAll(listener);
+    alice.hidePlayer(plugin, bob);
+    assertFalse(suggestions(alice, "loveessential", "msg", "").contains("Bob"));
+    server.dispatchCommand(alice, "le msg Bob invisible");
+    assertFalse(drain(bob).contains("invisible"));
+    await(plugin.module("messages", false));
+    server.dispatchCommand(alice, "le msg Bob disabled");
+    assertFalse(drain(bob).contains("disabled"));
+  }
+
+  @Test
+  void messagePreferencesGuiUsesTheSamePersistentSettings() throws Exception {
+    var p = server.addPlayer("Alice");
+    messageReady(p);
+    var messages = internal("messages", dev.lovelace.loveessential.module.PrivateMessages.class);
+    server.dispatchCommand(p, "le ignore");
+    assertLayout(p);
+    click(p, 4);
+    waitFor(() -> !messages.preferences(p).enabled());
+    assertLayout(p);
+  }
+
+  @Test
+  void inventoryReadOnlyAndEditingMutateOnlyTheAuthoritativeSlot() throws Exception {
+    var admin = admin();
+    var target = server.addPlayer("Target");
+    waitFor(() -> admin.canSee(target));
+    target
+        .getInventory()
+        .setItem(9, new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND, 12));
+    server.dispatchCommand(admin, "le invsee Target");
+    assertEquals(54, admin.getOpenInventory().getTopInventory().getSize());
+    click(admin, 0);
+    assertEquals(12, target.getInventory().getItem(9).getAmount());
+    assertTrue(admin.getItemOnCursor().getType().isAir());
+    click(admin, 50);
+    click(admin, 0);
+    assertNull(target.getInventory().getItem(9));
+    assertEquals(12, admin.getItemOnCursor().getAmount());
+    click(admin, 1);
+    assertEquals(12, target.getInventory().getItem(10).getAmount());
+    assertTrue(admin.getItemOnCursor().getType().isAir());
+    admin.closeInventory();
+    assertNull(target.getInventory().getItem(9));
+    assertEquals(12, target.getInventory().getItem(10).getAmount());
+  }
+
+  @Test
+  void staleInventoryClickCannotOverwriteTargetAndUnsafeClicksAreCancelled() throws Exception {
+    var admin = admin();
+    var target = server.addPlayer("Target");
+    waitFor(() -> admin.canSee(target));
+    target
+        .getInventory()
+        .setItem(9, new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND, 12));
+    server.dispatchCommand(admin, "le invsee Target edit");
+    target
+        .getInventory()
+        .setItem(9, new org.bukkit.inventory.ItemStack(org.bukkit.Material.GOLD_INGOT, 3));
+    click(admin, 0);
+    assertEquals(org.bukkit.Material.GOLD_INGOT, target.getInventory().getItem(9).getType());
+    assertTrue(admin.getItemOnCursor().getType().isAir());
+    for (var type :
+        java.util.List.of(
+            org.bukkit.event.inventory.ClickType.SHIFT_LEFT,
+            org.bukkit.event.inventory.ClickType.NUMBER_KEY,
+            org.bukkit.event.inventory.ClickType.DOUBLE_CLICK,
+            org.bukkit.event.inventory.ClickType.DROP,
+            org.bukkit.event.inventory.ClickType.MIDDLE)) {
+      var event =
+          new org.bukkit.event.inventory.InventoryClickEvent(
+              admin.getOpenInventory(),
+              org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+              0,
+              type,
+              org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY);
+      server.getPluginManager().callEvent(event);
+      assertTrue(event.isCancelled());
+    }
+    var drag =
+        new org.bukkit.event.inventory.InventoryDragEvent(
+            admin.getOpenInventory(),
+            null,
+            new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND),
+            false,
+            java.util.Map.of(0, new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND)));
+    server.getPluginManager().callEvent(drag);
+    assertTrue(drag.isCancelled());
+    assertEquals(3, target.getInventory().getItem(9).getAmount());
+    target.disconnect();
+    assertTrue(
+        admin.getOpenInventory().getTopInventory() == null
+            || admin.getOpenInventory().getTopInventory().getSize() != 54);
+  }
+
+  @Test
+  void inventoryPermissionIsRecheckedAndModuleDisableClosesView() throws Exception {
+    var p = server.addPlayer("Viewer");
+    var target = server.addPlayer("Target");
+    waitFor(() -> p.canSee(target));
+    var permissions = p.addAttachment(plugin, "loveessential.invsee", true);
+    server.dispatchCommand(p, "le invsee Target edit");
+    assertTrue(
+        p.getOpenInventory().getTopInventory() == null
+            || p.getOpenInventory().getTopInventory().getSize() != 54);
+    server.dispatchCommand(p, "le invsee Target");
+    assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
+    click(p, 50); // no edit permission
+    target
+        .getInventory()
+        .setItem(9, new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND));
+    server.getScheduler().performTicks(2);
+    click(p, 0);
+    assertNotNull(target.getInventory().getItem(9));
+    p.removeAttachment(permissions);
+    server.getScheduler().performOneTick();
+    assertTrue(
+        p.getOpenInventory().getTopInventory() == null
+            || p.getOpenInventory().getTopInventory().getSize() != 54);
+    var op = admin();
+    server.dispatchCommand(op, "le invsee Target");
+    await(plugin.module("inventory", false));
+    server.getScheduler().performOneTick();
+    assertTrue(
+        op.getOpenInventory().getTopInventory() == null
+            || op.getOpenInventory().getTopInventory().getSize() != 54);
+  }
+
+  @Test
+  void profileHasCurrentSkinRichPlaceholdersAndProtectedLocationCard() throws Exception {
+    var viewer = server.addPlayer("Viewer");
+    var target = server.addPlayer("Target");
+    waitFor(() -> viewer.canSee(target));
+    var skin = target.getPlayerProfile();
+    var textures = skin.getTextures();
+    textures.setSkin(java.net.URI.create("https://textures.minecraft.net/texture/abcdef").toURL());
+    skin.setTextures(textures);
+    target.setPlayerProfile(skin);
+    target.setLevel(42);
+    target.setStatistic(org.bukkit.Statistic.DEATHS, 7);
+    server.dispatchCommand(viewer, "le userinfo Target");
+    assertLayout(viewer);
+    var skull =
+        (org.bukkit.inventory.meta.SkullMeta)
+            viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
+    assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
+    var profiles = internal("profiles", dev.lovelace.loveessential.module.PlayerProfiles.class);
+    var values = profiles.values(target.getUniqueId());
+    assertEquals("42", values.get("level"));
+    assertEquals("7", values.get("deaths"));
+    assertEquals("Нет", values.get("afk_state"));
+    assertEquals(target.getUniqueId().toString(), values.get("uuid"));
+    assertEquals(textures.getSkin().toExternalForm(), values.get("skin_url"));
+    String lore =
+        java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
+            .filter(java.util.Objects::nonNull)
+            .map(item -> String.valueOf(item.getItemMeta().getLore()))
+            .collect(java.util.stream.Collectors.joining());
+    assertFalse(lore.contains("Координаты:"));
+    assertTrue(lore.contains("42"));
+    assertFalse(lore.contains("<health>"));
+    viewer.setOp(true);
+    server.dispatchCommand(viewer, "le profile Target");
+    lore =
+        java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
+            .filter(java.util.Objects::nonNull)
+            .map(item -> String.valueOf(item.getItemMeta().getLore()))
+            .collect(java.util.stream.Collectors.joining());
+    assertTrue(lore.contains("Координаты:"));
+    target.disconnect();
+    var store = internal("store", dev.lovelace.loveessential.storage.SqliteStore.class);
+    waitFor(
+        () ->
+            awaitUnchecked(store.profile(target.getUniqueId(), "loveessential.player-info"))
+                .isPresent());
+    assertTrue(
+        await(store.profile(target.getUniqueId(), "loveessential.player-info"))
+            .orElseThrow()
+            .contains("abcdef"));
+  }
+
+  <T> T awaitUnchecked(CompletableFuture<T> future) {
+    try {
+      return future.get(1, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  void ownPlaceholdersRenderInCardsAndPapiNumericValuesWorkOffThread() throws Exception {
+    var target = server.addPlayer("Target");
+    target.setLevel(23);
+    server.dispatchCommand(target, "le profile");
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    var lang = internal("lang", dev.lovelace.loveessential.lang.Lang.class);
+    lang.putAll(java.util.Map.of("players.test", "<level>|<papi:loveessential_level>|<uuid>"));
+    String text =
+        net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(placeholders.render("players.test", target, target));
+    assertEquals("23|23|" + target.getUniqueId(), text);
+    var expansion =
+        new dev.lovelace.loveessential.tab.LoveExpansion(
+            placeholders,
+            lang,
+            internal("love", dev.lovelace.loveessential.integration.LoveBridge.class),
+            p -> false,
+            p -> false);
+    assertEquals(
+        "23",
+        CompletableFuture.supplyAsync(() -> expansion.onRequest(target, "level"))
+            .get(1, TimeUnit.SECONDS));
+    assertEquals("survival", expansion.onRequest(target, "gamemode"));
+    assertEquals("false", expansion.onRequest(target, "afk"));
+  }
+
+  @Test
+  void concurrentInventoryViewersCannotTakeTheSameStackTwice() throws Exception {
+    var first = admin();
+    var second = server.addPlayer("OtherAdmin");
+    second.setOp(true);
+    var target = server.addPlayer("Target");
+    waitFor(() -> first.canSee(target) && second.canSee(target));
+    target
+        .getInventory()
+        .setItem(9, new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND, 12));
+    server.dispatchCommand(first, "le invsee Target edit");
+    server.dispatchCommand(second, "le invsee Target edit");
+    // No tick between these clicks: the second GUI still contains its old copy.
+    for (var p : java.util.List.of(first, second)) {
+      var event =
+          new org.bukkit.event.inventory.InventoryClickEvent(
+              p.getOpenInventory(),
+              org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+              0,
+              org.bukkit.event.inventory.ClickType.LEFT,
+              org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+      server.getPluginManager().callEvent(event);
+      assertTrue(event.isCancelled());
+    }
+    assertEquals(12, first.getItemOnCursor().getAmount());
+    assertTrue(second.getItemOnCursor().getType().isAir());
+    assertNull(target.getInventory().getItem(9));
+    first.closeInventory();
+    second.closeInventory();
+    assertNull(target.getInventory().getItem(9));
+  }
 }

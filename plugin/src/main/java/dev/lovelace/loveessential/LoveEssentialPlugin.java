@@ -33,7 +33,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "hologram",
           "traces",
           "joinquit",
-          "motd");
+          "motd",
+          "messages",
+          "inventory",
+          "profile");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -53,6 +56,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.gui.ControlMenus menus;
   private DialogService dialogs;
   private Gameplay gameplay;
+  private dev.lovelace.loveessential.module.PrivateMessages messages;
+  private dev.lovelace.loveessential.module.InventoryInspector inventories;
+  private dev.lovelace.loveessential.module.PlayerProfiles profiles;
   private TabModule tab;
   private LoveExpansion expansion;
   private ConditionEngine conditions;
@@ -176,6 +182,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
     gameplay = new Gameplay(this, main, store, lang, love, this::module);
     placeholders = new Placeholders(lang, love, gameplay::afk);
     gameplay.placeholders(placeholders);
+    messages =
+        new dev.lovelace.loveessential.module.PrivateMessages(
+            this, main, lang, store, love, gameplay);
+    inventories = new dev.lovelace.loveessential.module.InventoryInspector(this, lang, love);
+    profiles =
+        new dev.lovelace.loveessential.module.PlayerProfiles(
+            this, lang, love, gameplay, store, placeholders, messages, inventories);
+    placeholders.playerValues(profiles::values);
     npcs.vanish(gameplay::vanished);
     tab = new TabModule(this, lang, placeholders, conditions);
     var api = new EssentialApi(npcs, conditions, actions, store);
@@ -199,7 +213,20 @@ public class LoveEssentialPlugin extends JavaPlugin {
         new dev.lovelace.loveessential.gui.ControlMenus(
             this, main, lang, love, npcs, wizard, gameplay);
     var commands =
-        new Commands(this, main, lang, store, npcs, wizard, dialogs, gameplay, love, menus);
+        new Commands(
+            this,
+            main,
+            lang,
+            store,
+            npcs,
+            wizard,
+            dialogs,
+            gameplay,
+            love,
+            menus,
+            messages,
+            inventories,
+            profiles);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -237,6 +264,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       if (module("npc")) npcs.start();
                       gameplay.start();
+                      messages.start();
+                      inventories.start();
+                      profiles.start();
                       if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
                         expansion =
                             new LoveExpansion(
@@ -339,6 +369,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (!Set.of("native", "tab").contains(config.getString("tab.engine", "native")))
       throw new IllegalArgumentException("errors.config");
     bounded(config, "storage.write-queue", 1, 65536);
+    bounded(config, "messages.max-length", 1, 4096);
+    bounded(config, "messages.cooldown-ms", 0, 60000);
+    bounded(config, "messages.max-ignored", 1, 10000);
+    bounded(config, "inventory.refresh-ticks", 1, 200);
+    bounded(config, "profile.refresh-ticks", 20, 1200);
+    bounded(config, "profile.persist-seconds", 60, 86400);
     bounded(config, "tab.refresh-ticks", 2, 1200);
     bounded(config, "npc.max-active", 0, 10000);
     bounded(config, "npc.max-definitions", 1, 100000);
@@ -405,6 +441,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (dialogs != null) dialogs.close();
     if (npcs != null) npcs.close();
     if (tab != null) tab.close();
+    if (profiles != null) profiles.close();
+    if (inventories != null) inventories.close();
+    if (messages != null) messages.close();
     if (gameplay != null) gameplay.close();
     if (store != null) store.close();
     io.shutdown();

@@ -1,0 +1,35 @@
+enabled: true
+refresh-ticks: 40
+persist-seconds: 300
+cards:
+  identity:
+    enabled: true
+    material: PLAYER_HEAD
+    title-key: players.cards.identity.title
+    lore-keys: [players.cards.identity.lore]
+  survival:
+    enabled: true
+    material: GOLDEN_APPLE
+    title-key: players.cards.survival.title
+    lore-keys: [players.cards.survival.lore]
+  progress:
+    enabled: true
+    material: EXPERIENCE_BOTTLE
+    title-key: players.cards.progress.title
+    lore-keys: [players.cards.progress.lore]
+  statistics:
+    enabled: true
+    material: IRON_SWORD
+    title-key: players.cards.statistics.title
+    lore-keys: [players.cards.statistics.lore]
+  social:
+    enabled: true
+    material: BELL
+    title-key: players.cards.social.title
+    lore-keys: [players.cards.social.lore]
+  location:
+    enabled: true
+    material: COMPASS
+    permission: loveessential.profile.location
+    title-key: players.cards.location.title
+    lore-keys: [players.cards.location.lore]

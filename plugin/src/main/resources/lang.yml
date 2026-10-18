@@ -395,6 +395,9 @@ gui:
     blocked: <dark_gray>ЛКМ — действие заблокировано
     delete: <green>ЛКМ <dark_gray>— <gray>удалить с подтверждением
   module-labels:
+    messages: Личные сообщения
+    inventory: Просмотр инвентаря
+    profile: Профили игроков
     npc: Персонажи
     tab: Список игроков
     home: Дома
@@ -411,6 +414,9 @@ gui:
     joinquit: Вход и выход
     motd: Описание сервера
   module-names:
+    messages: <gold>Личные сообщения
+    inventory: <gold>Просмотр инвентаря
+    profile: <gold>Профили игроков
     npc: <gold>Персонажи
     tab: <gold>Список игроков
     home: <gold>Дома
@@ -427,6 +433,11 @@ gui:
     joinquit: <gold>Вход и выход
     motd: <gold>Описание сервера
   command-help:
+    msg: <gray>Личное сообщение или меню выбора получателя.
+    reply: <gray>Ответить последнему собеседнику.
+    ignore: <gray>Игнорировать игрока или открыть настройки личных сообщений.
+    msgtoggle: <gray>Включить или отключить личные сообщения.
+    invsee: <gray>Просмотр инвентаря; режим edit позволяет менять предметы при наличии права.
     loveessential: <gray>Главная панель, модули и настройки.
     npc: <gray>Создать, изменить или удалить персонажа.
     home: <gray>Телепорт к своему дому.
@@ -449,6 +460,95 @@ gui:
     hologram: <gray>Создать, переместить или удалить голограмму.
     portal: <gray>Настроить область и назначение портала.
   settings:
+    messages:
+      max-length:
+        _label: <gold>Максимальная длина сообщения
+      cooldown-ms:
+        _label: <gold>Задержка между сообщениями, мс
+      max-ignored:
+        _label: <gold>Лимит игнор-листа
+    inventory:
+      refresh-ticks:
+        _label: <gold>Обновление инвентаря, тики
+    profile:
+      refresh-ticks:
+        _label: <gold>Обновление информации, тики
+      persist-seconds:
+        _label: <gold>Сохранение снимка в SQLite, секунды
+      cards:
+        _label: <gold>Карточки досье
+        identity:
+          _label: <gold>Личность и облик
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        survival:
+          _label: <gold>Состояние
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        progress:
+          _label: <gold>Прогресс
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        statistics:
+          _label: <gold>Статистика
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        social:
+          _label: <gold>Связи
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
+        location:
+          _label: <gold>Местоположение
+          enabled:
+            _label: <gold>Показывать карточку
+          material:
+            _label: <gold>Иконка
+          permission:
+            _label: <gold>Право просмотра
+          title-key:
+            _label: <gold>Ключ заголовка в lang.yml
+          lore-keys:
+            _label: <gold>Ключи строк в lang.yml
     nightskip:
       max-multiplier:
         _label: <gold>Максимальное ускорение ночи
@@ -782,3 +882,120 @@ gui:
   skin-name: <gold>Установить скин по имени
   skin-reset: <gold>Вернуть собственный скин
   prompt-skin: '<yellow>Введите имя владельца скина: латинские буквы, цифры и _, до 16 символов.'
+messages:
+  menu: <gold>Личные сообщения
+  settings: <gold>Настройки личных сообщений
+  enabled: <green>Личные сообщения включены
+  muted: <red>Личные сообщения отключены
+  saved: <green>Настройки личных сообщений сохранены.
+  loading: <yellow>Настройки загружаются или сохраняются. Повторите через секунду.
+  disabled: <red>Модуль личных сообщений отключён.
+  usage: '<yellow>/le msg <игрок> <сообщение> <gray>— отправить личное сообщение.'
+  reply-usage: '<yellow>/le reply <сообщение> <gray>— ответить собеседнику.'
+  ignore-usage: '<yellow>/le ignore [игрок] <gray>— переключить игнор или открыть настройки.'
+  no-reply: <red>Нет доступного собеседника для ответа.
+  self: <red>Выберите другого игрока.
+  ignore-limit: <red>Достигнут лимит игнор-листа.
+  cooldown: <yellow>Подождите немного перед следующим сообщением.
+  cancelled: <red>Сообщение отклонено фильтром чата.
+  own-disabled: <yellow>Сначала включите личные сообщения через /le msgtoggle.
+  unavailable: <red>Личные сообщения этому игроку недоступны.
+  invalid: <red>Сообщение пустое, слишком длинное или содержит управляющие символы.
+  outgoing: '<dark_gray>[<gold>Вы <gray>→ <gold><recipient><dark_gray>] <white><message>'
+  incoming: '<dark_gray>[<gold><sender> <gray>→ <gold>Вы<dark_gray>] <white><message>'
+  reply-hint: <gray>Нажмите, чтобы ответить этому игроку.
+  afk: <yellow><player> сейчас AFK и может ответить позже.
+  compose: <gold>Нажмите здесь, чтобы написать игроку <player>.
+  unignore: <green>ЛКМ <dark_gray>— <gray>убрать из игнор-листа
+inventory:
+  title: '<gold>Инвентарь <dark_gray>| <yellow><player>'
+  owner: <gold><player>
+  self: <yellow>Свой инвентарь откройте обычной клавишей инвентаря.
+  usage: '<yellow>/le invsee <игрок> [view|edit]'
+  layout:
+  - <gray>Ряды 1–3 — основной инвентарь.
+  - <gray>Ряд 4 — панель быстрого доступа.
+  - <gray>Ряд 5 — ботинки, поножи, нагрудник, шлем, вторая рука.
+  instructions: <gold>Управление предметами
+  controls-left: <gray>ЛКМ — взять, положить или обменять стек.
+  controls-right: <gray>ПКМ — взять половину или положить один предмет.
+  controls-restricted: <gray>Shift, цифры, двойной клик и перетаскивание отключены.
+  editing: <green>Редактирование включено
+  readonly: <gray>Только просмотр
+  toggle: <gray>ЛКМ — сменить режим. Для редактирования нужно отдельное право.
+  changed: <yellow>Игрок изменил этот слот. Экран обновлён — повторите действие.
+players:
+  menu: <gold>Мой профиль
+  title: '<gold>Досье <dark_gray>| <yellow><player>'
+  list-title: <gold>Выберите игрока
+  entry: <gold><player>
+  unavailable: <red>Игрок недоступен или не в сети.
+  message: <gold>Написать сообщение
+  ignore: <gold>Переключить игнор
+  inventory: <gold>Инвентарь игрока
+  refresh: <gold>Обновить досье
+  select-profile: <gray>Открыть подробное досье игрока.
+  select-msg: <gray>Написать личное сообщение.
+  select-ignore: <gray>Добавить или убрать игрока из игнор-листа.
+  select-invsee: <gray>Открыть живой просмотр инвентаря.
+  save-failed: Не удалось сохранить снимок информации об игроке.
+  gamemodes:
+    survival: Выживание
+    creative: Творческий
+    adventure: Приключение
+    spectator: Наблюдатель
+  cards:
+    identity:
+      title: <gold>Личность и облик
+      lore:
+      - '<gray>Имя: <white><player>'
+      - '<gray>Отображаемое имя: <white><display_name>'
+      - '<gray>UUID: <white><uuid>'
+      - '<gray>Первый вход (UTC): <white><first_join>'
+      - '<gray>Модель скина: <white><skin_model>'
+      - <gray>Голова использует текущий скин игрока.
+    survival:
+      title: <gold>Состояние
+      lore:
+      - '<gray>Здоровье: <white><health>/<max_health>'
+      - '<gray>Сытость: <white><food>/20'
+      - '<gray>Насыщение: <white><saturation>'
+      - '<gray>Режим: <white><gamemode_name>'
+      - '<gray>Задержка: <white><ping> мс'
+      - '<gray>AFK: <white><afk_state>'
+      - '<gray>В бою: <white><combat_state>'
+    progress:
+      title: <gold>Путь в королевстве
+      lore:
+      - '<gray>Уровень: <white><level>'
+      - '<gray>До следующего уровня: <white><exp>% прогресса'
+      - '<gray>Всего опыта: <white><total_exp>'
+      - '<gray>Время в игре: <white><playtime_hours> ч <playtime_minutes> мин'
+      - '<gray>Сохранённых домов: <white><homes>'
+    statistics:
+      title: <gold>Подвиги и испытания
+      lore:
+      - '<gray>Побед над игроками: <white><kills>'
+      - '<gray>Побед над мобами: <white><mob_kills>'
+      - '<gray>Смертей: <white><deaths>'
+      - '<gray>Прыжков: <white><jumps>'
+      - '<gray>Нанесено урона: <white><damage_dealt>'
+      - '<gray>Получено урона: <white><damage_taken>'
+      - '<gray>Пройдено пешком: <white><walk_km> км'
+    social:
+      title: <gold>Связи в королевстве
+      lore:
+      - '<gray>Клан: <white><clan>'
+      - '<gray>Репутация: <white><reputation>'
+      - '<gray>Монеты в инвентаре: <white><balance> <currency>'
+    location:
+      title: <gold>Местоположение и возможности
+      lore:
+      - '<gray>Мир: <white><world>'
+      - '<gray>Координаты: <white><x> <y> <z>'
+      - '<gray>Территория: <white><territory>'
+      - '<gray>Полёт разрешён: <white><flight_allowed_state>'
+      - '<gray>Летает: <white><flying_state>'
+      - '<gray>Невидимость: <white><vanished_state>'
+  'yes': Да
+  'no': Нет

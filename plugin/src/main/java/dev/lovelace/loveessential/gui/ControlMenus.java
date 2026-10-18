@@ -170,6 +170,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
     put(m, 24, Material.ENDER_PEARL, "gui.portals", "gui.click.open", c -> places(p, "portal", 0));
     put(m, 25, Material.OAK_SIGN, "gui.holograms", "gui.click.open", c -> places(p, "hologram", 0));
     put(m, 28, Material.BOOK, "gui.commands", "gui.click.open", c -> commands(p, 0));
+    put(m, 38, Material.PLAYER_HEAD, "players.menu", "gui.click.open", c -> command(p, "profile"));
+    put(m, 40, Material.WRITABLE_BOOK, "messages.menu", "gui.click.open", c -> command(p, "msg"));
+    put(m, 42, Material.CHEST, "players.inventory", "gui.click.open", c -> command(p, "invsee"));
+    if (!p.hasPermission("loveessential.invsee")) locked(m, 42);
     put(
         m,
         30,
@@ -713,7 +717,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               }
               case "portal", "hologram" -> places(p, name, 0);
               case "skin" -> skin(p);
-              case "tpa", "tpahere", "sethome", "setspawn" ->
+              case "tpa", "tpahere", "sethome", "setspawn", "reply" ->
                   ask(
                       p,
                       "gui.prompt-value",
