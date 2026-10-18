@@ -1,0 +1,35 @@
+# Настройки модуля. Тексты находятся в lang.yml.
+enabled: true
+allowed-types:
+- MANNEQUIN
+- VILLAGER
+- WANDERING_TRADER
+- ARMOR_STAND
+- ZOMBIE
+- SKELETON
+- CAT
+- WOLF
+- IRON_GOLEM
+- ALLAY
+max-definitions: 1000
+max-active: 200
+max-route-points: 128
+pathfinding:
+  threads: 2
+  radius: 16
+  max-nodes: 4096
+  plans-per-tick: 1
+actions:
+  max-economy-amount: 100000
+  allowed-player-commands:
+  - contracts
+  - pcontract
+  - suffixes
+  - shops
+  - trade
+  - activities
+  - duels
+  - hunt
+  - brew
+  - spawn
+  - home

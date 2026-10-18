@@ -1,0 +1,4 @@
+# Настройки модуля. Тексты находятся в lang.yml.
+enabled: true
+timeout-seconds: 300
+kick-after-seconds: 0

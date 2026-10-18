@@ -306,8 +306,10 @@ public final class NpcService implements Listener, AutoCloseable {
       spawnFailures.put(n.id(), tick + 200);
       plugin
           .getLogger()
-          .warning(
-              lang.text("logs.npc-failed") + " [" + n.id() + "] " + e.getClass().getSimpleName());
+          .log(
+              java.util.logging.Level.WARNING,
+              lang.text("logs.npc-failed") + " [" + n.id() + "/" + n.entityType() + "]",
+              e);
       return null;
     }
   }
@@ -376,6 +378,10 @@ public final class NpcService implements Listener, AutoCloseable {
       if (n.flag("baby", false)) age.setBaby();
       else age.setAdult();
     }
+    equip(e, n);
+  }
+
+  static void equip(LivingEntity e, NpcDefinition n) {
     for (var slot :
         Map.of(
                 "main-hand",
@@ -395,7 +401,8 @@ public final class NpcService implements Listener, AutoCloseable {
       var mat = Material.matchMaterial(material);
       if (mat != null && e.getEquipment() != null) {
         e.getEquipment().setItem(slot.getValue(), new ItemStack(mat));
-        e.getEquipment().setDropChance(slot.getValue(), 0);
+        // Paper rejects drop chances on non-Mob entities (Mannequin / ArmorStand).
+        if (e instanceof Mob) e.getEquipment().setDropChance(slot.getValue(), 0);
       }
     }
   }
@@ -538,7 +545,7 @@ public final class NpcService implements Listener, AutoCloseable {
     Route.Point point = null;
     if (follow) {
       Player p =
-          n.settings().containsKey("follow-player")
+          !n.option("follow-player", "").isBlank()
               ? Bukkit.getPlayerExact(n.option("follow-player", ""))
               : target(l, n.number("activation-range", 48));
       if (p == null || !p.getWorld().equals(l.entity.getWorld())) return;
@@ -759,7 +766,7 @@ public final class NpcService implements Listener, AutoCloseable {
             (float) n.number("interaction-volume", 1),
             (float) n.number("interaction-pitch", 1));
       } catch (IllegalArgumentException ignored) {
-        plugin.getLogger().warning("Invalid interaction sound on NPC " + n.id());
+        plugin.getLogger().warning(lang.text("logs.npc-sound-failed") + " [" + n.id() + "]");
       }
     }
     if (n.flag("pause-on-interact", true)) instance.pauseUntil = tick + 200;
@@ -798,6 +805,14 @@ public final class NpcService implements Listener, AutoCloseable {
       if (npc == null || npc.flag("invulnerable", true)) e.setCancelled(true);
       if (e instanceof EntityDamageByEntityEvent by && by.getDamager() instanceof Player p)
         interact(p, e.getEntity(), Trigger.LEFT_CLICK);
+    }
+  }
+
+  @EventHandler
+  public void death(EntityDeathEvent e) {
+    if (identify(e.getEntity()).isPresent()) {
+      e.getDrops().clear();
+      e.setDroppedExp(0);
     }
   }
 

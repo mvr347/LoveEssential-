@@ -25,6 +25,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private final DialogService dialogs;
   private final Gameplay gameplay;
   private final LoveBridge love;
+  private final dev.lovelace.loveessential.gui.ControlMenus menus;
 
   public Commands(
       LoveEssentialPlugin plugin,
@@ -35,7 +36,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
       NpcWizard wizard,
       DialogService dialogs,
       Gameplay gameplay,
-      LoveBridge love) {
+      LoveBridge love,
+      dev.lovelace.loveessential.gui.ControlMenus menus) {
     this.plugin = plugin;
     this.main = main;
     this.lang = lang;
@@ -45,6 +47,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.dialogs = dialogs;
     this.gameplay = gameplay;
     this.love = love;
+    this.menus = menus;
   }
 
   @Override
@@ -55,19 +58,38 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       String cmd = command.getName();
+      boolean inputCommand =
+          cmd.equals("loveessential") && args.length > 0 && args[0].equalsIgnoreCase("input");
+      if (!inputCommand && sender instanceof Player p) {
+        menus.cancelInput(p);
+        wizard.cancelInput(p);
+      }
       if (cmd.equals("loveessential")) {
         if (args.length == 0) {
-          lang.send(sender, "help.main");
+          if (sender instanceof Player p) menus.direct(p, () -> menus.home(p));
+          else lang.send(sender, "help.overview");
           return true;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
+          case "menu", "меню" -> {
+            var p = player(sender);
+            menus.direct(p, () -> menus.home(p));
+          }
+          case "help", "помощь" -> {
+            if (sender instanceof Player p) menus.direct(p, () -> menus.commands(p, 0));
+            else lang.send(sender, "help.overview");
+          }
           case "answer" -> {
             var p = player(sender);
             if (args.length != 4) throw new IllegalArgumentException("errors.input");
             dialogs.answer(p, args[1], args[2], args[3]);
           }
           case "npc" -> npc(player(sender), slice(args, 1));
-          case "input" -> wizard.input(player(sender), String.join(" ", slice(args, 1)));
+          case "input" -> {
+            var p = player(sender);
+            String input = String.join(" ", slice(args, 1));
+            if (!menus.input(p, input)) wizard.input(p, input);
+          }
           case "reload", "перезагрузить" -> {
             admin(sender);
             complete(sender, plugin.reloadSettings(), "common.reloaded");
@@ -75,6 +97,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
           case "module", "модуль" -> {
             admin(sender);
             if (args.length < 2) {
+              if (sender instanceof Player p) {
+                menus.direct(p, () -> menus.modules(p));
+                break;
+              }
               lang.send(
                   sender,
                   "modules.list",
@@ -84,6 +110,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
               break;
             }
             String name = args[1];
+            if (!LoveEssentialPlugin.MODULES.contains(name))
+              throw new IllegalArgumentException("errors.module");
+            if (sender instanceof Player p && (args.length < 3 || args[2].equals("settings"))) {
+              menus.direct(p, () -> menus.settings(p, name, "", 0));
+              break;
+            }
             if (args.length < 3 || args[2].equals("info")) {
               lang.send(
                   sender,
@@ -143,9 +175,20 @@ public final class Commands implements CommandExecutor, TabCompleter {
                                     return null;
                                   })),
                   "tab.exported");
-            } else lang.send(sender, "help.tab");
+            } else if (sender instanceof Player p)
+              menus.direct(p, () -> menus.settings(p, "tab", "", 0));
+            else lang.send(sender, "help.tab-settings");
           }
-          default -> lang.send(sender, "help.main");
+          default -> {
+            String target = CommandSuggestions.resolve(plugin, args[0]);
+            if (target != null && !target.equals("loveessential"))
+              return onCommand(
+                  sender,
+                  Objects.requireNonNull(plugin.getCommand(target)),
+                  target,
+                  slice(args, 1));
+            lang.send(sender, "help.overview");
+          }
         }
         return true;
       }
@@ -153,6 +196,22 @@ public final class Commands implements CommandExecutor, TabCompleter {
       if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
       if (cmd.equals("npc")) {
         npc(p, args);
+        return true;
+      }
+      if (cmd.equals("skin") && args.length == 0) {
+        menus.direct(p, () -> menus.skin(p));
+        return true;
+      }
+      if (cmd.equals("skin") && args.length == 1 && args[0].equalsIgnoreCase("reset")) {
+        gameplay.command(p, "skin", new String[] {p.getName()});
+        return true;
+      }
+      if (cmd.equals("homes") && args.length == 0) {
+        menus.direct(p, () -> menus.places(p, "home", 0));
+        return true;
+      }
+      if (Set.of("hologram", "portal").contains(cmd) && args.length == 0) {
+        menus.direct(p, () -> menus.places(p, cmd, 0));
         return true;
       }
       if (cmd.equals("hologram")) {
@@ -176,8 +235,14 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private void npc(Player p, String[] args) {
     if (!plugin.module("npc")) throw new IllegalArgumentException("errors.module-disabled");
     if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
-    String op = args.length == 0 ? "wizard" : args[0].toLowerCase(Locale.ROOT);
+    if (args.length == 0) {
+      menus.direct(p, () -> menus.npcList(p, 0));
+      return;
+    }
+    String op = args[0].toLowerCase(Locale.ROOT);
     switch (op) {
+      case "menu", "меню" -> menus.direct(p, () -> menus.npcList(p, 0));
+      case "help", "помощь" -> lang.send(p, "help.npc-commands");
       case "wizard", "мастер" -> wizard.open(p);
       case "create", "создать" -> {
         if (args.length > 1) wizard.create(p, args[1]);
@@ -277,6 +342,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
       case "skin", "скин" -> wizard.edit(p, args[1], 1);
       case "list", "список" -> {
         permission(p, "view");
+        menus.direct(p, () -> menus.npcList(p, 0));
         for (var n : npcs.all())
           lang.send(
               p,
@@ -332,7 +398,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                 p.getUniqueId().toString()),
             "common.done");
       }
-      default -> lang.send(p, "help.npc");
+      default -> lang.send(p, "help.npc-commands");
     }
   }
 
@@ -385,29 +451,13 @@ public final class Commands implements CommandExecutor, TabCompleter {
   @Override
   public List<String> onTabComplete(
       CommandSender sender, Command cmd, String alias, String[] args) {
-    List<String> values = List.of();
-    if (cmd.getName().equals("npc") && sender.hasPermission("loveessential.npc.view")) {
-      if (args.length == 1)
-        values =
-            List.of(
-                "wizard", "edit", "set", "path", "dialog", "page", "save", "publish", "preview",
-                "list", "select", "debug", "delete");
-      else if (args.length == 2
-          && Set.of("edit", "debug", "delete", "enable", "disable").contains(args[0]))
-        values = npcs.all().stream().map(NpcDefinition::id).toList();
-      else if (args.length == 2 && args[0].equals("set"))
-        values = new ArrayList<>(dev.lovelace.loveessential.npc.NpcValidator.BOOLEAN_OPTIONS);
-      else if (args.length == 2 && args[0].equals("path"))
-        values =
-            List.of(
-                "wizard", "add", "point", "mode", "remove", "move", "undo", "redo", "record",
-                "tool", "show");
-    } else if (cmd.getName().equals("loveessential") && args.length == 1)
-      values =
-          sender.hasPermission("loveessential.admin")
-              ? List.of("npc", "module", "reload", "integrations", "backup", "tab")
-              : List.of();
+    var candidates =
+        new CommandSuggestions(plugin, npcs, gameplay, love).complete(sender, cmd.getName(), args);
     String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
-    return values.stream().filter(v -> v.startsWith(prefix)).toList();
+    return candidates.stream()
+        .filter(v -> v.toLowerCase(Locale.ROOT).startsWith(prefix))
+        .distinct()
+        .sorted(String.CASE_INSENSITIVE_ORDER)
+        .toList();
   }
 }
