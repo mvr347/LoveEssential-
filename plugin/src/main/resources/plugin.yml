@@ -115,7 +115,53 @@ commands:
     aliases: [личка]
   invsee:
     aliases: [инвентарь]
+  recipes:
+    aliases: [recipe, crafts, рецепты]
+  starter:
+    aliases: [startitems, старт]
+  worlds:
+    aliases: [world, mw, миры]
+  scenario:
+    aliases: [scenarios, сценарий]
+  dialog:
+    aliases: [dialogs, диалог]
+  motd:
+    aliases: [мотд]
+  scoreboard:
+    aliases: [sb, скорборд]
+  hat:
+    aliases: [шляпа]
+  traces:
+    aliases: [следы, trail]
+  heal:
+    aliases: [вылечить]
+  feed:
+    aliases: [сытость]
+  fly:
+    aliases: [полёт]
+  speed:
+    aliases: [скорость]
+  gamemode:
+    aliases: [gm, режим]
+  repair:
+    aliases: [починить]
+  workbench:
+    aliases: [craft, верстак]
+  enderchest:
+    aliases: [ec, эндерсундук]
 permissions:
+  loveessential.worlds.admin:
+    default: op
+  loveessential.worlds.teleport:
+    default: true
+  loveessential.scenarios.admin:
+    default: op
+  loveessential.dialogs.admin:
+    default: op
+  loveessential.scoreboard:
+    default: true
+  loveessential.content.edit:
+    default: op
   loveessential.nick:
     default: true
   loveessential.nick.color:
@@ -137,6 +183,12 @@ permissions:
   loveessential.admin:
     default: op
     children:
+      loveessential.worlds.admin: true
+      loveessential.worlds.teleport: true
+      loveessential.scenarios.admin: true
+      loveessential.dialogs.admin: true
+      loveessential.scoreboard: true
+      loveessential.content.edit: true
       loveessential.nick: true
       loveessential.nick.color: true
       loveessential.nick.gradient: true
@@ -156,6 +208,17 @@ permissions:
       loveessential.npc.debug: true
       loveessential.vanish: true
       loveessential.vanish.see: true
+      loveessential.sit: true
+      loveessential.hat: true
+      loveessential.traces: true
+      loveessential.heal: true
+      loveessential.feed: true
+      loveessential.fly: true
+      loveessential.speed: true
+      loveessential.gamemode: true
+      loveessential.repair: true
+      loveessential.workbench: true
+      loveessential.enderchest: true
       loveessential.ride: true
       loveessential.npc.import: true
       loveessential.npc.export: true
@@ -188,4 +251,26 @@ permissions:
   loveessential.npc.import:
     default: op
   loveessential.npc.export:
+    default: op
+  loveessential.sit:
+    default: true
+  loveessential.hat:
+    default: true
+  loveessential.traces:
+    default: true
+  loveessential.heal:
+    default: op
+  loveessential.feed:
+    default: op
+  loveessential.fly:
+    default: op
+  loveessential.speed:
+    default: op
+  loveessential.gamemode:
+    default: op
+  loveessential.repair:
+    default: op
+  loveessential.workbench:
+    default: op
+  loveessential.enderchest:
     default: op

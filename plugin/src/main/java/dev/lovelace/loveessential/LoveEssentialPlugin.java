@@ -28,6 +28,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "afk",
           "skin",
           "sitride",
+          "utilities",
           "nightskip",
           "portal",
           "hologram",
@@ -37,7 +38,13 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "messages",
           "inventory",
           "profile",
-          "nickname");
+          "nickname",
+          "crafting",
+          "starter",
+          "worlds",
+          "scenarios",
+          "dialogs",
+          "scoreboard");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -61,6 +68,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.module.PrivateMessages messages;
   private dev.lovelace.loveessential.module.InventoryInspector inventories;
   private dev.lovelace.loveessential.module.PlayerProfiles profiles;
+  private dev.lovelace.loveessential.content.ContentLibrary content;
+  private dev.lovelace.loveessential.content.ContentMenus contentMenus;
+  private dev.lovelace.loveessential.content.StarterItems starter;
+  private Extensions extensions;
   private TabModule tab;
   private LoveExpansion expansion;
   private ConditionEngine conditions;
@@ -184,6 +195,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     gameplay = new Gameplay(this, main, store, lang, love, this::module);
     placeholders = new Placeholders(lang, love, gameplay::afk);
     gameplay.placeholders(placeholders);
+    gameplay.holograms().setup(placeholders, actions);
+    getServer()
+        .getServicesManager()
+        .register(HologramService.class, gameplay.holograms(), this, ServicePriority.Normal);
     nicknames = new dev.lovelace.loveessential.module.Nicknames(this, main, lang, store, love);
     placeholders.nicknames(nicknames::display, nicknames::tabNames);
     messages =
@@ -221,6 +236,18 @@ public class LoveEssentialPlugin extends JavaPlugin {
     menus =
         new dev.lovelace.loveessential.gui.ControlMenus(
             this, main, lang, love, npcs, wizard, gameplay, nicknames);
+    content = new dev.lovelace.loveessential.content.ContentLibrary(this, main, store, lang, love);
+    starter =
+        new dev.lovelace.loveessential.content.StarterItems(this, main, store, lang, love, content);
+    contentMenus =
+        new dev.lovelace.loveessential.content.ContentMenus(
+            this, main, lang, love, content, starter, menus, actions);
+    extensions =
+        new Extensions(
+            this, main, store, lang, love, conditions, actions, content, tab, placeholders);
+    extensions.ui.beforeShow(menus::clearInput);
+    dialogs.nativeDialogs(extensions.ui);
+    gameplay.motd(extensions.windows::motd);
     var commands =
         new Commands(
             this,
@@ -236,7 +263,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
             messages,
             inventories,
             profiles,
-            nicknames);
+            nicknames,
+            contentMenus,
+            extensions);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -258,7 +287,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       return null;
                     }))
-        .thenCompose(v -> CompletableFuture.allOf(npcs.load(), gameplay.load()))
+        .thenCompose(
+            v ->
+                CompletableFuture.allOf(
+                    npcs.load(),
+                    gameplay.load(),
+                    content.load(),
+                    starter.load(),
+                    extensions.load()))
         .whenComplete(
             (v, error) ->
                 main.execute(
@@ -285,7 +321,17 @@ public class LoveEssentialPlugin extends JavaPlugin {
                         expansion.register();
                       }
                       if (module("tab")) tab.start();
+                      try {
+                        content.refresh();
+                      } catch (RuntimeException e) {
+                        getLogger()
+                            .log(java.util.logging.Level.SEVERE, lang.text("logs.start-failed"), e);
+                        getServer().getPluginManager().disablePlugin(this);
+                        return;
+                      }
                       ready = true;
+                      starter.start();
+                      extensions.start();
                       getLogger().info(lang.text("logs.ready"));
                     }));
   }
@@ -321,6 +367,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       if (name.equals("npc")) npcs.enabled(value);
                       gameplay.applyVanish();
                       if (name.equals("nickname")) nicknames.refresh();
+                      if (name.equals("crafting")) content.refresh();
+                      if (name.equals("scoreboard")) extensions.refresh();
                       return null;
                     }));
   }
@@ -373,6 +421,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       if (module("tab")) tab.start();
                       gameplay.applyVanish();
                       nicknames.refresh();
+                      content.refresh();
+                      extensions.refresh();
                       return null;
                     }))
         .whenComplete((v, error) -> reloading.set(false));
@@ -382,6 +432,13 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (!Set.of("native", "tab").contains(config.getString("tab.engine", "native")))
       throw new IllegalArgumentException("errors.config");
     bounded(config, "storage.write-queue", 1, 65536);
+    bounded(config, "crafting.max-recipes", 1, 10000);
+    bounded(config, "worlds.max-worlds", 1, 256);
+    bounded(config, "scenarios.max-rules", 1, 10000);
+    bounded(config, "scenarios.max-steps", 1, 128);
+    bounded(config, "scenarios.max-starts-per-minute", 1, 10000);
+    bounded(config, "dialogs.max-definitions", 1, 10000);
+    bounded(config, "scoreboard.refresh-ticks", 2, 1200);
     bounded(config, "nickname.min-length", 1, 32);
     bounded(config, "nickname.max-length", 1, 32);
     if (config.getInt("nickname.min-length", 3) > config.getInt("nickname.max-length", 24))
@@ -412,6 +469,17 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "npc.pathfinding.radius", 4, 24);
     bounded(config, "npc.pathfinding.max-nodes", 1, 100000);
     bounded(config, "npc.pathfinding.plans-per-tick", 1, 100);
+    bounded(config, "hologram.max-holograms", 1, 4096);
+    bounded(config, "hologram.max-visible-per-player", 1, 256);
+    bounded(config, "hologram.max-display-entities", 33, 50000);
+    bounded(config, "traces.interval-ms", 50, 5000);
+    decimal(config, "hologram.creation-height", .5, 10);
+    decimal(config, "traces.stride", .2, 3);
+    decimal(config, "traces.view-distance", 4, 64);
+    decimal(config, "sitride.ride-range", 1, 8);
+    if (config.contains("traces.color")
+        && !config.getString("traces.color", "").matches("[0-9a-fA-F]{6}"))
+      throw new IllegalArgumentException("errors.config");
     bounded(config, "home.default-limit", 1, 1000);
     bounded(config, "afk.timeout-seconds", 1, 31536000);
     bounded(config, "afk.kick-after-seconds", 0, 31536000);
@@ -447,6 +515,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
       }
   }
 
+  private static void decimal(
+      org.bukkit.configuration.ConfigurationSection config, String path, double min, double max) {
+    if (!config.contains(path)) return;
+    Object value = config.get(path);
+    if (!(value instanceof Number n)
+        || !Double.isFinite(n.doubleValue())
+        || n.doubleValue() < min
+        || n.doubleValue() > max) throw new IllegalArgumentException("errors.config");
+  }
+
   private static void bounded(
       org.bukkit.configuration.ConfigurationSection config, String path, double min, double max) {
     if (!config.contains(path)) return;
@@ -465,6 +543,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     ready = false;
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
+    if (extensions != null) extensions.close();
+    if (contentMenus != null) contentMenus.close();
+    if (starter != null) starter.close();
+    if (content != null) content.close();
     if (menus != null) menus.close();
     if (wizard != null) wizard.close();
     if (dialogs != null) dialogs.close();

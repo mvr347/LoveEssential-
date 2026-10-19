@@ -125,6 +125,29 @@ public final class SqliteStore implements AutoCloseable {
         });
   }
 
+  public <T> CompletableFuture<List<Document<T>>> listPrefix(
+      String kind, String prefix, Class<T> type) {
+    return read(
+        c -> {
+          var out = new ArrayList<Document<T>>();
+          try (var s =
+              c.prepareStatement(
+                  "SELECT id,revision,payload FROM documents WHERE kind=? AND substr(id,1,?)=?"
+                      + " ORDER BY id")) {
+            s.setString(1, kind);
+            s.setInt(2, prefix.length());
+            s.setString(3, prefix);
+            try (var r = s.executeQuery()) {
+              while (r.next())
+                out.add(
+                    new Document<>(
+                        r.getString(1), r.getLong(2), gson.fromJson(r.getString(3), type)));
+            }
+          }
+          return List.copyOf(out);
+        });
+  }
+
   public <T> CompletableFuture<Long> save(
       String kind, String id, long expected, T value, String actor) {
     String json = gson.toJson(value);

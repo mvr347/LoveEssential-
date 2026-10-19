@@ -1,0 +1,293 @@
+package dev.lovelace.loveessential.integration;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import dev.lovelace.loveessential.*;
+import dev.lovelace.loveessential.api.*;
+import dev.lovelace.loveessential.api.HologramService.*;
+import dev.lovelace.loveessential.module.*;
+import dev.lovelace.loveessential.storage.SqliteStore;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.BooleanSupplier;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import org.bukkit.*;
+import org.bukkit.event.inventory.*;
+import org.bukkit.inventory.ItemStack;
+import org.junit.jupiter.api.*;
+import org.mockbukkit.mockbukkit.*;
+import org.mockbukkit.mockbukkit.entity.PlayerMock;
+
+class ComfortHologramTest {
+  ServerMock server;
+  LoveEssentialPlugin plugin;
+  Holograms holograms;
+  SqliteStore store;
+
+  @BeforeEach
+  void setup() throws Exception {
+    server = MockBukkit.mock();
+    server.addSimpleWorld("world");
+    MockBukkit.createMockPlugin("LoveCore");
+    plugin = MockBukkit.load(LoveEssentialPlugin.class);
+    waitFor(plugin::ready);
+    await(plugin.module("tab", false));
+    await(plugin.module("scoreboard", false));
+    await(plugin.module("starter", false));
+    holograms = (Holograms) Bukkit.getServicesManager().load(HologramService.class);
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    store = (SqliteStore) field.get(plugin);
+  }
+
+  @AfterEach
+  void close() {
+    MockBukkit.unmock();
+  }
+
+  void waitFor(BooleanSupplier test) throws Exception {
+    long end = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+    while (!test.getAsBoolean() && System.nanoTime() < end) {
+      server.getScheduler().performOneTick();
+      Thread.sleep(5);
+    }
+    assertTrue(test.getAsBoolean());
+  }
+
+  <T> T await(CompletableFuture<T> f) throws Exception {
+    waitFor(f::isDone);
+    return f.get(1, TimeUnit.SECONDS);
+  }
+
+  PlayerMock admin() {
+    var p = server.addPlayer("Builder");
+    p.setOp(true);
+    return p;
+  }
+
+  void command(PlayerMock p, String command) {
+    assertTrue(server.dispatchCommand(p, command));
+  }
+
+  void click(PlayerMock p, int slot, ClickType type) {
+    var event =
+        new InventoryClickEvent(
+            p.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            slot,
+            type,
+            InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(event);
+    assertTrue(event.isCancelled());
+    server.getScheduler().performOneTick();
+  }
+
+  Hologram definition(String id, List<Line> lines) {
+    return new Hologram(
+        id,
+        Position.of(server.getWorld("world").getSpawnLocation().add(0, 2, 0)),
+        List.of(new Page(lines, null)),
+        0,
+        true,
+        .3,
+        48);
+  }
+
+  @Test
+  void hatSwapsBothItemsAndRejectsStackWithoutLoss() {
+    var p = admin();
+    var inv = p.getInventory();
+    inv.setHelmet(new ItemStack(Material.DIAMOND_HELMET));
+    inv.setItemInMainHand(new ItemStack(Material.CARVED_PUMPKIN));
+    command(p, "le hat");
+    assertEquals(Material.CARVED_PUMPKIN, inv.getHelmet().getType());
+    assertEquals(Material.DIAMOND_HELMET, inv.getItemInMainHand().getType());
+    inv.setItemInMainHand(new ItemStack(Material.STONE, 32));
+    command(p, "hat");
+    assertEquals(32, inv.getItemInMainHand().getAmount());
+    assertEquals(Material.CARVED_PUMPKIN, inv.getHelmet().getType());
+  }
+
+  @Test
+  void cursedHelmetCannotBeReplacedInSurvival() {
+    var p = admin();
+    var helmet = new ItemStack(Material.IRON_HELMET);
+    helmet.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.BINDING_CURSE, 1);
+    p.getInventory().setHelmet(helmet);
+    p.getInventory().setItemInMainHand(new ItemStack(Material.STONE));
+    command(p, "hat");
+    assertEquals(Material.IRON_HELMET, p.getInventory().getHelmet().getType());
+    assertEquals(Material.STONE, p.getInventory().getItemInMainHand().getType());
+  }
+
+  @Test
+  void sethomeSavesWithoutChatConfirmation() throws Exception {
+    var p = admin();
+    await(store.profile(p.getUniqueId(), "test.initial", "true"));
+    server.getScheduler().performTicks(3);
+    while (p.nextComponentMessage() != null) {}
+    command(p, "le sethome cabin");
+    await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    assertTrue(
+        await(store.get("place", "home:" + p.getUniqueId() + ":cabin", Gameplay.Place.class))
+            .isPresent());
+    server.getScheduler().performTicks(3);
+    var messages = new ArrayList<String>();
+    Component next;
+    while ((next = p.nextComponentMessage()) != null)
+      messages.add(
+          net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+              .serialize(next));
+    assertTrue(messages.isEmpty(), messages.toString());
+  }
+
+  private List<String> commands(Component c) {
+    var out = new ArrayList<String>();
+    if (c.clickEvent() != null && c.clickEvent().payload() instanceof ClickEvent.Payload.Text text)
+      out.add(text.value());
+    c.children().forEach(child -> out.addAll(commands(child)));
+    return out;
+  }
+
+  @Test
+  void teleportButtonsAreClickableAndOldRequestCannotDeclineNewOne() throws Exception {
+    var a = admin();
+    var b = server.addPlayer("Visitor");
+    await(store.profile(a.getUniqueId(), "test.barrier", "true"));
+    await(store.profile(b.getUniqueId(), "test.barrier", "true"));
+    server.getScheduler().performTicks(3);
+    while (b.nextComponentMessage() != null) {}
+    command(a, "tpa Visitor");
+    Component first = b.nextComponentMessage();
+    assertNotNull(first);
+    var buttons = commands(first);
+    assertEquals(2, buttons.size());
+    assertTrue(buttons.getFirst().contains("tpaccept"));
+    command(a, "tpa Visitor");
+    Component second = b.nextComponentMessage();
+    var current = commands(second);
+    assertNotEquals(buttons, current);
+    command(b, buttons.getLast().substring(1)); // stale request token must preserve the replacement
+    command(b, current.getLast().substring(1));
+    assertTrue(b.nextMessage().contains("не найден"));
+    assertTrue(b.nextMessage().contains("Готово"));
+  }
+
+  @Test
+  void rideRequiresConsentAndDismountsWhenItIsRevoked() throws Exception {
+    var rider =
+        new PlayerMock(server, "Rider") {
+          @Override
+          public boolean hasLineOfSight(org.bukkit.entity.Entity target) {
+            return true;
+          }
+        };
+    server.addPlayer(rider);
+    rider.setOp(true);
+    var target = server.addPlayer("Passenger");
+    rider.teleport(target.getLocation().clone().add(1, 0, 0));
+    await(store.profile(rider.getUniqueId(), "test.barrier", "true"));
+    await(store.profile(target.getUniqueId(), "test.barrier", "true"));
+    server.getScheduler().performTicks(3);
+    command(rider, "ride Passenger");
+    assertFalse(target.getPassengers().contains(rider));
+    var grant = target.addAttachment(plugin, "loveessential.ride.accept", true);
+    command(rider, "le ride Passenger");
+    assertTrue(target.getPassengers().contains(rider));
+    target.removeAttachment(grant);
+    server.getScheduler().performOneTick();
+    assertFalse(target.getPassengers().contains(rider));
+  }
+
+  @Test
+  void createsWithGeneratedIdAndLocalizesTextThenEditsLinesThroughGui() throws Exception {
+    var p = admin();
+    command(p, "le hologram create <gold>Первая строка");
+    waitFor(() -> holograms.all().size() == 1);
+    var old = holograms.all().iterator().next();
+    String id = old.value().id();
+    assertTrue(id.startsWith("holo_"));
+    assertEquals(p.getY() + 2, old.value().position().y(), .001);
+    var line = old.value().pages().getFirst().lines().getFirst();
+    assertTrue(
+        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"))
+            .contains("Первая строка"));
+    command(p, "hologram addline " + id + " Вторая строка");
+    waitFor(() -> holograms.get(id).orElseThrow().revision() > old.revision());
+    command(p, "hologram edit " + id);
+    var before = holograms.get(id).orElseThrow();
+    click(p, 20, ClickType.SHIFT_LEFT);
+    waitFor(() -> holograms.get(id).orElseThrow().revision() > before.revision());
+    var edited = holograms.get(id).orElseThrow();
+    assertEquals(line, edited.value().pages().getFirst().lines().get(1));
+    command(p, "hologram edit " + id);
+    click(p, 47, ClickType.LEFT);
+    waitFor(() -> holograms.get(id).orElseThrow().value().pages().size() == 2);
+    command(p, "hologram edit " + id);
+    var withPage = holograms.get(id).orElseThrow();
+    click(p, 4, ClickType.LEFT);
+    waitFor(() -> holograms.get(id).orElseThrow().revision() > withPage.revision());
+    assertFalse(holograms.get(id).orElseThrow().value().shadow());
+  }
+
+  @Test
+  void apiRejectsStaleChangesAndDefinitionsSurviveReload() throws Exception {
+    var value = definition(holograms.nextId(), List.of(new Line("common.done", "")));
+    var first = await(holograms.save(value, 0));
+    var stale = holograms.save(value, 0);
+    waitFor(stale::isDone);
+    assertTrue(stale.isCompletedExceptionally());
+    await(holograms.load());
+    assertEquals(first, holograms.get(value.id()).orElseThrow());
+    await(holograms.delete(value.id(), first.revision()));
+    assertTrue(holograms.get(value.id()).isEmpty());
+    var recreated = await(holograms.save(value, 0));
+    assertTrue(recreated.revision() > first.revision());
+    var oldDelete = holograms.delete(value.id(), first.revision());
+    waitFor(oldDelete::isDone);
+    assertTrue(oldDelete.isCompletedExceptionally());
+  }
+
+  @Test
+  void migratesLegacyHologramOnceAndDoesNotResurrectDeletedObject() throws Exception {
+    var pos = Position.of(server.getWorld("world").getSpawnLocation());
+    await(
+        store.save(
+            "place",
+            "hologram:legacy",
+            0,
+            new Gameplay.Place(pos, Map.of(), Collections.nCopies(33, "common.done")),
+            "test"));
+    await(holograms.load());
+    var saved = holograms.get("legacy").orElseThrow();
+    assertEquals(pos.y() + 2, saved.value().position().y());
+    assertEquals(2, saved.value().pages().size());
+    assertEquals(33, saved.value().pages().stream().mapToInt(page -> page.lines().size()).sum());
+    assertTrue(await(store.get("place", "hologram:legacy", Gameplay.Place.class)).isEmpty());
+    await(holograms.delete("legacy", saved.revision()));
+    await(holograms.load());
+    assertTrue(holograms.get("legacy").isEmpty());
+  }
+
+  @Test
+  void tracePreferenceIsPersistentAndCommandsHaveCompletion() throws Exception {
+    var p = admin();
+    await(plugin.module("traces", true));
+    command(p, "le traces off");
+    await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    assertEquals(
+        "false", await(store.profile(p.getUniqueId(), "loveessential.traces")).orElseThrow());
+    assertTrue(server.getCommandMap().tabComplete(p, "le hologram ").contains("edit"));
+    assertTrue(
+        server
+            .getCommandMap()
+            .tabComplete(p, "le ")
+            .containsAll(List.of("hat", "heal", "feed", "fly", "repair", "enderchest")));
+    var visitor = server.addPlayer("Guest");
+    visitor.setFoodLevel(1);
+    command(visitor, "feed");
+    assertEquals(1, visitor.getFoodLevel());
+  }
+}

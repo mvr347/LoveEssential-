@@ -6,6 +6,23 @@
 
 | Право | По умолчанию | Доступ |
 | --- | --- | --- |
+| `loveessential.sit` | Все | Посадка командой и по ПКМ |
+| `loveessential.hat` | Все | Предмет из руки вместо шлема |
+| `loveessential.traces` | Все | Свои следы |
+| `loveessential.heal` | OP | Лечение себя |
+| `loveessential.feed` | OP | Восстановление сытости |
+| `loveessential.fly` | OP | Разрешение полёта |
+| `loveessential.speed` | OP | Скорость ходьбы/полёта |
+| `loveessential.gamemode` | OP | Свой режим игры |
+| `loveessential.repair` | OP | Ремонт предмета в руке |
+| `loveessential.workbench` | OP | Верстак |
+| `loveessential.enderchest` | OP | Свой эндер-сундук |
+| `loveessential.worlds.admin` | OP | Создание, импорт, загрузка/выгрузка и изменение миров |
+| `loveessential.worlds.teleport` | Все | Список миров и переход; дополнительно проверяется право конкретного мира |
+| `loveessential.scenarios.admin` | OP | Создание, изменение, запуск и сброс своего журнала сценариев |
+| `loveessential.dialogs.admin` | OP | Создание и изменение нативных диалогов |
+| `loveessential.scoreboard` | Все | Выбор строк и оформление личного табло |
+| `loveessential.content.edit` | OP | GUI-редакторы кастомных крафтов и стартового набора; входит в loveessential.admin |
 | `loveessential.nick` | Все игроки | Изменение своего никнейма и сброс |
 | `loveessential.nick.color` | Все игроки | Выбор одноцветного оформления |
 | `loveessential.nick.gradient` | Все игроки | Выбор градиента |
@@ -49,3 +66,5 @@
 ## Права групп TAB и карточек профиля
 
 В `modules/tab.yml` поля `permission` задают доступ к группам; в стандартной конфигурации это `loveessential.group.admin` и `loveessential.group.knight`. В `modules/profile.yml` карточка также может содержать своё поле `permission`. Эти имена настраиваемые и не являются отдельными зарегистрированными нодами `plugin.yml`.
+
+Редактор MOTD и серверного каталога scoreboard требуют `loveessential.admin`. Все новые административные права входят в него. Диалоги и миры могут дополнительно требовать собственное настроенное право.

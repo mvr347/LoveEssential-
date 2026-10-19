@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 
 public final class Commands implements CommandExecutor, TabCompleter {
   private final LoveEssentialPlugin plugin;
+  private final Extensions extensions;
   private final MainThread main;
   private final Lang lang;
   private final SqliteStore store;
@@ -30,6 +31,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private final dev.lovelace.loveessential.module.PlayerProfiles profiles;
   private final LoveBridge love;
   private final dev.lovelace.loveessential.gui.ControlMenus menus;
+
+  private final dev.lovelace.loveessential.content.ContentMenus contentMenus;
 
   public Commands(
       LoveEssentialPlugin plugin,
@@ -45,7 +48,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
       dev.lovelace.loveessential.module.PrivateMessages messages,
       dev.lovelace.loveessential.module.InventoryInspector inventories,
       dev.lovelace.loveessential.module.PlayerProfiles profiles,
-      dev.lovelace.loveessential.module.Nicknames nicknames) {
+      dev.lovelace.loveessential.module.Nicknames nicknames,
+      dev.lovelace.loveessential.content.ContentMenus contentMenus,
+      Extensions extensions) {
     this.plugin = plugin;
     this.main = main;
     this.lang = lang;
@@ -60,6 +65,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.inventories = inventories;
     this.profiles = profiles;
     this.nicknames = nicknames;
+    this.contentMenus = contentMenus;
+    this.extensions = extensions;
   }
 
   @Override
@@ -75,6 +82,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
               && args.length > 0
               && Set.of("input", "cancel").contains(args[0].toLowerCase(Locale.ROOT));
       if (!inputCommand && sender instanceof Player p) {
+        extensions.ui.cancel(p);
         menus.cancelInput(p);
         wizard.cancelInput(p);
       }
@@ -167,7 +175,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                         .getDataFolder()
                         .toPath()
                         .resolve("backups/backup-" + System.currentTimeMillis() + ".db")),
-                "common.saved");
+                "chat.saved");
           }
           case "tab" -> {
             admin(sender);
@@ -214,6 +222,14 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       Player p = player(sender);
       if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
+      if (Extensions.COMMANDS.contains(cmd)) {
+        extensions.command(p, cmd, args);
+        return true;
+      }
+      if (Set.of("recipes", "starter").contains(cmd)) {
+        contentMenus.command(p, cmd, args);
+        return true;
+      }
       if (Set.of("msg", "reply", "ignore", "msgtoggle").contains(cmd)) {
         if (cmd.equals("msg") && args.length == 0) profiles.players(p, "msg", 0);
         else if (cmd.equals("ignore") && args.length == 0) profiles.preferences(p, 0);
@@ -275,8 +291,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       if (cmd.equals("hologram")) {
-        if (args.length < 2) throw new IllegalArgumentException("errors.input");
-        gameplay.hologram(p, args[0], args[1], String.join(" ", slice(args, 2)));
+        menus.hologramCommand(p, args);
         return true;
       }
       if (cmd.equals("portal")) {
@@ -362,7 +377,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                   }
                 },
                 plugin.io()),
-            "common.saved");
+            "chat.saved");
       }
       case "import", "импорт" -> {
         permission(p, "import");
@@ -511,8 +526,28 @@ public final class Commands implements CommandExecutor, TabCompleter {
   public List<String> onTabComplete(
       CommandSender sender, Command cmd, String alias, String[] args) {
     var candidates =
-        new CommandSuggestions(plugin, npcs, gameplay, love, messages)
-            .complete(sender, cmd.getName(), args);
+        sender instanceof Player p && Extensions.COMMANDS.contains(cmd.getName())
+            ? extensions.suggestions(p, cmd.getName(), args)
+            : cmd.getName().equals("loveessential")
+                    && args.length > 1
+                    && sender instanceof Player p
+                    && Extensions.COMMANDS.contains(
+                        java.util.Objects.toString(CommandSuggestions.resolve(plugin, args[0]), ""))
+                ? extensions.suggestions(
+                    p, CommandSuggestions.resolve(plugin, args[0]), slice(args, 1))
+                : sender instanceof Player p && Set.of("recipes", "starter").contains(cmd.getName())
+                    ? contentMenus.suggestions(p, cmd.getName(), args)
+                    : cmd.getName().equals("loveessential")
+                            && args.length > 1
+                            && sender instanceof Player p
+                            && Set.of("recipes", "starter")
+                                .contains(
+                                    java.util.Objects.toString(
+                                        CommandSuggestions.resolve(plugin, args[0]), ""))
+                        ? contentMenus.suggestions(
+                            p, CommandSuggestions.resolve(plugin, args[0]), slice(args, 1))
+                        : new CommandSuggestions(plugin, npcs, gameplay, love, messages)
+                            .complete(sender, cmd.getName(), args);
     String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
     return candidates.stream()
         .filter(v -> v.toLowerCase(Locale.ROOT).startsWith(prefix))

@@ -11,10 +11,10 @@ public record NpcDraft(NpcDefinition npc, int step, Map<String, String> texts) {
   public static NpcDraft create(UUID owner, Position at) {
     var n =
         new NpcDefinition(
-            "",
+            "npc_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16),
             0,
             owner,
-            "",
+            "npc.default-name",
             "MANNEQUIN",
             at,
             Map.of(),

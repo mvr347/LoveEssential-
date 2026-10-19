@@ -117,10 +117,38 @@ public final class Lang {
   }
 
   public void send(CommandSender to, String key) {
-    to.sendMessage(render(key));
+    send(to, key, Map.of());
   }
 
   public void send(CommandSender to, String key, Map<String, String> vars) {
-    to.sendMessage(render(key, vars));
+    Component message = render("chat.prefix").append(render(key, vars));
+    if (key.equals("errors.input") || key.endsWith(".usage"))
+      message =
+          message
+              .append(Component.space())
+              .append(
+                  render("chat.commands")
+                      .clickEvent(
+                          net.kyori.adventure.text.event.ClickEvent.runCommand(
+                              "/loveessential:loveessential help")));
+    if (key.equals("teleport.done"))
+      message =
+          message
+              .append(Component.space())
+              .append(
+                  render("chat.back")
+                      .clickEvent(
+                          net.kyori.adventure.text.event.ClickEvent.runCommand(
+                              "/loveessential:back")));
+    if (key.equals("wizard.published") && vars.containsKey("id"))
+      message =
+          message
+              .append(Component.space())
+              .append(
+                  render("chat.edit")
+                      .clickEvent(
+                          net.kyori.adventure.text.event.ClickEvent.runCommand(
+                              "/loveessential:npc edit " + vars.get("id"))));
+    to.sendMessage(message);
   }
 }
