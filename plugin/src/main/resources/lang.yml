@@ -395,6 +395,10 @@ gui:
     blocked: <dark_gray>ЛКМ — действие заблокировано
     delete: <green>ЛКМ <dark_gray>— <gray>удалить с подтверждением
   module-labels:
+    worlds: Миры
+    scenarios: Сценарии событий
+    dialogs: Диалоговые окна
+    scoreboard: Личное табло
     crafting: Рецепты крафта
     starter: Стартовые предметы
     nickname: Никнеймы
@@ -417,6 +421,10 @@ gui:
     joinquit: Вход и выход
     motd: Описание сервера
   module-names:
+    worlds: <gold>Миры
+    scenarios: <gold>Сценарии событий
+    dialogs: <gold>Диалоговые окна
+    scoreboard: <gold>Личное табло
     crafting: <gold>Рецепты крафта
     starter: <gold>Стартовые предметы
     nickname: <gold>Никнеймы
@@ -439,6 +447,11 @@ gui:
     joinquit: <gold>Вход и выход
     motd: <gold>Описание сервера
   command-help:
+    worlds: "<gray>Миры: создать, импортировать, загрузить, переместиться и изменить настройки."
+    scenario: <gray>Редактор сценариев событий, условий, задержек и действий.
+    dialog: <gray>Создать и изменить нативное диалоговое окно Paper.
+    motd: <gray>Редактор двух строк MOTD с предпросмотром в диалоговом окне.
+    scoreboard: <gray>Настроить строки, порядок и оформление личного табло.
     recipes: <gray>Каталог рецептов и редактор крафтов 3×3.
     starter: <gray>Предметы первого входа; claim — забрать, edit — настроить.
     nick: <gray>Изменить никнейм, цвет или градиент; сбросить к имени аккаунта.
@@ -469,6 +482,22 @@ gui:
     hologram: <gray>Создать, переместить или удалить голограмму.
     portal: <gray>Настроить область и назначение портала.
   settings:
+    worlds:
+      max-worlds:
+        _label: <gold>Максимум зарегистрированных миров
+    scenarios:
+      max-rules:
+        _label: <gold>Максимум сценариев
+      max-steps:
+        _label: <gold>Максимум шагов в сценарии
+      max-starts-per-minute:
+        _label: <gold>Лимит запусков за минуту для игрока
+    dialogs:
+      max-definitions:
+        _label: <gold>Максимум диалоговых окон
+    scoreboard:
+      refresh-ticks:
+        _label: <gold>Интервал обновления табло (тики)
     crafting:
       max-recipes:
         _label: <gold>Максимум своих рецептов
@@ -1088,6 +1117,14 @@ nick:
 module-menu:
   title: <gold>Настройки модулей LoveEssential
   descriptions:
+    worlds:
+    - "<gray>Создание, импорт, загрузка и настройки отдельных миров. /le worlds."
+    scenarios:
+    - "<gray>Действия при первом входе и других событиях. /le scenario."
+    dialogs:
+    - "<gray>Нативные окна Paper: текст, поля ввода и кнопки. /le dialog."
+    scoreboard:
+    - "<gray>Личные строки, форматы и наборы табло; перенос LoveTweaks. /le scoreboard."
     crafting:
     - "<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes."
     starter:
@@ -1457,3 +1494,193 @@ content:
   recipe-usage: '<yellow>/le recipes [create|edit|open|delete] ID; /le starter [preview|claim|edit]'
   delete-recipe: <red>Удалить рецепт
   delete-recipe-help: <gray>Удалить рецепт с подтверждением; крафт сразу станет недоступен.
+
+ui:
+  confirm: <gold>Подтверждение
+  close: <gray>Закрыть
+  delete: <red>Удалить
+  empty: ''
+  expired: <yellow>Это окно устарело или доступ изменился. Откройте его снова.
+  values:
+    'true': Да
+    'false': Нет
+    normal: Обычный
+    nether: Нижний мир
+    the_end: Край
+    flat: Плоский
+    amplified: Усиленный рельеф
+    large_biomes: Крупные биомы
+    peaceful: Мирная
+    easy: Лёгкая
+    hard: Сложная
+    survival: Выживание
+    creative: Творчество
+    adventure: Приключение
+    spectator: Наблюдатель
+    clear: Ясно
+    rain: Дождь
+    thunder: Гроза
+    first_join: Первый вход
+    join: Каждый вход
+    auth: Авторизация
+    world_enter: Смена мира
+    respawn: Возрождение
+    manual: Ручной запуск
+    message: Сообщение
+    actionbar: Надпись над панелью
+    command: Команда игрока
+    dialog: Диалоговое окно
+    world: Переход в мир
+    sound: Звук
+    starter: Стартовый набор
+    recipes: Каталог крафтов
+    charge: Списать монеты
+    give: Выдать монеты
+    close: Закрыть окно
+worlds:
+  title: <gold>Миры сервера
+  help: <gray>Выберите мир. Администратору доступны настройки, игроку — переход по разрешениям.
+  entry: <gold><world> <gray>• <state>
+  loaded: загружен
+  unloaded: выгружен
+  create: <green>Создать мир
+  import: <gold>Импортировать папку мира
+  create-help: <gray>Имя — латиница, цифры, _ и -. Импорт требует папку с level.dat внутри папки миров сервера. Создание мира может занять время.
+  name: <gold>Имя мира
+  environment: <gold>Измерение
+  type: <gold>Тип генерации
+  seed: <gold>Сид (целое число)
+  edit: <gold>Настройки мира
+  edit-help: <gray>Изменения сохраняются в SQLite и применяются к загруженному миру. Пустое право разрешает вход всем.
+  permission: <gold>Право доступа (пусто — всем)
+  autoload: <gold>Загружать при старте
+  pvp: <gold>Разрешить PvP
+  difficulty: <gold>Сложность
+  mode: <gold>Режим игры
+  enforce: <gold>Применять режим при входе
+  advanced: <gold>Время, погода и граница
+  advanced-help: <gray>Время 0–23999; граница 1–59999968 блоков. Мир возрождения должен быть загружен.
+  time: <gold>Время суток
+  freeze: <gold>Остановить смену дня и ночи
+  weather: <gold>Погода
+  border: <gold>Размер границы
+  border-x: <gold>Центр границы X
+  border-z: <gold>Центр границы Z
+  respawn: <gold>Мир возрождения (пусто — стандартно)
+  rules: <gold>Правила мира
+  teleport: <green>Перейти на точку появления
+  load: <green>Загрузить
+  unload: <yellow>Выгрузить
+  unload-confirm: <yellow>Сохранить и выгрузить пустой мир? Папка мира останется на диске.
+  setspawn: <gold>Сохранить текущую позицию как спавн
+  invalid-name: '<red>Имя мира: 1–48 латинских букв, цифр, _ или -.'
+  invalid-rule: <red>Неизвестное правило мира или недопустимое значение.
+  not-loaded: <red>Мир не загружен.
+  load-failed: <red>Не удалось загрузить мир.
+  import-missing: <red>Не найдена допустимая папка мира с level.dat. Внешние пути и ссылки наружу запрещены.
+  exists: <red>Папка уже существует. Для готового мира используйте импорт.
+  limit: <red>Достигнут лимит управляемых миров.
+  cannot-unload: <red>Нельзя выгрузить основной мир или мир с игроками.
+  usage: <yellow>/le worlds [list|create|import|load|unload|tp|edit|info|setspawn] [мир]
+  rule: <gold>Правило
+  rule-value: <gold>Значение
+  rules-help: <gray>Выберите правило и задайте true/false или целое число, в зависимости от его типа.
+scenarios:
+  entry: <gold><id>
+  rate-limit: <yellow>Лимит запусков сценариев за минуту достигнут. Возможна циклическая цепочка событий.
+  reset: <yellow>Сбросить свой журнал
+  reset-confirm: <yellow>Разрешить этому сценарию выполниться для вас заново? Награды и списания могут повториться.
+  title: <gold>Сценарии событий
+  help: <gray>Сценарий — условие и последовательность действий. Новые сценарии выключены до настройки.
+  create: <gold>Новый сценарий
+  id: <gold>ID сценария
+  edit: <gold>Редактор сценария
+  edit-help: <gray>Первый вход фиксируется до авторизации. Действия выполняются после LoveAuth. Пустой мир или право снимают соответствующее ограничение.
+  enabled: <gold>Включён
+  trigger: <gold>Событие запуска
+  once: <gold>Один раз для каждого игрока
+  steps: <gold>Последовательность действий
+  steps-help: <gray>Каждый шаг имеет задержку и действие. Откройте шаг для изменения или удаления.
+  step-entry: <gold><index>. <white><type>
+  add-step: <green>Добавить шаг
+  remove-step: <red>Удалить шаг
+  move-up: <gold>Переместить выше
+  step: <gold>Шаг сценария
+  step-help: <gray>Для сообщения введите MiniMessage; для диалога или мира — ID; для звука — Bukkit Sound; для монет — количество; для команды — строку
+    без /. Команда исполняется с правами игрока и должна быть разрешена в списке actions.
+  action: <gold>Действие
+  argument: <gold>Текст, ID или параметр действия
+  delay: <gold>Задержка в тиках (20 = 1 секунда)
+  run: <green>Запустить для себя
+  delete-confirm: <yellow>Удалить сценарий? Его журнал выполнения останется в базе.
+  disabled: <red>Сценарий выключен.
+  limit: <red>Достигнут лимит сценариев или шагов.
+  usage: <yellow>/le scenario [list|create|edit|run|reset|delete] [ID]
+windows:
+  title: <gold>Диалоговые окна
+  help: <gray>Выберите окно. Администратор может изменить его, игрок — открыть доступное.
+  entry: <gold><id>
+  create: <gold>Новое диалоговое окно
+  create-help: <gray>Введите ID из строчных латинских букв, цифр, _ и -.
+  id: <gold>ID окна
+  default-title: <gold>Окно королевства
+  default-body: <gray>Текст диалогового окна.
+  edit: <gold>Редактор диалогового окна
+  edit-help: <gray>Заголовок и текст поддерживают MiniMessage и плейсхолдеры LoveEssential. Все тексты сохраняются в lang.yml.
+  heading: <gold>Заголовок
+  body: <gold>Текст
+  answers: <gold>Кнопки ответов
+  answers-help: <gray>Откройте кнопку для изменения подписи, права и действия.
+  add-answer: <green>Добавить ответ
+  answer: <gold>Настройка ответа
+  answer-help: <gray>Выберите действие. Для сообщения — MiniMessage; для диалога/мира — ID. В параметрах можно использовать ${имя_поля}. Команды выполняются
+    с обычными правами игрока.
+  label: <gold>Подпись
+  preview: <gold>Предпросмотр
+  delete-confirm: <yellow>Удалить это диалоговое окно?
+  inputs: <gold>Поля ввода
+  inputs-help: <gray>Укажите ID поля для добавления, изменения или удаления. В параметрах действий доступна подстановка ${ID}.
+  input-id: <gold>ID поля (a-z, 0-9, _)
+  initial: <gold>Начальное значение
+  limit: <red>Достигнут лимит окон, полей или ответов.
+  add-input: <green>Добавить или заменить поле
+  remove-input: <red>Удалить поле по ID
+  usage: <yellow>/le dialog [list|create|edit|open|delete] [ID]
+  motd-title: <gold>Редактор MOTD сервера
+  motd-help: <gray>Две строки описания в списке серверов. Поддерживается MiniMessage. Предпросмотр не публикует изменения; «Сохранить» применяет их.
+  motd-first: <gold>Первая строка
+  motd-second: <gold>Вторая строка
+  input-limit: <gold>Максимум символов (1–2048)
+sidebar:
+  profile: <gold>Ваш профиль
+  profile-help: <gray>ЛКМ — открыть профиль игрока.
+  edit: <gold>Редактор табло сервера
+  edit-help: <gray>Измените оформление или откройте строку. Тексты сохраняются в lang.yml, определения — в SQLite.
+  view-all: <gold>Все строки / выбранная категория
+  add-line: <green>Добавить строку
+  separator: <gold>Разделитель
+  bottom: <gold>Нижняя строка
+  max: <gold>Максимум выбранных строк (1–8)
+  disabled-worlds: <gold>Скрывать в мирах (имена через запятую)
+  delete-line: <yellow>Удалить строку из каталога?
+  line-editor: <gold>Редактор строки табло
+  line-editor-help: <gray>Шаблоны MiniMessage и PAPI. Варианты разделяйте символом |. Необязательное требование — PAPI-выражение и ожидаемое значение.
+  line-id: <gold>ID строки
+  category-id: <gold>ID категории
+  variants: <gold>Варианты шаблона через |
+  requirement: <gold>Требование PAPI (пусто — без требования)
+  expected: <gold>Ожидаемое значение (пусто — непустой ответ)
+  reason: <gold>Объяснение недоступности
+
+  menu: <gold>Настройки личного табло
+  general: <gold>Общее
+  'on': <green>Табло включено • нажмите выключить
+  'off': <gray>Табло выключено • нажмите включить
+  category: <gold>Следующая категория
+  preset-help: <gray>ЛКМ — применить набор строк.
+  line-help: <gray>ЛКМ — включить/убрать; ПКМ — ниже; Shift+ПКМ — выше; Shift+ЛКМ — следующий формат.
+  selected: <green>Включено, позиция <position>
+  not-selected: <gray>Не выбрано
+  unavailable: <yellow>Требование не выполнено или плейсхолдер недоступен.
+  limit: <yellow>Недоступная строка или достигнут лимит строк.
+  legacy-conflict: <yellow>Не удалось передать scoreboard LoveTweaks. Личное табло приостановлено, чтобы избежать конфликта.

@@ -16,6 +16,12 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class DialogService implements Listener, AutoCloseable {
+  private dev.lovelace.loveessential.dialog.NativeDialogs nativeDialogs;
+
+  public void nativeDialogs(dev.lovelace.loveessential.dialog.NativeDialogs dialogs) {
+    nativeDialogs = dialogs;
+  }
+
   private final NpcService npcs;
   private final ConditionEngine conditions;
   private final ActionEngine actions;
@@ -146,6 +152,25 @@ public final class DialogService implements Listener, AutoCloseable {
     var node = npc.dialog().nodes().get(s.node);
     if (node == null) {
       sessions.remove(p.getUniqueId());
+      return;
+    }
+    if (nativeDialogs != null) {
+      var buttons = new ArrayList<dev.lovelace.loveessential.dialog.NativeDialogs.Button>();
+      for (var a : node.answers())
+        if (conditions.test(p, a.condition()) == Verdict.ALLOW)
+          buttons.add(
+              new dev.lovelace.loveessential.dialog.NativeDialogs.Button(
+                  a.id(), lang.render(a.textKey()), v -> answer(p, s.nonce, s.node, a.id())));
+      if (buttons.isEmpty())
+        buttons.add(
+            nativeDialogs.button("close", "ui.close", v -> sessions.remove(p.getUniqueId(), s)));
+      nativeDialogs.show(
+          p,
+          lang.render(npc.nameKey()),
+          lang.render(node.textKey(), Map.of("player", p.getName())),
+          List.of(),
+          buttons,
+          who -> sessions.get(who.getUniqueId()) == s && npcs.accessible(who, npc));
       return;
     }
     Component message = lang.render(node.textKey(), Map.of("player", p.getName()));

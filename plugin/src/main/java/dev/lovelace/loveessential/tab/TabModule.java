@@ -27,6 +27,27 @@ public final class TabModule implements Listener, AutoCloseable {
   private final Map<UUID, View> views = new HashMap<>();
   private BukkitTask task;
   private boolean enabled;
+  private java.util.function.BiConsumer<Player, Scoreboard> customSidebar;
+  private java.util.function.BooleanSupplier customEnabled = () -> false;
+  private java.util.function.Predicate<Scoreboard> companionBoard = b -> false;
+
+  public void customSidebar(
+      java.util.function.BiConsumer<Player, Scoreboard> render,
+      java.util.function.BooleanSupplier enabled,
+      java.util.function.Predicate<Scoreboard> owned) {
+    customSidebar = render;
+    customEnabled = enabled;
+    companionBoard = owned;
+  }
+
+  public boolean managesBoards() {
+    return enabled && task != null && !task.isCancelled();
+  }
+
+  public boolean owns(Player p) {
+    var v = views.get(p.getUniqueId());
+    return v != null && p.getScoreboard() == v.board;
+  }
 
   private static final class View {
     final Scoreboard previous, board;
@@ -196,6 +217,7 @@ public final class TabModule implements Listener, AutoCloseable {
     }
     boolean respect = plugin.getConfig().getBoolean("tab.respect-other-scoreboards", true);
     if (!respect
+        || companionBoard.test(p.getScoreboard())
         || p.getScoreboard().equals(view.board)
         || p.getScoreboard().equals(Bukkit.getScoreboardManager().getMainScoreboard())) {
       p.setScoreboard(view.board);
@@ -239,6 +261,10 @@ public final class TabModule implements Listener, AutoCloseable {
   }
 
   private void sidebar(Player p, View view) {
+    if (customSidebar != null && customEnabled.getAsBoolean()) {
+      customSidebar.accept(p, view.board);
+      return;
+    }
     var section = plugin.getConfig().getConfigurationSection("tab.sidebar");
     if (section == null || !section.getBoolean("enabled", false) || !allowed(p, section)) {
       var old = view.board.getObjective("le_side");

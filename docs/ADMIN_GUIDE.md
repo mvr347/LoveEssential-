@@ -350,3 +350,8 @@ NPC универсальны: категории и ролевые шаблон�
 ## Кастомные крафты и первый вход
 
 Модули `crafting` и `starter` имеют отдельные файлы в `modules/`. Редакторы: `/le recipes`, `/le starter edit`; [руководство по созданию и переносу из LoveTweaks](CUSTOM_CONTENT.md).
+
+
+## Миры, сценарии, нативные диалоги и перенос scoreboard
+
+[Команды, настройка и ограничения](WORLDS_AND_AUTOMATION.md). Работа с содержимым открывается через `/le worlds`, `/le scenario`, `/le dialog`, `/le motd`, `/le scoreboard`. Главное `/le` содержит только настройки модулей. `/le guide` отложен.

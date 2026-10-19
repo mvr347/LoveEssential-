@@ -39,6 +39,7 @@ class ContentIntegrationTest {
     plugin = MockBukkit.load(LoveEssentialPlugin.class);
     waitFor(plugin::ready);
     await(plugin.module("tab", false));
+    await(plugin.module("scoreboard", false));
     await(plugin.module("starter", false));
     library = internal("content", ContentLibrary.class);
     starter = internal("starter", StarterItems.class);

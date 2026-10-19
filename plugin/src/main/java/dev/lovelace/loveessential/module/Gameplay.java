@@ -647,9 +647,15 @@ public final class Gameplay implements Listener, AutoCloseable {
     active.put(e.getPlayer().getUniqueId(), System.currentTimeMillis());
   }
 
+  private java.util.function.Supplier<net.kyori.adventure.text.Component> motd;
+
+  public void motd(java.util.function.Supplier<net.kyori.adventure.text.Component> provider) {
+    motd = provider;
+  }
+
   @EventHandler
   public void ping(ServerListPingEvent e) {
-    if (enabled.test("motd")) e.motd(lang.render("motd.text"));
+    if (enabled.test("motd")) e.motd(motd == null ? lang.render("motd.text") : motd.get());
   }
 
   public void close() {
