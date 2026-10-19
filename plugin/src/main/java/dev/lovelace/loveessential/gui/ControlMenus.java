@@ -200,14 +200,19 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   public void modules(Player p) {
+    modules(p, 0);
+  }
+
+  private void modules(Player p, int page) {
     var m = menu(p, "module-menu.title", Map.of(), this::admin);
     m.root = true;
+    var names = LoveEssentialPlugin.MODULES.stream().sorted().toList();
     int i = 0;
-    for (String id : LoveEssentialPlugin.MODULES.stream().sorted().toList()) {
+    for (String id : names.subList(page * 21, Math.min(names.size(), (page + 1) * 21))) {
       boolean enabled = plugin.module(id);
       entry(
           m,
-          MenuStyle.slot(i++, LoveEssentialPlugin.MODULES.size()),
+          MenuStyle.slot(i++, Math.min(21, names.size() - page * 21)),
           switch (id) {
             case "npc", "profile" -> Material.PLAYER_HEAD;
             case "tab", "nickname" -> Material.NAME_TAG;
@@ -241,11 +246,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
               .toList(),
           c -> {
             if (c.isRightClick())
-              complete(p, plugin.module(id, !plugin.module(id)), () -> modules(p), true);
+              complete(p, plugin.module(id, !plugin.module(id)), () -> modules(p, page), true);
             else settings(p, id, "", 0);
           });
     }
-    navigation(m, p, 0, 0, n -> {}, () -> home(p));
+    navigation(m, p, page, names.size(), n -> modules(p, n), () -> home(p));
     p.openInventory(m.inventory);
   }
 
@@ -998,6 +1003,22 @@ public final class ControlMenus implements Listener, AutoCloseable {
     put(m, 24, Material.RED_CONCRETE, "gui.cancel", "gui.click.open", c -> back.run());
     put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());
     p.openInventory(m.inventory);
+  }
+
+  public void clearInput(Player p) {
+    cancelInput(p);
+    wizard.cancelInput(p);
+  }
+
+  public void request(
+      Player p,
+      String key,
+      String example,
+      String current,
+      Predicate<Player> allowed,
+      Consumer<String> input,
+      Runnable back) {
+    ask(p, key, allowed, input, back, lang.render("content.recipe-input-context"), example, current);
   }
 
   private void ask(

@@ -911,14 +911,20 @@ class PluginLifecycleTest {
             .map(id -> plain.serialize(lang.render("gui.module-names." + id)))
             .collect(java.util.stream.Collectors.toSet());
     var found = new java.util.HashSet<String>();
-    for (int slot : dev.lovelace.loveessential.gui.MenuStyle.CONTENT) {
-      var item = p.getOpenInventory().getTopInventory().getItem(slot);
-      if (item == null) continue;
-      String name = plain.serialize(item.getItemMeta().displayName());
-      assertTrue(expected.contains(name), name);
-      found.add(name);
-      assertTrue(item.getItemMeta().getLore().stream().anyMatch(line -> line.contains("ЛКМ")));
-      assertTrue(item.getItemMeta().getLore().stream().anyMatch(line -> line.contains("ПКМ")));
+    for (int page = 0; page < (LoveEssentialPlugin.MODULES.size() + 20) / 21; page++) {
+      for (int slot : dev.lovelace.loveessential.gui.MenuStyle.CONTENT) {
+        var item = p.getOpenInventory().getTopInventory().getItem(slot);
+        if (item == null) continue;
+        String name = plain.serialize(item.getItemMeta().displayName());
+        assertTrue(expected.contains(name), name);
+        found.add(name);
+        assertTrue(item.getItemMeta().getLore().stream().anyMatch(line -> line.contains("ЛКМ")));
+        assertTrue(item.getItemMeta().getLore().stream().anyMatch(line -> line.contains("ПКМ")));
+      }
+      if ((page + 1) * 21 < LoveEssentialPlugin.MODULES.size()) {
+        click(p, 44);
+        assertLayout(p);
+      }
     }
     assertEquals(expected, found);
     assertEquals(

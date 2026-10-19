@@ -115,7 +115,13 @@ commands:
     aliases: [личка]
   invsee:
     aliases: [инвентарь]
+  recipes:
+    aliases: [recipe, crafts, рецепты]
+  starter:
+    aliases: [startitems, старт]
 permissions:
+  loveessential.content.edit:
+    default: op
   loveessential.nick:
     default: true
   loveessential.nick.color:
@@ -137,6 +143,7 @@ permissions:
   loveessential.admin:
     default: op
     children:
+      loveessential.content.edit: true
       loveessential.nick: true
       loveessential.nick.color: true
       loveessential.nick.gradient: true

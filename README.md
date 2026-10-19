@@ -4,12 +4,14 @@
 
 [![Build and test](https://github.com/mvr347/LoveEssential-/actions/workflows/build.yml/badge.svg)](https://github.com/mvr347/LoveEssential-/actions/workflows/build.yml)
 
-**Документация:** [все команды и алиасы](docs/COMMANDS.md) · [все плейсхолдеры](docs/PLACEHOLDERS.md) · [права доступа](docs/PERMISSIONS.md) · [руководство администратора](docs/ADMIN_GUIDE.md)
+**Документация:** [крафты и стартовый набор](docs/CUSTOM_CONTENT.md) · [все команды и алиасы](docs/COMMANDS.md) · [все плейсхолдеры](docs/PLACEHOLDERS.md) · [права доступа](docs/PERMISSIONS.md) · [руководство администратора](docs/ADMIN_GUIDE.md)
 
 ## Возможности
 
 | Раздел | Что доступно |
 | --- | --- |
+| Свои крафты | Редактор 3×3, рецепты с формой/без формы, точные ингредиенты и результат с метаданными |
+| Первый вход | Перенос набора LoveTweaks, GUI настройки, ожидание LoveAuth и свободного места, защита повторов |
 | Панель управления | `/le` — настройки и включение модулей; отдельные GUI функций и каталог `/le help` |
 | NPC | Создание, удаление с подтверждением, черновики, независимые действия, скины MANNEQUIN, экипировка, условия доступа, расписания |
 | Маршруты и диалоги | Мастер пути, запись точек, undo/redo, предпросмотр, граф диалогов с условиями и действиями |
@@ -39,6 +41,8 @@ NPC работают на нативных сущностях Paper, включ�
 | Задача | Команда |
 | --- | --- |
 | Настроить модули / открыть каталог команд | `/le` / `/le help` |
+| Создать / изменить кастомный крафт | `/le recipes` → «Создать» / ПКМ по рецепту |
+| Настроить предметы первого входа | `/le starter edit` |
 | Создать NPC через мастер | `/le npc create guard` |
 | Удалить опубликованного NPC | `/le npc delete guard confirm` |
 | Сохранить дом / вернуться | `/le sethome base` / `/le home base` |
@@ -81,13 +85,15 @@ plugins/LoveEssential/
 │   ├── messages.yml
 │   ├── nickname.yml
 │   ├── inventory.yml
-│   └── profile.yml
+│   ├── profile.yml
+│   ├── crafting.yml
+│   └── starter.yml
 ├── loveessential.db    # NPC, черновики, профили и состояния
 ├── backups/            # Резервные копии SQLite
 └── exports/            # Экспорт NPC для переноса
 ```
 
-Доступны 19 модулей: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`.
+Доступен 21 модуль: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`.
 
 `/le module` открывает список: ЛКМ — настройки, ПКМ — включение/отключение. Состояние, заданное командой или GUI, сохраняется в SQLite и имеет приоритет над `enabled` в файле модуля. `/le reload` перечитывает конфиги и язык. Старый монолитный конфиг переносится автоматически с копией `config.yml.pre-modules.bak`.
 

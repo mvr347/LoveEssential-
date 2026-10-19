@@ -395,6 +395,8 @@ gui:
     blocked: <dark_gray>ЛКМ — действие заблокировано
     delete: <green>ЛКМ <dark_gray>— <gray>удалить с подтверждением
   module-labels:
+    crafting: Рецепты крафта
+    starter: Стартовые предметы
     nickname: Никнеймы
     messages: Личные сообщения
     inventory: Просмотр инвентаря
@@ -415,6 +417,8 @@ gui:
     joinquit: Вход и выход
     motd: Описание сервера
   module-names:
+    crafting: <gold>Рецепты крафта
+    starter: <gold>Стартовые предметы
     nickname: <gold>Никнеймы
     messages: <gold>Личные сообщения
     inventory: <gold>Просмотр инвентаря
@@ -435,6 +439,8 @@ gui:
     joinquit: <gold>Вход и выход
     motd: <gold>Описание сервера
   command-help:
+    recipes: <gray>Каталог рецептов и редактор крафтов 3×3.
+    starter: <gray>Предметы первого входа; claim — забрать, edit — настроить.
     nick: <gray>Изменить никнейм, цвет или градиент; сбросить к имени аккаунта.
     msg: <gray>Личное сообщение или меню выбора получателя.
     reply: <gray>Ответить последнему собеседнику.
@@ -463,6 +469,9 @@ gui:
     hologram: <gray>Создать, переместить или удалить голограмму.
     portal: <gray>Настроить область и назначение портала.
   settings:
+    crafting:
+      max-recipes:
+        _label: <gold>Максимум своих рецептов
     nickname:
       min-length:
         _label: <gold>Минимальная длина ника
@@ -1079,6 +1088,10 @@ nick:
 module-menu:
   title: <gold>Настройки модулей LoveEssential
   descriptions:
+    crafting:
+    - "<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes."
+    starter:
+    - "<gray>Набор первого входа после входа в LoveAuth. Редактор: /le starter edit."
     npc:
     - <gray>Настройки универсальных NPC, появления и маршрутов.
     - '<gray>Создание и редактор: /le npc.'
@@ -1384,3 +1397,63 @@ module-help:
       _description: <gray>Параметры внешнего TAB. После изменения примените экспорт через /le tab export.
 logs-ui:
   npc-tracking-failed: Не удалось обновить взгляд NPC; повтор через 10 секунд.
+
+content:
+  recipes-title: <gold>Рецепты королевства
+  craft-editor: '<gold>Рецепт <white><id>'
+  recipe-preview: '<gold>Как создать <white><id>'
+  starter-title: <gold>Первое путешествие • стартовый набор
+  starter-editor: <gold>Настройка стартового набора
+  confirm-delete: <gold>Подтвердить замену или удаление
+  entry: <gold><id>
+  entry-help: <gray>ЛКМ — открыть.
+  entry-admin-help: <gray>ЛКМ — открыть; ПКМ — редактировать.
+  create: <green>Создать
+  create-help: <gray>Введите уникальный ID. Сохраните изменения в редакторе.
+  save: <green>Сохранить в SQLite
+  save-help: <gray>Применить изменения. До сохранения они видны только вам.
+  edit: <gold>Редактировать
+  permission: <gold>Право доступа
+  permission-help: <gray>Укажите permission; символ «-» открывает доступ всем.
+  shaped: <gold>Крафт с формой
+  shaped-help: <gray>Важен порядок ячеек 3×3. Нажмите для переключения.
+  shapeless: <gold>Крафт без формы
+  shapeless-help: <gray>Важен состав, расположение не важно. Нажмите для переключения.
+  exact: <gold>Ингредиенты с метаданными
+  exact-help: <gray>Учитывать название, зачарования, PDC и компоненты предмета.
+  material: <gold>Ингредиенты по материалу
+  material-help: <gray>Подойдёт любой предмет этого материала, включая переименованный.
+  ingredient: <gray>Ингредиент
+  ingredient-help: <gray>ЛКМ — копия одного предмета с курсора или из руки; ПКМ — очистить.
+  result: <gold>Результат крафта
+  result-help: <gray>ЛКМ — копия предмета и количества с курсора или из руки; ПКМ — очистить.
+  add-item: <green>Добавить предмет из руки
+  add-item-help: <gray>Копируется предмет с курсора или руки вместе с количеством и метаданными.
+  add-scroll: <gold>Добавить свиток LoveTweaks
+  add-scroll-help: <gray>Настоящий свиток создаётся фабрикой LoveTweaks при выдаче набора.
+  copy-inventory: <gold>Заменить набор содержимым инвентаря
+  copy-inventory-help: <gray>36 основных ячеек, без брони. Нужны подтверждение и сохранение.
+  kit-entry: '<gray>Количество в наборе: <white><amount>'
+  kit-entry-help: <gray>ЛКМ — изменить количество; ПКМ — удалить из набора.
+  claim: <green>Забрать стартовый набор
+  claim-help: <gray>Доступен один раз новым игрокам после авторизации.
+  hold-item: <yellow>Возьмите нужный предмет в основную руку или на курсор и нажмите ещё раз.
+  item-amount: <red>Количество должно быть допустимым для предмета; в наборе — от 1 до 2304.
+  limit: <red>Достигнут лимит объектов, предметов или действий.
+  incomplete-recipe: <red>Укажите хотя бы один ингредиент и результат крафта.
+  recipe-conflict: <red>Не удалось зарегистрировать рецепт — его ключ уже занят.
+  no-starter: <yellow>У вас нет ожидающего набора первого входа.
+  starter-received: <gray>Вы уже получили стартовый набор.
+  starter-given: <green>Предметы для первого путешествия выданы. Добро пожаловать!
+  starter-full: <yellow>Освободите место для всего набора и нажмите «Забрать» в /le starter.
+  starter-too-large: <red>Набор занимает больше 36 ячеек. Администратору нужно уменьшить его.
+  scroll-unavailable: <yellow>Свиток LoveTweaks пока недоступен
+  scroll-unavailable-help: <gray>Нужен работающий LoveTweaks. Выдача набора будет ждать восстановления.
+  prompts:
+    permission: <yellow>Введите право доступа; «-» удалит ограничение.
+    amount: <yellow>Введите количество этого предмета в стартовом наборе (1–2304).
+    recipe-id: <yellow>Введите ID нового рецепта — латиница, цифры, _ и -.
+  recipe-input-context: <gold>Редактор крафтов и стартового набора
+  recipe-usage: '<yellow>/le recipes [create|edit|open|delete] ID; /le starter [preview|claim|edit]'
+  delete-recipe: <red>Удалить рецепт
+  delete-recipe-help: <gray>Удалить рецепт с подтверждением; крафт сразу станет недоступен.

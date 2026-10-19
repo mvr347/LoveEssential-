@@ -37,7 +37,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "messages",
           "inventory",
           "profile",
-          "nickname");
+          "nickname",
+          "crafting",
+          "starter");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -61,6 +63,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.module.PrivateMessages messages;
   private dev.lovelace.loveessential.module.InventoryInspector inventories;
   private dev.lovelace.loveessential.module.PlayerProfiles profiles;
+  private dev.lovelace.loveessential.content.ContentLibrary content;
+  private dev.lovelace.loveessential.content.ContentMenus contentMenus;
+  private dev.lovelace.loveessential.content.StarterItems starter;
   private TabModule tab;
   private LoveExpansion expansion;
   private ConditionEngine conditions;
@@ -221,6 +226,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
     menus =
         new dev.lovelace.loveessential.gui.ControlMenus(
             this, main, lang, love, npcs, wizard, gameplay, nicknames);
+    content = new dev.lovelace.loveessential.content.ContentLibrary(this, main, store, lang, love);
+    starter =
+        new dev.lovelace.loveessential.content.StarterItems(this, main, store, lang, love, content);
+    contentMenus =
+        new dev.lovelace.loveessential.content.ContentMenus(
+            this, main, lang, love, content, starter, menus, actions);
     var commands =
         new Commands(
             this,
@@ -236,7 +247,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
             messages,
             inventories,
             profiles,
-            nicknames);
+            nicknames,
+            contentMenus);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -258,7 +270,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       return null;
                     }))
-        .thenCompose(v -> CompletableFuture.allOf(npcs.load(), gameplay.load()))
+        .thenCompose(
+            v ->
+                CompletableFuture.allOf(
+                    npcs.load(), gameplay.load(), content.load(), starter.load()))
         .whenComplete(
             (v, error) ->
                 main.execute(
@@ -285,7 +300,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
                         expansion.register();
                       }
                       if (module("tab")) tab.start();
+                      try {
+                        content.refresh();
+                      } catch (RuntimeException e) {
+                        getLogger()
+                            .log(java.util.logging.Level.SEVERE, lang.text("logs.start-failed"), e);
+                        getServer().getPluginManager().disablePlugin(this);
+                        return;
+                      }
                       ready = true;
+                      starter.start();
                       getLogger().info(lang.text("logs.ready"));
                     }));
   }
@@ -321,6 +345,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       if (name.equals("npc")) npcs.enabled(value);
                       gameplay.applyVanish();
                       if (name.equals("nickname")) nicknames.refresh();
+                      if (name.equals("crafting")) content.refresh();
                       return null;
                     }));
   }
@@ -373,6 +398,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       if (module("tab")) tab.start();
                       gameplay.applyVanish();
                       nicknames.refresh();
+                      content.refresh();
                       return null;
                     }))
         .whenComplete((v, error) -> reloading.set(false));
@@ -382,6 +408,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (!Set.of("native", "tab").contains(config.getString("tab.engine", "native")))
       throw new IllegalArgumentException("errors.config");
     bounded(config, "storage.write-queue", 1, 65536);
+    bounded(config, "crafting.max-recipes", 1, 10000);
     bounded(config, "nickname.min-length", 1, 32);
     bounded(config, "nickname.max-length", 1, 32);
     if (config.getInt("nickname.min-length", 3) > config.getInt("nickname.max-length", 24))
@@ -465,6 +492,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
     ready = false;
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
+    if (contentMenus != null) contentMenus.close();
+    if (starter != null) starter.close();
+    if (content != null) content.close();
     if (menus != null) menus.close();
     if (wizard != null) wizard.close();
     if (dialogs != null) dialogs.close();
