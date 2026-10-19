@@ -243,6 +243,10 @@ public final class PrivateMessages implements Listener, AutoCloseable {
     sender.sendMessage(lang.rich("messages.outgoing", values));
     recipient.sendMessage(
         lang.rich("messages.incoming", values)
+            .append(net.kyori.adventure.text.Component.space())
+            .append(
+                lang.render("chat.reply")
+                    .clickEvent(ClickEvent.suggestCommand("/le msg " + sender.getName() + " ")))
             .clickEvent(ClickEvent.suggestCommand("/le msg " + sender.getName() + " "))
             .hoverEvent(lang.render("messages.reply-hint")));
     replies.put(sender.getUniqueId(), recipient.getUniqueId());

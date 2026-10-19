@@ -146,7 +146,8 @@ class ContentIntegrationTest {
     assertNull(plugin.getCommand("customgui"));
     command(p, "le crafts");
     click(p, 50, false);
-    command(p, "le input emblem");
+    var editorInventory = p.getOpenInventory().getTopInventory();
+    assertNotNull(editorInventory);
     var ingredient = new ItemStack(Material.DIAMOND, 8);
     p.getInventory().setItemInMainHand(ingredient);
     click(p, 19, false);
@@ -160,7 +161,9 @@ class ContentIntegrationTest {
     p.getInventory().setItemInMainHand(output);
     click(p, 24, false);
     click(p, 50, false);
-    waitFor(() -> library.craft("emblem").isPresent());
+    waitFor(() -> !library.ids().isEmpty());
+    String generated = library.ids().getFirst();
+    assertTrue(generated.startsWith("craft_"));
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
@@ -171,7 +174,7 @@ class ContentIntegrationTest {
         net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
             .serialize(
                 library
-                    .craft("emblem")
+                    .craft(generated)
                     .orElseThrow()
                     .value()
                     .result()
@@ -190,15 +193,15 @@ class ContentIntegrationTest {
     p.getInventory().setItemInMainHand(new ItemStack(Material.STONE));
     click(p, 19, false);
     click(p, 50, false);
-    waitFor(() -> library.craft("emblem").orElseThrow().revision() > 1);
+    waitFor(() -> library.craft(generated).orElseThrow().revision() > 1);
     var nativeRecipe =
-        assertInstanceOf(ShapelessRecipe.class, Bukkit.getRecipe(library.key("emblem")));
+        assertInstanceOf(ShapelessRecipe.class, Bukkit.getRecipe(library.key(generated)));
     assertEquals(5, nativeRecipe.getResult().getAmount());
     assertInstanceOf(RecipeChoice.MaterialChoice.class, nativeRecipe.getChoiceList().getFirst());
     assertEquals(
         Material.STONE,
         library
-            .craft("emblem")
+            .craft(generated)
             .orElseThrow()
             .value()
             .ingredients()
@@ -209,8 +212,8 @@ class ContentIntegrationTest {
     click(p, 22, true);
     click(p, 33, false);
     click(p, 20, false);
-    waitFor(() -> library.craft("emblem").isEmpty());
-    assertNull(Bukkit.getRecipe(library.key("emblem")));
+    waitFor(() -> library.craft(generated).isEmpty());
+    assertNull(Bukkit.getRecipe(library.key(generated)));
   }
 
   @Test

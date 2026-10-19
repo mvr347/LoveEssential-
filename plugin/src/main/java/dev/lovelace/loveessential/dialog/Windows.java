@@ -285,7 +285,7 @@ public final class Windows {
                   if (!p.isOnline()) return;
                   if (error != null) ui.error(p, error);
                   else {
-                    lang.send(p, "common.saved");
+                    lang.send(p, "chat.saved");
                     if (plugin.ready()) next.run();
                   }
                 }));
@@ -293,6 +293,11 @@ public final class Windows {
 
   public void command(Player p, String[] args) {
     if (!plugin.module("dialogs")) throw new IllegalArgumentException("errors.module-disabled");
+    if (args.length == 1 && args[0].equals("create"))
+      args =
+          new String[] {
+            "create", "dialog_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)
+          };
     if (args.length == 0 || args[0].equals("list")) {
       menu(p, 0);
       return;
@@ -386,22 +391,7 @@ public final class Windows {
                 else open(p, id);
               }));
     if (admin(p))
-      buttons.add(
-          ui.button(
-              "create",
-              "content.create",
-              v ->
-                  ui.show(
-                      p,
-                      "windows.create",
-                      "windows.create-help",
-                      List.of(ui.text("id", "windows.id", "", 48)),
-                      List.of(
-                          ui.button(
-                              "save",
-                              "content.create",
-                              values -> command(p, new String[] {"create", values.get("id")}))),
-                      this::admin)));
+      buttons.add(ui.button("create", "content.create", v -> command(p, new String[] {"create"})));
     if (page > 0) buttons.add(ui.button("prev", "gui.previous", v -> menu(p, page - 1)));
     if (start + 16 < ids.size())
       buttons.add(ui.button("next", "common.next", v -> menu(p, page + 1)));

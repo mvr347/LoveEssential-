@@ -7,7 +7,7 @@ common:
   preview: <aqua>Предпросмотр
   publish: <green>Опубликовать
   done: <green>Готово.
-  saved: <green>Сохранено в SQLite.
+  saved: <green>Изменения сохранены.
   reloaded: <green>Настройки перезагружены.
 errors:
   permission: <red>Недостаточно прав.
@@ -88,6 +88,7 @@ modules:
 integrations:
   entry: '<gray><name>: <state>'
 npc:
+  default-name: '<gold>Персонаж'
   entry: <gold><id> <gray>· <type> · ревизия <revision>
   debug: '<gray>Состояние: <state>'
   selected: '<gray>Выбран: <id>'
@@ -413,7 +414,8 @@ gui:
     vanish: Невидимость
     afk: AFK
     skin: Скины
-    sitride: Посадка и езда
+    utilities: Служебные команды
+    sitride: Посадка, езда и шляпы
     nightskip: Пропуск ночи
     portal: Порталы
     hologram: Голограммы
@@ -439,7 +441,8 @@ gui:
     vanish: <gold>Невидимость
     afk: <gold>AFK
     skin: <gold>Скины
-    sitride: <gold>Посадка и езда
+    utilities: <gold>Служебные команды
+    sitride: <gold>Посадка, езда и шляпы
     nightskip: <gold>Пропуск ночи
     portal: <gold>Порталы
     hologram: <gold>Голограммы
@@ -476,7 +479,17 @@ gui:
     vanish: <gray>Переключить невидимость. Требуется соответствующее право.
     afk: <gray>Переключить статус AFK.
     skin: <gray>Установить скин по имени игрока.
-    sit: <gray>Сесть на текущем месте.
+    hat: <gray>Надеть один предмет из руки; предыдущий шлем вернётся в руку.
+    traces: <gray>Включить или выключить свои следы при ходьбе.
+    heal: <gray>Восстановить своё здоровье.
+    feed: <gray>Восстановить свою сытость.
+    fly: <gray>Включить или выключить разрешение на полёт.
+    speed: <gray>Установить скорость ходьбы или полёта от 0 до 10.
+    gamemode: <gray>Изменить свой игровой режим.
+    repair: <gray>Починить предмет в основной руке.
+    workbench: <gray>Открыть верстак.
+    enderchest: <gray>Открыть свой эндер-сундук.
+    sit: <gray>Сесть на поверхность. Повтор команды или Shift — встать.
     ride: <gray>Сесть на ближайшую подходящую сущность.
     profile: <gray>Посмотреть свой профиль Love.
     hologram: <gray>Создать, переместить или удалить голограмму.
@@ -610,17 +623,39 @@ gui:
     nightskip:
       max-multiplier:
         _label: <gold>Максимальное ускорение ночи
-    hologram: {}
+    hologram:
+      max-holograms:
+        _label: <gold>Общий лимит голограмм
+      creation-height:
+        _label: <gold>Высота создания над игроком
+      max-visible-per-player:
+        _label: <gold>Голограмм поблизости на игрока
+      max-display-entities:
+        _label: <gold>Общий лимит сущностей голограмм
     afk:
       timeout-seconds:
         _label: <gold>Время до AFK, секунды
       kick-after-seconds:
         _label: <gold>Время до отключения AFK, секунды
     teleport: {}
-    traces: {}
+    traces:
+      default-enabled:
+        _label: <gold>Показывать следы новым игрокам
+      stride:
+        _label: <gold>Расстояние между шагами
+      interval-ms:
+        _label: <gold>Минимальная задержка между шагами, мс
+      view-distance:
+        _label: <gold>Дальность видимости следов
+      color:
+        _label: <gold>Цвет следов, RGB
     spawn: {}
     joinquit: {}
-    sitride: {}
+    sitride:
+      click-to-sit:
+        _label: <gold>Садиться пустой рукой по ПКМ
+      ride-range:
+        _label: <gold>Дальность посадки на сущность
     skin: {}
     vanish: {}
     npc:
@@ -1146,6 +1181,8 @@ module-menu:
     - <gray>Ручной и автоматический AFK, время до отключения.
     skin:
     - <gray>Смена скина по имени игрока и возврат своего скина.
+    utilities:
+    - <gray>Лечение, еда, полёт, скорость, игровой режим, ремонт, верстак и эндер-сундук.
     sitride:
     - <gray>Сидение и посадка на сущность при наличии прав.
     nightskip:
@@ -1343,6 +1380,31 @@ npc-help:
     description-key: npc.description.guard
 
 module-help:
+  hologram:
+    max-holograms:
+      _description: <gray>Максимум определений в базе. Уже созданные объекты не удаляются.
+    creation-height:
+      _description: <gray>Высота нижней строки над игроком при создании. Строки растут вверх.
+    max-visible-per-player:
+      _description: <gray>Показывает ближайшие голограммы в пределах их дальности.
+    max-display-entities:
+      _description: <gray>Суммарный бюджет TextDisplay, ItemDisplay и Interaction для всех игроков.
+  sitride:
+    click-to-sit:
+      _description: <gray>ПКМ пустой основной рукой по ступеням, плитам или ковру садит игрока. Shift пропускает действие.
+    ride-range:
+      _description: <gray>Максимальное расстояние до цели /ride. Проверяются прямая видимость, территория, бой и согласие игрока.
+  traces:
+    default-enabled:
+      _description: <gray>Начальное состояние следов. Личный выбор /traces хранится в SQLite и имеет приоритет.
+    stride:
+      _description: <gray>Минимальное расстояние в блоках между следами. Повороты на месте следов не оставляют.
+    interval-ms:
+      _description: <gray>Ограничивает частоту частиц независимо от количества событий движения.
+    view-distance:
+      _description: <gray>Видят только авторизованные игроки поблизости, которым доступен сам игрок.
+    color:
+      _description: <gray>Шесть цифр RGB без решётки, например 78644B.
   nickname:
     min-length:
       _description: <gray>Минимальное число букв, цифр и _ в никнейме.
@@ -1684,3 +1746,91 @@ sidebar:
   unavailable: <yellow>Требование не выполнено или плейсхолдер недоступен.
   limit: <yellow>Недоступная строка или достигнут лимит строк.
   legacy-conflict: <yellow>Не удалось передать scoreboard LoveTweaks. Личное табло приостановлено, чтобы избежать конфликта.
+
+chat:
+  back: '<aqua>[Назад]'
+  edit: '<aqua>[Редактировать]'
+  saved: '<green>Изменения сохранены.'
+  prefix: '<dark_gray>[<gold>Love<dark_gray>] <reset>'
+  commands: '<aqua>[Команды]'
+  teleport-request: '<gold>Телепортация <dark_gray>» <white><player> <gray>хочет переместиться к вам.'
+  teleport-here: '<gold>Телепортация <dark_gray>» <white><player> <gray>приглашает вас к себе.'
+  accept: '<green>[Принять]'
+  deny: '<red>[Отклонить]'
+  reply: '<aqua>[Ответить]'
+comfort:
+  prompt-mode: '<yellow>Введите survival, creative, adventure или spectator.'
+  prompt-speed: '<yellow>Введите скорость от 0 до 10. При полёте меняется скорость полёта, иначе — ходьбы.'
+  usage: '<gray>/sit · /ride [игрок] · /hat · /traces [on|off] · /speed <0–10> · /gamemode <режим>'
+  healed: '<green>Здоровье восстановлено.'
+  fed: '<green>Сытость восстановлена.'
+  fly-on: '<green>Полёт разрешён.'
+  fly-off: '<gray>Полёт выключен.'
+  traces-on: '<green>Следы включены.'
+  traces-off: '<gray>Следы выключены.'
+  repair-item: '<yellow>Возьмите в основную руку предмет, который нужно починить.'
+  hat-single: '<yellow>Для /hat возьмите ровно один предмет в основную руку. Шлем вернётся в эту руку.'
+  hat-binding: '<red>Нельзя снять шлем с проклятием несъёмности.'
+  hat-done: '<green>Предмет надет. Предыдущий шлем теперь в руке.'
+  seat-surface: '<yellow>Здесь нет подходящей поверхности для посадки.'
+  seat-state: '<yellow>Сначала выйдите из транспорта и завершите полёт, плавание или бой.'
+  seat-space: '<yellow>Над сиденьем недостаточно свободного места.'
+  seat-occupied: '<yellow>Это место уже занято.'
+  ride-target: '<yellow>Посмотрите на свободную живую цель поблизости или укажите игрока: /ride <ник>.'
+  ride-consent: '<yellow>Игрок должен разрешить посадку правом loveessential.ride.accept и находиться вне боя.'
+holo:
+  position: '<gray>Нижняя строка: <x> <y> <z>'
+  move-adjust: '<gray>Shift+ЛКМ: выше на 0.25; Shift+ПКМ: ниже на 0.25.'
+  render-failed: 'Не удалось отобразить голограмму; повтор через 10 секунд.'
+  handler-failed: 'Ошибка обработчика нажатия голограммы.'
+  'on': 'включена'
+  'off': 'выключена'
+  title: '<gold><id> <dark_gray>· <gray>страница <page>/<pages>'
+  usage: '<gray>/hologram create [текст] · edit <id> · move <id> · addline <id> <текст> · delete <id>'
+  saved: '<green>Голограмма <white><id> <green>сохранена.'
+  limit: '<red>Достигнут лимит голограмм.'
+  create-help: '<gray>Введите первую строку. ID назначится автоматически; появится редактор.'
+  portal-create-help: '<gray>Сначала отметьте pos1. Эта точка станет вторым углом; ID назначится автоматически.'
+  prompt-text: '<yellow>Введите текст строки. Поддерживаются MiniMessage и плейсхолдеры. Кнопка отмены ниже.'
+  text-example: '<gold>Добро пожаловать, <player>!'
+  line: '<gold>Строка <number>'
+  line-title: '<gold>Редактор строки <number>'
+  preview: '<gold>Сейчас отображается'
+  item-line: '<gray>Предметная строка. Копия предмета хранится в SQLite.'
+  line-help: '<gray>Нажмите для редактирования. Shift+ЛКМ — выше, Shift+ПКМ — ниже.'
+  background: '<gold>Фон: <white><value>'
+  background-help: '<gray>Цвет AARRGGBB: первые две цифры — прозрачность. 00000000 — без фона.'
+  prompt-background: '<yellow>Введите цвет фона из 8 шестнадцатеричных цифр AARRGGBB. Например: 80000000.'
+  shadow: '<gold>Тень: <white><value>'
+  shadow-help: '<gray>Переключить тень под буквами.'
+  spacing: '<gold>Интервал строк: <white><value>'
+  spacing-help: '<gray>Расстояние между текстовыми строками: 0.2–2 блока.'
+  prompt-spacing: '<yellow>Введите расстояние между строками: 0.2–2 блока.'
+  range: '<gold>Дальность: <white><value>'
+  range-help: '<gray>Расстояние видимости: 4–96 блоков. Чанки принудительно не загружаются.'
+  prompt-range: '<yellow>Введите дальность видимости: 4–96 блоков.'
+  move-help: '<gray>Поставить нижнюю строку на два блока выше вашего положения.'
+  previous-page: '<gold>Предыдущая страница'
+  next-page: '<gold>Следующая страница'
+  add-page: '<green>Добавить страницу'
+  delete-page: '<red>Удалить эту страницу'
+  page-help: '<gray>ПКМ по голограмме переключает страницы отдельно для каждого игрока.'
+  action: '<gold>Действие страницы по ПКМ'
+  action-value: '<gray>Сейчас: <white><value>'
+  page-next: 'Следующая страница'
+  action-help: '<gray>Команда от имени игрока из разрешённого списка NPC actions. reset — вернуть перелистывание.'
+  prompt-action: '<yellow>Введите команду игрока без / или reset. Она должна быть разрешена в modules/npc.yml → actions.allowed-player-commands.'
+  add-text: '<green>Добавить текстовую строку'
+  edit-text: '<gold>Изменить текст'
+  text-help: '<gray>Текст сохраняется в lang.yml; виден текущий текст и работают плейсхолдеры.'
+  add-item: '<green>Добавить предмет из руки'
+  replace-item: '<gold>Заменить предметом из руки'
+  item-help: '<gray>Возьмите предмет в основную руку перед открытием GUI. Создаётся копия, предмет не расходуется.'
+  item-required: '<yellow>Сначала возьмите предмет в основную руку.'
+  up: '<gold>Переместить выше'
+  down: '<gold>Переместить ниже'
+  reorder-help: '<gray>Поменять эту строку с соседней.'
+
+input-extra:
+  comfort-context: '<gold>Настройка своей игровой механики'
+  hologram-context: '<gold>Редактор голограммы'

@@ -175,7 +175,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                         .getDataFolder()
                         .toPath()
                         .resolve("backups/backup-" + System.currentTimeMillis() + ".db")),
-                "common.saved");
+                "chat.saved");
           }
           case "tab" -> {
             admin(sender);
@@ -291,8 +291,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       if (cmd.equals("hologram")) {
-        if (args.length < 2) throw new IllegalArgumentException("errors.input");
-        gameplay.hologram(p, args[0], args[1], String.join(" ", slice(args, 2)));
+        menus.hologramCommand(p, args);
         return true;
       }
       if (cmd.equals("portal")) {
@@ -378,7 +377,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                   }
                 },
                 plugin.io()),
-            "common.saved");
+            "chat.saved");
       }
       case "import", "импорт" -> {
         permission(p, "import");

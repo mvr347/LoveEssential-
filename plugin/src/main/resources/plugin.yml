@@ -129,6 +129,26 @@ commands:
     aliases: [мотд]
   scoreboard:
     aliases: [sb, скорборд]
+  hat:
+    aliases: [шляпа]
+  traces:
+    aliases: [следы, trail]
+  heal:
+    aliases: [вылечить]
+  feed:
+    aliases: [сытость]
+  fly:
+    aliases: [полёт]
+  speed:
+    aliases: [скорость]
+  gamemode:
+    aliases: [gm, режим]
+  repair:
+    aliases: [починить]
+  workbench:
+    aliases: [craft, верстак]
+  enderchest:
+    aliases: [ec, эндерсундук]
 permissions:
   loveessential.worlds.admin:
     default: op
@@ -188,6 +208,17 @@ permissions:
       loveessential.npc.debug: true
       loveessential.vanish: true
       loveessential.vanish.see: true
+      loveessential.sit: true
+      loveessential.hat: true
+      loveessential.traces: true
+      loveessential.heal: true
+      loveessential.feed: true
+      loveessential.fly: true
+      loveessential.speed: true
+      loveessential.gamemode: true
+      loveessential.repair: true
+      loveessential.workbench: true
+      loveessential.enderchest: true
       loveessential.ride: true
       loveessential.npc.import: true
       loveessential.npc.export: true
@@ -220,4 +251,26 @@ permissions:
   loveessential.npc.import:
     default: op
   loveessential.npc.export:
+    default: op
+  loveessential.sit:
+    default: true
+  loveessential.hat:
+    default: true
+  loveessential.traces:
+    default: true
+  loveessential.heal:
+    default: op
+  loveessential.feed:
+    default: op
+  loveessential.fly:
+    default: op
+  loveessential.speed:
+    default: op
+  loveessential.gamemode:
+    default: op
+  loveessential.repair:
+    default: op
+  loveessential.workbench:
+    default: op
+  loveessential.enderchest:
     default: op

@@ -101,7 +101,7 @@ plugins/LoveEssential/
 └── exports/            # Экспорт NPC для переноса
 ```
 
-Доступны 25 модулей: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`, `worlds`, `scenarios`, `dialogs`, `scoreboard`.
+Доступны 26 модулей: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `utilities`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`, `worlds`, `scenarios`, `dialogs`, `scoreboard`.
 
 `/le module` открывает список: ЛКМ — настройки, ПКМ — включение/отключение. Состояние, заданное командой или GUI, сохраняется в SQLite и имеет приоритет над `enabled` в файле модуля. `/le reload` перечитывает конфиги и язык. Старый монолитный конфиг переносится автоматически с копией `config.yml.pre-modules.bak`.
 
@@ -132,3 +132,9 @@ plugins/LoveEssential/
 Числовые настройки модулей изменяются кнопками или точным вводом. Движок TAB, параметры bossbar и материалы карточек выбираются в GUI. В запросе ввода в чат указаны редактируемый параметр, пример и текущее значение; кнопка «ОТМЕНИТЬ ВВОД» возвращает в меню. Старая кнопка отмены не влияет на новый запрос.
 
 Взгляд NPC работает во время паузы движения после клика и в предпросмотре. В `modules/npc.yml` раздел `tracking` задаёт `update-ticks` (1–20; по умолчанию 2) и `max-turn-degrees` (1–180; по умолчанию 30). Это поворот модели, без телепортации для слежения.
+
+## Посадка, следы и голограммы
+
+`/sit` учитывает поверхность ступеней, плит и ковров; доступна посадка по ПКМ пустой рукой. `/ride [игрок]` проверяет направление взгляда и согласие игрока. `/hat` меняет предмет в руке и шлем местами. `/traces` сохраняет личный выбор следов. `/sethome` не отправляет подтверждение в чат; запросы телепорта и ЛС получили кнопки действий.
+
+`/hologram` открывает редактор с автоматическим ID, текущими значениями строк, перестановкой, страницами по ПКМ, фоном, предметами и отдельными плейсхолдерами для каждого зрителя. Для магазинов есть Bukkit-сервис `HologramService`. Добавлены `heal`, `feed`, `fly`, `speed`, `gamemode`, `repair`, `workbench`, `enderchest` с отдельными правами. [Настройка и API](docs/COMFORT_AND_HOLOGRAMS.md).

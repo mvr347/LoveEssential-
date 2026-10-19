@@ -237,9 +237,9 @@ interaction.close();
 Дома с лимитом, несколько спавнов, TPA/Back с безопасной телепортацией, постоянный vanish, AFK, смена скина по имени, сидение/посадка, ускорение ночи, MOTD, join/quit, простые TextDisplay-голограммы, прямоугольные порталы и частицы следов.
 
 ```text
-/hologram create market <gold>Рынок
-/hologram addline market <gray>Добро пожаловать!
-/hologram move market
+/hologram create <gold>Рынок
+/hologram addline <автоматический-id> <gray>Добро пожаловать!
+/hologram move <автоматический-id>
 /portal pos1
 /portal create gate
 /portal destination gate
@@ -355,3 +355,5 @@ NPC универсальны: категории и ролевые шаблон�
 ## Миры, сценарии, нативные диалоги и перенос scoreboard
 
 [Команды, настройка и ограничения](WORLDS_AND_AUTOMATION.md). Работа с содержимым открывается через `/le worlds`, `/le scenario`, `/le dialog`, `/le motd`, `/le scoreboard`. Главное `/le` содержит только настройки модулей. `/le guide` отложен.
+
+Редактор строк, страниц, фона, предметов и API голограмм, а также sit/ride/hat и следы: [подробное руководство](COMFORT_AND_HOLOGRAMS.md).

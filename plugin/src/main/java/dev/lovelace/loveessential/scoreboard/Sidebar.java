@@ -900,7 +900,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                   if (!p.isOnline()) return;
                   if (e != null) ui.error(p, e);
                   else {
-                    lang.send(p, "common.saved");
+                    lang.send(p, "chat.saved");
                     if (admin(p)) after.run();
                   }
                 }));

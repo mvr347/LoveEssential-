@@ -28,6 +28,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "afk",
           "skin",
           "sitride",
+          "utilities",
           "nightskip",
           "portal",
           "hologram",
@@ -194,6 +195,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     gameplay = new Gameplay(this, main, store, lang, love, this::module);
     placeholders = new Placeholders(lang, love, gameplay::afk);
     gameplay.placeholders(placeholders);
+    gameplay.holograms().setup(placeholders, actions);
+    getServer()
+        .getServicesManager()
+        .register(HologramService.class, gameplay.holograms(), this, ServicePriority.Normal);
     nicknames = new dev.lovelace.loveessential.module.Nicknames(this, main, lang, store, love);
     placeholders.nicknames(nicknames::display, nicknames::tabNames);
     messages =
@@ -464,6 +469,17 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "npc.pathfinding.radius", 4, 24);
     bounded(config, "npc.pathfinding.max-nodes", 1, 100000);
     bounded(config, "npc.pathfinding.plans-per-tick", 1, 100);
+    bounded(config, "hologram.max-holograms", 1, 4096);
+    bounded(config, "hologram.max-visible-per-player", 1, 256);
+    bounded(config, "hologram.max-display-entities", 33, 50000);
+    bounded(config, "traces.interval-ms", 50, 5000);
+    decimal(config, "hologram.creation-height", .5, 10);
+    decimal(config, "traces.stride", .2, 3);
+    decimal(config, "traces.view-distance", 4, 64);
+    decimal(config, "sitride.ride-range", 1, 8);
+    if (config.contains("traces.color")
+        && !config.getString("traces.color", "").matches("[0-9a-fA-F]{6}"))
+      throw new IllegalArgumentException("errors.config");
     bounded(config, "home.default-limit", 1, 1000);
     bounded(config, "afk.timeout-seconds", 1, 31536000);
     bounded(config, "afk.kick-after-seconds", 0, 31536000);
@@ -497,6 +513,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
           throw new IllegalArgumentException("errors.config", e);
         }
       }
+  }
+
+  private static void decimal(
+      org.bukkit.configuration.ConfigurationSection config, String path, double min, double max) {
+    if (!config.contains(path)) return;
+    Object value = config.get(path);
+    if (!(value instanceof Number n)
+        || !Double.isFinite(n.doubleValue())
+        || n.doubleValue() < min
+        || n.doubleValue() > max) throw new IllegalArgumentException("errors.config");
   }
 
   private static void bounded(

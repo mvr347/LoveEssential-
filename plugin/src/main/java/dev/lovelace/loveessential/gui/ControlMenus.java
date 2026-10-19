@@ -645,6 +645,539 @@ public final class ControlMenus implements Listener, AutoCloseable {
     p.openInventory(m.inventory);
   }
 
+  public void hologramCommand(Player p, String[] args) {
+    if (!admin(p) || !plugin.module("hologram"))
+      throw new IllegalArgumentException("errors.permission");
+    var service = gameplay.holograms();
+    String op = args[0].toLowerCase(Locale.ROOT);
+    if (op.equals("create")) {
+      if (args.length == 1)
+        ask(
+            p,
+            "holo.prompt-text",
+            this::admin,
+            text -> service.create(p, text, id -> hologram(p, id, 0, 0)),
+            () -> places(p, "hologram", 0));
+      else
+        service.create(
+            p,
+            String.join(" ", Arrays.copyOfRange(args, 1, args.length)),
+            id -> hologram(p, id, 0, 0));
+      return;
+    }
+    if (args.length < 2) throw new IllegalArgumentException("holo.usage");
+    var old =
+        service.get(args[1]).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+    switch (op) {
+      case "edit", "info" -> hologram(p, args[1], 0, 0);
+      case "move" ->
+          holoSave(
+              p,
+              old,
+              dev.lovelace.loveessential.api.Position.of(p.getLocation().add(0, 2, 0)),
+              old.value().pages(),
+              old.value().background(),
+              old.value().shadow(),
+              old.value().spacing(),
+              old.value().range(),
+              () -> hologram(p, args[1], 0, 0));
+      case "delete" ->
+          confirm(
+              p,
+              "gui.remove",
+              () -> service.remove(p, old, () -> places(p, "hologram", 0)),
+              () -> hologram(p, args[1], 0, 0),
+              this::admin,
+              args[1]);
+      case "addline" -> {
+        if (args.length < 3) throw new IllegalArgumentException("holo.usage");
+        holoText(
+            p,
+            old,
+            0,
+            -1,
+            String.join(" ", Arrays.copyOfRange(args, 2, args.length)),
+            () -> hologram(p, args[1], 0, 0));
+      }
+      default -> throw new IllegalArgumentException("holo.usage");
+    }
+  }
+
+  private void holoSave(
+      Player p,
+      dev.lovelace.loveessential.api.HologramService.Snapshot old,
+      dev.lovelace.loveessential.api.Position at,
+      List<dev.lovelace.loveessential.api.HologramService.Page> pages,
+      int background,
+      boolean shadow,
+      double spacing,
+      double range,
+      Runnable done) {
+    var value =
+        new dev.lovelace.loveessential.api.HologramService.Hologram(
+            old.value().id(), at, pages, background, shadow, spacing, range);
+    gameplay.holograms().mutate(p, value, old.revision(), done);
+  }
+
+  private void holoPages(
+      Player p,
+      dev.lovelace.loveessential.api.HologramService.Snapshot old,
+      List<dev.lovelace.loveessential.api.HologramService.Page> pages,
+      Runnable done) {
+    var v = old.value();
+    holoSave(p, old, v.position(), pages, v.background(), v.shadow(), v.spacing(), v.range(), done);
+  }
+
+  private void holoText(
+      Player p,
+      dev.lovelace.loveessential.api.HologramService.Snapshot old,
+      int page,
+      int line,
+      String text,
+      Runnable done) {
+    String key =
+        "holograms." + old.value().id() + ".text_" + UUID.randomUUID().toString().replace("-", "");
+    var lines = new ArrayList<>(old.value().pages().get(page).lines());
+    var value = new dev.lovelace.loveessential.api.HologramService.Line(key, "");
+    if (line < 0) lines.add(value);
+    else lines.set(line, value);
+    var pages = new ArrayList<>(old.value().pages());
+    pages.set(
+        page,
+        new dev.lovelace.loveessential.api.HologramService.Page(lines, pages.get(page).action()));
+    gameplay.holograms().publishText(p, key, text, () -> holoPages(p, old, pages, done));
+  }
+
+  public void hologram(Player p, String id, int page, int scroll) {
+    var old =
+        gameplay
+            .holograms()
+            .get(id)
+            .orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+    var v = old.value();
+    int selected = Math.clamp(page, 0, v.pages().size() - 1);
+    var current = v.pages().get(selected);
+    Predicate<Player> allowed =
+        who ->
+            admin(who)
+                && plugin.module("hologram")
+                && gameplay
+                    .holograms()
+                    .get(id)
+                    .map(s -> s.revision() == old.revision())
+                    .orElse(false);
+    var m =
+        menu(
+            p,
+            "holo.title",
+            Map.of(
+                "id",
+                id,
+                "page",
+                Integer.toString(selected + 1),
+                "pages",
+                Integer.toString(v.pages().size())),
+            allowed);
+    Runnable reopen = () -> hologram(p, id, selected, scroll);
+    for (int i = scroll * 21; i < Math.min(current.lines().size(), (scroll + 1) * 21); i++) {
+      int index = i;
+      var line = current.lines().get(i);
+      boolean item = !line.item().isBlank();
+      var lore = new ArrayList<Component>();
+      lore.add(item ? lang.render("holo.item-line") : gameplay.holograms().text(line, p));
+      if (item) lore.add(dev.lovelace.loveessential.module.Holograms.decode(line).displayName());
+      lore.add(lang.render("holo.line-help"));
+      entry(
+          m,
+          MenuStyle.CONTENT[i % 21],
+          item
+              ? dev.lovelace.loveessential.module.Holograms.decode(line).getType()
+              : Material.PAPER,
+          lang.render("holo.line", Map.of("number", Integer.toString(i + 1))),
+          lore,
+          c -> {
+            if (c == ClickType.SHIFT_LEFT || c == ClickType.SHIFT_RIGHT) {
+              int to = index + (c == ClickType.SHIFT_LEFT ? -1 : 1);
+              if (to < 0 || to >= current.lines().size()) return;
+              var lines = new ArrayList<>(current.lines());
+              Collections.swap(lines, index, to);
+              var pages = new ArrayList<>(v.pages());
+              pages.set(
+                  selected,
+                  new dev.lovelace.loveessential.api.HologramService.Page(lines, current.action()));
+              holoPages(p, old, pages, reopen);
+            } else holoLine(p, old, selected, index, scroll);
+          });
+    }
+    navigation(
+        m,
+        p,
+        scroll,
+        current.lines().size(),
+        n -> hologram(p, id, selected, n),
+        () -> places(p, "hologram", 0));
+    entry(
+        m,
+        3,
+        Material.BLACK_DYE,
+        lang.render("holo.background", Map.of("value", String.format("%08X", v.background()))),
+        List.of(lang.render("holo.background-help")),
+        c ->
+            request(
+                p,
+                "holo.prompt-background",
+                "80000000",
+                String.format("%08X", v.background()),
+                allowed,
+                text -> {
+                  if (!text.matches("[0-9a-fA-F]{8}"))
+                    throw new IllegalArgumentException("errors.input");
+                  holoSave(
+                      p,
+                      old,
+                      v.position(),
+                      v.pages(),
+                      (int) Long.parseLong(text, 16),
+                      v.shadow(),
+                      v.spacing(),
+                      v.range(),
+                      reopen);
+                },
+                reopen));
+    entry(
+        m,
+        4,
+        Material.GLOWSTONE_DUST,
+        lang.render("holo.shadow", Map.of("value", lang.text(v.shadow() ? "holo.on" : "holo.off"))),
+        List.of(lang.render("holo.shadow-help")),
+        c ->
+            holoSave(
+                p,
+                old,
+                v.position(),
+                v.pages(),
+                v.background(),
+                !v.shadow(),
+                v.spacing(),
+                v.range(),
+                reopen));
+    entry(
+        m,
+        5,
+        Material.STRING,
+        lang.render("holo.spacing", Map.of("value", Double.toString(v.spacing()))),
+        List.of(lang.render("holo.spacing-help")),
+        c ->
+            request(
+                p,
+                "holo.prompt-spacing",
+                "0.3",
+                Double.toString(v.spacing()),
+                allowed,
+                text ->
+                    holoSave(
+                        p,
+                        old,
+                        v.position(),
+                        v.pages(),
+                        v.background(),
+                        v.shadow(),
+                        Double.parseDouble(text),
+                        v.range(),
+                        reopen),
+                reopen));
+    entry(
+        m,
+        6,
+        Material.ENDER_EYE,
+        lang.render("holo.range", Map.of("value", Double.toString(v.range()))),
+        List.of(lang.render("holo.range-help")),
+        c ->
+            request(
+                p,
+                "holo.prompt-range",
+                "48",
+                Double.toString(v.range()),
+                allowed,
+                text ->
+                    holoSave(
+                        p,
+                        old,
+                        v.position(),
+                        v.pages(),
+                        v.background(),
+                        v.shadow(),
+                        v.spacing(),
+                        Double.parseDouble(text),
+                        reopen),
+                reopen));
+    entry(
+        m,
+        7,
+        Material.COMPASS,
+        lang.render("gui.move"),
+        List.of(
+            lang.render(
+                "holo.position",
+                Map.of(
+                    "x",
+                    Double.toString(v.position().x()),
+                    "y",
+                    Double.toString(v.position().y()),
+                    "z",
+                    Double.toString(v.position().z()))),
+            lang.render("holo.move-help"),
+            lang.render("holo.move-adjust")),
+        c -> {
+          var at =
+              c == ClickType.SHIFT_LEFT || c == ClickType.SHIFT_RIGHT
+                  ? v.position().location().add(0, c == ClickType.SHIFT_LEFT ? .25 : -.25, 0)
+                  : p.getLocation().add(0, 2, 0);
+          holoSave(
+              p,
+              old,
+              dev.lovelace.loveessential.api.Position.of(at),
+              v.pages(),
+              v.background(),
+              v.shadow(),
+              v.spacing(),
+              v.range(),
+              reopen);
+        });
+    put(
+        m,
+        8,
+        Material.BARRIER,
+        "gui.remove",
+        "gui.click.delete",
+        c ->
+            confirm(
+                p,
+                "gui.remove",
+                () -> gameplay.holograms().remove(p, old, () -> places(p, "hologram", 0)),
+                reopen,
+                allowed,
+                id));
+    if (selected > 0)
+      put(
+          m,
+          45,
+          Material.ARROW,
+          "holo.previous-page",
+          "gui.click.open",
+          c -> hologram(p, id, selected - 1, 0));
+    if (selected + 1 < v.pages().size())
+      put(
+          m,
+          46,
+          Material.ARROW,
+          "holo.next-page",
+          "gui.click.open",
+          c -> hologram(p, id, selected + 1, 0));
+    if (v.pages().size() < 16)
+      put(
+          m,
+          47,
+          Material.BOOK,
+          "holo.add-page",
+          "holo.page-help",
+          c -> {
+            var pages = new ArrayList<>(v.pages());
+            pages.add(new dev.lovelace.loveessential.api.HologramService.Page(List.of(), null));
+            holoPages(p, old, pages, () -> hologram(p, id, pages.size() - 1, 0));
+          });
+    if (v.pages().size() > 1)
+      put(
+          m,
+          48,
+          Material.RED_DYE,
+          "holo.delete-page",
+          "gui.click.delete",
+          c ->
+              confirm(
+                  p,
+                  "holo.delete-page",
+                  () -> {
+                    var pages = new ArrayList<>(v.pages());
+                    pages.remove(selected);
+                    holoPages(p, old, pages, () -> hologram(p, id, Math.max(0, selected - 1), 0));
+                  },
+                  reopen,
+                  allowed,
+                  Integer.toString(selected + 1)));
+    entry(
+        m,
+        49,
+        Material.COMMAND_BLOCK,
+        lang.render("holo.action"),
+        List.of(
+            lang.render(
+                "holo.action-value",
+                Map.of(
+                    "value",
+                    current.action() == null
+                        ? lang.text("holo.page-next")
+                        : current.action().type() + " " + current.action().args())),
+            lang.render("holo.action-help")),
+        c ->
+            request(
+                p,
+                "holo.prompt-action",
+                "recipes",
+                current.action() != null ? current.action().args().getOrDefault("value", "") : "",
+                allowed,
+                text -> {
+                  var pages = new ArrayList<>(v.pages());
+                  var action =
+                      text.equalsIgnoreCase("reset")
+                          ? null
+                          : new dev.lovelace.loveessential.api.Action(
+                              "command", Map.of("value", text));
+                  pages.set(
+                      selected,
+                      new dev.lovelace.loveessential.api.HologramService.Page(
+                          current.lines(), action));
+                  holoPages(p, old, pages, reopen);
+                },
+                reopen));
+    if (current.lines().size() < 32) {
+      put(
+          m,
+          50,
+          Material.WRITABLE_BOOK,
+          "holo.add-text",
+          "holo.text-help",
+          c ->
+              ask(
+                  p,
+                  "holo.prompt-text",
+                  allowed,
+                  text -> holoText(p, old, selected, -1, text, reopen),
+                  reopen));
+      put(
+          m,
+          53,
+          Material.ITEM_FRAME,
+          "holo.add-item",
+          "holo.item-help",
+          c -> {
+            var lines = new ArrayList<>(current.lines());
+            lines.add(
+                dev.lovelace.loveessential.module.Holograms.item(
+                    p.getInventory().getItemInMainHand()));
+            var pages = new ArrayList<>(v.pages());
+            pages.set(
+                selected,
+                new dev.lovelace.loveessential.api.HologramService.Page(lines, current.action()));
+            holoPages(p, old, pages, reopen);
+          });
+    }
+    p.openInventory(m.inventory);
+  }
+
+  private void holoLine(
+      Player p,
+      dev.lovelace.loveessential.api.HologramService.Snapshot old,
+      int page,
+      int index,
+      int scroll) {
+    var v = old.value();
+    var current = v.pages().get(page);
+    var line = current.lines().get(index);
+    Runnable back = () -> hologram(p, v.id(), page, scroll);
+    Predicate<Player> allowed =
+        who ->
+            admin(who)
+                && plugin.module("hologram")
+                && gameplay
+                    .holograms()
+                    .get(v.id())
+                    .map(s -> s.revision() == old.revision())
+                    .orElse(false);
+    var m = menu(p, "holo.line-title", Map.of("number", Integer.toString(index + 1)), allowed);
+    var preview =
+        List.of(
+            line.item().isBlank()
+                ? gameplay.holograms().text(line, p)
+                : lang.render("holo.item-line"));
+    entry(m, 4, Material.PAPER, lang.render("holo.preview"), preview, c -> {});
+    put(
+        m,
+        20,
+        Material.WRITABLE_BOOK,
+        "holo.edit-text",
+        "holo.text-help",
+        c ->
+            request(
+                p,
+                "holo.prompt-text",
+                lang.text("holo.text-example"),
+                line.item().isBlank() ? lang.text(line.textKey()) : "",
+                allowed,
+                text -> holoText(p, old, page, index, text, back),
+                back));
+    put(
+        m,
+        22,
+        Material.ITEM_FRAME,
+        "holo.replace-item",
+        "holo.item-help",
+        c -> {
+          var lines = new ArrayList<>(current.lines());
+          lines.set(
+              index,
+              dev.lovelace.loveessential.module.Holograms.item(
+                  p.getInventory().getItemInMainHand()));
+          var pages = new ArrayList<>(v.pages());
+          pages.set(
+              page,
+              new dev.lovelace.loveessential.api.HologramService.Page(lines, current.action()));
+          holoPages(p, old, pages, back);
+        });
+    put(
+        m,
+        24,
+        Material.BARRIER,
+        "gui.remove",
+        "gui.click.delete",
+        c ->
+            confirm(
+                p,
+                "gui.remove",
+                () -> {
+                  var lines = new ArrayList<>(current.lines());
+                  lines.remove(index);
+                  var pages = new ArrayList<>(v.pages());
+                  pages.set(
+                      page,
+                      new dev.lovelace.loveessential.api.HologramService.Page(
+                          lines, current.action()));
+                  holoPages(p, old, pages, back);
+                },
+                back,
+                allowed,
+                Integer.toString(index + 1)));
+    for (int direction : new int[] {-1, 1})
+      if (index + direction >= 0 && index + direction < current.lines().size())
+        put(
+            m,
+            direction < 0 ? 30 : 32,
+            Material.ARROW,
+            direction < 0 ? "holo.up" : "holo.down",
+            "holo.reorder-help",
+            c -> {
+              var lines = new ArrayList<>(current.lines());
+              Collections.swap(lines, index, index + direction);
+              var pages = new ArrayList<>(v.pages());
+              pages.set(
+                  page,
+                  new dev.lovelace.loveessential.api.HologramService.Page(lines, current.action()));
+              holoPages(p, old, pages, back);
+            });
+    navigation(m, p, 0, 0, n -> {}, back);
+    p.openInventory(m.inventory);
+  }
+
   public void places(Player p, String kind, int page) {
     Predicate<Player> allowed =
         who -> plugin.module(kind) && (!Set.of("portal", "hologram").contains(kind) || admin(who));
@@ -662,11 +1195,28 @@ public final class ControlMenus implements Listener, AutoCloseable {
           List.of(lang.render("gui.separator"), lang.render("gui.click.open")),
           c -> {
             if (kind.equals("home") || kind.equals("spawn")) command(p, kind + " " + id);
+            else if (kind.equals("hologram")) hologram(p, id, 0, 0);
             else place(p, kind, id);
           });
     }
     navigation(m, p, page, names.size(), n -> places(p, kind, n), () -> home(p));
-    if (!kind.equals("spawn") || admin(p))
+    if (kind.equals("hologram"))
+      put(
+          m,
+          50,
+          Material.LIME_DYE,
+          "gui.add",
+          "holo.create-help",
+          c -> hologramCommand(p, new String[] {"create"}));
+    else if (kind.equals("portal"))
+      put(
+          m,
+          50,
+          Material.LIME_DYE,
+          "gui.add",
+          "holo.portal-create-help",
+          c -> command(p, "portal create"));
+    else if (!kind.equals("spawn") || admin(p))
       put(
           m,
           50,
@@ -686,7 +1236,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                           p,
                           "gui.prompt-text",
                           allowed,
-                          text -> command(p, "hologram create " + id + " " + text),
+                          text -> command(p, "hologram create " + text),
                           () -> places(p, kind, page));
                     else
                       command(
@@ -712,20 +1262,6 @@ public final class ControlMenus implements Listener, AutoCloseable {
         kind.equals("portal") ? "gui.destination" : "gui.move",
         "gui.click.run",
         c -> command(p, kind + (kind.equals("portal") ? " destination " : " move ") + id));
-    if (kind.equals("hologram"))
-      put(
-          m,
-          22,
-          Material.WRITABLE_BOOK,
-          "gui.add-line",
-          "gui.click.edit",
-          c ->
-              ask(
-                  p,
-                  "gui.prompt-text",
-                  this::admin,
-                  text -> command(p, "hologram addline " + id + " " + text),
-                  () -> place(p, kind, id)));
     put(
         m,
         24,
@@ -955,6 +1491,16 @@ public final class ControlMenus implements Listener, AutoCloseable {
               case "portal", "hologram" -> places(p, name, 0);
               case "skin" -> skin(p);
               case "nick" -> nickname(p);
+              case "speed", "gamemode" ->
+                  request(
+                      p,
+                      name.equals("speed") ? "comfort.prompt-speed" : "comfort.prompt-mode",
+                      name.equals("speed") ? "2" : "survival",
+                      "",
+                      who ->
+                          plugin.module("utilities") && who.hasPermission("loveessential." + name),
+                      value -> command(p, name + " " + value),
+                      () -> commands(p, page));
               case "tpa", "tpahere", "sethome", "setspawn", "reply" ->
                   ask(
                       p,
@@ -1018,7 +1564,20 @@ public final class ControlMenus implements Listener, AutoCloseable {
       Predicate<Player> allowed,
       Consumer<String> input,
       Runnable back) {
-    ask(p, key, allowed, input, back, lang.render("content.recipe-input-context"), example, current);
+    ask(
+        p,
+        key,
+        allowed,
+        input,
+        back,
+        lang.render(
+            key.startsWith("holo.")
+                ? "input-extra.hologram-context"
+                : key.startsWith("comfort.")
+                    ? "input-extra.comfort-context"
+                    : "content.recipe-input-context"),
+        example,
+        current);
   }
 
   private void ask(
@@ -1029,7 +1588,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
         allowed,
         input,
         back,
-        lang.render("input.contexts." + key.replace('.', '-')),
+        lang.render(
+            key.startsWith("holo.")
+                ? "input-extra.hologram-context"
+                : "input.contexts." + key.replace('.', '-')),
         lang.contains("input.examples." + key.replace('.', '-'))
             ? lang.text("input.examples." + key.replace('.', '-'))
             : "",

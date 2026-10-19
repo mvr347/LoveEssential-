@@ -396,6 +396,11 @@ public final class Scenarios implements Listener, AutoCloseable {
 
   public void command(Player p, String[] args) {
     if (!admin(p)) throw new IllegalArgumentException("errors.permission");
+    if (args.length == 1 && args[0].equals("create"))
+      args =
+          new String[] {
+            "create", "scenario_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)
+          };
     if (args.length == 0 || args[0].equals("list")) {
       menu(p, 0);
       return;
@@ -492,7 +497,7 @@ public final class Scenarios implements Listener, AutoCloseable {
                   if (!p.isOnline()) return;
                   if (e != null) ui.error(p, e);
                   else {
-                    lang.send(p, "common.saved");
+                    lang.send(p, "chat.saved");
                     if (admin(p)) after.run();
                   }
                 }));
@@ -506,22 +511,7 @@ public final class Scenarios implements Listener, AutoCloseable {
       buttons.add(
           new NativeDialogs.Button(
               id, lang.render("scenarios.entry", Map.of("id", id)), v -> edit(p, id)));
-    buttons.add(
-        ui.button(
-            "create",
-            "content.create",
-            v ->
-                ui.show(
-                    p,
-                    "scenarios.create",
-                    "scenarios.help",
-                    List.of(ui.text("id", "scenarios.id", "", 48)),
-                    List.of(
-                        ui.button(
-                            "save",
-                            "content.create",
-                            values -> command(p, new String[] {"create", values.get("id")}))),
-                    this::admin)));
+    buttons.add(ui.button("create", "content.create", v -> command(p, new String[] {"create"})));
     if (page > 0) buttons.add(ui.button("prev", "gui.previous", v -> menu(p, page - 1)));
     if (start + 16 < ids.size())
       buttons.add(ui.button("next", "common.next", v -> menu(p, page + 1)));

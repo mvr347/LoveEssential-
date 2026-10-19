@@ -223,7 +223,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
                   if (!p.isOnline()) return;
                   if (ex != null) error(p, ex);
                   else {
-                    lang.send(p, "common.saved");
+                    lang.send(p, "chat.saved");
                     success.run();
                   }
                 }));
@@ -263,6 +263,11 @@ public final class ContentMenus implements Listener, AutoCloseable {
       list(p, 0);
       return;
     }
+    if (args.length == 1 && args[0].equals("create"))
+      args =
+          new String[] {
+            "create", "craft_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)
+          };
     if (args.length != 2) throw new IllegalArgumentException("content.recipe-usage");
     String op = args[0], id = args[1];
     ContentLibrary.id(id);
@@ -350,15 +355,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
           50,
           Material.EMERALD,
           "content.create",
-          e ->
-              ask(
-                  p,
-                  "recipe-id",
-                  "sigil",
-                  "",
-                  null,
-                  id -> command(p, "recipes", new String[] {"create", id}),
-                  () -> list(p, actual)));
+          e -> command(p, "recipes", new String[] {"create"}));
     nav(v, p, actual, ids.size(), n -> list(p, n), null);
     p.openInventory(v.inventory);
   }

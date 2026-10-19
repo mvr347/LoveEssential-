@@ -26,7 +26,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     }
   }
 
-  private record Request(UUID sender, boolean here, long expires) {}
+  private record Request(UUID sender, boolean here, long expires, String token) {}
 
   private final JavaPlugin plugin;
   private final MainThread main;
@@ -41,8 +41,9 @@ public final class Gameplay implements Listener, AutoCloseable {
       manualAfk = new HashSet<>();
   private final Map<UUID, Long> active = new HashMap<>(), portalCooldown = new HashMap<>();
   private final Map<UUID, Request> requests = new HashMap<>();
-  private final Map<UUID, ArmorStand> seats = new HashMap<>();
-  private final Map<String, List<TextDisplay>> holograms = new HashMap<>();
+  private final Comfort comfort;
+  private final Holograms hologramService;
+
   private final Map<UUID, Position> portalFirst = new HashMap<>();
   private BukkitTask task;
   private Placeholders placeholders;
@@ -62,6 +63,12 @@ public final class Gameplay implements Listener, AutoCloseable {
     this.love = love;
     this.enabled = enabled;
     teleport = new TeleportService(plugin, main, store, lang, love);
+    comfort = new Comfort((LoveEssentialPlugin) plugin, main, store, lang, love, this);
+    hologramService = new Holograms((LoveEssentialPlugin) plugin, main, store, lang, love);
+  }
+
+  public Holograms holograms() {
+    return hologramService;
   }
 
   public void placeholders(Placeholders p) {
@@ -78,13 +85,16 @@ public final class Gameplay implements Listener, AutoCloseable {
                       places.clear();
                       list.forEach(d -> places.put(d.id(), d));
                       return null;
-                    }));
+                    }))
+        .thenCompose(v -> hologramService.load());
   }
 
   public void start() {
     Bukkit.getPluginManager().registerEvents(this, plugin);
     for (var p : Bukkit.getOnlinePlayers()) loadPlayer(p, false);
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20, 20);
+    comfort.start();
+    hologramService.start();
   }
 
   public boolean afk(Player p) {
@@ -140,6 +150,8 @@ public final class Gameplay implements Listener, AutoCloseable {
   }
 
   public List<String> names(Player p, String kind) {
+    if (kind.equals("hologram"))
+      return hologramService.all().stream().map(d -> d.value().id()).sorted().toList();
     String prefix = kind.equals("home") ? "home:" + p.getUniqueId() + ":" : kind + ":";
     return places.keySet().stream()
         .filter(k -> k.startsWith(prefix))
@@ -149,6 +161,10 @@ public final class Gameplay implements Listener, AutoCloseable {
   }
 
   public void command(Player p, String cmd, String[] args) {
+    if (Comfort.COMMANDS.contains(cmd)) {
+      comfort.command(p, cmd, args);
+      return;
+    }
     String name = args.length > 0 ? args[0] : "default";
     switch (cmd) {
       case "sethome" -> {
@@ -220,13 +236,36 @@ public final class Gameplay implements Listener, AutoCloseable {
         requests.put(
             target.getUniqueId(),
             new Request(
-                p.getUniqueId(), cmd.equals("tpahere"), System.currentTimeMillis() + 60000));
-        lang.send(target, "teleport.request", Map.of("player", p.getName()));
+                p.getUniqueId(),
+                cmd.equals("tpahere"),
+                System.currentTimeMillis() + 60000,
+                UUID.randomUUID().toString()));
+        target.sendMessage(
+            lang.render(
+                    cmd.equals("tpahere") ? "chat.teleport-here" : "chat.teleport-request",
+                    Map.of("player", p.getName()))
+                .append(net.kyori.adventure.text.Component.space())
+                .append(
+                    lang.render("chat.accept")
+                        .clickEvent(
+                            net.kyori.adventure.text.event.ClickEvent.runCommand(
+                                "/loveessential:tpaccept "
+                                    + requests.get(target.getUniqueId()).token())))
+                .append(net.kyori.adventure.text.Component.space())
+                .append(
+                    lang.render("chat.deny")
+                        .clickEvent(
+                            net.kyori.adventure.text.event.ClickEvent.runCommand(
+                                "/loveessential:tpdeny "
+                                    + requests.get(target.getUniqueId()).token()))));
         lang.send(p, "common.done");
       }
       case "tpaccept" -> {
         check("teleport");
-        var request = requests.remove(p.getUniqueId());
+        var request = requests.get(p.getUniqueId());
+        if (request != null && args.length > 0 && !request.token().equals(args[0]))
+          throw new IllegalArgumentException("errors.not-found");
+        requests.remove(p.getUniqueId());
         if (request == null || request.expires() < System.currentTimeMillis())
           throw new IllegalArgumentException("errors.not-found");
         var sender = Bukkit.getPlayer(request.sender());
@@ -236,6 +275,9 @@ public final class Gameplay implements Listener, AutoCloseable {
         else teleport.teleport(sender, Position.of(p.getLocation()));
       }
       case "tpdeny" -> {
+        var request = requests.get(p.getUniqueId());
+        if (request != null && args.length > 0 && !request.token().equals(args[0]))
+          throw new IllegalArgumentException("errors.not-found");
         requests.remove(p.getUniqueId());
         lang.send(p, "common.done");
       }
@@ -296,45 +338,6 @@ public final class Gameplay implements Listener, AutoCloseable {
                                           }));
                         }));
       }
-      case "sit" -> {
-        check("sitride");
-        if (seats.containsKey(p.getUniqueId())) {
-          seats.remove(p.getUniqueId()).remove();
-          return;
-        }
-        var at = p.getLocation().clone().subtract(0, 1.3, 0);
-        var seat =
-            p.getWorld()
-                .spawn(
-                    at,
-                    ArmorStand.class,
-                    s -> {
-                      s.setPersistent(false);
-                      s.setVisible(false);
-                      s.setGravity(false);
-                      s.setMarker(true);
-                      s.setInvulnerable(true);
-                    });
-        seat.addPassenger(p);
-        seats.put(p.getUniqueId(), seat);
-      }
-      case "ride" -> {
-        check("sitride");
-        if (!p.hasPermission("loveessential.ride"))
-          throw new IllegalArgumentException("errors.permission");
-        var target =
-            p.getWorld().getNearbyEntities(p.getLocation(), 2, 2, 2).stream()
-                .filter(
-                    e ->
-                        e instanceof LivingEntity
-                            && !e.equals(p)
-                            && (!(e instanceof Player other)
-                                || other.hasPermission("loveessential.ride.accept")
-                                    && p.canSee(other)))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
-        target.addPassenger(p);
-      }
       case "profile" ->
           lang.send(
               p,
@@ -354,55 +357,6 @@ public final class Gameplay implements Listener, AutoCloseable {
     }
   }
 
-  public void hologram(Player p, String op, String id, String text) {
-    check("hologram");
-    admin(p);
-    if (!id.matches("[a-z0-9_-]{1,48}")) throw new IllegalArgumentException("validation.id");
-    String doc = "hologram:" + id;
-    switch (op) {
-      case "create", "addline" -> {
-        var old = places.get(doc);
-        if (op.equals("create") && old != null)
-          throw new IllegalArgumentException("errors.conflict");
-        if (op.equals("addline") && old == null)
-          throw new IllegalArgumentException("errors.not-found");
-        var keys = new ArrayList<String>(old == null ? List.of() : old.value().textKeys());
-        String key = "holograms." + id + ".line" + keys.size();
-        keys.add(key);
-        var place =
-            new Place(
-                old == null ? Position.of(p.getLocation()) : old.value().position(),
-                Map.of(),
-                keys);
-        java.util.concurrent.CompletableFuture.runAsync(
-                () -> {
-                  try {
-                    lang.putAll(Map.of(key, text));
-                  } catch (Exception e) {
-                    throw new java.util.concurrent.CompletionException(e);
-                  }
-                },
-                ((LoveEssentialPlugin) plugin).io())
-            .whenComplete(
-                (v, error) ->
-                    main.execute(
-                        () -> {
-                          if (error != null) lang.send(p, "errors.storage");
-                          else save(p, doc, place);
-                        }));
-      }
-      case "move" -> {
-        var old = Objects.requireNonNull(places.get(doc));
-        save(
-            p,
-            doc,
-            new Place(Position.of(p.getLocation()), old.value().options(), old.value().textKeys()));
-      }
-      case "delete" -> remove(p, doc);
-      default -> throw new IllegalArgumentException("errors.input");
-    }
-  }
-
   public void portal(Player p, String op, String id) {
     check("portal");
     admin(p);
@@ -412,7 +366,8 @@ public final class Gameplay implements Listener, AutoCloseable {
         lang.send(p, "common.done");
       }
       case "create" -> {
-        if (!id.matches("[a-z0-9_-]{1,48}")) throw new IllegalArgumentException("validation.id");
+        if (!id.isBlank() && !id.matches("[a-z0-9_-]{1,48}"))
+          throw new IllegalArgumentException("validation.id");
         var first = portalFirst.get(p.getUniqueId());
         if (first == null || !first.world().equals(p.getWorld().getUID()))
           throw new IllegalArgumentException("errors.input");
@@ -421,6 +376,8 @@ public final class Gameplay implements Listener, AutoCloseable {
         options.put("x2", Double.toString(second.x()));
         options.put("y2", Double.toString(second.y()));
         options.put("z2", Double.toString(second.z()));
+        if (id.isBlank())
+          id = "portal_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         save(p, "portal:" + id, new Place(first, options, List.of()));
       }
       case "destination" -> {
@@ -437,44 +394,6 @@ public final class Gameplay implements Listener, AutoCloseable {
   private void tick() {
     ticks += 20;
     requests.values().removeIf(r -> r.expires() < System.currentTimeMillis());
-    if (enabled.test("hologram")) {
-      for (var entry : places.entrySet())
-        if (entry.getKey().startsWith("hologram:")) {
-          var place = entry.getValue().value();
-          World world = Bukkit.getWorld(place.position().world());
-          if (world == null) continue;
-          Location at = place.position().location();
-          boolean near =
-              world.isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4)
-                  && world.getPlayers().stream()
-                      .anyMatch(p -> p.getLocation().distanceSquared(at) < 48 * 48);
-          var displays = holograms.get(entry.getKey());
-          if (near && (displays == null || displays.stream().anyMatch(d -> !d.isValid()))) {
-            if (displays != null) displays.forEach(Entity::remove);
-            displays = new ArrayList<>();
-            for (int i = 0; i < place.textKeys().size(); i++) {
-              String key = place.textKeys().get(i);
-              var display =
-                  world.spawn(
-                      at.clone().add(0, -i * .27, 0),
-                      TextDisplay.class,
-                      d -> {
-                        d.setPersistent(false);
-                        d.setBillboard(Display.Billboard.CENTER);
-                        d.text(lang.render(key));
-                      });
-              displays.add(display);
-            }
-            holograms.put(entry.getKey(), displays);
-          } else if (!near && displays != null) {
-            displays.forEach(Entity::remove);
-            holograms.remove(entry.getKey());
-          }
-        }
-    } else {
-      holograms.values().forEach(l -> l.forEach(Entity::remove));
-      holograms.clear();
-    }
     if (enabled.test("nightskip"))
       for (World w : Bukkit.getWorlds())
         if (w.getTime() > 12500 && w.getTime() < 23500) {
@@ -499,16 +418,6 @@ public final class Gameplay implements Listener, AutoCloseable {
                       - active.getOrDefault(p.getUniqueId(), System.currentTimeMillis())
                   > kick * 1000) p.kick(lang.render("afk.kick"));
     }
-    seats
-        .entrySet()
-        .removeIf(
-            e -> {
-              if (!e.getValue().isValid() || e.getValue().getPassengers().isEmpty()) {
-                e.getValue().remove();
-                return true;
-              }
-              return false;
-            });
   }
 
   private void save(Player p, String id, Place value) {
@@ -527,9 +436,7 @@ public final class Gameplay implements Listener, AutoCloseable {
                         return;
                       }
                       places.put(id, new SqliteStore.Document<>(id, rev, value));
-                      var displays = holograms.remove(id);
-                      if (displays != null) displays.forEach(Entity::remove);
-                      lang.send(p, "common.saved");
+                      if (!id.startsWith("home:")) lang.send(p, "chat.saved");
                     }));
   }
 
@@ -547,8 +454,6 @@ public final class Gameplay implements Listener, AutoCloseable {
                         return;
                       }
                       places.remove(id);
-                      var displays = holograms.remove(id);
-                      if (displays != null) displays.forEach(Entity::remove);
                       lang.send(p, "common.done");
                     }));
   }
@@ -592,28 +497,17 @@ public final class Gameplay implements Listener, AutoCloseable {
     requests.remove(p.getUniqueId());
     portalCooldown.remove(p.getUniqueId());
     portalFirst.remove(p.getUniqueId());
-    var seat = seats.remove(p.getUniqueId());
-    if (seat != null) seat.remove();
     teleport.forget(p);
   }
 
   @EventHandler
   public void move(PlayerMoveEvent e) {
-    if (e.getTo() == null || e.getFrom().distanceSquared(e.getTo()) < .001) return;
+    if (e.getTo() == null
+        || e.getFrom().getWorld().equals(e.getTo().getWorld())
+            && e.getFrom().distanceSquared(e.getTo()) < .001) return;
     var p = e.getPlayer();
     active.put(p.getUniqueId(), System.currentTimeMillis());
     manualAfk.remove(p.getUniqueId());
-    if (enabled.test("traces") && !vanished(p) && ticks % 4 == 0)
-      p.getWorld()
-          .spawnParticle(
-              Particle.DUST,
-              p.getLocation().clone().add(0, .05, 0),
-              1,
-              0,
-              0,
-              0,
-              0,
-              new Particle.DustOptions(Color.fromRGB(120, 100, 75), .5f));
     if (enabled.test("portal")
         && System.currentTimeMillis() - portalCooldown.getOrDefault(p.getUniqueId(), 0L) > 3000)
       for (var entry : places.entrySet())
@@ -661,10 +555,8 @@ public final class Gameplay implements Listener, AutoCloseable {
   public void close() {
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
-    seats.values().forEach(Entity::remove);
-    seats.clear();
-    holograms.values().forEach(l -> l.forEach(Entity::remove));
-    holograms.clear();
+    comfort.close();
+    hologramService.close();
     for (var viewer : Bukkit.getOnlinePlayers())
       for (var target : Bukkit.getOnlinePlayers()) viewer.showPlayer(plugin, target);
   }
