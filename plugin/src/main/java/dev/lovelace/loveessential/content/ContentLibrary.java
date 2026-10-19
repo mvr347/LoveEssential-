@@ -1,8 +1,6 @@
 package dev.lovelace.loveessential.content;
 
 import dev.lovelace.loveessential.*;
-import dev.lovelace.loveessential.api.*;
-import dev.lovelace.loveessential.condition.*;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.storage.SqliteStore;
@@ -17,20 +15,6 @@ import org.bukkit.inventory.*;
 
 /** Immutable SQL documents; Bukkit recipes are registered and removed only on the server thread. */
 public final class ContentLibrary implements Listener, AutoCloseable {
-  public record Button(
-      ContentItems icon, Condition condition, List<Action> left, List<Action> right) {
-    public Button {
-      left = List.copyOf(left);
-      right = List.copyOf(right);
-    }
-  }
-
-  public record Menu(String id, String titleKey, String permission, Map<Integer, Button> buttons) {
-    public Menu {
-      buttons = Map.copyOf(buttons);
-    }
-  }
-
   public record Craft(
       String id,
       boolean enabled,
@@ -49,45 +33,27 @@ public final class ContentLibrary implements Listener, AutoCloseable {
   private final SqliteStore store;
   private final Lang lang;
   private final LoveBridge love;
-  private final ConditionEngine conditions;
-  private final Map<String, SqliteStore.Document<Menu>> menus = new ConcurrentHashMap<>();
   private final Map<String, SqliteStore.Document<Craft>> crafts = new ConcurrentHashMap<>();
   private final Set<NamespacedKey> registered = new HashSet<>();
 
   public ContentLibrary(
-      LoveEssentialPlugin plugin,
-      MainThread main,
-      SqliteStore store,
-      Lang lang,
-      LoveBridge love,
-      ConditionEngine conditions) {
+      LoveEssentialPlugin plugin, MainThread main, SqliteStore store, Lang lang, LoveBridge love) {
     this.plugin = plugin;
     this.main = main;
     this.store = store;
     this.lang = lang;
     this.love = love;
-    this.conditions = conditions;
     Bukkit.getPluginManager().registerEvents(this, plugin);
   }
 
   public CompletableFuture<Void> load() {
     return store
-        .list("custom-menu", Menu.class)
-        .thenCombine(
-            store.list("custom-craft", Craft.class),
-            (m, c) -> {
-              m.forEach(d -> menus.put(d.id(), d));
-              c.forEach(d -> crafts.put(d.id(), d));
-              return null;
-            });
+        .list("custom-craft", Craft.class)
+        .thenAccept(saved -> saved.forEach(d -> crafts.put(d.id(), d)));
   }
 
-  public List<String> ids(boolean recipes) {
-    return (recipes ? crafts : menus).keySet().stream().sorted().toList();
-  }
-
-  public Optional<SqliteStore.Document<Menu>> menu(String id) {
-    return Optional.ofNullable(menus.get(id));
+  public List<String> ids() {
+    return crafts.keySet().stream().sorted().toList();
   }
 
   public Optional<SqliteStore.Document<Craft>> craft(String id) {
@@ -96,16 +62,6 @@ public final class ContentLibrary implements Listener, AutoCloseable {
 
   public static void id(String id) {
     if (!id.matches("[a-z0-9_-]{1,48}")) throw new IllegalArgumentException("validation.id");
-  }
-
-  public boolean allowed(Player p, Menu m) {
-    return plugin.module("customgui")
-        && love.authenticated(p)
-        && (m.permission().isBlank() || p.hasPermission(m.permission()));
-  }
-
-  public boolean allowed(Player p, Button b) {
-    return conditions.test(p, b.condition()) == LoveEssentialService.Verdict.ALLOW;
   }
 
   public boolean allowed(Player p, Craft c) {
@@ -135,28 +91,6 @@ public final class ContentLibrary implements Listener, AutoCloseable {
   }
 
   public CompletableFuture<Void> save(
-      Menu value, long revision, String actor, Map<String, String> texts) {
-    id(value.id());
-    if (value.buttons().size() > 21
-        || !Arrays.stream(dev.lovelace.loveessential.gui.MenuStyle.CONTENT)
-            .boxed()
-            .toList()
-            .containsAll(value.buttons().keySet()))
-      throw new IllegalArgumentException("errors.input");
-    if (revision == 0 && menus.size() >= plugin.getConfig().getInt("customgui.max-menus", 256))
-      throw new IllegalArgumentException("content.limit");
-    return texts(texts)
-        .thenCompose(v -> store.save("custom-menu", value.id(), revision, value, actor))
-        .thenCompose(
-            rev ->
-                main.call(
-                    () -> {
-                      menus.put(value.id(), new SqliteStore.Document<>(value.id(), rev, value));
-                      return null;
-                    }));
-  }
-
-  public CompletableFuture<Void> save(
       Craft value, long revision, String actor, Map<String, String> texts) {
     id(value.id());
     validate(value);
@@ -176,17 +110,15 @@ public final class ContentLibrary implements Listener, AutoCloseable {
                     }));
   }
 
-  public CompletableFuture<Void> delete(boolean recipe, String id, long revision, String actor) {
+  public CompletableFuture<Void> delete(String id, long revision, String actor) {
     return store
-        .delete(recipe ? "custom-craft" : "custom-menu", id, revision, actor)
+        .delete("custom-craft", id, revision, actor)
         .thenCompose(
             v ->
                 main.call(
                     () -> {
-                      if (recipe) {
-                        crafts.remove(id);
-                        refresh();
-                      } else menus.remove(id);
+                      crafts.remove(id);
+                      refresh();
                       return null;
                     }));
   }

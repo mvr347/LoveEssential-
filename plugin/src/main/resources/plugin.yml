@@ -115,8 +115,6 @@ commands:
     aliases: [личка]
   invsee:
     aliases: [инвентарь]
-  customgui:
-    aliases: [gui, меню]
   recipes:
     aliases: [recipe, crafts, рецепты]
   starter:

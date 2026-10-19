@@ -4,13 +4,12 @@
 
 [![Build and test](https://github.com/mvr347/LoveEssential-/actions/workflows/build.yml/badge.svg)](https://github.com/mvr347/LoveEssential-/actions/workflows/build.yml)
 
-**Документация:** [меню, крафты и стартовый набор](docs/CUSTOM_CONTENT.md) · [все команды и алиасы](docs/COMMANDS.md) · [все плейсхолдеры](docs/PLACEHOLDERS.md) · [права доступа](docs/PERMISSIONS.md) · [руководство администратора](docs/ADMIN_GUIDE.md)
+**Документация:** [крафты и стартовый набор](docs/CUSTOM_CONTENT.md) · [все команды и алиасы](docs/COMMANDS.md) · [все плейсхолдеры](docs/PLACEHOLDERS.md) · [права доступа](docs/PERMISSIONS.md) · [руководство администратора](docs/ADMIN_GUIDE.md)
 
 ## Возможности
 
 | Раздел | Что доступно |
 | --- | --- |
-| Свои меню | Редактор кнопок, описаний, действий, условий и прав; тексты в lang.yml |
 | Свои крафты | Редактор 3×3, рецепты с формой/без формы, точные ингредиенты и результат с метаданными |
 | Первый вход | Перенос набора LoveTweaks, GUI настройки, ожидание LoveAuth и свободного места, защита повторов |
 | Панель управления | `/le` — настройки и включение модулей; отдельные GUI функций и каталог `/le help` |
@@ -42,7 +41,7 @@ NPC работают на нативных сущностях Paper, включ�
 | Задача | Команда |
 | --- | --- |
 | Настроить модули / открыть каталог команд | `/le` / `/le help` |
-| Создать своё меню / рецепт | `/le gui create market` / `/le recipes create sigil` |
+| Создать / изменить кастомный крафт | `/le recipes` → «Создать» / ПКМ по рецепту |
 | Настроить предметы первого входа | `/le starter edit` |
 | Создать NPC через мастер | `/le npc create guard` |
 | Удалить опубликованного NPC | `/le npc delete guard confirm` |
@@ -87,7 +86,6 @@ plugins/LoveEssential/
 │   ├── nickname.yml
 │   ├── inventory.yml
 │   ├── profile.yml
-│   ├── customgui.yml
 │   ├── crafting.yml
 │   └── starter.yml
 ├── loveessential.db    # NPC, черновики, профили и состояния
@@ -95,7 +93,7 @@ plugins/LoveEssential/
 └── exports/            # Экспорт NPC для переноса
 ```
 
-Доступны 22 модуля: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `customgui`, `crafting`, `starter`.
+Доступен 21 модуль: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`.
 
 `/le module` открывает список: ЛКМ — настройки, ПКМ — включение/отключение. Состояние, заданное командой или GUI, сохраняется в SQLite и имеет приоритет над `enabled` в файле модуля. `/le reload` перечитывает конфиги и язык. Старый монолитный конфиг переносится автоматически с копией `config.yml.pre-modules.bak`.
 

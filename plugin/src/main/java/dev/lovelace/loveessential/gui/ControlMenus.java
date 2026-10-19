@@ -1018,7 +1018,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
       Predicate<Player> allowed,
       Consumer<String> input,
       Runnable back) {
-    ask(p, key, allowed, input, back, lang.render("content.input-context"), example, current);
+    ask(p, key, allowed, input, back, lang.render("content.recipe-input-context"), example, current);
   }
 
   private void ask(

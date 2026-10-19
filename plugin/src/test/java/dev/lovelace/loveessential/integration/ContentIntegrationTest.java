@@ -99,50 +99,6 @@ class ContentIntegrationTest {
   }
 
   @Test
-  void menuEditorCopiesItemsPersistsTextsAndExecutesButtonActions() throws Exception {
-    var p = admin();
-    var icon = new ItemStack(Material.EMERALD, 8);
-    icon.editMeta(m -> m.displayName(Component.text("Trade")));
-    p.getInventory().setItemInMainHand(icon);
-    command(p, "le gui create market");
-    click(p, 22, false); // create button with a copy; opens its editor
-    click(p, 24, false); // left actions
-    click(p, 20, false); // message action (second action)
-    command(p, "le input <gold>Welcome!</gold>");
-    click(p, 51, false); // back to menu editor
-    click(p, 50, false);
-    waitFor(() -> library.menu("market").isPresent());
-    assertEquals(8, p.getInventory().getItemInMainHand().getAmount());
-    assertEquals(
-        1,
-        library
-            .menu("market")
-            .orElseThrow()
-            .value()
-            .buttons()
-            .get(22)
-            .icon()
-            .item(lang)
-            .getAmount());
-    var document =
-        await(store.get("custom-menu", "market", ContentLibrary.Menu.class)).orElseThrow();
-    assertEquals(1, document.value().buttons().get(22).left().size());
-    String text =
-        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"));
-    assertTrue(text.contains("Welcome!"));
-    command(p, "le gui market");
-    click(p, 22, false);
-    boolean found = false;
-    Component msg;
-    while ((msg = p.nextComponentMessage()) != null)
-      if (net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-          .serialize(msg)
-          .contains("Welcome!")) found = true;
-    assertTrue(found);
-    assertEquals(8, p.getInventory().getItemInMainHand().getAmount());
-  }
-
-  @Test
   void nativeRecipeEditorPreservesPdcAndUnregistersWhenDisabled() throws Exception {
     var p = admin();
     command(p, "le recipes create sigil");
@@ -183,51 +139,84 @@ class ContentIntegrationTest {
   }
 
   @Test
-  void permissionAndConditionsGateMenuAndRecheckOnClick() throws Exception {
+  void recipesCanBeCreatedEditedAndDeletedEntirelyThroughGui() throws Exception {
     var p = admin();
-    var texts = new HashMap<String, String>();
-    texts.put("content-text.tests.title", "Test");
-    texts.put("content-text.tests.message", "SECRET");
-    var icon = data(new ItemStack(Material.PAPER));
-    var button =
-        new ContentLibrary.Button(
-            icon,
-            new Condition("permission", Map.of("value", "test.button"), List.of()),
-            List.of(new Action("message", Map.of("key", "content-text.tests.message"))),
-            List.of());
-    await(
-        library.save(
-            new ContentLibrary.Menu(
-                "secret", "content-text.tests.title", "test.open", Map.of(22, button)),
-            0,
-            "test",
-            texts));
-    var user = server.addPlayer("Visitor");
-    command(user, "gui secret");
+    assertFalse(LoveEssentialPlugin.MODULES.contains("customgui"));
+    assertNull(plugin.getCommand("customgui"));
+    command(p, "le crafts");
+    click(p, 50, false);
+    command(p, "le input emblem");
+    var ingredient = new ItemStack(Material.DIAMOND, 8);
+    p.getInventory().setItemInMainHand(ingredient);
+    click(p, 19, false);
+    assertEquals(8, p.getInventory().getItemInMainHand().getAmount());
+    var output = new ItemStack(Material.EMERALD, 3);
+    output.editMeta(
+        m -> {
+          m.displayName(Component.text("Символ королевства"));
+          m.lore(List.of(Component.text("Создан через редактор крафтов")));
+        });
+    p.getInventory().setItemInMainHand(output);
+    click(p, 24, false);
+    click(p, 50, false);
+    waitFor(() -> library.craft("emblem").isPresent());
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getItem(22) != null);
+    assertEquals(3, p.getInventory().getItemInMainHand().getAmount());
+    assertEquals(
+        "Символ королевства",
+        net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(
+                library
+                    .craft("emblem")
+                    .orElseThrow()
+                    .value()
+                    .result()
+                    .item(lang)
+                    .getItemMeta()
+                    .displayName()));
     assertTrue(
-        user.getOpenInventory().getTopInventory() == null
-            || user.getOpenInventory().getTopInventory().getSize() != 54);
-    var permission = user.addAttachment(plugin, "test.open", true);
-    command(user, "gui secret");
-    assertNull(user.getOpenInventory().getTopInventory().getItem(22));
-    permission.setPermission("test.button", true);
-    command(user, "gui secret");
-    assertNotNull(user.getOpenInventory().getTopInventory().getItem(22));
-    permission.setPermission("test.button", false);
-    click(user, 22, false);
-    Component msg;
-    while ((msg = user.nextComponentMessage()) != null)
-      assertFalse(
-          net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-              .serialize(msg)
-              .contains("SECRET"));
+        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"))
+            .contains("Создан через редактор крафтов"));
+    click(p, 22, true); // edit from catalog
+    p.getInventory().setItemInMainHand(new ItemStack(Material.EMERALD, 5));
+    click(p, 24, false);
+    click(p, 1, false);
+    click(p, 3, false); // shapeless, material comparison
+    click(p, 19, true);
+    p.getInventory().setItemInMainHand(new ItemStack(Material.STONE));
+    click(p, 19, false);
+    click(p, 50, false);
+    waitFor(() -> library.craft("emblem").orElseThrow().revision() > 1);
+    var nativeRecipe =
+        assertInstanceOf(ShapelessRecipe.class, Bukkit.getRecipe(library.key("emblem")));
+    assertEquals(5, nativeRecipe.getResult().getAmount());
+    assertInstanceOf(RecipeChoice.MaterialChoice.class, nativeRecipe.getChoiceList().getFirst());
+    assertEquals(
+        Material.STONE,
+        library
+            .craft("emblem")
+            .orElseThrow()
+            .value()
+            .ingredients()
+            .getFirst()
+            .item(lang)
+            .getType());
+    command(p, "le recipes");
+    click(p, 22, true);
+    click(p, 33, false);
+    click(p, 20, false);
+    waitFor(() -> library.craft("emblem").isEmpty());
+    assertNull(Bukkit.getRecipe(library.key("emblem")));
   }
 
   @Test
   void editorRejectsVisitorsAndNativeRecipeRequiresAllFields() throws Exception {
     var p = server.addPlayer("Visitor");
-    command(p, "gui create denied");
-    assertTrue(library.menu("denied").isEmpty());
+    command(p, "recipes create denied");
+    assertTrue(library.craft("denied").isEmpty());
     p.setOp(true);
     command(p, "recipes create incomplete");
     click(p, 50, false);

@@ -38,7 +38,6 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "inventory",
           "profile",
           "nickname",
-          "customgui",
           "crafting",
           "starter");
   private final ExecutorService io =
@@ -227,14 +226,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
     menus =
         new dev.lovelace.loveessential.gui.ControlMenus(
             this, main, lang, love, npcs, wizard, gameplay, nicknames);
-    content =
-        new dev.lovelace.loveessential.content.ContentLibrary(
-            this, main, store, lang, love, conditions);
+    content = new dev.lovelace.loveessential.content.ContentLibrary(this, main, store, lang, love);
     starter =
         new dev.lovelace.loveessential.content.StarterItems(this, main, store, lang, love, content);
     contentMenus =
         new dev.lovelace.loveessential.content.ContentMenus(
-            this, main, lang, love, content, starter, menus, actions, placeholders);
+            this, main, lang, love, content, starter, menus, actions);
     var commands =
         new Commands(
             this,
@@ -411,7 +408,6 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (!Set.of("native", "tab").contains(config.getString("tab.engine", "native")))
       throw new IllegalArgumentException("errors.config");
     bounded(config, "storage.write-queue", 1, 65536);
-    bounded(config, "customgui.max-menus", 1, 10000);
     bounded(config, "crafting.max-recipes", 1, 10000);
     bounded(config, "nickname.min-length", 1, 32);
     bounded(config, "nickname.max-length", 1, 32);

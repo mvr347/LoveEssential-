@@ -30,8 +30,6 @@ public final class ContentMenus implements Listener, AutoCloseable {
   private final ContentLibrary library;
   private final StarterItems starter;
   private final ControlMenus controls;
-  private final ActionEngine actions;
-  private final dev.lovelace.loveessential.tab.Placeholders placeholders;
   private final Map<UUID, Object> drafts = new HashMap<>();
   private final List<LoveEssentialService.Registration> registrations = new ArrayList<>();
   private static final int[] GRID = {19, 20, 21, 28, 29, 30, 37, 38, 39};
@@ -47,27 +45,6 @@ public final class ContentMenus implements Listener, AutoCloseable {
 
     public Inventory getInventory() {
       return inventory;
-    }
-  }
-
-  private static final class MenuDraft {
-    final String id, token = UUID.randomUUID().toString();
-    long revision;
-    String title, permission;
-    final Map<Integer, ContentLibrary.Button> buttons = new HashMap<>();
-    final Map<String, String> texts = new HashMap<>();
-    boolean saving;
-
-    MenuDraft(ContentLibrary.Menu m, long rev) {
-      id = m.id();
-      title = m.titleKey();
-      permission = m.permission();
-      buttons.putAll(m.buttons());
-      revision = rev;
-    }
-
-    ContentLibrary.Menu value() {
-      return new ContentLibrary.Menu(id, title, permission, buttons);
     }
   }
 
@@ -126,8 +103,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
       ContentLibrary library,
       StarterItems starter,
       ControlMenus controls,
-      ActionEngine actions,
-      dev.lovelace.loveessential.tab.Placeholders placeholders) {
+      ActionEngine actions) {
     this.plugin = plugin;
     this.main = main;
     this.lang = lang;
@@ -135,16 +111,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
     this.library = library;
     this.starter = starter;
     this.controls = controls;
-    this.actions = actions;
-    this.placeholders = placeholders;
     Bukkit.getPluginManager().registerEvents(this, plugin);
-    registrations.add(
-        actions.register(
-            "menu",
-            (p, a) -> {
-              open(p, a.get("id"));
-              return true;
-            }));
     registrations.add(
         actions.register(
             "starter",
@@ -156,7 +123,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
         actions.register(
             "recipes",
             (p, a) -> {
-              list(p, true, 0);
+              list(p, 0);
               return true;
             }));
   }
@@ -215,11 +182,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
         example,
         current,
         who ->
-            editor(
-                    who,
-                    draft instanceof CraftDraft
-                        ? "crafting"
-                        : draft instanceof KitDraft ? "starter" : "customgui")
+            editor(who, draft instanceof KitDraft ? "starter" : "crafting")
                 && (draft == null || drafts.get(who.getUniqueId()) == draft),
         value -> {
           if (value.length() > 2048) throw new IllegalArgumentException("errors.input");
@@ -291,146 +254,97 @@ public final class ContentMenus implements Listener, AutoCloseable {
         var d = new KitDraft(starter.kit());
         drafts.put(p.getUniqueId(), d);
         kitEditor(p, d, 0);
-      } else throw new IllegalArgumentException("content.usage");
+      } else throw new IllegalArgumentException("content.recipe-usage");
       return;
     }
-    boolean recipes = command.equals("recipes");
-    String module = recipes ? "crafting" : "customgui";
-    if (!plugin.module(module)) throw new IllegalArgumentException("errors.module-disabled");
+    if (!command.equals("recipes")) throw new IllegalArgumentException("content.recipe-usage");
+    if (!plugin.module("crafting")) throw new IllegalArgumentException("errors.module-disabled");
     if (args.length == 0 || args.length == 1 && args[0].equals("list")) {
-      list(p, recipes, 0);
+      list(p, 0);
       return;
     }
-    if (!recipes && args.length == 1) {
-      open(p, args[0]);
-      return;
-    }
-    if (args.length != 2) throw new IllegalArgumentException("content.usage");
+    if (args.length != 2) throw new IllegalArgumentException("content.recipe-usage");
     String op = args[0], id = args[1];
     ContentLibrary.id(id);
     if (op.equals("open") || op.equals("preview")) {
-      if (recipes) previewRecipe(p, id);
-      else open(p, id);
+      previewRecipe(p, id);
       return;
     }
-    requireEditor(p, module);
+    requireEditor(p, "crafting");
+    var saved = library.craft(id);
     if (op.equals("delete")) {
-      long revision =
-          recipes
-              ? library
-                  .craft(id)
-                  .orElseThrow(() -> new IllegalArgumentException("errors.not-found"))
-                  .revision()
-              : library
-                  .menu(id)
-                  .orElseThrow(() -> new IllegalArgumentException("errors.not-found"))
-                  .revision();
+      var document = saved.orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
       confirm(
           p,
           () ->
               complete(
                   p,
-                  library.delete(recipes, id, revision, p.getUniqueId().toString()),
-                  () -> list(p, recipes, 0),
+                  library.delete(id, document.revision(), p.getUniqueId().toString()),
+                  () -> list(p, 0),
                   () -> {}),
-          () -> list(p, recipes, 0),
-          who -> editor(who, module));
+          () -> list(p, 0),
+          who -> editor(who, "crafting"));
       return;
     }
-    if (!Set.of("create", "edit").contains(op)) throw new IllegalArgumentException("content.usage");
-    if (recipes) {
-      var saved = library.craft(id);
-      if (op.equals("create") && saved.isPresent())
-        throw new IllegalArgumentException("errors.conflict");
-      if (op.equals("edit") && saved.isEmpty())
-        throw new IllegalArgumentException("errors.not-found");
-      var d =
-          saved
-              .map(v -> new CraftDraft(v.value(), v.revision()))
-              .orElseGet(() -> new CraftDraft(id));
-      drafts.put(p.getUniqueId(), d);
-      craftEditor(p, d);
-    } else {
-      var saved = library.menu(id);
-      if (op.equals("create") && saved.isPresent())
-        throw new IllegalArgumentException("errors.conflict");
-      if (op.equals("edit") && saved.isEmpty())
-        throw new IllegalArgumentException("errors.not-found");
-      var d =
-          saved
-              .map(v -> new MenuDraft(v.value(), v.revision()))
-              .orElseGet(() -> new MenuDraft(new ContentLibrary.Menu(id, "", "", Map.of()), 0));
-      if (d.title.isEmpty()) {
-        d.title = prefix("menus", id) + ".title";
-        d.texts.put(d.title, lang.text("content.new-title"));
-      }
-      drafts.put(p.getUniqueId(), d);
-      menuEditor(p, d);
-    }
+    if (!Set.of("create", "edit").contains(op))
+      throw new IllegalArgumentException("content.recipe-usage");
+    if (op.equals("create") && saved.isPresent())
+      throw new IllegalArgumentException("errors.conflict");
+    if (op.equals("edit") && saved.isEmpty())
+      throw new IllegalArgumentException("errors.not-found");
+    var d =
+        saved.map(v -> new CraftDraft(v.value(), v.revision())).orElseGet(() -> new CraftDraft(id));
+    drafts.put(p.getUniqueId(), d);
+    craftEditor(p, d);
   }
 
   public List<String> suggestions(Player p, String command, String[] args) {
-    String module =
-        command.equals("starter")
-            ? "starter"
-            : command.equals("recipes") ? "crafting" : "customgui";
+    String module = command.equals("starter") ? "starter" : "crafting";
     if (!plugin.module(module)) return List.of();
     if (command.equals("starter"))
       return args.length == 1
           ? (editor(p, module) ? List.of("preview", "claim", "edit") : List.of("preview", "claim"))
           : List.of();
-    boolean recipes = command.equals("recipes");
     if (args.length == 1) {
       var out = new ArrayList<>(List.of("list", "open"));
       if (editor(p, module)) out.addAll(List.of("create", "edit", "delete"));
-      if (!recipes) out.addAll(library.ids(false));
       return out;
     }
     if (args.length == 2 && Set.of("open", "edit", "delete", "preview").contains(args[0]))
-      return library.ids(recipes);
+      return library.ids();
     return List.of();
   }
 
-  public void list(Player p, boolean recipes, int page) {
-    String module = recipes ? "crafting" : "customgui";
+  public void list(Player p, int page) {
     var ids =
-        library.ids(recipes).stream()
+        library.ids().stream()
             .filter(
                 id ->
-                    recipes
-                        ? library.allowed(p, library.craft(id).orElseThrow().value())
-                            || editor(p, module)
-                        : library.allowed(p, library.menu(id).orElseThrow().value())
-                            || editor(p, module))
+                    library.allowed(p, library.craft(id).orElseThrow().value())
+                        || editor(p, "crafting"))
             .toList();
     int actual = Math.max(0, Math.min(page, Math.max(0, (ids.size() - 1) / 21)));
-    var v =
-        view(
-            p,
-            recipes ? "content.recipes-title" : "content.menus-title",
-            Map.of(),
-            who -> plugin.module(module));
+    var v = view(p, "content.recipes-title", Map.of(), who -> plugin.module("crafting"));
     for (int i = actual * 21; i < Math.min(ids.size(), (actual + 1) * 21); i++) {
       String id = ids.get(i);
       var icon =
           MenuStyle.item(
-              recipes ? Material.CRAFTING_TABLE : Material.CHEST,
+              Material.CRAFTING_TABLE,
               lang.render("content.entry", Map.of("id", id)),
               List.of(
                   lang.render(
-                      editor(p, module) ? "content.entry-admin-help" : "content.entry-help")));
+                      editor(p, "crafting") ? "content.entry-admin-help" : "content.entry-help")));
       item(
           v,
           MenuStyle.slot(i % 21, Math.min(21, ids.size() - actual * 21)),
           icon,
           e -> {
-            if (e.isRightClick() && editor(p, module))
-              command(p, recipes ? "recipes" : "customgui", new String[] {"edit", id});
-            else if (recipes) previewRecipe(p, id);
-            else open(p, id);
+            if (e.isRightClick() && editor(p, "crafting"))
+              command(p, "recipes", new String[] {"edit", id});
+            else previewRecipe(p, id);
           });
     }
-    if (editor(p, module))
+    if (editor(p, "crafting"))
       put(
           v,
           50,
@@ -439,181 +353,18 @@ public final class ContentMenus implements Listener, AutoCloseable {
           e ->
               ask(
                   p,
-                  "id",
-                  "market",
+                  "recipe-id",
+                  "sigil",
                   "",
                   null,
-                  id -> command(p, recipes ? "recipes" : "customgui", new String[] {"create", id}),
-                  () -> list(p, recipes, actual)));
-    nav(v, p, actual, ids.size(), n -> list(p, recipes, n), null);
+                  id -> command(p, "recipes", new String[] {"create", id}),
+                  () -> list(p, actual)));
+    nav(v, p, actual, ids.size(), n -> list(p, n), null);
     p.openInventory(v.inventory);
-  }
-
-  public void open(Player p, String id) {
-    var saved =
-        library.menu(id).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
-    var m = saved.value();
-    var v =
-        view(
-            p,
-            m.titleKey(),
-            Map.of("player", p.getName()),
-            who ->
-                library
-                    .menu(id)
-                    .map(d -> d.revision() == saved.revision() && library.allowed(who, d.value()))
-                    .orElse(false));
-    for (var entry : m.buttons().entrySet()) {
-      var button = entry.getValue();
-      if (!library.allowed(p, button)) continue;
-      item(
-          v,
-          entry.getKey(),
-          personalize(p, button.icon()),
-          e -> {
-            if (!library.allowed(p, button)) throw new IllegalArgumentException("errors.access");
-            actions.execute(p, e.isRightClick() ? button.right() : button.left());
-          });
-    }
-    p.openInventory(v.inventory);
-  }
-
-  private ItemStack personalize(Player p, ContentItems data) {
-    var item = data.item(lang);
-    var meta = item.getItemMeta();
-    if (!data.nameKey().isEmpty()) meta.displayName(placeholders.render(data.nameKey(), p, p));
-    if (!data.loreKeys().isEmpty())
-      meta.lore(data.loreKeys().stream().map(k -> placeholders.render(k, p, p)).toList());
-    item.setItemMeta(meta);
-    return item;
   }
 
   private boolean active(Player p, Object draft, String module) {
     return drafts.get(p.getUniqueId()) == draft && editor(p, module);
-  }
-
-  private void menuEditor(Player p, MenuDraft d) {
-    var v =
-        view(
-            p,
-            "content.menu-editor",
-            Map.of("id", d.id),
-            who -> active(who, d, "customgui") && !d.saving);
-    for (int slot : MenuStyle.CONTENT) {
-      var b = d.buttons.get(slot);
-      var icon =
-          b == null
-              ? MenuStyle.button(
-                  lang,
-                  Material.LIGHT_GRAY_STAINED_GLASS_PANE,
-                  "content.empty-button",
-                  "content.empty-button-help")
-              : preview(b.icon(), d.texts);
-      item(
-          v,
-          slot,
-          icon,
-          e -> {
-            if (e.isRightClick()) {
-              d.buttons.remove(slot);
-              menuEditor(p, d);
-            } else {
-              if (!d.buttons.containsKey(slot))
-                d.buttons.put(
-                    slot,
-                    new ContentLibrary.Button(
-                        ContentItems.capture(selected(p, e, true), prefix("menus", d.id), d.texts),
-                        Condition.always(),
-                        List.of(),
-                        List.of()));
-              buttonEditor(p, d, slot);
-            }
-          });
-    }
-    put(
-        v,
-        1,
-        Material.NAME_TAG,
-        "content.title",
-        e ->
-            ask(
-                p,
-                "title",
-                "<gold>Магазин</gold>",
-                d.texts.getOrDefault(d.title, lang.text(d.title)),
-                d,
-                value -> {
-                  d.title = prefix("menus", d.id) + ".title";
-                  d.texts.put(d.title, value);
-                  menuEditor(p, d);
-                },
-                () -> menuEditor(p, d)));
-    put(
-        v,
-        3,
-        Material.TRIPWIRE_HOOK,
-        "content.permission",
-        e ->
-            permission(
-                p,
-                d,
-                d.permission,
-                value -> {
-                  d.permission = value;
-                  menuEditor(p, d);
-                },
-                () -> menuEditor(p, d)));
-    put(v, 5, Material.ENDER_EYE, "content.preview", e -> previewMenu(p, d));
-    put(
-        v,
-        7,
-        Material.TNT,
-        "content.delete",
-        e -> {
-          if (d.revision == 0) {
-            drafts.remove(p.getUniqueId());
-            list(p, false, 0);
-          } else
-            confirm(
-                p,
-                () ->
-                    complete(
-                        p,
-                        library.delete(false, d.id, d.revision, p.getUniqueId().toString()),
-                        () -> {
-                          drafts.remove(p.getUniqueId(), d);
-                          list(p, false, 0);
-                        },
-                        () -> {}),
-                () -> menuEditor(p, d),
-                who -> active(who, d, "customgui"));
-        });
-    put(
-        v,
-        50,
-        Material.LIME_DYE,
-        "content.save",
-        e -> {
-          d.saving = true;
-          complete(
-              p,
-              library.save(d.value(), d.revision, p.getUniqueId().toString(), d.texts),
-              () -> {
-                drafts.remove(p.getUniqueId(), d);
-                list(p, false, 0);
-              },
-              () -> d.saving = false);
-        });
-    nav(v, p, 0, 0, n -> {}, () -> list(p, false, 0));
-    p.openInventory(v.inventory);
-  }
-
-  private void previewMenu(Player p, MenuDraft d) {
-    var v =
-        view(p, "content.preview-title", Map.of("id", d.id), who -> active(who, d, "customgui"));
-    d.buttons.forEach((slot, b) -> item(v, slot, preview(b.icon(), d.texts), e -> {}));
-    nav(v, p, 0, 0, n -> {}, () -> menuEditor(p, d));
-    p.openInventory(v.inventory);
   }
 
   private ItemStack preview(ContentItems data, Map<String, String> texts) {
@@ -629,262 +380,6 @@ public final class ContentMenus implements Listener, AutoCloseable {
               .toList());
     item.setItemMeta(meta);
     return item;
-  }
-
-  private void updateButton(
-      MenuDraft d,
-      int slot,
-      ContentItems icon,
-      Condition condition,
-      List<Action> left,
-      List<Action> right) {
-    d.buttons.put(slot, new ContentLibrary.Button(icon, condition, left, right));
-  }
-
-  private void buttonEditor(Player p, MenuDraft d, int slot) {
-    var b = d.buttons.get(slot);
-    var v =
-        view(
-            p,
-            "content.button-editor",
-            Map.of("id", d.id, "slot", "" + slot),
-            who -> active(who, d, "customgui") && !d.saving);
-    item(
-        v,
-        22,
-        preview(b.icon(), d.texts),
-        e -> {
-          var icon = ContentItems.capture(selected(p, e, true), prefix("menus", d.id), d.texts);
-          updateButton(d, slot, icon, b.condition(), b.left(), b.right());
-          buttonEditor(p, d, slot);
-        });
-    put(
-        v,
-        19,
-        Material.NAME_TAG,
-        "content.button-name",
-        e ->
-            ask(
-                p,
-                "button-name",
-                "<yellow>Открыть магазин</yellow>",
-                d.texts.getOrDefault(b.icon().nameKey(), ""),
-                d,
-                value -> {
-                  String key = prefix("menus", d.id) + ".name";
-                  d.texts.put(key, value);
-                  updateButton(
-                      d,
-                      slot,
-                      new ContentItems(b.icon().data(), key, b.icon().loreKeys()),
-                      b.condition(),
-                      b.left(),
-                      b.right());
-                  buttonEditor(p, d, slot);
-                },
-                () -> buttonEditor(p, d, slot)));
-    put(
-        v,
-        20,
-        Material.WRITABLE_BOOK,
-        "content.button-lore",
-        e ->
-            ask(
-                p,
-                "lore",
-                "<gray>Описание | <green>Нажмите",
-                "",
-                d,
-                value -> {
-                  var keys = new ArrayList<String>();
-                  String prefix = prefix("menus", d.id);
-                  int i = 0;
-                  for (String line : value.split("\\|", -1)) {
-                    String key = prefix + ".lore." + i++;
-                    d.texts.put(key, line.strip());
-                    keys.add(key);
-                  }
-                  updateButton(
-                      d,
-                      slot,
-                      new ContentItems(b.icon().data(), b.icon().nameKey(), keys),
-                      b.condition(),
-                      b.left(),
-                      b.right());
-                  buttonEditor(p, d, slot);
-                },
-                () -> buttonEditor(p, d, slot)));
-    put(v, 24, Material.COMPARATOR, "content.left-actions", e -> actionEditor(p, d, slot, false));
-    put(v, 25, Material.REPEATER, "content.right-actions", e -> actionEditor(p, d, slot, true));
-    put(v, 31, Material.TRIPWIRE_HOOK, "content.condition", e -> conditionEditor(p, d, slot));
-    put(
-        v,
-        33,
-        Material.BARRIER,
-        "content.clear-actions",
-        e -> {
-          updateButton(d, slot, b.icon(), Condition.always(), List.of(), List.of());
-          buttonEditor(p, d, slot);
-        });
-    nav(v, p, 0, 0, n -> {}, () -> menuEditor(p, d));
-    p.openInventory(v.inventory);
-  }
-
-  private void actionEditor(Player p, MenuDraft d, int slot, boolean right) {
-    var b = d.buttons.get(slot);
-    var selected = right ? b.right() : b.left();
-    var v =
-        view(p, "content.action-editor", Map.of(), who -> active(who, d, "customgui") && !d.saving);
-    String[] types = {"menu", "message", "command", "charge", "sound", "starter", "recipes"};
-    for (int i = 0; i < types.length; i++) {
-      String type = types[i];
-      put(
-          v,
-          MenuStyle.slot(i, types.length),
-          Material.BOOK,
-          "content.actions." + type,
-          e -> {
-            if (selected.size() >= 8) throw new IllegalArgumentException("content.limit");
-            Consumer<String> add =
-                value -> {
-                  Map<String, String> args =
-                      switch (type) {
-                        case "menu" -> Map.of("id", value);
-                        case "message" -> {
-                          String key = prefix("menus", d.id) + ".message";
-                          d.texts.put(key, value);
-                          yield Map.of("key", key);
-                        }
-                        case "command" -> Map.of("value", value);
-                        case "charge" -> {
-                          long amount = Long.parseLong(value);
-                          if (amount <= 0) throw new IllegalArgumentException("errors.input");
-                          yield Map.of("amount", value);
-                        }
-                        case "sound" -> {
-                          Sound.valueOf(value.toUpperCase(Locale.ROOT));
-                          yield Map.of("sound", value.toUpperCase(Locale.ROOT));
-                        }
-                        default -> Map.of();
-                      };
-                  var list = new ArrayList<>(selected);
-                  list.add(new Action(type, args));
-                  updateButton(
-                      d,
-                      slot,
-                      b.icon(),
-                      b.condition(),
-                      right ? b.left() : list,
-                      right ? list : b.right());
-                  buttonEditor(p, d, slot);
-                };
-            if (type.equals("starter") || type.equals("recipes")) add.accept("");
-            else
-              ask(
-                  p,
-                  "action-" + type,
-                  lang.text("content.examples." + type),
-                  "",
-                  d,
-                  add,
-                  () -> actionEditor(p, d, slot, right));
-          });
-    }
-    var lore =
-        selected.stream()
-            .map(
-                a ->
-                    lang.render(
-                        "content.action-summary",
-                        Map.of("type", a.type(), "args", a.args().toString())))
-            .toList();
-    item(v, 31, MenuStyle.item(Material.PAPER, lang.render("content.action-order"), lore), e -> {});
-    put(
-        v,
-        50,
-        Material.BARRIER,
-        "content.clear-actions",
-        e -> {
-          updateButton(
-              d,
-              slot,
-              b.icon(),
-              b.condition(),
-              right ? b.left() : List.of(),
-              right ? List.of() : b.right());
-          buttonEditor(p, d, slot);
-        });
-    nav(v, p, 0, 0, n -> {}, () -> buttonEditor(p, d, slot));
-    p.openInventory(v.inventory);
-  }
-
-  private void conditionEditor(Player p, MenuDraft d, int slot) {
-    var b = d.buttons.get(slot);
-    var v =
-        view(
-            p,
-            "content.condition-editor",
-            Map.of(),
-            who -> active(who, d, "customgui") && !d.saving);
-    put(
-        v,
-        20,
-        Material.LIME_DYE,
-        "content.condition-always",
-        e -> {
-          updateButton(d, slot, b.icon(), Condition.always(), b.left(), b.right());
-          buttonEditor(p, d, slot);
-        });
-    put(
-        v,
-        22,
-        Material.TRIPWIRE_HOOK,
-        "content.permission",
-        e ->
-            permission(
-                p,
-                d,
-                "",
-                value -> {
-                  updateButton(
-                      d,
-                      slot,
-                      b.icon(),
-                      value.isBlank()
-                          ? Condition.always()
-                          : new Condition("permission", Map.of("value", value), List.of()),
-                      b.left(),
-                      b.right());
-                  buttonEditor(p, d, slot);
-                },
-                () -> conditionEditor(p, d, slot)));
-    put(
-        v,
-        24,
-        Material.GOLD_INGOT,
-        "content.condition-balance",
-        e ->
-            ask(
-                p,
-                "balance",
-                "100",
-                "",
-                d,
-                value -> {
-                  long amount = Long.parseLong(value);
-                  if (amount < 0) throw new IllegalArgumentException("errors.input");
-                  updateButton(
-                      d,
-                      slot,
-                      b.icon(),
-                      new Condition("balance", Map.of("amount", value), List.of()),
-                      b.left(),
-                      b.right());
-                  buttonEditor(p, d, slot);
-                },
-                () -> conditionEditor(p, d, slot)));
-    nav(v, p, 0, 0, n -> {}, () -> buttonEditor(p, d, slot));
-    p.openInventory(v.inventory);
   }
 
   private void permission(
@@ -983,6 +478,28 @@ public final class ContentMenus implements Listener, AutoCloseable {
           d.enabled = !d.enabled;
           craftEditor(p, d);
         });
+    if (d.revision > 0)
+      put(
+          v,
+          33,
+          Material.TNT,
+          "content.delete-recipe",
+          e ->
+              confirm(
+                  p,
+                  () -> {
+                    d.saving = true;
+                    complete(
+                        p,
+                        library.delete(d.id, d.revision, p.getUniqueId().toString()),
+                        () -> {
+                          drafts.remove(p.getUniqueId(), d);
+                          list(p, 0);
+                        },
+                        () -> d.saving = false);
+                  },
+                  () -> craftEditor(p, d),
+                  who -> active(who, d, "crafting") && !d.saving));
     put(
         v,
         50,
@@ -996,11 +513,11 @@ public final class ContentMenus implements Listener, AutoCloseable {
               library.save(d.value(), d.revision, p.getUniqueId().toString(), d.texts),
               () -> {
                 drafts.remove(p.getUniqueId(), d);
-                list(p, true, 0);
+                list(p, 0);
               },
               () -> d.saving = false);
         });
-    nav(v, p, 0, 0, n -> {}, () -> list(p, true, 0));
+    nav(v, p, 0, 0, n -> {}, () -> list(p, 0));
     p.openInventory(v.inventory);
   }
 
@@ -1033,7 +550,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
           Material.COMPARATOR,
           "content.edit",
           e -> command(p, "recipes", new String[] {"edit", id}));
-    nav(v, p, 0, 0, n -> {}, () -> list(p, true, 0));
+    nav(v, p, 0, 0, n -> {}, () -> list(p, 0));
     p.openInventory(v.inventory);
   }
 

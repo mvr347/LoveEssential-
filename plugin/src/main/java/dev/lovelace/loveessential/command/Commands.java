@@ -218,7 +218,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       Player p = player(sender);
       if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
-      if (Set.of("customgui", "recipes", "starter").contains(cmd)) {
+      if (Set.of("recipes", "starter").contains(cmd)) {
         contentMenus.command(p, cmd, args);
         return true;
       }
@@ -519,13 +519,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
   public List<String> onTabComplete(
       CommandSender sender, Command cmd, String alias, String[] args) {
     var candidates =
-        sender instanceof Player p
-                && Set.of("customgui", "recipes", "starter").contains(cmd.getName())
+        sender instanceof Player p && Set.of("recipes", "starter").contains(cmd.getName())
             ? contentMenus.suggestions(p, cmd.getName(), args)
             : cmd.getName().equals("loveessential")
                     && args.length > 1
                     && sender instanceof Player p
-                    && Set.of("customgui", "recipes", "starter")
+                    && Set.of("recipes", "starter")
                         .contains(
                             java.util.Objects.toString(
                                 CommandSuggestions.resolve(plugin, args[0]), ""))
