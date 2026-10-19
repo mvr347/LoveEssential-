@@ -24,7 +24,6 @@ public final class CommandSuggestions {
           Map.entry("create", "create"),
           Map.entry("edit", "edit"),
           Map.entry("set", "edit"),
-          Map.entry("template", "edit"),
           Map.entry("here", "edit"),
           Map.entry("page", "edit"),
           Map.entry("save", "edit"),
@@ -52,7 +51,6 @@ public final class CommandSuggestions {
           Map.entry("настроить", "set"),
           Map.entry("путь", "path"),
           Map.entry("диалог", "dialog"),
-          Map.entry("шаблон", "template"),
           Map.entry("расписание", "schedule"),
           Map.entry("скин", "skin"),
           Map.entry("копия", "clone"),
@@ -165,8 +163,6 @@ public final class CommandSuggestions {
       }
       if (op.equals("delete") && args.length == 3 && npcs.get(args[1]).isPresent())
         return List.of("confirm");
-      if (op.equals("template") && args.length == 2)
-        return NpcOptions.choices("template", plugin.getConfig());
       if (op.equals("page") && args.length == 2) return List.of("1", "2", "3", "4", "5", "6", "7");
       if (op.equals("path")) {
         if (args.length == 2)

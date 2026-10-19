@@ -404,6 +404,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "profile.persist-seconds", 60, 86400);
     bounded(config, "tab.refresh-ticks", 2, 1200);
     bounded(config, "npc.max-active", 0, 10000);
+    bounded(config, "npc.tracking.update-ticks", 1, 20);
+    bounded(config, "npc.tracking.max-turn-degrees", 1, 180);
     bounded(config, "npc.max-definitions", 1, 100000);
     bounded(config, "npc.max-route-points", 1, 10000);
     bounded(config, "npc.pathfinding.threads", 1, 4);

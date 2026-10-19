@@ -52,6 +52,8 @@ public final class NpcService implements Listener, AutoCloseable {
   private boolean closed;
   private int plansThisTick;
   private DialogService dialogs;
+  private List<? extends Player> eligiblePlayers = List.of();
+  private final Map<String, Long> trackingFailures = new HashMap<>();
   private Predicate<Player> vanished = p -> false;
 
   public void vanish(Predicate<Player> check) {
@@ -152,6 +154,8 @@ public final class NpcService implements Listener, AutoCloseable {
     live.values().forEach(l -> l.entity.remove());
     live.clear();
     clicked.clear();
+    eligiblePlayers = List.of();
+    trackingFailures.clear();
   }
 
   public Optional<NpcDefinition> get(String id) {
@@ -411,6 +415,11 @@ public final class NpcService implements Listener, AutoCloseable {
     if (closed) return;
     tick++;
     plansThisTick = 0;
+    eligiblePlayers =
+        Bukkit.getOnlinePlayers().stream()
+            .filter(love::authenticated)
+            .filter(p -> !vanished.test(p))
+            .toList();
     if (tick % 10 == 0) {
       for (var n : definitions.values()) {
         if (!n.enabled() || !scheduled(n)) continue;
@@ -451,6 +460,7 @@ public final class NpcService implements Listener, AutoCloseable {
           continue;
         }
         if (l.pauseUntil <= tick) move(l, l.previewDefinition);
+        look(l, l.previewDefinition);
         continue;
       }
       if (n == null
@@ -482,19 +492,31 @@ public final class NpcService implements Listener, AutoCloseable {
           continue;
         }
       }
-      if (l.pauseUntil > tick) continue;
-      move(l, n);
-      if (n.flag("look-at", true) && tick % 4 == 0) {
-        Player target = target(l, n.number("look-range", 8));
-        if (target != null) {
-          var dir =
-              target.getEyeLocation().toVector().subtract(l.entity.getEyeLocation().toVector());
-          if (dir.lengthSquared() > .01) {
-            var look = l.entity.getLocation().setDirection(dir);
-            l.entity.setRotation(look.getYaw(), look.getPitch());
-          }
-        }
-      }
+      if (l.pauseUntil <= tick) move(l, n);
+      look(l, n);
+    }
+  }
+
+  private void look(Live instance, NpcDefinition definition) {
+    int interval = Math.max(1, plugin.getConfig().getInt("npc.tracking.update-ticks", 2));
+    if (!definition.flag("look-at", true)
+        || tick % interval != 0
+        || trackingFailures.getOrDefault(instance.key, 0L) > tick) return;
+    try {
+      Player player = target(instance, definition.number("look-range", 8));
+      if (player != null)
+        NpcLook.update(
+            instance.entity,
+            player.getEyeLocation(),
+            (float) plugin.getConfig().getDouble("npc.tracking.max-turn-degrees", 30));
+    } catch (RuntimeException error) {
+      trackingFailures.put(instance.key, tick + 200);
+      plugin
+          .getLogger()
+          .log(
+              java.util.logging.Level.WARNING,
+              lang.text("logs-ui.npc-tracking-failed") + " [" + definition.id() + "]",
+              error);
     }
   }
 
@@ -521,10 +543,12 @@ public final class NpcService implements Listener, AutoCloseable {
   private Player target(Live l, double range) {
     Player best = null;
     double distance = range * range;
-    for (var p : l.entity.getWorld().getPlayers()) {
+    Location origin = l.entity.getLocation();
+    for (var p : eligiblePlayers) {
+      if (!p.isOnline() || !p.getWorld().equals(origin.getWorld())) continue;
       if (l.viewer != null && !l.viewer.equals(p.getUniqueId())) continue;
-      if (!love.authenticated(p) || vanished.test(p) || !p.canSee(l.entity)) continue;
-      double d = p.getLocation().distanceSquared(l.entity.getLocation());
+      double d = p.getLocation().distanceSquared(origin);
+      if (d >= distance || !p.canSee(l.entity)) continue;
       if (d < distance) {
         best = p;
         distance = d;
@@ -548,7 +572,13 @@ public final class NpcService implements Listener, AutoCloseable {
           !n.option("follow-player", "").isBlank()
               ? Bukkit.getPlayerExact(n.option("follow-player", ""))
               : target(l, n.number("activation-range", 48));
-      if (p == null || !p.getWorld().equals(l.entity.getWorld())) return;
+      if (p == null
+          || !p.isOnline()
+          || !p.getWorld().equals(l.entity.getWorld())
+          || !love.authenticated(p)
+          || vanished.test(p)
+          || !p.canSee(l.entity)
+          || l.viewer != null && !l.viewer.equals(p.getUniqueId())) return;
       destination = p.getLocation();
       if (destination.distanceSquared(l.entity.getLocation())
           <= Math.pow(n.number("follow-distance", 3), 2)) return;
@@ -892,6 +922,8 @@ public final class NpcService implements Listener, AutoCloseable {
     live.values().forEach(l -> l.entity.remove());
     live.clear();
     clicked.clear();
+    eligiblePlayers = List.of();
+    trackingFailures.clear();
     hooks.clear();
     paths.shutdownNow();
   }

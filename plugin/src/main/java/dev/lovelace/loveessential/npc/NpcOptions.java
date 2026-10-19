@@ -89,7 +89,6 @@ public final class NpcOptions {
       case "movement" -> List.of("route", "follow", "stationary");
       case "interaction-mode" -> List.of("RIGHT_CLICK", "LEFT_CLICK", "BOTH");
       case "stuck-policy" -> List.of("PAUSE", "SKIP", "RETURN_HOME");
-      case "template" -> List.of("guard", "guide", "merchant", "quest", "decoration");
       default -> List.of();
     };
   }

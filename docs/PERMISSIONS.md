@@ -15,7 +15,7 @@
 | `loveessential.profile.location` | OP | Просмотр карточки координат/территории другого игрока; свою карточку владелец видит без этого права |
 | `loveessential.invsee` | OP | Просмотр чужого инвентаря |
 | `loveessential.invsee.edit` | OP | Редактирование чужого инвентаря; дополнительно нужен loveessential.invsee |
-| `loveessential.admin` | OP | Общее управление, reload/backup, настройка модулей и административные функции; включает дочерние права из plugin.yml |
+| `loveessential.admin` | OP | Главная панель /le, общее управление, reload/backup, настройка модулей и административные функции; включает дочерние права из plugin.yml |
 | `loveessential.npc.view` | OP | Просмотр списка и выбор NPC |
 | `loveessential.npc.create` | OP | Создание и клонирование NPC; работа мастера требует также npc.edit |
 | `loveessential.npc.edit` | OP | Мастер, параметры и черновики NPC |
