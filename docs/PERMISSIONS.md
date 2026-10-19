@@ -6,6 +6,7 @@
 
 | Право | По умолчанию | Доступ |
 | --- | --- | --- |
+| `loveessential.content.edit` | OP | Редакторы своих меню, рецептов и стартового набора; входит в loveessential.admin |
 | `loveessential.nick` | Все игроки | Изменение своего никнейма и сброс |
 | `loveessential.nick.color` | Все игроки | Выбор одноцветного оформления |
 | `loveessential.nick.gradient` | Все игроки | Выбор градиента |
