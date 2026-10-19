@@ -1,0 +1,489 @@
+package dev.lovelace.loveessential.integration;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import dev.lovelace.loveessential.*;
+import dev.lovelace.loveessential.module.*;
+import dev.lovelace.loveessential.storage.SqliteStore;
+import dev.lovelace.loveessential.tab.*;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.BooleanSupplier;
+import me.clip.placeholderapi.PlaceholderAPIPlugin;
+import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.*;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.*;
+import org.bukkit.plugin.*;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.junit.jupiter.api.*;
+import org.mockbukkit.mockbukkit.*;
+import org.mockbukkit.mockbukkit.entity.PlayerMock;
+
+class ProfilePrivacyTest {
+  ServerMock server;
+  LoveEssentialPlugin plugin;
+  PlayerProfiles profiles;
+  SqliteStore store;
+  PlaceholderAPIPlugin papi;
+
+  @BeforeEach
+  void setup() throws Exception {
+    server =
+        MockBukkit.mock(
+            new ServerMock() {
+              @Override
+              public String getBukkitVersion() {
+                return "26.2-R0.1-SNAPSHOT";
+              }
+            });
+    server.addSimpleWorld("world");
+    MockBukkit.createMockPlugin("LoveCore");
+    plugin = MockBukkit.load(LoveEssentialPlugin.class);
+    waitFor(plugin::ready);
+    await(plugin.module("tab", false));
+    await(plugin.module("scoreboard", false));
+    await(plugin.module("starter", false));
+    profiles = internal("profiles", PlayerProfiles.class);
+    store = internal("store", SqliteStore.class);
+  }
+
+  @AfterEach
+  void close() throws Exception {
+    // Exercise the real PAPI parser and expansion registry without its metrics/cloud lifecycle.
+    if (papi != null) {
+      var enabled = JavaPlugin.class.getDeclaredField("isEnabled");
+      enabled.setAccessible(true);
+      enabled.setBoolean(papi, false);
+      var instance = PlaceholderAPIPlugin.class.getDeclaredField("instance");
+      instance.setAccessible(true);
+      instance.set(null, null);
+    }
+    MockBukkit.unmock();
+  }
+
+  <T> T internal(String name, Class<T> type) throws Exception {
+    var f = LoveEssentialPlugin.class.getDeclaredField(name);
+    f.setAccessible(true);
+    return type.cast(f.get(plugin));
+  }
+
+  void waitFor(BooleanSupplier condition) throws Exception {
+    long end = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+    while (!condition.getAsBoolean() && System.nanoTime() < end) {
+      server.getScheduler().performOneTick();
+      Thread.sleep(5);
+    }
+    assertTrue(condition.getAsBoolean());
+  }
+
+  <T> T await(CompletableFuture<T> f) throws Exception {
+    waitFor(f::isDone);
+    return f.get(1, TimeUnit.SECONDS);
+  }
+
+  PlayerMock player(String name) throws Exception {
+    var p = server.addPlayer(name);
+    waitFor(() -> profiles.privacy().loaded(p.getUniqueId()));
+    await(store.profile(p.getUniqueId(), "test.ready", "true"));
+    server.getScheduler().performTicks(2);
+    return p;
+  }
+
+  void command(PlayerMock p, String command) {
+    assertTrue(server.dispatchCommand(p, command));
+  }
+
+  void click(PlayerMock p, int slot) {
+    var e =
+        new InventoryClickEvent(
+            p.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            slot,
+            ClickType.LEFT,
+            InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(e);
+    assertTrue(e.isCancelled());
+    server.getScheduler().performOneTick();
+  }
+
+  String lore(PlayerMock p) {
+    return Arrays.stream(p.getOpenInventory().getTopInventory().getContents())
+        .filter(Objects::nonNull)
+        .map(item -> String.valueOf(item.getItemMeta().getLore()))
+        .collect(java.util.stream.Collectors.joining());
+  }
+
+  String title(PlayerMock p, int slot) {
+    return PlainTextComponentSerializer.plainText()
+        .serialize(
+            p.getOpenInventory().getTopInventory().getItem(slot).getItemMeta().displayName());
+  }
+
+  void enablePapi() throws Exception {
+    MockBukkit.createMockPlugin("PlaceholderAPI");
+    var unsafeType = Class.forName("sun.misc.Unsafe");
+    var field = unsafeType.getDeclaredField("theUnsafe");
+    field.setAccessible(true);
+    papi =
+        (PlaceholderAPIPlugin)
+            unsafeType
+                .getMethod("allocateInstance", Class.class)
+                .invoke(field.get(null), PlaceholderAPIPlugin.class);
+    for (var item :
+        Map.of(
+                "server",
+                server,
+                "dataFolder",
+                new java.io.File(plugin.getDataFolder(), "papi-fixture"),
+                "description",
+                new PluginDescriptionFile(
+                    "PlaceholderAPI", "2.11.6", PlaceholderAPIPlugin.class.getName()),
+                "logger",
+                java.util.logging.Logger.getLogger("PAPI-fixture"))
+            .entrySet()) {
+      var member = JavaPlugin.class.getDeclaredField(item.getKey());
+      member.setAccessible(true);
+      member.set(papi, item.getValue());
+    }
+    var manager = new me.clip.placeholderapi.expansion.manager.LocalExpansionManager(papi);
+    var managerField = PlaceholderAPIPlugin.class.getDeclaredField("localExpansionManager");
+    managerField.setAccessible(true);
+    managerField.set(papi, manager);
+    var expansionsField = manager.getClass().getDeclaredField("expansions");
+    expansionsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    var expansions = (Map<String, PlaceholderExpansion>) expansionsField.get(manager);
+    var enabled = JavaPlugin.class.getDeclaredField("isEnabled");
+    enabled.setAccessible(true);
+    enabled.setBoolean(papi, true);
+    var instance = PlaceholderAPIPlugin.class.getDeclaredField("instance");
+    instance.setAccessible(true);
+    instance.set(null, papi);
+    for (String id : List.of("loveadaptation", "lovebehavior", "lovesubnames")) {
+      expansions.put(
+          id,
+          new PlaceholderExpansion() {
+            public String getIdentifier() {
+              return id;
+            }
+
+            public String getAuthor() {
+              return "test";
+            }
+
+            public String getVersion() {
+              return "1";
+            }
+
+            @Override
+            public String onPlaceholderRequest(Player target, String params) {
+              return "&a" + target.getName() + ":" + params;
+            }
+          });
+    }
+  }
+
+  public static class Neighbor extends JavaPlugin {
+    public Neighbor() {}
+  }
+
+  final List<String> calls = new ArrayList<>();
+
+  Neighbor neighbor(String name, String... commands) throws Exception {
+    var description =
+        new PluginDescriptionFile(
+            new java.io.StringReader(
+                "name: "
+                    + name
+                    + "\nversion: 1\nmain: "
+                    + Neighbor.class.getName()
+                    + "\ncommands:\n"
+                    + Arrays.stream(commands)
+                        .map(c -> "  " + c + ": {}\n")
+                        .collect(java.util.stream.Collectors.joining())));
+    var n = MockBukkit.loadWith(Neighbor.class, description);
+    for (String c : commands)
+      n.getCommand(c)
+          .setExecutor(
+              (sender, cmd, label, args) -> {
+                calls.add(
+                    n.getName()
+                        + ":"
+                        + cmd.getName()
+                        + ":"
+                        + sender.getName()
+                        + ":"
+                        + String.join(" ", args));
+                return true;
+              });
+    return n;
+  }
+
+  @Test
+  void removedCommandsAndAliasesAreNotRegistered() {
+    for (String name : List.of("workbench", "enderchest", "craft", "ec"))
+      assertNull(plugin.getCommand(name));
+    var p = server.addPlayer("Visitor");
+    var root = server.getCommandMap().tabComplete(p, "le ");
+    assertFalse(root.contains("workbench"));
+    assertFalse(root.contains("enderchest"));
+    assertNotNull(plugin.getCommand("crafts"));
+  }
+
+  @Test
+  void unknownPreferencesNeverExposeProfileToAnotherPlayer() throws Exception {
+    var a = player("Viewer");
+    a.setOp(true);
+    var b = player("Target");
+    var statesField = ProfilePrivacy.class.getDeclaredField("states");
+    statesField.setAccessible(true);
+    ((Map<?, ?>) statesField.get(profiles.privacy())).remove(b.getUniqueId());
+    assertFalse(profiles.privacy().loaded(b.getUniqueId()));
+    assertFalse(profiles.canView(a, b));
+    assertTrue(profiles.canView(b, b));
+  }
+
+  @Test
+  void targetContextAndCurrentSkinAreUsedForAllProfileSections() throws Exception {
+    enablePapi();
+    var viewer = player("Viewer");
+    var target = player("Target");
+    var skin = target.getPlayerProfile();
+    var textures = skin.getTextures();
+    textures.setSkin(java.net.URI.create("https://textures.minecraft.net/texture/abcd").toURL());
+    skin.setTextures(textures);
+    target.setPlayerProfile(skin);
+    command(viewer, "le profile view Target");
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals("Адаптации", title(viewer, 14));
+    assertTrue(lore(viewer).contains("Target:current_name"));
+    assertFalse(lore(viewer).contains("Viewer:current_name"));
+    var renderer = internal("placeholders", Placeholders.class);
+    assertEquals(
+        "нет",
+        PlainTextComponentSerializer.plainText()
+            .serialize(renderer.renderRaw("<papi:missing_value:'нет'>", viewer, target)));
+    var skull =
+        (org.bukkit.inventory.meta.SkullMeta)
+            viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
+    assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
+    click(viewer, 14);
+    assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
+    assertTrue(lore(viewer).contains("Target:water_progress"));
+    assertFalse(lore(viewer).contains("Viewer:water_progress"));
+  }
+
+  @Test
+  void hideClosesExistingViewAndHidesListCompletionEvenForOp() throws Exception {
+    var owner = player("Owner");
+    var viewer = player("Viewer");
+    viewer.setOp(true);
+    command(viewer, "profile Owner");
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    command(owner, "profile hide");
+    waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
+    assertFalse(
+        viewer.getOpenInventory().getTopInventory() != null
+            && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+    command(viewer, "profile Owner");
+    assertFalse(
+        viewer.getOpenInventory().getTopInventory() != null
+            && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+    assertFalse(server.getCommandMap().tabComplete(viewer, "le profile view ").contains("Owner"));
+    command(owner, "profile");
+    assertEquals(27, owner.getOpenInventory().getTopInventory().getSize());
+    command(viewer, "profile list");
+    assertFalse(lore(viewer).contains("Owner"));
+    command(owner, "profile show");
+    waitFor(() -> profiles.privacy().preferences(owner).profileVisible());
+    command(viewer, "profile view Owner");
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+  }
+
+  @Test
+  void activityCanBeHiddenWithoutHidingAdaptations() throws Exception {
+    enablePapi();
+    var owner = player("Owner");
+    var viewer = player("Viewer");
+    owner.setStatistic(Statistic.PLAY_ONE_MINUTE, 20 * 60 * 60 * 77);
+    command(viewer, "profile Owner");
+    click(viewer, 12);
+    assertTrue(lore(viewer).contains("77"));
+    command(owner, "profile activity hide");
+    waitFor(() -> !profiles.privacy().preferences(owner).activityVisible());
+    assertFalse(
+        viewer.getOpenInventory().getTopInventory() != null
+            && viewer.getOpenInventory().getTopInventory().getSize() == 54);
+    command(viewer, "profile Owner");
+    assertTrue(profiles.canView(viewer, owner));
+    assertFalse(lore(viewer).contains("77"));
+    click(viewer, 12);
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    click(viewer, 14);
+    assertTrue(lore(viewer).contains("Owner:current_name"));
+    command(owner, "profile settings");
+    click(owner, 19);
+    assertTrue(title(owner, 3).contains("доступен"));
+    assertTrue(title(owner, 5).contains("скрыта"));
+    click(owner, 5);
+    waitFor(() -> profiles.privacy().preferences(owner).activityVisible());
+    assertTrue(profiles.privacy().preferences(owner).profileVisible());
+  }
+
+  @Test
+  void guiHasIndependentPersistentPrivacyTogglesAndNoReputationOnSelf() throws Exception {
+    var owner = player("Owner");
+    command(owner, "profile settings");
+    click(owner, 19);
+    click(owner, 3);
+    waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
+    assertTrue(profiles.privacy().preferences(owner).activityVisible());
+    var doc =
+        await(
+                store.get(
+                    "profile-preferences",
+                    owner.getUniqueId().toString(),
+                    ProfilePrivacy.Preferences.class))
+            .orElseThrow();
+    assertFalse(doc.value().profileVisible());
+    assertTrue(doc.value().activityVisible());
+    command(owner, "profile");
+    click(owner, 15);
+    assertTrue(calls.isEmpty());
+  }
+
+  @Test
+  void placeholdersAreAsyncSafeAndProduceUsableMenuCommands() throws Exception {
+    var p = player("Owner");
+    command(p, "profile hide");
+    waitFor(() -> !profiles.privacy().preferences(p).profileVisible());
+    var placeholders = internal("placeholders", Placeholders.class);
+    var expansion =
+        new LoveExpansion(
+            placeholders,
+            internal("lang", dev.lovelace.loveessential.lang.Lang.class),
+            internal("love", LoveBridge.class),
+            v -> false,
+            v -> false);
+    assertEquals(
+        "false",
+        CompletableFuture.supplyAsync(() -> expansion.onRequest(p, "profile_visible"))
+            .get(1, TimeUnit.SECONDS));
+    assertEquals("true", expansion.onRequest(p, "profile_hidden"));
+    assertEquals("true", expansion.onRequest(p, "activity_enabled"));
+    assertEquals("false", expansion.onRequest(p, "activity_visible"));
+    assertEquals("loveessential:profile view Owner", expansion.onRequest(p, "profile_command"));
+    command(p, expansion.onRequest(p, "profile_toggle_command"));
+    waitFor(() -> profiles.privacy().preferences(p).profileVisible());
+  }
+
+  @Test
+  void pendingPrivacyWriteIsRespectedAfterFastReconnect() throws Exception {
+    var p = player("Owner");
+    var saving = profiles.privacy().change(p, old -> new ProfilePrivacy.Preferences(false, false));
+    p.disconnect();
+    p.reconnect();
+    await(saving);
+    waitFor(() -> profiles.privacy().loaded(p.getUniqueId()));
+    assertFalse(profiles.privacy().preferences(p).profileVisible());
+    assertFalse(profiles.privacy().preferences(p).activityVisible());
+  }
+
+  @Test
+  void repButtonUsesTargetNameWhileOwnerUsesBehavior() throws Exception {
+    neighbor("LoveBehavior", "rep", "behavior");
+    var viewer = player("Viewer");
+    var target = player("Target");
+    viewer.addAttachment(plugin, "lovebehavior.rep", true);
+    viewer.addAttachment(plugin, "lovebehavior.behavior", true);
+    command(viewer, "profile Target");
+    click(viewer, 15);
+    assertEquals(List.of("LoveBehavior:rep:Viewer:Target"), calls);
+    command(viewer, "profile");
+    click(viewer, 15);
+    assertEquals("LoveBehavior:behavior:Viewer:", calls.getLast());
+  }
+
+  @Test
+  void privateAccountCannotBeOpenedFromAnotherPlayersProfile() throws Exception {
+    neighbor("LoveBehavior", "account");
+    plugin.getConfig().set("profile.links.account.plugin", "LoveBehavior");
+    plugin.getConfig().set("profile.links.account.command", "account");
+    var viewer = player("Viewer");
+    var target = player("Target");
+    command(viewer, "profile Target");
+    click(viewer, 11);
+    assertTrue(calls.isEmpty());
+    command(viewer, "profile");
+    click(viewer, 11);
+    assertEquals(List.of("LoveBehavior:account:Viewer:"), calls);
+  }
+
+  @Test
+  void notificationButtonsUseLoveCoreAndKeepOneChannelEnabled() throws Exception {
+    var channels = EnumSet.of(dev.lovelace.lovecore.api.notify.LoveNotify.Channel.CHAT);
+    var notify =
+        new dev.lovelace.lovecore.api.notify.LoveNotify() {
+          public Set<Channel> getEnabledChannels(UUID id) {
+            return Set.copyOf(channels);
+          }
+
+          public boolean isChannelEnabled(UUID id, Channel c) {
+            return channels.contains(c);
+          }
+
+          public boolean toggleChannel(UUID id, Channel c) {
+            setChannelEnabled(id, c, !channels.contains(c));
+            return channels.contains(c);
+          }
+
+          public boolean setChannelEnabled(UUID id, Channel c, boolean on) {
+            if (!on && channels.size() == 1 && channels.contains(c)) return false;
+            if (on) channels.add(c);
+            else channels.remove(c);
+            return true;
+          }
+
+          public void notify(
+              Player p,
+              net.kyori.adventure.text.Component c,
+              Set<Channel> selected,
+              boolean important) {}
+
+          public void notifyInteractive(Player p, net.kyori.adventure.text.Component c) {}
+        };
+    server
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.notify.LoveNotify.class,
+            notify,
+            plugin,
+            ServicePriority.Normal);
+    var p = player("Owner");
+    command(p, "profile settings");
+    click(p, 21);
+    click(p, 20);
+    assertEquals(1, channels.size());
+    click(p, 22);
+    assertTrue(channels.contains(dev.lovelace.lovecore.api.notify.LoveNotify.Channel.ACTION_BAR));
+    click(p, 20);
+    assertFalse(channels.contains(dev.lovelace.lovecore.api.notify.LoveNotify.Channel.CHAT));
+    assertEquals(1, channels.size());
+  }
+
+  @Test
+  void redirectedCommandCannotRunAsDifferentPluginOrEscalateSender() throws Exception {
+    neighbor("LoveBehavior", "rep");
+    var viewer = player("Viewer");
+    var target = player("Target");
+    viewer.addAttachment(plugin, "lovebehavior.rep", true);
+    plugin.getConfig().set("profile.links.reputation.command", "loveessential:reload");
+    command(viewer, "profile Target");
+    click(viewer, 15);
+    assertTrue(calls.isEmpty());
+    assertFalse(viewer.isOp());
+  }
+}

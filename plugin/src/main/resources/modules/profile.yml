@@ -18,7 +18,7 @@ cards:
     title-key: players.cards.progress.title
     lore-keys: [players.cards.progress.lore]
   statistics:
-    enabled: true
+    enabled: false
     material: IRON_SWORD
     title-key: players.cards.statistics.title
     lore-keys: [players.cards.statistics.lore]
@@ -33,3 +33,126 @@ cards:
     permission: loveessential.profile.location
     title-key: players.cards.location.title
     lore-keys: [players.cards.location.lore]
+
+# Личная приватность хранится в SQLite; это значения для новых игроков.
+privacy:
+  default-visible: true
+  default-activity-visible: true
+# Команды исполняются от имени зрителя. Владельцы команд проверяются перед вызовом.
+links:
+  account:
+    plugin: LoveAuth
+    command: loveauth account
+    permission: ''
+  behavior:
+    plugin: LoveBehavior
+    command: behavior
+    permission: lovebehavior.behavior
+  reputation:
+    plugin: LoveBehavior
+    command: rep {player}
+    permission: lovebehavior.rep
+  adaptations:
+    plugin: LoveAdaptation
+    command: loveadaptation mainmenu
+    permission: loveadaptation.use
+  suffixes:
+    plugin: LoveSubnames
+    command: suffixes
+    permission: lovesubnames.use
+  nickname:
+    plugin: LoveEssential
+    command: nick
+    permission: loveessential.nick
+  scoreboard:
+    plugin: LoveEssential
+    command: scoreboard
+    permission: loveessential.scoreboard
+  grammar:
+    plugin: LoveChatFilter
+    command: grammar
+    permission: ''
+  silent:
+    plugin: Lovechat
+    command: silent
+    permission: ''
+  mentions:
+    plugin: Lovechat
+    command: tagtoggle
+    permission: ''
+  channel:
+    plugin: Lovechat
+    command: channel global
+    permission: ''
+  channel-local:
+    plugin: Lovechat
+    command: channel local
+    permission: ''
+  clan-invites:
+    plugin: LoveClans
+    command: loveclan invites
+    permission: ''
+  player-trades:
+    plugin: LoveTrades
+    command: trade toggle
+    permission: ''
+setting-controls:
+  grammar:
+    material: WRITABLE_BOOK
+    link: grammar
+    title-key: profile-menu.grammar
+    lore-key: profile-menu.grammar-lore
+  silent:
+    material: FEATHER
+    link: silent
+    title-key: profile-menu.silent
+    lore-key: profile-menu.silent-lore
+  mentions:
+    material: NOTE_BLOCK
+    link: mentions
+    title-key: profile-menu.mentions
+    lore-key: profile-menu.mentions-lore
+  channel:
+    material: PAPER
+    link: channel
+    title-key: profile-menu.channel
+    lore-key: profile-menu.channel-lore
+  clan-invites:
+    material: WHITE_BANNER
+    link: clan-invites
+    title-key: profile-menu.clan-invites
+    lore-key: profile-menu.clan-invites-lore
+  player-trades:
+    material: EMERALD
+    link: player-trades
+    title-key: profile-menu.player-trades
+    lore-key: profile-menu.player-trades-lore
+adaptation-cards:
+  water:
+    material: HEART_OF_THE_SEA
+    title-key: profile-menu.adaptation-water
+    lore-key: profile-menu.adaptation-water-lore
+  nether:
+    material: BLAZE_POWDER
+    title-key: profile-menu.adaptation-nether
+    lore-key: profile-menu.adaptation-nether-lore
+  cave:
+    material: AMETHYST_SHARD
+    title-key: profile-menu.adaptation-cave
+    lore-key: profile-menu.adaptation-cave-lore
+  height:
+    material: FEATHER
+    title-key: profile-menu.adaptation-height
+    lore-key: profile-menu.adaptation-height-lore
+  abyss:
+    material: ENDER_PEARL
+    title-key: profile-menu.adaptation-abyss
+    lore-key: profile-menu.adaptation-abyss-lore
+  combat:
+    material: SHIELD
+    title-key: profile-menu.adaptation-combat
+    lore-key: profile-menu.adaptation-combat-lore
+  travel:
+    material: COMPASS
+    title-key: profile-menu.adaptation-travel
+    lore-key: profile-menu.adaptation-travel-lore

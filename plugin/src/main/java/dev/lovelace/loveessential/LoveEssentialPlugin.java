@@ -457,6 +457,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "messages.cooldown-ms", 0, 60000);
     bounded(config, "messages.max-ignored", 1, 10000);
     bounded(config, "inventory.refresh-ticks", 1, 200);
+    for (String path :
+        List.of("profile.privacy.default-visible", "profile.privacy.default-activity-visible"))
+      if (config.contains(path) && !(config.get(path) instanceof Boolean))
+        throw new IllegalArgumentException("errors.config");
     bounded(config, "profile.refresh-ticks", 20, 1200);
     bounded(config, "profile.persist-seconds", 60, 86400);
     bounded(config, "tab.refresh-ticks", 2, 1200);

@@ -253,9 +253,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       if (cmd.equals("profile")) {
-        if (args.length > 1) throw new IllegalArgumentException("errors.input");
-        if (args.length == 1 && args[0].equalsIgnoreCase("list")) profiles.players(p, "profile", 0);
-        else profiles.profile(p, args.length == 0 ? p : messages.target(p, args[0]));
+        profiles.command(p, args);
         return true;
       }
       if (cmd.equals("invsee")) {
@@ -546,7 +544,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                                         CommandSuggestions.resolve(plugin, args[0]), ""))
                         ? contentMenus.suggestions(
                             p, CommandSuggestions.resolve(plugin, args[0]), slice(args, 1))
-                        : new CommandSuggestions(plugin, npcs, gameplay, love, messages)
+                        : new CommandSuggestions(plugin, npcs, gameplay, love, messages, profiles)
                             .complete(sender, cmd.getName(), args);
     String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
     return candidates.stream()

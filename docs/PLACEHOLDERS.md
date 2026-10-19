@@ -182,3 +182,9 @@ _DEFAULT_:
 Координаты и территория в GUI защищены настройкой права карточки. PAPI-поля `world`, `x`, `y`, `z`, `territory` предоставляются серверным плагинам без отдельной проверки зрителя: используйте их в соответствующих административных шаблонах.
 
 Плейсхолдеры поддерживаются там, где шаблон проходит через рендерер LoveEssential, например в TAB и карточках профиля. Произвольная строка YAML или обычное сообщение `lang.yml` сама по себе не включает PAPI.
+
+## Приватность профиля и экосистема
+
+`%loveessential_profile_visible%`, `%loveessential_profile_hidden%`, `%loveessential_activity_enabled%`, `%loveessential_activity_visible%`, `%loveessential_profile_loaded%` возвращают `true`/`false`. `%loveessential_profile_command%` содержит команду открытия цели; `%loveessential_profile_toggle_command%` и `%loveessential_activity_toggle_command%` — команды переключения собственных настроек. Также есть локализованные `profile_visibility_label` и `activity_visibility_label`. [Полная таблица и примеры внешнего меню](PLAYER_PROFILE.md).
+
+Необязательный запасной текст для PAPI: `<papi:loveadaptation_current_name:"—">`. Профиль отображает адаптации и поведение через реальные `loveadaptation_*`, `lovebehavior_*`, `lovesubnames_*`; авторизацию получает через LoveCore. В чужом профиле PAPI вычисляется для цели.
