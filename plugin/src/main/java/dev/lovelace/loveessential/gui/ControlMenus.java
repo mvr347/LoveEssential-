@@ -48,7 +48,15 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   private record Prompt(
-      long expires, Predicate<Player> allowed, Consumer<String> input, Runnable back) {}
+      long expires,
+      Predicate<Player> allowed,
+      Consumer<String> input,
+      Runnable back,
+      String token,
+      Component context,
+      String instructionKey,
+      String example,
+      String current) {}
 
   private static final class Menu implements InventoryHolder {
     Inventory inventory;
@@ -164,48 +172,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   public void home(Player p) {
-    var m = menu(p, "gui.title", Map.of(), who -> true);
-    put(m, 19, Material.COMPARATOR, "gui.modules", "gui.click.open", c -> modules(p));
-    put(m, 20, Material.PLAYER_HEAD, "gui.npcs", "gui.click.open", c -> npcList(p, 0));
-    put(m, 21, Material.NAME_TAG, "gui.tab", "gui.click.open", c -> settings(p, "tab", "", 0));
-    put(m, 22, Material.RED_BED, "gui.homes", "gui.click.open", c -> places(p, "home", 0));
-    put(m, 23, Material.RESPAWN_ANCHOR, "gui.spawns", "gui.click.open", c -> places(p, "spawn", 0));
-    put(m, 24, Material.ENDER_PEARL, "gui.portals", "gui.click.open", c -> places(p, "portal", 0));
-    put(m, 25, Material.OAK_SIGN, "gui.holograms", "gui.click.open", c -> places(p, "hologram", 0));
-    put(m, 28, Material.BOOK, "gui.commands", "gui.click.open", c -> commands(p, 0));
-    put(m, 37, Material.PLAYER_HEAD, "players.menu", "gui.click.open", c -> command(p, "profile"));
-    put(m, 41, Material.WRITABLE_BOOK, "messages.menu", "gui.click.open", c -> command(p, "msg"));
-    put(m, 43, Material.CHEST, "players.inventory", "gui.click.open", c -> command(p, "invsee"));
-    if (!p.hasPermission("loveessential.invsee")) locked(m, 43);
-    put(m, 39, Material.NAME_TAG, "nick.title", "gui.click.open", c -> nickname(p));
-    if (!nicknames.canUse(p)) locked(m, 39);
-    put(
-        m,
-        30,
-        Material.TRIPWIRE_HOOK,
-        "gui.integrations",
-        "gui.click.open",
-        c -> command(p, "le integrations"));
-    put(m, 32, Material.CHEST, "gui.backup", "gui.click.run", c -> command(p, "le backup"));
-    put(
-        m,
-        34,
-        Material.CLOCK,
-        "gui.reload",
-        "gui.click.run",
-        c -> {
-          if (!admin(p)) throw new IllegalArgumentException("errors.permission");
-          complete(p, plugin.reloadSettings(), () -> home(p), true);
-        });
-    // Administrative controls stay visible with an explicit reason when unavailable.
-    for (int slot : new int[] {19, 21, 30, 32, 34}) if (!admin(p)) locked(m, slot);
-    if (!npcView(p)) locked(m, 20);
-    if (!admin(p)) {
-      locked(m, 24);
-      locked(m, 25);
-    }
-    put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());
-    p.openInventory(m.inventory);
+    modules(p);
   }
 
   private void locked(Menu m, int slot) {
@@ -233,21 +200,45 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   public void modules(Player p) {
-    var m = menu(p, "gui.modules", Map.of(), this::admin);
+    var m = menu(p, "module-menu.title", Map.of(), this::admin);
+    m.root = true;
     int i = 0;
     for (String id : LoveEssentialPlugin.MODULES.stream().sorted().toList()) {
       boolean enabled = plugin.module(id);
       entry(
           m,
           MenuStyle.slot(i++, LoveEssentialPlugin.MODULES.size()),
-          enabled ? Material.LIME_DYE : Material.GRAY_DYE,
+          switch (id) {
+            case "npc", "profile" -> Material.PLAYER_HEAD;
+            case "tab", "nickname" -> Material.NAME_TAG;
+            case "home" -> Material.RED_BED;
+            case "spawn" -> Material.RESPAWN_ANCHOR;
+            case "teleport", "portal" -> Material.ENDER_PEARL;
+            case "messages" -> Material.WRITABLE_BOOK;
+            case "inventory" -> Material.CHEST;
+            case "afk" -> Material.CLOCK;
+            case "vanish" -> Material.ENDER_EYE;
+            case "skin" -> Material.LEATHER_HELMET;
+            case "sitride" -> Material.SADDLE;
+            case "nightskip" -> Material.LANTERN;
+            case "hologram", "motd", "joinquit" -> Material.OAK_SIGN;
+            case "traces" -> Material.FEATHER;
+            default -> Material.COMPARATOR;
+          },
           lang.render("gui.module-names." + id),
-          List.of(
-              lang.render(enabled ? "gui.enabled" : "gui.disabled"),
-              lang.render("gui.file", Map.of("path", "modules/" + id + ".yml")),
-              lang.render("gui.separator"),
-              lang.render("gui.click.settings"),
-              lang.render("gui.click.toggle")),
+          java.util.stream.Stream.concat(
+                  lang.lines("module-menu.descriptions." + id).stream()
+                      .map(
+                          line ->
+                              net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                                  .deserialize(line)),
+                  java.util.stream.Stream.of(
+                      lang.render(enabled ? "gui.enabled" : "gui.disabled"),
+                      lang.render("gui.file", Map.of("path", "modules/" + id + ".yml")),
+                      lang.render("gui.separator"),
+                      lang.render("gui.click.settings"),
+                      lang.render("gui.click.toggle")))
+              .toList(),
           c -> {
             if (c.isRightClick())
               complete(p, plugin.module(id, !plugin.module(id)), () -> modules(p), true);
@@ -281,6 +272,20 @@ public final class ControlMenus implements Listener, AutoCloseable {
               ? lang.render(labelKey)
               : lang.render("gui.label", Map.of("name", key));
       var lore = new ArrayList<Component>();
+      String helpKey = "module-help." + id + "." + full + "._description";
+      if (lang.contains(helpKey)) lore.addAll(MenuStyle.description(lang, helpKey));
+      else
+        lore.add(
+            lang.render(
+                folder
+                    ? "settings-help.section"
+                    : value instanceof Boolean
+                        ? "settings-help.boolean"
+                        : value instanceof Number
+                            ? "settings-help.number"
+                            : value instanceof List<?>
+                                ? "settings-help.list"
+                                : "settings-help.text"));
       lore.add(lang.render("gui.path", Map.of("path", full)));
       if (!folder)
         lore.add(
@@ -315,6 +320,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
               saveSetting(p, id, full, value, !b, () -> settings(p, id, path, page));
             else if (value instanceof List<?> list)
               list(p, id, full, list, 0, () -> settings(p, id, path, page));
+            else if (!settingChoices(id, full).isEmpty())
+              settingPicker(p, id, full, value, 0, () -> settings(p, id, path, page));
             else if (c.isRightClick()
                 && value instanceof String text
                 && full.endsWith("-key")
@@ -337,7 +344,12 @@ public final class ControlMenus implements Listener, AutoCloseable {
                               plugin.io()),
                           () -> settings(p, id, path, page),
                           true),
-                  () -> settings(p, id, path, page));
+                  () -> settings(p, id, path, page),
+                  lang.render("gui.path", Map.of("path", text)),
+                  lang.text(text),
+                  lang.text(text));
+            else if (value instanceof Number)
+              number(p, id, full, value, () -> settings(p, id, path, page));
             else
               ask(
                   p,
@@ -351,7 +363,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
                           value,
                           parse(value, input),
                           () -> settings(p, id, path, page)),
-                  () -> settings(p, id, path, page));
+                  () -> settings(p, id, path, page),
+                  title,
+                  String.valueOf(value),
+                  String.valueOf(value));
           });
     }
     if (keys.isEmpty())
@@ -391,6 +406,59 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   () -> settings(p, id, path, page),
                   this::admin));
     p.openInventory(m.inventory);
+  }
+
+  private List<String> settingChoices(String module, String path) {
+    if (module.equals("tab") && path.equals("engine")) return List.of("native", "tab");
+    if (module.equals("tab") && path.startsWith("bossbars.")) {
+      if (path.endsWith(".color"))
+        return Arrays.stream(net.kyori.adventure.bossbar.BossBar.Color.values())
+            .map(Enum::name)
+            .toList();
+      if (path.endsWith(".overlay"))
+        return Arrays.stream(net.kyori.adventure.bossbar.BossBar.Overlay.values())
+            .map(Enum::name)
+            .toList();
+    }
+    if (module.equals("profile") && path.startsWith("cards.") && path.endsWith(".material"))
+      return Arrays.stream(Material.values())
+          .filter(m -> m.isItem() && !m.isAir())
+          .map(Enum::name)
+          .sorted()
+          .toList();
+    return List.of();
+  }
+
+  private void settingPicker(
+      Player p, String module, String path, Object expected, int page, Runnable back) {
+    var menu = menu(p, "settings-help.choice-title", Map.of("path", path), this::admin);
+    var choices = settingChoices(module, path);
+    int count = Math.max(0, Math.min(21, choices.size() - page * 21));
+    for (int i = 0; i < count; i++) {
+      String value = choices.get(page * 21 + i);
+      Material icon = module.equals("profile") ? Material.matchMaterial(value) : Material.PAPER;
+      Component title =
+          lang.contains("settings-help.choices." + value)
+              ? lang.render("settings-help.choices." + value)
+              : module.equals("profile")
+                  ? Component.translatable(icon.translationKey())
+                  : lang.render("gui.label", Map.of("name", value));
+      entry(
+          menu,
+          MenuStyle.slot(i, count),
+          icon,
+          title,
+          List.of(lang.render("gui.click.select")),
+          c -> saveSetting(p, module, path, expected, value, back));
+    }
+    navigation(
+        menu,
+        p,
+        page,
+        choices.size(),
+        n -> settingPicker(p, module, path, expected, n, back),
+        back);
+    p.openInventory(menu.inventory);
   }
 
   private static Object parse(Object previous, String input) {
@@ -441,7 +509,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
                     next.set(index, parse(values.get(index), input));
                     saveSetting(p, module, path, values, next, back);
                   },
-                  () -> list(p, module, path, values, page, back));
+                  () -> list(p, module, path, values, page, back),
+                  lang.render("gui.path", Map.of("path", path + "[" + (index + 1) + "]")),
+                  String.valueOf(values.get(index)),
+                  String.valueOf(values.get(index)));
           });
     }
     navigation(m, p, page, values.size(), n -> list(p, module, path, values, n, back), back);
@@ -461,7 +532,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   next.add(values.isEmpty() ? input : parse(values.getFirst(), input));
                   saveSetting(p, module, path, values, next, back);
                 },
-                () -> list(p, module, path, values, page, back)));
+                () -> list(p, module, path, values, page, back),
+                lang.render("gui.path", Map.of("path", path)),
+                values.isEmpty() ? "" : String.valueOf(values.getFirst()),
+                ""));
     p.openInventory(m.inventory);
   }
 
@@ -506,7 +580,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
                         && who.hasPermission("loveessential.npc.edit")
                         && plugin.module("npc"),
                 id -> wizard.create(p, id),
-                () -> npcList(p, page)));
+                () -> npcList(p, page),
+                lang.render("gui.create-npc"),
+                "npc_01",
+                ""));
     if (!p.hasPermission("loveessential.npc.create") || !p.hasPermission("loveessential.npc.edit"))
       locked(m, 50);
     if (!p.hasPermission("loveessential.npc.edit")) locked(m, 4);
@@ -925,33 +1002,156 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   private void ask(
       Player p, String key, Predicate<Player> allowed, Consumer<String> input, Runnable back) {
+    ask(
+        p,
+        key,
+        allowed,
+        input,
+        back,
+        lang.render("input.contexts." + key.replace('.', '-')),
+        lang.contains("input.examples." + key.replace('.', '-'))
+            ? lang.text("input.examples." + key.replace('.', '-'))
+            : "",
+        "");
+  }
+
+  private void ask(
+      Player p,
+      String key,
+      Predicate<Player> allowed,
+      Consumer<String> input,
+      Runnable back,
+      Component context,
+      String example,
+      String current) {
     if (!allowed.test(p) || !love.authenticated(p))
       throw new IllegalArgumentException("errors.permission");
     wizard.cancelInput(p);
     p.closeInventory();
-    prompts.put(
-        p.getUniqueId(), new Prompt(System.currentTimeMillis() + 180000, allowed, input, back));
-    lang.send(p, key);
-    lang.send(p, "gui.prompt-cancel");
+    var prompt =
+        new Prompt(
+            System.currentTimeMillis() + 180000,
+            allowed,
+            input,
+            back,
+            UUID.randomUUID().toString(),
+            context,
+            key,
+            example,
+            current);
+    prompts.put(p.getUniqueId(), prompt);
+    sendPrompt(p, prompt);
+  }
+
+  private void sendPrompt(Player p, Prompt prompt) {
+    ChatPrompt.send(
+        p,
+        lang,
+        prompt.token,
+        prompt.context,
+        lang.render(prompt.instructionKey),
+        prompt.example,
+        prompt.current);
+  }
+
+  public boolean cancelPrompt(Player p, String token) {
+    var prompt = prompts.get(p.getUniqueId());
+    if (prompt == null || !prompt.token.equals(token)) return false;
+    return input(p, "cancel");
   }
 
   public boolean input(Player p, String value) {
     var prompt = prompts.remove(p.getUniqueId());
     if (prompt == null) return false;
     if (prompt.expires < System.currentTimeMillis()) {
-      lang.send(p, "wizard.no-prompt");
+      lang.send(p, "input.expired");
       return true;
     }
     try {
       if (!plugin.ready() || !love.authenticated(p) || !prompt.allowed.test(p))
         throw new IllegalArgumentException("errors.permission");
-      if (value.equalsIgnoreCase("cancel") || value.equalsIgnoreCase("отмена")) prompt.back.run();
-      else prompt.input.accept(value);
-    } catch (RuntimeException error) {
-      error(p, error);
-      if (love.authenticated(p) && prompt.allowed.test(p)) prompt.back.run();
+      if (value.equalsIgnoreCase("cancel") || value.equalsIgnoreCase("отмена")) {
+        lang.send(p, "input.cancelled");
+        prompt.back.run();
+      } else prompt.input.accept(value);
+    } catch (RuntimeException failure) {
+      error(p, failure);
+      if (plugin.ready() && love.authenticated(p) && prompt.allowed.test(p)) {
+        prompts.putIfAbsent(p.getUniqueId(), prompt);
+        sendPrompt(p, prompts.get(p.getUniqueId()));
+      }
     }
     return true;
+  }
+
+  private void number(Player p, String module, String path, Object value, Runnable back) {
+    var m = menu(p, "settings-help.number-title", Map.of("path", path), this::admin);
+    m.inventory.setItem(
+        4,
+        MenuStyle.item(
+            Material.COMPARATOR,
+            lang.render("gui.label", Map.of("name", path)),
+            List.of(
+                lang.render("gui.value", Map.of("value", value.toString())),
+                lang.render("settings-help.number"))));
+    double step = value instanceof Double || value instanceof Float ? .1 : 1;
+    int[] changes = {-10, -5, -1, 1, 5, 10};
+    for (int i = 0; i < changes.length; i++) {
+      int delta = changes[i];
+      entry(
+          m,
+          MenuStyle.slot(i, changes.length),
+          delta < 0 ? Material.RED_DYE : Material.LIME_DYE,
+          lang.render(
+              "settings-help.change",
+              Map.of(
+                  "amount",
+                  (delta > 0 ? "+" : "")
+                      + java.math.BigDecimal.valueOf(delta * step)
+                          .stripTrailingZeros()
+                          .toPlainString())),
+          List.of(lang.render("gui.click.run")),
+          c -> {
+            String next =
+                java.math.BigDecimal.valueOf(((Number) value).doubleValue())
+                    .add(java.math.BigDecimal.valueOf(delta * step))
+                    .stripTrailingZeros()
+                    .toPlainString();
+            saveSetting(
+                p,
+                module,
+                path,
+                value,
+                parse(value, next),
+                () ->
+                    number(
+                        p,
+                        module,
+                        path,
+                        dev.lovelace.loveessential.config.ModuleConfigs.view(
+                                plugin.getConfig(), module)
+                            .get(path),
+                        back));
+          });
+    }
+    put(
+        m,
+        50,
+        Material.WRITABLE_BOOK,
+        "gui.manual-input",
+        "gui.click.edit",
+        c ->
+            ask(
+                p,
+                "gui.prompt-value",
+                this::admin,
+                input -> saveSetting(p, module, path, value, parse(value, input), back),
+                () -> number(p, module, path, value, back),
+                lang.render("gui.path", Map.of("path", path)),
+                value.toString(),
+                value.toString()));
+    navigation(m, p, 0, 0, n -> {}, back);
+    p.openInventory(m.inventory);
   }
 
   private void complete(Player p, CompletableFuture<?> future, Runnable back, boolean adminOnly) {
@@ -1017,6 +1217,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (prompt == null) return;
     if (prompt.expires < System.currentTimeMillis()) {
       prompts.remove(e.getPlayer().getUniqueId(), prompt);
+      e.setCancelled(true);
+      main.execute(() -> lang.send(e.getPlayer(), "input.expired"));
       return;
     }
     e.setCancelled(true);

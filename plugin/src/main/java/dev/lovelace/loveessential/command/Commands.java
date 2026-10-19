@@ -71,7 +71,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       String cmd = command.getName();
       boolean inputCommand =
-          cmd.equals("loveessential") && args.length > 0 && args[0].equalsIgnoreCase("input");
+          cmd.equals("loveessential")
+              && args.length > 0
+              && Set.of("input", "cancel").contains(args[0].toLowerCase(Locale.ROOT));
       if (!inputCommand && sender instanceof Player p) {
         menus.cancelInput(p);
         wizard.cancelInput(p);
@@ -97,6 +99,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
             dialogs.answer(p, args[1], args[2], args[3]);
           }
           case "npc" -> npc(player(sender), slice(args, 1));
+          case "cancel" -> {
+            var p = player(sender);
+            if (args.length != 2
+                || !menus.cancelPrompt(p, args[1]) && !wizard.cancelPrompt(p, args[1]))
+              lang.send(p, "input.stale-cancel");
+          }
           case "input" -> {
             var p = player(sender);
             String input = String.join(" ", slice(args, 1));
@@ -302,7 +310,6 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       case "edit", "изменить" -> wizard.edit(p, args[1]);
       case "set", "настроить" -> wizard.set(p, args[1], String.join(" ", slice(args, 2)));
-      case "template", "шаблон" -> wizard.template(p, args[1]);
       case "here", "сюда" -> wizard.spawnHere(p);
       case "page", "шаг" -> wizard.page(p, Integer.parseInt(args[1]) - 1);
       case "save", "сохранить" -> wizard.save(p);

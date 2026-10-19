@@ -14,6 +14,27 @@ public final class MenuStyle {
 
   private MenuStyle() {}
 
+  public static List<Component> description(Lang lang, String key) {
+    var result = new ArrayList<Component>();
+    for (String line : lang.text(key).split("\n")) {
+      String remaining =
+          net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+              .serialize(
+                  net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line));
+      while (remaining.length() > 54) {
+        int split = remaining.lastIndexOf(' ', 54);
+        if (split <= 0) split = 54;
+        result.add(
+            Component.text(
+                remaining.substring(0, split),
+                net.kyori.adventure.text.format.NamedTextColor.GRAY));
+        remaining = remaining.substring(split).stripLeading();
+      }
+      result.add(Component.text(remaining, net.kyori.adventure.text.format.NamedTextColor.GRAY));
+    }
+    return result;
+  }
+
   public static ItemStack item(Material icon, Component title, List<Component> lore) {
     var item = new ItemStack(icon);
     var meta = item.getItemMeta();

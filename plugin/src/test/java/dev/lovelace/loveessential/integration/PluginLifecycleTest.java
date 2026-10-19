@@ -163,9 +163,8 @@ class PluginLifecycleTest {
   @Test
   void npcCanBeCreatedAndDeletedFromRootMenus() throws Exception {
     var p = admin();
-    server.dispatchCommand(p, "le");
+    server.dispatchCommand(p, "le npc");
     assertLayout(p);
-    click(p, 20); // NPC browser
     click(p, 50); // create prompt
     server.dispatchCommand(p, "le input menu_guard");
     waitFor(
@@ -173,7 +172,7 @@ class PluginLifecycleTest {
             p.getOpenInventory().getTopInventory() != null
                 && p.getOpenInventory().getTopInventory().getSize() == 54);
     assertLayout(p);
-    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(3, 5)); // entity picker
+    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(2, 4)); // entity picker
     assertLayout(p);
     click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(1, 11)); // VILLAGER
     server.dispatchCommand(p, "le npc publish");
@@ -872,5 +871,295 @@ class PluginLifecycleTest {
         nick.display(alice));
     await(plugin.reloadSettings());
     assertEquals("#445566", plugin.getConfig().getString("nickname.default-color"));
+  }
+
+  int itemNamed(PlayerMock p, String name) {
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    var inv = p.getOpenInventory().getTopInventory();
+    for (int i = 0; i < inv.getSize(); i++) {
+      var item = inv.getItem(i);
+      if (item != null
+          && item.getItemMeta().displayName() != null
+          && plain.serialize(item.getItemMeta().displayName()).contains(name)) return i;
+    }
+    fail("Missing menu item: " + name);
+    return -1;
+  }
+
+  String cancelButton(PlayerMock p) {
+    net.kyori.adventure.text.Component next;
+    String command = null;
+    while ((next = p.nextComponentMessage()) != null) {
+      if (next.clickEvent() != null
+          && next.clickEvent().payload()
+              instanceof net.kyori.adventure.text.event.ClickEvent.Payload.Text text
+          && text.value().contains(" cancel ")) command = text.value();
+    }
+    assertNotNull(command, "prompt must contain a clickable cancellation button");
+    return command.substring(1);
+  }
+
+  @Test
+  void mainMenuContainsOnlyModuleSettingsAndToggleControls() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le");
+    assertLayout(p);
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    var lang = internal("lang", dev.lovelace.loveessential.lang.Lang.class);
+    var expected =
+        LoveEssentialPlugin.MODULES.stream()
+            .map(id -> plain.serialize(lang.render("gui.module-names." + id)))
+            .collect(java.util.stream.Collectors.toSet());
+    var found = new java.util.HashSet<String>();
+    for (int slot : dev.lovelace.loveessential.gui.MenuStyle.CONTENT) {
+      var item = p.getOpenInventory().getTopInventory().getItem(slot);
+      if (item == null) continue;
+      String name = plain.serialize(item.getItemMeta().displayName());
+      assertTrue(expected.contains(name), name);
+      found.add(name);
+      assertTrue(item.getItemMeta().getLore().stream().anyMatch(line -> line.contains("ЛКМ")));
+      assertTrue(item.getItemMeta().getLore().stream().anyMatch(line -> line.contains("ПКМ")));
+    }
+    assertEquals(expected, found);
+    assertEquals(
+        org.bukkit.Material.GRAY_STAINED_GLASS_PANE,
+        p.getOpenInventory().getTopInventory().getItem(51).getType());
+    var regular = server.addPlayer("Visitor");
+    server.dispatchCommand(regular, "le");
+    assertTrue(
+        regular.getOpenInventory().getTopInventory() == null
+            || regular.getOpenInventory().getTopInventory().getSize() != 54);
+  }
+
+  @Test
+  void wizardIsUniversalAndPromptsExplainFieldWithClickableSafeCancellation() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le npc create universal");
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getSize() == 54);
+    assertLayout(p);
+    assertFalse(suggestions(p, "loveessential", "npc", "").contains("template"));
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    for (var item : p.getOpenInventory().getTopInventory().getContents())
+      if (item != null)
+        assertFalse(plain.serialize(item.getItemMeta().displayName()).contains("Шаблон"));
+    click(p, itemNamed(p, "Имя NPC"));
+    String first = cancelButton(p);
+    server.dispatchCommand(p, first);
+    assertLayout(p);
+    click(p, itemNamed(p, "Имя NPC"));
+    String second = cancelButton(p);
+    assertNotEquals(first, second);
+    server.dispatchCommand(p, first); // old button must not remove the new prompt
+    server.dispatchCommand(p, "le input <gold>Универсальный");
+    assertLayout(p);
+    server.dispatchCommand(p, "le npc publish");
+    var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
+    waitFor(() -> api.npc("universal").isPresent());
+    assertEquals(
+        "<gold>Универсальный",
+        internal("lang", dev.lovelace.loveessential.lang.Lang.class)
+            .text(api.npc("universal").orElseThrow().nameKey()));
+  }
+
+  @Test
+  void invalidWizardInputKeepsPromptAndShowsParameterDetails() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le npc create observer");
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getSize() == 54);
+    server.dispatchCommand(p, "le npc page 4");
+    click(p, itemNamed(p, "Радиус взгляда"));
+    String messages = drain(p);
+    assertTrue(messages.contains("Радиус взгляда"));
+    assertTrue(messages.contains("Пример ввода"));
+    assertTrue(messages.contains("1–64"));
+    server.dispatchCommand(p, "le input nonsense");
+    String cancel = cancelButton(p);
+    server.dispatchCommand(p, cancel);
+    assertLayout(p);
+    click(p, itemNamed(p, "Радиус взгляда"));
+    server.dispatchCommand(p, "le input 12");
+    assertLayout(p);
+    server.dispatchCommand(p, "le npc publish");
+    var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
+    waitFor(() -> api.npc("observer").isPresent());
+    assertEquals("12", api.npc("observer").orElseThrow().option("look-range", ""));
+  }
+
+  @Test
+  void numericSettingsHaveButtonsAndContextualCancellableManualInput() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le module home");
+    click(p, itemNamed(p, "Базовый лимит домов"));
+    assertLayout(p);
+    int before = plugin.getConfig().getInt("home.default-limit");
+    click(p, itemNamed(p, "+1"));
+    waitFor(() -> plugin.getConfig().getInt("home.default-limit") == before + 1);
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getSize() == 54);
+    click(p, 50);
+    String command = cancelButton(p);
+    server.dispatchCommand(p, command);
+    assertLayout(p);
+    click(p, 50);
+    server.dispatchCommand(p, "le input 8");
+    waitFor(() -> plugin.getConfig().getInt("home.default-limit") == 8);
+  }
+
+  @Test
+  void routeAndActionEditorsManageIndividualEntriesWithConfirmation() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le npc create route_editor");
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getSize() == 54);
+    server.dispatchCommand(p, "le npc path add");
+    server.dispatchCommand(p, "le npc path add");
+    server.dispatchCommand(p, "le npc page 5");
+    click(p, itemNamed(p, "Редактировать точку"));
+    assertLayout(p);
+    click(p, itemNamed(p, "Точка 1"));
+    assertLayout(p);
+    click(p, itemNamed(p, "Ожидание в точке"));
+    server.dispatchCommand(p, "le input 40");
+    server.dispatchCommand(p, "le npc page 5");
+    click(p, itemNamed(p, "Редактировать точку"));
+    click(p, itemNamed(p, "Точка 2"));
+    click(p, itemNamed(p, "Удалить эту точку"));
+    assertLayout(p);
+    click(p, 24); // cancelling confirmation keeps the point
+    click(p, itemNamed(p, "Удалить эту точку"));
+    click(p, 20);
+    server.dispatchCommand(
+        p,
+        "le npc set actions"
+            + " [{\"type\":\"sound\",\"args\":{\"sound\":\"ENTITY_EXPERIENCE_ORB_PICKUP\"}},{\"type\":\"message\",\"args\":{\"key\":\"common.done\"}}]");
+    server.dispatchCommand(p, "le npc page 6");
+    click(p, itemNamed(p, "Действия по клику"));
+    assertLayout(p);
+    click(p, 4);
+    assertLayout(p);
+    var deleteEvent =
+        new org.bukkit.event.inventory.InventoryClickEvent(
+            p.getOpenInventory(),
+            org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+            dev.lovelace.loveessential.gui.MenuStyle.slot(0, 2),
+            org.bukkit.event.inventory.ClickType.RIGHT,
+            org.bukkit.event.inventory.InventoryAction.PICKUP_HALF);
+    server.getPluginManager().callEvent(deleteEvent);
+    server.getScheduler().performOneTick();
+    click(p, 20);
+    server.dispatchCommand(p, "le npc publish");
+    var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
+    waitFor(() -> api.npc("route_editor").isPresent());
+    var npc = api.npc("route_editor").orElseThrow();
+    assertEquals(1, npc.route().points().size());
+    assertEquals(40, npc.route().points().getFirst().waitTicks());
+    assertEquals(1, npc.actions().size());
+    assertEquals("message", npc.actions().getFirst().type());
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+  @SuppressWarnings("unchecked")
+  void pausedNpcStillTracksPlayerWhileMovementRemainsPaused(boolean preview) throws Exception {
+    var player = admin();
+    player.teleport(new org.bukkit.Location(player.getWorld(), 4, 64, 4));
+    var npcs = internal("npcs", dev.lovelace.loveessential.npc.NpcService.class);
+    var rotations = new java.util.concurrent.atomic.AtomicInteger();
+    var uuid = java.util.UUID.randomUUID();
+    org.bukkit.entity.LivingEntity entity =
+        (org.bukkit.entity.LivingEntity)
+            java.lang.reflect.Proxy.newProxyInstance(
+                getClass().getClassLoader(),
+                new Class<?>[] {org.bukkit.entity.LivingEntity.class},
+                (proxy, method, args) ->
+                    switch (method.getName()) {
+                      case "getLocation" -> new org.bukkit.Location(player.getWorld(), 0, 64, 0);
+                      case "getEyeLocation" ->
+                          new org.bukkit.Location(player.getWorld(), 0, 65.6, 0);
+                      case "getWorld" -> player.getWorld();
+                      case "getUniqueId" -> uuid;
+                      case "isValid", "isVisibleByDefault" -> true;
+                      case "setRotation" -> {
+                        rotations.incrementAndGet();
+                        yield null;
+                      }
+                      case "setBodyYaw", "remove" -> null;
+                      default -> method.getReturnType() == boolean.class ? false : null;
+                    });
+    var definition =
+        new NpcDefinition(
+            "observer",
+            1,
+            player.getUniqueId(),
+            "common.done",
+            "MANNEQUIN",
+            Position.of(new org.bukkit.Location(player.getWorld(), 0, 64, 0)),
+            java.util.Map.of("look-at", "true"),
+            Condition.always(),
+            Condition.always(),
+            Route.empty(),
+            Dialog.empty(),
+            java.util.List.of(),
+            true);
+    Class<?> liveClass = Class.forName("dev.lovelace.loveessential.npc.NpcService$Live");
+    var constructor = liveClass.getDeclaredConstructors()[0];
+    constructor.setAccessible(true);
+    String key = preview ? "preview:" + player.getUniqueId() : definition.id();
+    var live = constructor.newInstance(key, definition, player.getUniqueId(), entity, preview);
+    if (!preview) {
+      var definitionsField = npcs.getClass().getDeclaredField("definitions");
+      definitionsField.setAccessible(true);
+      ((java.util.Map<String, NpcDefinition>) definitionsField.get(npcs))
+          .put(definition.id(), definition);
+    }
+    var pause = liveClass.getDeclaredField("pauseUntil");
+    pause.setAccessible(true);
+    pause.setLong(live, Long.MAX_VALUE);
+    var liveField = npcs.getClass().getDeclaredField("live");
+    liveField.setAccessible(true);
+    ((java.util.Map<String, Object>) liveField.get(npcs)).put(key, live);
+    server.getScheduler().performTicks(4);
+    assertTrue(rotations.get() > 0, "paused preview must still update its gaze");
+    assertEquals(Long.MAX_VALUE, pause.getLong(live));
+  }
+
+  @Test
+  void moduleToggleAndEnginePickerPersistFromGui() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le");
+    int slot = itemNamed(p, "Дома");
+    var toggle =
+        new org.bukkit.event.inventory.InventoryClickEvent(
+            p.getOpenInventory(),
+            org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+            slot,
+            org.bukkit.event.inventory.ClickType.RIGHT,
+            org.bukkit.event.inventory.InventoryAction.PICKUP_HALF);
+    server.getPluginManager().callEvent(toggle);
+    server.getScheduler().performOneTick();
+    assertTrue(toggle.isCancelled());
+    waitFor(() -> !plugin.module("home"));
+    server.dispatchCommand(p, "le tab");
+    click(p, itemNamed(p, "Движок списка игроков"));
+    assertLayout(p);
+    click(p, itemNamed(p, "NEZNAMY"));
+    waitFor(() -> plugin.getConfig().getString("tab.engine").equals("tab"));
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getSize() == 54);
+    await(plugin.reloadSettings());
+    assertFalse(plugin.module("home"));
+    assertEquals("tab", plugin.getConfig().getString("tab.engine"));
   }
 }

@@ -14,6 +14,9 @@ allowed-types:
 max-definitions: 1000
 max-active: 200
 max-route-points: 128
+tracking:
+  update-ticks: 2
+  max-turn-degrees: 30
 pathfinding:
   threads: 2
   radius: 16

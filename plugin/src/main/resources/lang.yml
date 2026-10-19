@@ -594,6 +594,12 @@ gui:
         _label: <gold>Лимит активных NPC
       max-route-points:
         _label: <gold>Лимит точек маршрута
+      tracking:
+        _label: <gold>Слежение за игроками
+        update-ticks:
+          _label: <gold>Интервал поворота, тики
+        max-turn-degrees:
+          _label: <gold>Максимальный поворот за обновление
       pathfinding:
         _label: <gold>Поиск пути
         threads:
@@ -1069,3 +1075,312 @@ nick:
     light_purple: Светло-фиолетовый
     yellow: Жёлтый
     white: Белый
+
+module-menu:
+  title: <gold>Настройки модулей LoveEssential
+  descriptions:
+    npc:
+    - <gray>Настройки универсальных NPC, появления и маршрутов.
+    - '<gray>Создание и редактор: /le npc.'
+    tab:
+    - <gray>Список игроков, имена, группы, scoreboard и bossbar.
+    home:
+    - <gray>Лимит домов и доступность команд сохранения/телепорта.
+    spawn:
+    - <gray>Доступность сохранённых точек спавна.
+    teleport:
+    - <gray>Запросы телепорта и возврат на предыдущую позицию.
+    vanish:
+    - <gray>Скрытие игрока с сохранением состояния между входами.
+    afk:
+    - <gray>Ручной и автоматический AFK, время до отключения.
+    skin:
+    - <gray>Смена скина по имени игрока и возврат своего скина.
+    sitride:
+    - <gray>Сидение и посадка на сущность при наличии прав.
+    nightskip:
+    - <gray>Ускорение ночи, когда игроки спят.
+    portal:
+    - '<gray>Области перехода и назначения. Объекты: /le portal.'
+    hologram:
+    - '<gray>Текстовые голограммы. Объекты: /le hologram.'
+    traces:
+    - <gray>Частицы следов за движущимися игроками.
+    joinquit:
+    - <gray>Сообщения о входе и выходе из королевства.
+    motd:
+    - <gray>Описание сервера в списке серверов Minecraft.
+    messages:
+    - <gray>Личные сообщения, задержка и лимит игнор-листа.
+    inventory:
+    - <gray>Живой просмотр и изменение инвентаря по правам.
+    profile:
+    - '<gray>Досье игрока: карточки, права и обновление данных.'
+    nickname:
+    - <gray>Псевдонимы, ограничения, цвета и готовые градиенты.
+input:
+  context: '<gold>Сейчас настраивается: <context>'
+  npc: <gold>NPC <white><id>
+  npc-field: <gold>NPC <white><npc> <dark_gray>• <field>
+  operation: <operation> <dark_gray>• <parameter>
+  current: '<gray>Текущее значение: <white><value>'
+  example: '<gray>Пример ввода: <yellow><value>'
+  cancel-button: <red><bold>[ОТМЕНИТЬ ВВОД]</bold> <gray>— нажмите, чтобы вернуться
+  cancel-hover: <yellow>Отменить этот запрос и вернуться в меню.
+  delivery: <gray>Напишите ответ в чат или /le input значение. Ожидание — 3 минуты.
+  cancelled: <gray>Ввод отменён. Изменения не применены.
+  expired: <yellow>Запрос ввода истёк. Откройте нужный параметр снова.
+  stale-cancel: <gray>Эта кнопка относится к завершённому запросу. Новый запрос остаётся активным.
+  empty: Не задано
+  contexts:
+    gui-prompt-text: Текст сообщения или строки интерфейса
+    gui-prompt-value: Значение выбранного параметра
+    gui-prompt-id: Идентификатор нового объекта
+    gui-prompt-skin: Скин игрока
+    nick-prompt-name: Текст вашего никнейма
+    nick-prompt-color: Цвет никнейма
+    nick-prompt-gradient: Цвета градиента никнейма
+  examples:
+    gui-prompt-text: Добро пожаловать!
+    gui-prompt-value: '5'
+    gui-prompt-id: my_object
+    gui-prompt-skin: Notch
+    nick-prompt-name: Аврора
+    nick-prompt-color: '#ff6699'
+    nick-prompt-gradient: '#ff6699 #55ffff'
+    wizard-prompt-mode: PING_PONG
+    wizard-prompt-point: 1 wait 40
+    wizard-prompt-node: hello Здравствуй, путник!
+    wizard-prompt-answer: hello leave end До встречи!
+    wizard-prompt-start: hello
+    wizard-prompt-answer-condition: hello leave {"type":"authenticated","args":{},"children":[]}
+    wizard-prompt-answer-actions: hello leave []
+    wizard-prompt-text: Приветствую в королевстве!
+  operation-examples:
+    wizard:
+      conditions:
+        permission:
+          value: loveessential.example
+        world:
+          value: world
+        clan:
+          value: Knights
+        weather:
+          value: clear
+      action-types:
+        command:
+          value: spawn
+  parameter-examples:
+    value: loveessential.example
+    amount: '10'
+    min: '0'
+    material: DIAMOND
+    from: '0'
+    to: '12000'
+    sound: ENTITY_EXPERIENCE_ORB_PICKUP
+    delta: '5'
+    metric: essential.npc.interactions
+settings-help:
+  section: <gray>Откройте раздел, чтобы настроить его параметры.
+  boolean: <gray>Переключатель функции. Нажмите для смены состояния.
+  number: <gray>Изменяйте число кнопками или введите точное значение.
+  list: <gray>Откройте список, чтобы добавить, изменить или удалить элемент.
+  text: <gray>Текстовое значение. При вводе «-» строка очищается.
+  choice-title: <gold>Выберите значение
+  choices:
+    native: <gold>Средствами Paper
+    tab: <gold>Через установленный TAB от NEZNAMY
+  number-title: <gold>Числовой параметр
+  change: <gold>Изменить на <amount>
+  npc-number-shortcuts: '<gray>ПКМ: увеличить; Shift+ПКМ: уменьшить. ЛКМ: точный ввод.'
+npc-editor:
+  route-title: <gold>Точки маршрута NPC
+  point: <gold>Точка <number>
+  point-title: <gold>Точка маршрута <number>
+  position: '<gray>Позиция: <white><x> <y> <z>'
+  point-details: '<gray>Пауза: <white><wait> <gray>тиков • скорость: <white><speed> <gray>• радиус: <white><radius>'
+  empty-route: <gray>Точек пока нет — нажмите кнопку добавления сверху.
+  move-point: <gold>Перенести точку в вашу позицию
+  move-up: <gold>Переместить точку раньше
+  move-down: <gold>Переместить точку позже
+  delete-point: <gold>Удалить эту точку маршрута
+  point-fields:
+    wait: <gold>Ожидание в точке
+    speed: <gold>Скорость к точке
+    radius: <gold>Радиус достижения
+  point-help:
+    wait: '<gray>Время остановки: 20 тиков = 1 секунда. Допустимо 0–72000.'
+    speed: '<gray>Множитель скорости движения: от 0.1 до 5.'
+    radius: '<gray>На каком расстоянии точка считается достигнутой: 0.1–8 блоков.'
+  actions-title: <gold>Назначенные действия NPC
+  action-order: '<gray>Порядок выполнения: <white><number>'
+  action-controls: '<gray>ЛКМ: поднять раньше в списке. ПКМ: удалить с подтверждением.'
+  empty-actions: <gray>Действий пока нет. Вернитесь и выберите нужное действие.
+  stale: <yellow>Черновик уже изменён. Открыт актуальный редактор.
+  actions-summary: 'Действий: <count>'
+  conditions-summary: 'Условий: <count>'
+  route-summary: 'Точек: <count>'
+  dialog-summary: 'Реплик: <count>'
+npc-help:
+  fields:
+    id: '<gray>Уникальный ID NPC: 1–48 строчных латинских букв, цифр, _ или -. После публикации не меняется.'
+    name: <gray>Имя над NPC с поддержкой цветовой разметки MiniMessage. Текст сохраняется в lang.yml.
+    type: <gray>Модель сущности Minecraft. MANNEQUIN поддерживает скин игрока; возможности других моделей отличаются.
+    spawn: <gray>Нажмите, чтобы NPC появлялся в вашей текущей позиции. Проверяется безопасность и территория.
+    skin: <gray>Имя или UUID владельца скина для MANNEQUIN. «-» убирает выбранный скин.
+    helmet: <gray>Материал предмета на голове NPC. AIR убирает предмет.
+    chestplate: <gray>Материал нагрудника. AIR убирает предмет.
+    leggings: <gray>Материал поножей. AIR убирает предмет.
+    boots: <gray>Материал ботинок. AIR убирает предмет.
+    main-hand: <gray>Предмет в основной руке. Сам по себе не назначает NPC профессию или действие.
+    off-hand: <gray>Предмет во второй руке. AIR освобождает руку.
+    pose: <gray>Поза модели. Набор доступных поз зависит от выбранной сущности.
+    scale: '<gray>Размер модели: 1 — обычный, 0.1–8 — допустимые значения.'
+    baby: <gray>Включает детскую модель, если выбранная сущность её поддерживает.
+    glowing: <gray>Добавляет светящийся контур вокруг NPC.
+    name-visible: <gray>Показывает или скрывает имя над сущностью.
+    silent: <gray>Отключает обычные звуки сущности. Настроенный звук клика задаётся отдельно.
+    personal: <gray>Каждый подходящий игрок видит свой экземпляр NPC с отдельным движением.
+    visibility: <gray>Определяет, кто видит NPC. Можно назначить сразу несколько условий.
+    access: <gray>Определяет, кто может взаимодействовать с видимым NPC.
+    require-auth: <gray>При установленном LoveAuth допускает взаимодействие и видимость после авторизации.
+    interaction-range: '<gray>Максимальная дистанция клика: от 1 до 16 блоков.'
+    cooldown-ms: '<gray>Минимальная задержка между кликами игрока: 1000 мс = 1 секунда.'
+    interaction-mode: '<gray>На какие клики реагировать: левый, правый или оба. Выберите вариант в меню.'
+    line-of-sight: <gray>Запрещает взаимодействовать с NPC сквозь стену.
+    interaction-sound: <gray>Звук при успешном клике. NONE или «-» отключает звук.
+    interaction-volume: '<gray>Громкость звука клика: 0–4.'
+    interaction-pitch: '<gray>Высота звука клика: 0.5–2.'
+    movement: '<gray>Независимое поведение: стоять, идти по маршруту или следовать за игроком.'
+    speed: '<gray>Множитель скорости передвижения: 0.1–5.'
+    look-at: <gray>Поворачивает NPC к ближайшему доступному игроку, в том числе во время остановки движения.
+    look-range: '<gray>На какой дистанции искать игрока для взгляда: 1–64 блока.'
+    pause-on-interact: <gray>После клика останавливает движение на 10 секунд; взгляд продолжает работать.
+    stuck-policy: '<gray>Что делать после неудачных попыток пройти: остановиться, пропустить точку или вернуться.'
+    activation-range: '<gray>Дистанция появления и активности NPC: 4–192 блока.'
+    follow-player: <gray>Настоящее имя игрока, за которым идти. «-» выбирает ближайшего доступного игрока.
+    follow-distance: '<gray>На каком расстоянии остановиться при сопровождении: 1–32 блока.'
+    stuck-ticks: <gray>Сколько тиков ждать при препятствии перед повторным поиском пути. 20 тиков = 1 секунда.
+    point-add: <gray>Добавить вашу позицию в конец маршрута. Сначала встаньте на безопасное место.
+    point-mode: <gray>ONCE — один проход; LOOP — круг; PING_PONG — туда-обратно; RANDOM — случайная точка.
+    point-record: <gray>Переключает запись точек при вашем движении. Повторное нажатие выключает запись.
+    point-tool: <gray>Выдаёт инструмент. ПКМ добавляет вашу текущую позицию в маршрут.
+    point-show: <gray>Показывает точки частицами только вам.
+    point-edit: <gray>Открывает список точек. Выберите точку, чтобы изменить ожидание, скорость, радиус или порядок.
+    point-undo: <gray>Отменяет последнее изменение маршрута.
+    point-redo: <gray>Повторяет отменённое изменение маршрута.
+    dialog-node: '<gray>Добавить или изменить реплику: ID узла и текст, который увидит игрок.'
+    dialog-answer: '<gray>Добавить вариант ответа: узел, ID ответа, следующий узел или end и текст.'
+    dialog-start: <gray>ID реплики, с которой начинается диалог NPC.
+    dialog-condition: <gray>Условие доступности конкретного ответа в диалоге.
+    dialog-actions: <gray>Действия, которые выполняются после выбора ответа.
+    actions: <gray>Любые назначенные действия по клику. Один NPC может сочетать меню, сообщения, оплату и диалог.
+    enabled-hours: <gray>Показывать NPC только в выбранные часы игрового мира.
+    hour-from: '<gray>Начало работы в тиках мира: 0 — утро, 12000 — закат, 18000 — полночь.'
+    hour-to: '<gray>Конец работы в тиках мира: 0–23999. Можно задать интервал через полночь.'
+    enabled: <gray>Разрешает появление этого NPC. Остальные настройки сохраняются.
+    collidable: <gray>Разрешает столкновения с моделью NPC.
+    gravity: <gray>Разрешает сущности падать под действием гравитации.
+    invulnerable: <gray>Защищает NPC от обычного урона.
+    avoid-water: <gray>Прокладывает наземный маршрут в обход воды.
+    can-open-doors: <gray>Разрешает NPC открывать двери на пути.
+    teleport-on-stuck: <gray>При RETURN_HOME разрешает безопасный телепорт к месту появления.
+  examples:
+    id: npc_01
+    name: <gold>Хранитель
+    skin: Notch
+    follow-player: Steve
+    description-key: npc.description.guard
+
+module-help:
+  nickname:
+    min-length:
+      _description: <gray>Минимальное число букв, цифр и _ в никнейме.
+    max-length:
+      _description: <gray>Максимальное число символов в никнейме.
+    prevent-impersonation:
+      _description: <gray>Запрещает совпадения с чужим известным именем и ником другого онлайн-игрока.
+    default-color:
+      _description: <gray>Цвет после сброса оформления. Пусто — наследовать цвет шаблона чата/TAB.
+    apply-display-name:
+      _description: <gray>Применять ник к Bukkit displayName; используется совместимыми чатами.
+    apply-to-tab:
+      _description: <gray>Подставлять никнейм в шаблоны имени TAB.
+    apply-to-messages:
+      _description: <gray>Показывать ник в личных сообщениях; команды ответа используют имя аккаунта.
+  messages:
+    max-length:
+      _description: <gray>Максимум символов в одном личном сообщении.
+    cooldown-ms:
+      _description: <gray>Задержка между отправками. 1000 мс = 1 секунда.
+    max-ignored:
+      _description: <gray>Максимум игроков в персональном игнор-листе.
+  inventory:
+    refresh-ticks:
+      _description: <gray>Интервал обновления живого инвентаря. 20 тиков = 1 секунда.
+  profile:
+    refresh-ticks:
+      _description: <gray>Как часто обновлять снимок данных для досье и плейсхолдеров.
+    persist-seconds:
+      _description: <gray>Как часто сохранять снимок профиля в SQLite, в секундах.
+    cards:
+      _description: <gray>Карточки досье. У каждой есть иконка, текст и отдельное право просмотра.
+  home:
+    default-limit:
+      _description: <gray>Сколько домов можно сохранить без повышающего лимит права.
+  afk:
+    timeout-seconds:
+      _description: <gray>Через сколько секунд без активности считать игрока AFK.
+    kick-after-seconds:
+      _description: <gray>Сколько секунд AFK допускается до отключения. 0 отключает автокик.
+  nightskip:
+    max-multiplier:
+      _description: <gray>Максимальное ускорение ночи при сне игроков.
+  npc:
+    max-active:
+      _description: <gray>Лимит одновременно появившихся экземпляров NPC, включая персональные.
+    max-definitions:
+      _description: <gray>Максимум сохранённых NPC в базе.
+    max-route-points:
+      _description: <gray>Максимум точек в одном маршруте.
+    allowed-types:
+      _description: <gray>Разрешённые модели сущностей для NPC. MANNEQUIN поддерживает скин игрока.
+    pathfinding:
+      _description: <gray>Ограничения наземного поиска пути; настройки числа потоков требуют перезапуска.
+      threads:
+        _description: <gray>Число потоков вычисления A*. Применяется после перезапуска сервера.
+      radius:
+        _description: <gray>Радиус снимка мира для поиска ближайшего участка маршрута.
+      max-nodes:
+        _description: <gray>Ограничение числа узлов A* на одну задачу.
+      plans-per-tick:
+        _description: <gray>Сколько NPC может начать поиск пути за один тик.
+    tracking:
+      _description: <gray>Плавность и частота поворота головы за игроками.
+      update-ticks:
+        _description: <gray>Интервал поворота NPC. 2 тика = 10 обновлений в секунду.
+      max-turn-degrees:
+        _description: <gray>Максимальный угол поворота за одно обновление. Меньше — плавнее.
+    actions:
+      _description: <gray>Доступные игровые действия и ограничения на экономику/команды.
+      max-economy-amount:
+        _description: <gray>Максимальная сумма одной операции NPC с физическими монетами.
+      allowed-player-commands:
+        _description: <gray>Разрешённые корневые команды для действий NPC от имени игрока.
+  tab:
+    engine:
+      _description: <gray>native — оформление средствами Paper; tab — установленный TAB от NEZNAMY.
+    refresh-ticks:
+      _description: <gray>Интервал обновления оформления TAB в тиках.
+    respect-other-scoreboards:
+      _description: <gray>Не заменять scoreboard другого плагина без необходимости.
+    sorting-enabled:
+      _description: <gray>Включает управление порядком игроков в списке.
+    sorting:
+      _description: <gray>Порядок критериев сортировки, например group, затем name.
+    name-enabled:
+      _description: <gray>Разрешает применять имя, префикс и суффикс игрока в TAB.
+    external:
+      _description: <gray>Параметры внешнего TAB. После изменения примените экспорт через /le tab export.
+logs-ui:
+  npc-tracking-failed: Не удалось обновить взгляд NPC; повтор через 10 секунд.
