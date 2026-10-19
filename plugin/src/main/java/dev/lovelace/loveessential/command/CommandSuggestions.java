@@ -14,6 +14,7 @@ public final class CommandSuggestions {
   private final LoveEssentialPlugin plugin;
   private final NpcService npcs;
   private final Gameplay gameplay;
+  private final dev.lovelace.loveessential.module.PlayerProfiles profiles;
   private final LoveBridge love;
   private final dev.lovelace.loveessential.module.PrivateMessages messages;
   private static final Map<String, String> NPC_PERMISSIONS =
@@ -64,12 +65,14 @@ public final class CommandSuggestions {
       NpcService npcs,
       Gameplay gameplay,
       LoveBridge love,
-      dev.lovelace.loveessential.module.PrivateMessages messages) {
+      dev.lovelace.loveessential.module.PrivateMessages messages,
+      dev.lovelace.loveessential.module.PlayerProfiles profiles) {
     this.plugin = plugin;
     this.npcs = npcs;
     this.gameplay = gameplay;
     this.love = love;
     this.messages = messages;
+    this.profiles = profiles;
   }
 
   public List<String> complete(CommandSender sender, String command, String[] args) {
@@ -184,11 +187,30 @@ public final class CommandSuggestions {
       return List.of();
     }
     if (!(sender instanceof Player p)) return List.of();
-    if (Set.of("msg", "ignore", "profile", "invsee").contains(command)) {
-      String module =
-          command.equals("invsee")
-              ? "inventory"
-              : command.equals("profile") ? "profile" : "messages";
+    if (command.equals("profile")) {
+      if (!plugin.module("profile") || !p.hasPermission("loveessential.profile")) return List.of();
+      var names =
+          Bukkit.getOnlinePlayers().stream()
+              .filter(target -> profiles.canView(p, target))
+              .map(Player::getName)
+              .toList();
+      if (args.length == 1) {
+        var out = new ArrayList<>(names);
+        out.addAll(
+            List.of("view", "list", "settings", "activity", "privacy", "hide", "show", "toggle"));
+        return out;
+      }
+      if (args.length == 2)
+        return switch (args[0].toLowerCase(Locale.ROOT)) {
+          case "view" -> names;
+          case "activity" -> List.of("show", "hide", "toggle");
+          case "privacy" -> List.of("public", "private");
+          default -> List.of();
+        };
+      return List.of();
+    }
+    if (Set.of("msg", "ignore", "invsee").contains(command)) {
+      String module = command.equals("invsee") ? "inventory" : "messages";
       String permission = command.equals("invsee") ? "invsee" : module;
       if (!plugin.module(module) || !p.hasPermission("loveessential." + permission))
         return List.of();
@@ -198,7 +220,6 @@ public final class CommandSuggestions {
             : List.of("view");
       if (args.length == 1) {
         var out = new ArrayList<>(players(sender));
-        if (command.equals("profile")) out.add("list");
         if (command.equals("ignore")) out.addAll(messages.ignoredNames(p));
         return out;
       }

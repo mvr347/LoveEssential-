@@ -571,7 +571,12 @@ class PluginLifecycleTest {
   void profileHasCurrentSkinRichPlaceholdersAndProtectedLocationCard() throws Exception {
     var viewer = server.addPlayer("Viewer");
     var target = server.addPlayer("Target");
-    waitFor(() -> viewer.canSee(target));
+    var profiles = internal("profiles", dev.lovelace.loveessential.module.PlayerProfiles.class);
+    waitFor(
+        () ->
+            viewer.canSee(target)
+                && profiles.privacy().loaded(target.getUniqueId())
+                && profiles.privacy().loaded(viewer.getUniqueId()));
     var skin = target.getPlayerProfile();
     var textures = skin.getTextures();
     textures.setSkin(java.net.URI.create("https://textures.minecraft.net/texture/abcdef").toURL());
@@ -580,12 +585,11 @@ class PluginLifecycleTest {
     target.setLevel(42);
     target.setStatistic(org.bukkit.Statistic.DEATHS, 7);
     server.dispatchCommand(viewer, "le userinfo Target");
-    assertLayout(viewer);
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     var skull =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
-    var profiles = internal("profiles", dev.lovelace.loveessential.module.PlayerProfiles.class);
     var values = profiles.values(target.getUniqueId());
     assertEquals("42", values.get("level"));
     assertEquals("7", values.get("deaths"));
@@ -598,10 +602,20 @@ class PluginLifecycleTest {
             .map(item -> String.valueOf(item.getItemMeta().getLore()))
             .collect(java.util.stream.Collectors.joining());
     assertFalse(lore.contains("Координаты:"));
-    assertTrue(lore.contains("42"));
+    assertTrue(
+        lore.contains("Адаптации")
+            || viewer
+                .getOpenInventory()
+                .getTopInventory()
+                .getItem(14)
+                .getItemMeta()
+                .getDisplayName()
+                .contains("Адаптации"));
+    server.dispatchCommand(viewer, "le profile activity");
     assertFalse(lore.contains("<health>"));
     viewer.setOp(true);
     server.dispatchCommand(viewer, "le profile Target");
+    profiles.activity(viewer, target);
     lore =
         java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
             .filter(java.util.Objects::nonNull)

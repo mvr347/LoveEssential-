@@ -15,8 +15,6 @@
 | `loveessential.speed` | OP | Скорость ходьбы/полёта |
 | `loveessential.gamemode` | OP | Свой режим игры |
 | `loveessential.repair` | OP | Ремонт предмета в руке |
-| `loveessential.workbench` | OP | Верстак |
-| `loveessential.enderchest` | OP | Свой эндер-сундук |
 | `loveessential.worlds.admin` | OP | Создание, импорт, загрузка/выгрузка и изменение миров |
 | `loveessential.worlds.teleport` | Все | Список миров и переход; дополнительно проверяется право конкретного мира |
 | `loveessential.scenarios.admin` | OP | Создание, изменение, запуск и сброс своего журнала сценариев |
@@ -28,8 +26,8 @@
 | `loveessential.nick.gradient` | Все игроки | Выбор градиента |
 | `loveessential.nick.others` | OP | Изменение ника другого онлайн-игрока; также нужны базовое право и право выбранного оформления |
 | `loveessential.messages` | Все игроки | Личные сообщения, ответы, игнор и настройки |
-| `loveessential.profile` | Все игроки | Просмотр досье |
-| `loveessential.profile.location` | OP | Просмотр карточки координат/территории другого игрока; свою карточку владелец видит без этого права |
+| `loveessential.profile` | Все игроки | Просмотр доступных профилей и настройка собственной приватности |
+| `loveessential.profile.location` | OP | Карточка координат/территории в разрешённой активности другого игрока; не обходит скрытие профиля или активности |
 | `loveessential.invsee` | OP | Просмотр чужого инвентаря |
 | `loveessential.invsee.edit` | OP | Редактирование чужого инвентаря; дополнительно нужен loveessential.invsee |
 | `loveessential.admin` | OP | Главная панель /le, общее управление, reload/backup, настройка модулей и административные функции; включает дочерние права из plugin.yml |

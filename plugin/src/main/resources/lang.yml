@@ -487,8 +487,6 @@ gui:
     speed: <gray>Установить скорость ходьбы или полёта от 0 до 10.
     gamemode: <gray>Изменить свой игровой режим.
     repair: <gray>Починить предмет в основной руке.
-    workbench: <gray>Открыть верстак.
-    enderchest: <gray>Открыть свой эндер-сундук.
     sit: <gray>Сесть на поверхность. Повтор команды или Shift — встать.
     ride: <gray>Сесть на ближайшую подходящую сущность.
     profile: <gray>Посмотреть свой профиль Love.
@@ -542,6 +540,130 @@ gui:
       refresh-ticks:
         _label: <gold>Обновление инвентаря, тики
     profile:
+      privacy:
+        _label: <gold>Приватность новых игроков
+        default-visible:
+          _label: <gold>Открывать профиль другим
+        default-activity-visible:
+          _label: <gold>Показывать активность другим
+      adaptation-cards:
+        _label: <gold>Карточки адаптаций
+      setting-controls:
+        _label: <gold>Кнопки личных настроек
+      links:
+        _label: <gold>Команды соседних модулей
+        account:
+          _label: <gold>Безопасность LoveAuth
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        behavior:
+          _label: <gold>Своя репутация
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        reputation:
+          _label: <gold>Оценить другого игрока
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        adaptations:
+          _label: <gold>Меню адаптаций
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        suffixes:
+          _label: <gold>Каталог пометок
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        nickname:
+          _label: <gold>Редактор никнейма
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        scoreboard:
+          _label: <gold>Личное табло
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        grammar:
+          _label: <gold>Грамматика
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        silent:
+          _label: <gold>Тихий режим
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        mentions:
+          _label: <gold>Упоминания
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        channel:
+          _label: <gold>Глобальный чат
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        channel-local:
+          _label: <gold>Локальный чат
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        clan-invites:
+          _label: <gold>Приглашения в клан
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
+        player-trades:
+          _label: <gold>Обмен с игроками
+          plugin:
+            _label: <gold>Владелец команды
+          command:
+            _label: <gold>Команда игрока
+          permission:
+            _label: <gold>Дополнительное право
       refresh-ticks:
         _label: <gold>Обновление информации, тики
       persist-seconds:
@@ -1182,7 +1304,7 @@ module-menu:
     skin:
     - <gray>Смена скина по имени игрока и возврат своего скина.
     utilities:
-    - <gray>Лечение, еда, полёт, скорость, игровой режим, ремонт, верстак и эндер-сундук.
+    - <gray>Лечение, еда, полёт, скорость, игровой режим и ремонт.
     sitride:
     - <gray>Сидение и посадка на сущность при наличии прав.
     nightskip:
@@ -1431,6 +1553,14 @@ module-help:
     refresh-ticks:
       _description: <gray>Интервал обновления живого инвентаря. 20 тиков = 1 секунда.
   profile:
+    privacy:
+      _description: <gray>Начальные значения для игроков без сохранённого выбора; личные переключатели хранятся в SQLite.
+    links:
+      _description: <gray>Команды исполняются от имени игрока, без OP и консоли. Проверяются плагин-владелец, права и доступ к профилю.
+    adaptation-cards:
+      _description: <gray>Карточки только для просмотра. Тексты по ключам lang.yml получают плейсхолдеры выбранного игрока.
+    setting-controls:
+      _description: <gray>Кнопки личных настроек профиля со ссылкой на команду модуля и локализованные подписи.
     refresh-ticks:
       _description: <gray>Как часто обновлять снимок данных для досье и плейсхолдеров.
     persist-seconds:
@@ -1834,3 +1964,177 @@ holo:
 input-extra:
   comfort-context: '<gold>Настройка своей игровой механики'
   hologram-context: '<gold>Редактор голограммы'
+
+profile-menu:
+  title: <gold>Профиль <dark_gray>| <white><player>
+  heading: <gold>Профиль <dark_gray>| <nickname>
+  heading-lore:
+  - <gray>Личная карточка игрока
+  - '<gray>Имя: <white><player>'
+  - '<gray>Клан: <gold><clan>'
+  - '<gray>Пометка: <suffix>'
+  - <green>ЛКМ <dark_gray>— <gray>обновить информацию
+  account: <gold>Безопасность
+  account-lore:
+  - <gray>Учётная запись LoveAuth
+  - <gray>Пароль, привязки и активные сессии.
+  - <green>ЛКМ <dark_gray>— <gray>открыть безопасность своей учётной записи
+  public-account-lore:
+  - '<gray>Авторизация: <white><authenticated_state>'
+  - <gray>Личные настройки безопасности доступны только владельцу.
+  settings: <gold>Настройки
+  settings-lore:
+  - <gray>Параметры персонажа
+  - <gray>Активность и приватность, чат, уведомления, личные сообщения.
+  - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки
+  customization: <gold>Персонализация
+  customization-lore:
+  - '<gray>Внешний вид: <nickname> <suffix>'
+  - <gray>Цвета, градиенты, сброс ника и пометки.
+  - <green>ЛКМ <dark_gray>— <gray>открыть персонализацию
+  public-customization-lore:
+  - '<gray>Ник: <nickname>'
+  - '<gray>Пометка: <suffix>'
+  - '<gray>Получено пометок: <papi:lovesubnames_unlocked_count:"—">'
+  - <gray>Редактировать чужой внешний вид через профиль нельзя.
+  adaptations: <gold>Адаптации
+  adaptations-lore:
+  - <gray>Путь и прогресс LoveAdaptation
+  - '<gray>Текущая: <white><papi:loveadaptation_current_name:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_current_progress:"—">'
+  - '<gray>Следующая: <white><papi:loveadaptation_progress_next_adaptation:"—">'
+  - <green>ЛКМ <dark_gray>— <gray>просмотреть адаптации этого игрока
+  open-adaptations: <gold>Открыть LoveAdaptation
+  reputation: <gold>Репутация
+  behavior-lore:
+  - <gray>Поведение LoveBehavior
+  - '<gray>Вежливость: <white><papi:lovebehavior_politeness_name:"—">'
+  - '<gray>Стиль игры: <white><papi:lovebehavior_playstyle_name:"—">'
+  - '<gray>Репутация: <white><reputation>'
+  - <green>ЛКМ <dark_gray>— <gray>открыть своё меню поведения
+  reputation-lore:
+  - <gray>Оценить игрока <white><player>
+  - '<gray>Вежливость: <white><papi:lovebehavior_politeness_name:"—">'
+  - '<gray>Стиль игры: <white><papi:lovebehavior_playstyle_name:"—">'
+  - '<gray>Репутация: <white><reputation>'
+  - <green>ЛКМ <dark_gray>— <gray>открыть /rep для этого игрока
+  activity: <gold>Активность и приватность
+  activity-title: <gold>Активность <dark_gray>| <white><player>
+  activity-settings-lore:
+  - '<gray>Видимость профиля: <white><profile_visibility_label>'
+  - '<gray>Видимость активности: <white><activity_visibility_label>'
+  - <gray>Эти переключатели не изменяют прогресс адаптаций.
+  - <green>ЛКМ <dark_gray>— <gray>настроить отдельно
+  public-activity-lore:
+  - <gray>Время игры, состояние и доступная информация.
+  - <green>ЛКМ <dark_gray>— <gray>просмотреть активность
+  activity-hidden-lore:
+  - <gray>Владелец скрыл свою активность.
+  - <gray>Адаптации доступны отдельно.
+  activity-hidden: <yellow>Игрок скрыл свою активность.
+  visibility-on: <green>Профиль доступен другим
+  visibility-off: <gray>Профиль скрыт от других
+  visibility-help: <gray>Переключить доступ к своему профилю. Владелец видит его всегда.
+  activity-on: <green>Активность доступна другим
+  activity-off: <gray>Активность скрыта от других
+  activity-help: <gray>Отдельно скрывает время игры, состояние и местоположение в профиле.
+  profile-public: <green>Ваш профиль теперь доступен другим игрокам.
+  profile-private: <gray>Ваш профиль скрыт от других игроков.
+  activity-public: <green>Ваша активность доступна при открытом профиле.
+  activity-private: <gray>Ваша активность скрыта. Видимость адаптаций не изменена.
+  visibility-public: Открыт
+  visibility-private: Скрыт
+  hidden: <yellow>Профиль недоступен или скрыт владельцем.
+  loading: <yellow>Настройки приватности ещё загружаются. Повторите действие через секунду.
+  load-failed: Не удалось загрузить настройки приватности профиля.
+  usage: <gray>/profile [игрок] · view <игрок> · list · settings · hide/show/toggle · activity [show|hide|toggle] · privacy <public|private>
+  integration-unavailable: <gray>Этот модуль или его команда сейчас недоступны либо не хватает прав.
+  messages-lore:
+  - <gray>Включение личных сообщений и игнор-лист.
+  - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки ЛС
+  notifications: <gold>Уведомления
+  notifications-lore:
+  - '<gray>Каналы LoveCore: чат, Actionbar, Title.'
+  - <green>ЛКМ <dark_gray>— <gray>открыть переключатели
+  notification-lore:
+  - <gray>ЛКМ — переключить этот канал уведомлений.
+  - <gray>Важные сообщения и кнопки остаются доступны в чате.
+  notify-chat: '<gold>Канал: чат'
+  notify-actionbar: '<gold>Канал: Actionbar'
+  notify-title: '<gold>Канал: Title'
+  enabled: <green>Включено
+  disabled: <gray>Выключено
+  last-channel: '<yellow>Сначала включите другой канал: последний канал отключить нельзя.'
+  scoreboard: <gold>Боковая панель
+  scoreboard-lore:
+  - <gray>Строки и оформление личного табло.
+  - <green>ЛКМ <dark_gray>— <gray>открыть редактор
+  nickname: <gold>Никнейм
+  nickname-lore:
+  - '<gray>Текущий: <nickname>'
+  - <gray>Цвет, градиент, текст и сброс к стандартному имени.
+  suffixes: <gold>Пометки
+  suffixes-lore:
+  - '<gray>Текущая: <suffix>'
+  - '<gray>Открыто: <papi:lovesubnames_unlocked_count:"—">/<papi:lovesubnames_total_count:"—">'
+  - <green>ЛКМ <dark_gray>— <gray>открыть каталог LoveSubnames
+  grammar: <gold>Грамматика
+  grammar-lore:
+  - <gray>Автоисправление LoveChat
+  - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+  - <gray>ЛКМ — переключить.
+  silent: <gold>Тихий режим
+  silent-lore:
+  - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
+  - <gray>ЛКМ — переключить.
+  mentions: <gold>Упоминания
+  mentions-lore:
+  - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
+  - <gray>ЛКМ — переключить.
+  channel: <gold>Канал чата
+  channel-lore:
+  - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
+  - <gray>ЛКМ — переключить локальный/глобальный канал.
+  clan-invites: <gold>Приглашения в клан
+  clan-invites-lore:
+  - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
+  - <gray>ЛКМ — переключить.
+  player-trades: <gold>Обмен с игроками
+  player-trades-lore:
+  - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
+  - <gray>ЛКМ — переключить.
+  adaptation-water: <gold>Вода
+  adaptation-water-lore:
+  - '<gray>Статус: <white><papi:loveadaptation_water_status:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_water_progress:"—">'
+  - <papi:loveadaptation_water_bar:"—">
+  adaptation-nether: <gold>Незер
+  adaptation-nether-lore:
+  - '<gray>Статус: <white><papi:loveadaptation_nether_status:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_nether_progress:"—">'
+  - <papi:loveadaptation_nether_bar:"—">
+  adaptation-cave: <gold>Пещеры
+  adaptation-cave-lore:
+  - '<gray>Статус: <white><papi:loveadaptation_cave_status:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_cave_progress:"—">'
+  - <papi:loveadaptation_cave_bar:"—">
+  adaptation-height: <gold>Высота
+  adaptation-height-lore:
+  - '<gray>Статус: <white><papi:loveadaptation_height_status:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_height_progress:"—">'
+  - <papi:loveadaptation_height_bar:"—">
+  adaptation-abyss: <gold>Бездна
+  adaptation-abyss-lore:
+  - '<gray>Статус: <white><papi:loveadaptation_abyss_status:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_abyss_progress:"—">'
+  - <papi:loveadaptation_abyss_bar:"—">
+  adaptation-combat: <gold>Бой
+  adaptation-combat-lore:
+  - '<gray>Статус: <white><papi:loveadaptation_combat_status:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_combat_progress:"—">'
+  - <papi:loveadaptation_combat_bar:"—">
+  adaptation-travel: <gold>Путешествия
+  adaptation-travel-lore:
+  - '<gray>Статус: <white><papi:loveadaptation_travel_status:"—">'
+  - '<gray>Прогресс: <white><papi:loveadaptation_travel_progress:"—">'
+  - <papi:loveadaptation_travel_bar:"—">

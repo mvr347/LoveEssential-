@@ -22,19 +22,7 @@ import org.bukkit.inventory.meta.Damageable;
 /** Temporary vehicles are owned, bounded and removed on every exit path. */
 public final class Comfort implements Listener, AutoCloseable {
   public static final Set<String> COMMANDS =
-      Set.of(
-          "sit",
-          "ride",
-          "hat",
-          "traces",
-          "heal",
-          "feed",
-          "fly",
-          "speed",
-          "gamemode",
-          "repair",
-          "workbench",
-          "enderchest");
+      Set.of("sit", "ride", "hat", "traces", "heal", "feed", "fly", "speed", "gamemode", "repair");
 
   private record Seat(ArmorStand entity, Location stand, Block block) {}
 
@@ -184,8 +172,6 @@ public final class Comfort implements Listener, AutoCloseable {
         item.setItemMeta(d);
         lang.send(p, "common.done");
       }
-      case "workbench" -> p.openWorkbench(null, true);
-      case "enderchest" -> p.openInventory(p.getEnderChest());
       default -> throw new IllegalArgumentException("errors.input");
     }
   }

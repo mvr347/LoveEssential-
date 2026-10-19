@@ -284,7 +284,7 @@ class ComfortHologramTest {
         server
             .getCommandMap()
             .tabComplete(p, "le ")
-            .containsAll(List.of("hat", "heal", "feed", "fly", "repair", "enderchest")));
+            .containsAll(List.of("hat", "heal", "feed", "fly", "repair")));
     var visitor = server.addPlayer("Guest");
     visitor.setFoodLevel(1);
     command(visitor, "feed");

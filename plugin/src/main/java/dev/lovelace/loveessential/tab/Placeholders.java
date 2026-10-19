@@ -120,10 +120,15 @@ public final class Placeholders {
     b.resolver(
         TagResolver.resolver(
             "papi",
-            (args, context) ->
-                Tag.inserting(
-                    legacyOrMini(
-                        papi(viewer, target, "%" + args.popOr("identifier").value() + "%")))));
+            (args, context) -> {
+              String id = args.popOr("identifier").value();
+              String fallback = args.hasNext() ? args.pop().value() : "";
+              String token = "%" + id + "%", value = papi(viewer, target, token);
+              return Tag.inserting(
+                  value == null || value.isBlank() || value.equals(token)
+                      ? Component.text(fallback)
+                      : legacyOrMini(value));
+            }));
     b.resolver(
         TagResolver.resolver(
             "animation",

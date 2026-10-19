@@ -145,10 +145,6 @@ commands:
     aliases: [gm, режим]
   repair:
     aliases: [починить]
-  workbench:
-    aliases: [craft, верстак]
-  enderchest:
-    aliases: [ec, эндерсундук]
 permissions:
   loveessential.worlds.admin:
     default: op
@@ -217,8 +213,6 @@ permissions:
       loveessential.speed: true
       loveessential.gamemode: true
       loveessential.repair: true
-      loveessential.workbench: true
-      loveessential.enderchest: true
       loveessential.ride: true
       loveessential.npc.import: true
       loveessential.npc.export: true
@@ -269,8 +263,4 @@ permissions:
   loveessential.gamemode:
     default: op
   loveessential.repair:
-    default: op
-  loveessential.workbench:
-    default: op
-  loveessential.enderchest:
     default: op
