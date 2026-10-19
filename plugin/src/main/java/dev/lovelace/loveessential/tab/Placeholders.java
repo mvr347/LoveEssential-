@@ -78,6 +78,10 @@ public final class Placeholders {
     return renderText(lang.text(key), viewer, target, 0);
   }
 
+  public Component renderRaw(String template, Player viewer, Player target) {
+    return renderText(template, viewer, target, 0);
+  }
+
   private Component renderText(String template, Player viewer, Player target, int depth) {
     if (depth > 4) return Component.empty();
     var b = TagResolver.builder();

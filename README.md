@@ -4,12 +4,16 @@
 
 [![Build and test](https://github.com/mvr347/LoveEssential-/actions/workflows/build.yml/badge.svg)](https://github.com/mvr347/LoveEssential-/actions/workflows/build.yml)
 
-**Документация:** [крафты и стартовый набор](docs/CUSTOM_CONTENT.md) · [все команды и алиасы](docs/COMMANDS.md) · [все плейсхолдеры](docs/PLACEHOLDERS.md) · [права доступа](docs/PERMISSIONS.md) · [руководство администратора](docs/ADMIN_GUIDE.md)
+**Документация:** [миры, сценарии, диалоги и scoreboard](docs/WORLDS_AND_AUTOMATION.md) · [крафты и стартовый набор](docs/CUSTOM_CONTENT.md) · [все команды и алиасы](docs/COMMANDS.md) · [все плейсхолдеры](docs/PLACEHOLDERS.md) · [права доступа](docs/PERMISSIONS.md) · [руководство администратора](docs/ADMIN_GUIDE.md)
 
 ## Возможности
 
 | Раздел | Что доступно |
 | --- | --- |
+| Миры | Создание, импорт, загрузка/выгрузка, переходы и отдельные настройки миров через диалоги |
+| Сценарии | События первого входа, авторизации, смены мира и возрождения; условия, задержки и журнал |
+| Диалоговые окна | Нативные окна Paper: тексты, поля ввода и действия ответов; редактор MOTD |
+| Личное табло | Перенос scoreboard LoveTweaks, личный выбор строк и вариантов, наборы и редактор каталога |
 | Свои крафты | Редактор 3×3, рецепты с формой/без формы, точные ингредиенты и результат с метаданными |
 | Первый вход | Перенос набора LoveTweaks, GUI настройки, ожидание LoveAuth и свободного места, защита повторов |
 | Панель управления | `/le` — настройки и включение модулей; отдельные GUI функций и каталог `/le help` |
@@ -41,6 +45,10 @@ NPC работают на нативных сущностях Paper, включ�
 | Задача | Команда |
 | --- | --- |
 | Настроить модули / открыть каталог команд | `/le` / `/le help` |
+| Управление мирами | `/le worlds` |
+| Сценарии событий / диалоговые окна | `/le scenario` / `/le dialog` |
+| Изменить MOTD | `/le motd` |
+| Настроить личное табло / каталог | `/le scoreboard` / `/le scoreboard edit` |
 | Создать / изменить кастомный крафт | `/le recipes` → «Создать» / ПКМ по рецепту |
 | Настроить предметы первого входа | `/le starter edit` |
 | Создать NPC через мастер | `/le npc create guard` |
@@ -93,7 +101,7 @@ plugins/LoveEssential/
 └── exports/            # Экспорт NPC для переноса
 ```
 
-Доступен 21 модуль: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`.
+Доступны 25 модулей: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`, `worlds`, `scenarios`, `dialogs`, `scoreboard`.
 
 `/le module` открывает список: ЛКМ — настройки, ПКМ — включение/отключение. Состояние, заданное командой или GUI, сохраняется в SQLite и имеет приоритет над `enabled` в файле модуля. `/le reload` перечитывает конфиги и язык. Старый монолитный конфиг переносится автоматически с копией `config.yml.pre-modules.bak`.
 

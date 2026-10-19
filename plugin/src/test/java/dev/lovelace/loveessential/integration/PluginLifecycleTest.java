@@ -25,6 +25,7 @@ class PluginLifecycleTest {
     waitFor(plugin::ready);
     plugin.getConfig().set("npc.max-active", 0);
     await(plugin.module("tab", false));
+    await(plugin.module("scoreboard", false));
   }
 
   @AfterEach

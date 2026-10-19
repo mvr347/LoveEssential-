@@ -39,7 +39,11 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "profile",
           "nickname",
           "crafting",
-          "starter");
+          "starter",
+          "worlds",
+          "scenarios",
+          "dialogs",
+          "scoreboard");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -66,6 +70,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.content.ContentLibrary content;
   private dev.lovelace.loveessential.content.ContentMenus contentMenus;
   private dev.lovelace.loveessential.content.StarterItems starter;
+  private Extensions extensions;
   private TabModule tab;
   private LoveExpansion expansion;
   private ConditionEngine conditions;
@@ -232,6 +237,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
     contentMenus =
         new dev.lovelace.loveessential.content.ContentMenus(
             this, main, lang, love, content, starter, menus, actions);
+    extensions =
+        new Extensions(
+            this, main, store, lang, love, conditions, actions, content, tab, placeholders);
+    extensions.ui.beforeShow(menus::clearInput);
+    dialogs.nativeDialogs(extensions.ui);
+    gameplay.motd(extensions.windows::motd);
     var commands =
         new Commands(
             this,
@@ -248,7 +259,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
             inventories,
             profiles,
             nicknames,
-            contentMenus);
+            contentMenus,
+            extensions);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -273,7 +285,11 @@ public class LoveEssentialPlugin extends JavaPlugin {
         .thenCompose(
             v ->
                 CompletableFuture.allOf(
-                    npcs.load(), gameplay.load(), content.load(), starter.load()))
+                    npcs.load(),
+                    gameplay.load(),
+                    content.load(),
+                    starter.load(),
+                    extensions.load()))
         .whenComplete(
             (v, error) ->
                 main.execute(
@@ -310,6 +326,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       }
                       ready = true;
                       starter.start();
+                      extensions.start();
                       getLogger().info(lang.text("logs.ready"));
                     }));
   }
@@ -346,6 +363,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       gameplay.applyVanish();
                       if (name.equals("nickname")) nicknames.refresh();
                       if (name.equals("crafting")) content.refresh();
+                      if (name.equals("scoreboard")) extensions.refresh();
                       return null;
                     }));
   }
@@ -399,6 +417,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       gameplay.applyVanish();
                       nicknames.refresh();
                       content.refresh();
+                      extensions.refresh();
                       return null;
                     }))
         .whenComplete((v, error) -> reloading.set(false));
@@ -409,6 +428,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
       throw new IllegalArgumentException("errors.config");
     bounded(config, "storage.write-queue", 1, 65536);
     bounded(config, "crafting.max-recipes", 1, 10000);
+    bounded(config, "worlds.max-worlds", 1, 256);
+    bounded(config, "scenarios.max-rules", 1, 10000);
+    bounded(config, "scenarios.max-steps", 1, 128);
+    bounded(config, "scenarios.max-starts-per-minute", 1, 10000);
+    bounded(config, "dialogs.max-definitions", 1, 10000);
+    bounded(config, "scoreboard.refresh-ticks", 2, 1200);
     bounded(config, "nickname.min-length", 1, 32);
     bounded(config, "nickname.max-length", 1, 32);
     if (config.getInt("nickname.min-length", 3) > config.getInt("nickname.max-length", 24))
@@ -492,6 +517,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     ready = false;
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
+    if (extensions != null) extensions.close();
     if (contentMenus != null) contentMenus.close();
     if (starter != null) starter.close();
     if (content != null) content.close();

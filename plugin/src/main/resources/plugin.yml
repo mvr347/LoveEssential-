@@ -119,7 +119,27 @@ commands:
     aliases: [recipe, crafts, рецепты]
   starter:
     aliases: [startitems, старт]
+  worlds:
+    aliases: [world, mw, миры]
+  scenario:
+    aliases: [scenarios, сценарий]
+  dialog:
+    aliases: [dialogs, диалог]
+  motd:
+    aliases: [мотд]
+  scoreboard:
+    aliases: [sb, скорборд]
 permissions:
+  loveessential.worlds.admin:
+    default: op
+  loveessential.worlds.teleport:
+    default: true
+  loveessential.scenarios.admin:
+    default: op
+  loveessential.dialogs.admin:
+    default: op
+  loveessential.scoreboard:
+    default: true
   loveessential.content.edit:
     default: op
   loveessential.nick:
@@ -143,6 +163,11 @@ permissions:
   loveessential.admin:
     default: op
     children:
+      loveessential.worlds.admin: true
+      loveessential.worlds.teleport: true
+      loveessential.scenarios.admin: true
+      loveessential.dialogs.admin: true
+      loveessential.scoreboard: true
       loveessential.content.edit: true
       loveessential.nick: true
       loveessential.nick.color: true
