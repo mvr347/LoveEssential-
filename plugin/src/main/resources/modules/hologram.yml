@@ -1,6 +1,0 @@
-# Голограммы и предметы сохраняются в SQLite, тексты в lang.yml.
-enabled: true
-max-holograms: 256
-creation-height: 2.0
-max-visible-per-player: 24
-max-display-entities: 4096

@@ -1,0 +1,13 @@
+# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+enabled: true
+max-rules: 256
+max-steps: 32
+max-starts-per-minute: 60
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

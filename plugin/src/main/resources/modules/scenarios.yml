@@ -1,4 +1,0 @@
-enabled: true
-max-rules: 256
-max-steps: 32
-max-starts-per-minute: 60

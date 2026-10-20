@@ -1,7 +1,0 @@
-# Короткие частицы следов при ходьбе; выбор /traces хранится в SQLite.
-enabled: false
-default-enabled: true
-stride: 0.65
-interval-ms: 180
-view-distance: 24.0
-color: '78644B'

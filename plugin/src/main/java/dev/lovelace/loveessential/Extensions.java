@@ -24,6 +24,7 @@ public final class Extensions implements AutoCloseable {
   public final Scenarios scenarios;
   public final Windows windows;
   public final Sidebar sidebar;
+  public final TabSettings tabSettings;
   private org.bukkit.scheduler.BukkitTask task;
 
   public Extensions(
@@ -39,6 +40,7 @@ public final class Extensions implements AutoCloseable {
       Placeholders placeholders) {
     this.plugin = plugin;
     ui = new NativeDialogs(plugin, main, lang, love);
+    tabSettings = new TabSettings(plugin, ui, lang, love);
     worlds = new Worlds(plugin, main, store, lang, love, ui);
     windows = new Windows(plugin, main, store, lang, love, ui, actions, texts, placeholders);
     scenarios = new Scenarios(plugin, main, store, lang, love, conditions, actions, ui, texts);
@@ -83,7 +85,8 @@ public final class Extensions implements AutoCloseable {
         windows.motdEditor(p);
       }
       case "scoreboard" -> {
-        if (args.length == 1 && args[0].equals("edit")) sidebar.editCatalog(p, 0);
+        if (args.length == 1 && Set.of("edit", "settings").contains(args[0])) sidebar.settings(p);
+        else if (args.length == 1 && args[0].equals("worlds")) sidebar.worlds(p, 0);
         else {
           if (args.length != 0) throw new IllegalArgumentException("errors.input");
           sidebar.open(p, "", 0);
@@ -99,7 +102,9 @@ public final class Extensions implements AutoCloseable {
       case "scenario" -> scenarios.suggestions(p, args);
       case "dialog" -> windows.suggestions(p, args);
       case "scoreboard" ->
-          p.hasPermission("loveessential.admin") && args.length == 1 ? List.of("edit") : List.of();
+          p.hasPermission("loveessential.admin") && args.length == 1
+              ? List.of("edit", "settings", "worlds")
+              : List.of();
       default -> List.of();
     };
   }
@@ -110,6 +115,7 @@ public final class Extensions implements AutoCloseable {
     scenarios.close();
     worlds.close();
     sidebar.close();
+    tabSettings.close();
     ui.close();
   }
 }

@@ -84,6 +84,7 @@ public final class Placeholders {
 
   private Component renderText(String template, Player viewer, Player target, int depth) {
     if (depth > 4) return Component.empty();
+    template = template.replaceAll("%([a-zA-Z0-9_:.]+)%", "<papi:'$1'>");
     var b = TagResolver.builder();
     Map<String, String> variables =
         Map.ofEntries(
@@ -144,7 +145,7 @@ public final class Placeholders {
     return mm.deserialize(template, b.build());
   }
 
-  private Component legacyOrMini(String value) {
+  public Component legacyOrMini(String value) {
     if (value == null || value.startsWith("%") && value.endsWith("%")) return Component.empty();
     return value.contains("§")
         ? LegacyComponentSerializer.legacySection().deserialize(value)

@@ -22,6 +22,12 @@ import org.bukkit.inventory.*;
 
 /** Native inventory controls; all mutations still pass through permission and service checks. */
 public final class ControlMenus implements Listener, AutoCloseable {
+  private dev.lovelace.loveessential.dialog.NativeDialogs nativeUi;
+
+  public void nativeDialogs(dev.lovelace.loveessential.dialog.NativeDialogs ui) {
+    nativeUi = ui;
+  }
+
   private final LoveEssentialPlugin plugin;
   private final MainThread main;
   private final Lang lang;
@@ -58,8 +64,22 @@ public final class ControlMenus implements Listener, AutoCloseable {
       String example,
       String current) {}
 
-  private static final class Menu implements InventoryHolder {
+  private static final class Menu implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
+    String menuId = "gui.menu";
+
+    public String guiId() {
+      return menuId;
+    }
+
+    public Map<Integer, ?> guiActions() {
+      return actions;
+    }
+
+    public void guiPut(int slot, Runnable action) {
+      actions.put(slot, click -> action.run());
+    }
+
     final Map<Integer, Consumer<ClickType>> actions = new HashMap<>();
     final Predicate<Player> allowed;
     boolean root;
@@ -112,7 +132,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
     String route = title + new TreeMap<>(vars);
     if (direct.remove(p.getUniqueId())) roots.put(p.getUniqueId(), route);
     m.root = route.equals(roots.get(p.getUniqueId()));
-    m.inventory = Bukkit.createInventory(m, 54, lang.render(title, vars));
+    m.menuId = title;
+    m.inventory = Bukkit.createInventory(m, 54, MenuStyle.title(lang, title, vars));
     MenuStyle.frame(m.inventory);
     m.inventory.setItem(
         0,
@@ -239,7 +260,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                                   .deserialize(line)),
                   java.util.stream.Stream.of(
                       lang.render(enabled ? "gui.enabled" : "gui.disabled"),
-                      lang.render("gui.file", Map.of("path", "modules/" + id + ".yml")),
+                      lang.render("gui.file", Map.of("path", "modules/" + id + "/" + id + ".yml")),
                       lang.render("gui.separator"),
                       lang.render("gui.click.settings"),
                       lang.render("gui.click.toggle")))
@@ -251,7 +272,13 @@ public final class ControlMenus implements Listener, AutoCloseable {
           });
     }
     navigation(m, p, page, names.size(), n -> modules(p, n), () -> home(p));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
+  }
+
+  private java.util.function.Consumer<Player> scoreboardEditor = p -> {};
+
+  public void scoreboardEditor(java.util.function.Consumer<Player> opener) {
+    scoreboardEditor = opener;
   }
 
   public void settings(Player p, String id, String path, int page) {
@@ -260,24 +287,44 @@ public final class ControlMenus implements Listener, AutoCloseable {
     var snapshot = ModuleConfigs.view(plugin.getConfig(), id);
     var section = path.isEmpty() ? snapshot : snapshot.getConfigurationSection(path);
     if (section == null) throw new IllegalArgumentException("errors.not-found");
-    var keys = section.getKeys(false).stream().sorted().toList();
+    var keys =
+        section.getKeys(false).stream()
+            .filter(
+                k ->
+                    !id.equals("tab")
+                        || !path.isEmpty()
+                        || !Set.of("engine", "external").contains(k))
+            .sorted()
+            .toList();
     var m =
         menu(
             p,
             "gui.settings-title",
             Map.of("module", lang.text("gui.module-labels." + id), "path", path),
             this::admin);
+    if (id.equals("scoreboard"))
+      entry(
+          m,
+          8,
+          Material.WRITABLE_BOOK,
+          lang.render("sidebar.admin-menu"),
+          List.of(lang.render("sidebar.edit-help")),
+          click -> scoreboardEditor.accept(p));
     for (int i = page * 21; i < Math.min(keys.size(), (page + 1) * 21); i++) {
       String key = keys.get(i), full = path.isEmpty() ? key : path + "." + key;
       Object value = section.get(key);
       boolean folder = section.isConfigurationSection(key);
       String labelKey = "gui.settings." + id + "." + full + "._label";
+      if (full.equals("access") || full.startsWith("access."))
+        labelKey = "access-editor." + full.replace("access.", "") + ".title";
       var title =
           lang.contains(labelKey)
               ? lang.render(labelKey)
               : lang.render("gui.label", Map.of("name", key));
       var lore = new ArrayList<Component>();
       String helpKey = "module-help." + id + "." + full + "._description";
+      if (full.equals("access") || full.startsWith("access."))
+        helpKey = "access-editor." + full.replace("access.", "") + ".help";
       if (lang.contains(helpKey)) lore.addAll(MenuStyle.description(lang, helpKey));
       else
         lore.add(
@@ -300,7 +347,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
                     "value",
                     (value instanceof List<?> values
                         ? lang.text("gui.list-count") + " " + values.size()
-                        : String.valueOf(value)))));
+                        : value instanceof Boolean flag
+                            ? lang.text(flag ? "players.yes" : "players.no")
+                            : String.valueOf(value)))));
       lore.add(lang.render("gui.separator"));
       lore.add(
           lang.render(
@@ -396,25 +445,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
         c ->
             complete(
                 p, plugin.module(id, !plugin.module(id)), () -> settings(p, id, path, page), true));
-    if (id.equals("tab") && path.isEmpty())
-      put(
-          m,
-          50,
-          Material.WRITABLE_BOOK,
-          "gui.tab-export",
-          "gui.click.run",
-          c ->
-              confirm(
-                  p,
-                  "gui.tab-export",
-                  () -> command(p, "le tab export"),
-                  () -> settings(p, id, path, page),
-                  this::admin));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private List<String> settingChoices(String module, String path) {
-    if (module.equals("tab") && path.equals("engine")) return List.of("native", "tab");
     if (module.equals("tab") && path.startsWith("bossbars.")) {
       if (path.endsWith(".color"))
         return Arrays.stream(net.kyori.adventure.bossbar.BossBar.Color.values())
@@ -463,7 +497,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         choices.size(),
         n -> settingPicker(p, module, path, expected, n, back),
         back);
-    p.openInventory(menu.inventory);
+    MenuStyle.open(p, menu.inventory);
   }
 
   private static Object parse(Object previous, String input) {
@@ -479,6 +513,50 @@ public final class ControlMenus implements Listener, AutoCloseable {
     return input.equals("-") ? "" : input;
   }
 
+  private List<String> accessChoices(String path) {
+    if (!path.startsWith("access.")) return List.of();
+    if (path.endsWith("states"))
+      return dev.lovelace.loveessential.module.ModulePolicy.STATES.stream().sorted().toList();
+    if (path.endsWith("gamemodes"))
+      return Arrays.stream(org.bukkit.GameMode.values())
+          .map(mode -> mode.name().toLowerCase(Locale.ROOT))
+          .toList();
+    return List.of();
+  }
+
+  private Component accessLabel(String path, String value) {
+    if (path.startsWith("access.") && (path.endsWith("states") || path.endsWith("gamemodes")))
+      return lang.render(
+          "module-access."
+              + (path.endsWith("states") ? "states." : "gamemodes.")
+              + value.toLowerCase(Locale.ROOT));
+    return lang.render("gui.label", Map.of("name", value));
+  }
+
+  private void accessPicker(
+      Player p, String module, String path, List<?> values, int index, Runnable back) {
+    var menu = menu(p, "access-editor.choice-title", Map.of(), this::admin);
+    var choices = accessChoices(path);
+    for (int i = 0; i < choices.size(); i++) {
+      String choice = choices.get(i);
+      entry(
+          menu,
+          MenuStyle.slot(i, choices.size()),
+          Material.PAPER,
+          accessLabel(path, choice),
+          List.of(lang.render("gui.separator"), lang.render("gui.click.select")),
+          click -> {
+            var next = new ArrayList<Object>(values);
+            if (index < 0) {
+              if (!next.contains(choice)) next.add(choice);
+            } else next.set(index, choice);
+            saveSetting(p, module, path, values, next, back);
+          });
+    }
+    navigation(menu, p, 0, choices.size(), ignored -> {}, back);
+    MenuStyle.open(p, menu.inventory);
+  }
+
   private void list(Player p, String module, String path, List<?> values, int page, Runnable back) {
     var m = menu(p, "gui.list-title", Map.of("path", path), this::admin);
     for (int i = page * 21; i < Math.min(values.size(), (page + 1) * 21); i++) {
@@ -487,7 +565,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
           m,
           MenuStyle.slot(i % 21, Math.min(21, values.size() - page * 21)),
           Material.PAPER,
-          lang.render("gui.label", Map.of("name", String.valueOf(values.get(i)))),
+          accessLabel(path, String.valueOf(values.get(i))),
           List.of(
               lang.render("gui.separator"),
               lang.render("gui.click.edit"),
@@ -504,6 +582,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   },
                   () -> list(p, module, path, values, page, back),
                   this::admin);
+            else if (!accessChoices(path).isEmpty())
+              accessPicker(
+                  p, module, path, values, index, () -> list(p, module, path, values, page, back));
             else
               ask(
                   p,
@@ -527,21 +608,27 @@ public final class ControlMenus implements Listener, AutoCloseable {
         Material.LIME_DYE,
         "gui.add",
         "gui.click.edit",
-        c ->
-            ask(
-                p,
-                "gui.prompt-value",
-                this::admin,
-                input -> {
-                  var next = new ArrayList<Object>(values);
-                  next.add(values.isEmpty() ? input : parse(values.getFirst(), input));
-                  saveSetting(p, module, path, values, next, back);
-                },
-                () -> list(p, module, path, values, page, back),
-                lang.render("gui.path", Map.of("path", path)),
-                values.isEmpty() ? "" : String.valueOf(values.getFirst()),
-                ""));
-    p.openInventory(m.inventory);
+        c -> {
+          if (!accessChoices(path).isEmpty()) {
+            accessPicker(
+                p, module, path, values, -1, () -> list(p, module, path, values, page, back));
+            return;
+          }
+          ask(
+              p,
+              "gui.prompt-value",
+              this::admin,
+              input -> {
+                var next = new ArrayList<Object>(values);
+                next.add(values.isEmpty() ? input : parse(values.getFirst(), input));
+                saveSetting(p, module, path, values, next, back);
+              },
+              () -> list(p, module, path, values, page, back),
+              lang.render("gui.path", Map.of("path", path)),
+              values.isEmpty() ? "" : String.valueOf(values.getFirst()),
+              "");
+        });
+    MenuStyle.open(p, m.inventory);
   }
 
   private void saveSetting(
@@ -592,7 +679,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (!p.hasPermission("loveessential.npc.create") || !p.hasPermission("loveessential.npc.edit"))
       locked(m, 50);
     if (!p.hasPermission("loveessential.npc.edit")) locked(m, 4);
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private void npc(Player p, String id) {
@@ -642,7 +729,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (!p.hasPermission("loveessential.npc.debug")) locked(m, 31);
     if (!p.hasPermission("loveessential.npc.delete")) locked(m, 33);
     navigation(m, p, 0, 0, k -> {}, () -> npcList(p, 0));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   public void hologramCommand(Player p, String[] args) {
@@ -1072,7 +1159,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             holoPages(p, old, pages, reopen);
           });
     }
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private void holoLine(
@@ -1175,10 +1262,14 @@ public final class ControlMenus implements Listener, AutoCloseable {
               holoPages(p, old, pages, back);
             });
     navigation(m, p, 0, 0, n -> {}, back);
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   public void places(Player p, String kind, int page) {
+    if (kind.equals("portal")) {
+      gameplay.portals().list(p, page);
+      return;
+    }
     Predicate<Player> allowed =
         who -> plugin.module(kind) && (!Set.of("portal", "hologram").contains(kind) || admin(who));
     var m =
@@ -1250,7 +1341,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   () -> places(p, kind, page)));
     if (kind.equals("portal"))
       put(m, 4, Material.WOODEN_AXE, "gui.pos1", "gui.click.run", c -> command(p, "portal pos1"));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private void place(Player p, String kind, String id) {
@@ -1277,7 +1368,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 this::admin,
                 id));
     navigation(m, p, 0, 0, n -> {}, () -> places(p, kind, 0));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   public void skin(Player p) {
@@ -1298,7 +1389,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         "gui.click.run",
         c -> command(p, "skin " + p.getName()));
     navigation(m, p, 0, 0, n -> {}, () -> commands(p, 0));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   public void nickname(Player p) {
@@ -1353,10 +1444,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 () -> nicknameChange(p, "reset"),
                 () -> nickname(p),
                 nicknames::canUse));
-    if (!p.hasPermission("loveessential.nick.color")) locked(m, 21);
-    if (!p.hasPermission("loveessential.nick.gradient")) locked(m, 23);
     navigation(m, p, 0, 0, n -> {}, () -> home(p));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private void nicknameChange(Player p, String... args) {
@@ -1364,8 +1453,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   private void nicknameColors(Player p) {
-    Predicate<Player> allowed =
-        who -> nicknames.canUse(who) && who.hasPermission("loveessential.nick.color");
+    Predicate<Player> allowed = who -> nicknames.canUse(who);
     var m = menu(p, "nick.color", Map.of(), allowed);
     var colors =
         net.kyori.adventure.text.format.NamedTextColor.NAMES.keys().stream().sorted().toList();
@@ -1399,12 +1487,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 value -> nicknameChange(p, "color", value),
                 () -> nicknameColors(p)));
     navigation(m, p, 0, 0, n -> {}, () -> nickname(p));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private void nicknameGradients(Player p, int page) {
-    Predicate<Player> allowed =
-        who -> nicknames.canUse(who) && who.hasPermission("loveessential.nick.gradient");
+    Predicate<Player> allowed = who -> nicknames.canUse(who);
     var m = menu(p, "nick.gradient", Map.of(), allowed);
     var section = plugin.getConfig().getConfigurationSection("nickname.gradients");
     var keys =
@@ -1448,7 +1535,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 },
                 () -> nicknameGradients(p, page)));
     navigation(m, p, page, keys.size(), n -> nicknameGradients(p, n), () -> nickname(p));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   public void commands(Player p, int page) {
@@ -1513,7 +1600,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
           });
     }
     navigation(m, p, page, names.size(), n -> commands(p, n), () -> home(p));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private void confirm(
@@ -1548,7 +1635,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         });
     put(m, 24, Material.RED_CONCRETE, "gui.cancel", "gui.click.open", c -> back.run());
     put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   public void clearInput(Player p) {
@@ -1611,6 +1698,26 @@ public final class ControlMenus implements Listener, AutoCloseable {
       throw new IllegalArgumentException("errors.permission");
     wizard.cancelInput(p);
     p.closeInventory();
+    if (nativeUi != null) {
+      nativeUi.show(
+          p,
+          context,
+          lang.render(key),
+          List.of(
+              dev.lovelace.loveessential.dialog.NativeDialogs.Field.text(
+                  "value", lang.render("gui.value", Map.of("value", example)), current, 2048)),
+          List.of(
+              new dev.lovelace.loveessential.dialog.NativeDialogs.Button(
+                  "save",
+                  lang.render("gui.confirm"),
+                  v -> {
+                    input.accept(v.get("value"));
+                  }),
+              new dev.lovelace.loveessential.dialog.NativeDialogs.Button(
+                  "back", lang.render("common.back"), v -> back.run())),
+          allowed);
+      return;
+    }
     var prompt =
         new Prompt(
             System.currentTimeMillis() + 180000,
@@ -1734,7 +1841,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 value.toString(),
                 value.toString()));
     navigation(m, p, 0, 0, n -> {}, back);
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   private void complete(Player p, CompletableFuture<?> future, Runnable back, boolean adminOnly) {
@@ -1759,7 +1866,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   private void error(Player p, Throwable e) {
     while (e.getCause() != null) e = e.getCause();
-    lang.send(p, lang.contains(e.getMessage()) ? e.getMessage() : "errors.input");
+    lang.error(p, e);
     p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, .4f, 1);
   }
 

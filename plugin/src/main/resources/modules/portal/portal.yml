@@ -1,0 +1,28 @@
+# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+enabled: true
+max-portals: 128
+max-volume: 32768
+default-cooldown-seconds: 3
+disabled-worlds: []
+allowed-player-commands:
+- lovecontracts
+- loveadaptation
+- loveactivities
+- loveduels
+- lovebehavior
+- lovehunt
+allowed-console-commands: []
+particles:
+  refresh-ticks: 6
+  view-distance: 32.0
+  per-player-budget: 256
+  per-portal-budget: 64
+  creation-ticks: 60
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

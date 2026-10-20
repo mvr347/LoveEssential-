@@ -1,4 +1,4 @@
-# Общие настройки. Конфигурация модулей: modules/<модуль>.yml.
-config-version: 3
+# Общие настройки. Конфигурация модулей: modules/<модуль>/<модуль>.yml и gui.yml.
+config-version: 4
 storage:
   write-queue: 256

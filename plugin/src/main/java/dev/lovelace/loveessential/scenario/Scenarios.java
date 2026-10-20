@@ -141,7 +141,7 @@ public final class Scenarios implements Listener, AutoCloseable {
 
   private boolean allowed(Player p, Rule rule) {
     return plugin.ready()
-        && plugin.module("scenarios")
+        && plugin.allows("scenarios", p)
         && p.isOnline()
         && love.authenticated(p)
         && rule.enabled()

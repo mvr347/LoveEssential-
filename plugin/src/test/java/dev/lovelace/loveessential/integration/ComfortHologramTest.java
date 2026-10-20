@@ -96,6 +96,56 @@ class ComfortHologramTest {
   }
 
   @Test
+  void laySurvivesServerPoseResetAndSecondCommandRestoresStanding() throws Exception {
+    var world =
+        new org.mockbukkit.mockbukkit.world.WorldMock() {
+          @Override
+          public org.mockbukkit.mockbukkit.block.BlockMock createBlock(
+              org.mockbukkit.mockbukkit.world.Coordinate coordinate) {
+            return new org.mockbukkit.mockbukkit.block.BlockMock(
+                coordinate.y < 64 ? Material.STONE : Material.AIR,
+                new Location(this, coordinate.x, coordinate.y, coordinate.z)) {
+              @Override
+              public boolean isPassable() {
+                return getType().isAir();
+              }
+
+              @Override
+              public org.bukkit.util.VoxelShape getCollisionShape() {
+                var boxes =
+                    getType().isAir()
+                        ? List.<org.bukkit.util.BoundingBox>of()
+                        : List.of(new org.bukkit.util.BoundingBox(0, 0, 0, 1, 1, 1));
+                return new org.bukkit.util.VoxelShape() {
+                  public Collection<org.bukkit.util.BoundingBox> getBoundingBoxes() {
+                    return boxes;
+                  }
+
+                  public boolean overlaps(org.bukkit.util.BoundingBox box) {
+                    return boxes.stream().anyMatch(b -> b.overlaps(box));
+                  }
+                };
+              }
+            };
+          }
+        };
+    world.setName("lay-test");
+    server.addWorld(world);
+    var p = server.addPlayer("Lounger");
+    p.teleport(new Location(world, .5, 64, .5));
+    command(p, "lay");
+    assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
+    p.setPose(org.bukkit.entity.Pose.STANDING, false); // A server/client update must not end /lay.
+    server.getScheduler().performTicks(5);
+    assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
+    assertTrue(p.hasFixedPose());
+    command(p, "лежать");
+    server.getScheduler().performTicks(3);
+    assertEquals(org.bukkit.entity.Pose.STANDING, p.getPose());
+    assertFalse(p.hasFixedPose());
+  }
+
+  @Test
   void hatSwapsBothItemsAndRejectsStackWithoutLoss() {
     var p = admin();
     var inv = p.getInventory();
@@ -123,15 +173,42 @@ class ComfortHologramTest {
   }
 
   @Test
-  void sethomeSavesWithoutChatConfirmation() throws Exception {
+  void homeAndSpawnArePublicButSetspawnRequiresAdminAndWorldDenialExplainsReason()
+      throws Exception {
+    var p = server.addPlayer("Visitor");
+    p.addAttachment(plugin, "loveessential.home", false);
+    p.addAttachment(plugin, "loveessential.spawn", false);
+    while (p.nextComponentMessage() != null) {}
+    command(p, "home");
+    assertTrue(p.nextMessage().contains("У вас ещё нет дома"));
+    command(p, "sethome");
+    await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    assertTrue(
+        await(store.get("place", "home:" + p.getUniqueId() + ":default", Gameplay.Place.class))
+            .isPresent());
+    while (p.nextComponentMessage() != null) {}
+    command(p, "spawn");
+    assertFalse(p.nextMessage().contains("Недостаточно прав"));
+    command(p, "setspawn");
+    assertTrue(p.nextMessage().toLowerCase(Locale.ROOT).contains("недостаточно прав"));
+    assertTrue(await(store.get("place", "spawn:default", Gameplay.Place.class)).isEmpty());
+    plugin.getConfig().set("home.access.denied-worlds", List.of("world"));
+    command(p, "home");
+    String denied = p.nextMessage();
+    assertTrue(denied.contains("мире") && denied.contains("world"), denied);
+    assertFalse(denied.toLowerCase(Locale.ROOT).contains("недостаточно прав"));
+  }
+
+  @Test
+  void sethomeSavesSinglePointWithPlainConfirmation() throws Exception {
     var p = admin();
     await(store.profile(p.getUniqueId(), "test.initial", "true"));
     server.getScheduler().performTicks(3);
     while (p.nextComponentMessage() != null) {}
-    command(p, "le sethome cabin");
+    command(p, "le sethome");
     await(store.profile(p.getUniqueId(), "test.barrier", "true"));
     assertTrue(
-        await(store.get("place", "home:" + p.getUniqueId() + ":cabin", Gameplay.Place.class))
+        await(store.get("place", "home:" + p.getUniqueId() + ":default", Gameplay.Place.class))
             .isPresent());
     server.getScheduler().performTicks(3);
     var messages = new ArrayList<String>();
@@ -140,7 +217,8 @@ class ComfortHologramTest {
       messages.add(
           net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
               .serialize(next));
-    assertTrue(messages.isEmpty(), messages.toString());
+    assertEquals(1, messages.size());
+    assertTrue(messages.getFirst().contains("Точка дома установлена"));
   }
 
   private List<String> commands(Component c) {
@@ -152,31 +230,13 @@ class ComfortHologramTest {
   }
 
   @Test
-  void teleportButtonsAreClickableAndOldRequestCannotDeclineNewOne() throws Exception {
-    var a = admin();
-    var b = server.addPlayer("Visitor");
-    await(store.profile(a.getUniqueId(), "test.barrier", "true"));
-    await(store.profile(b.getUniqueId(), "test.barrier", "true"));
-    server.getScheduler().performTicks(3);
-    while (b.nextComponentMessage() != null) {}
-    command(a, "tpa Visitor");
-    Component first = b.nextComponentMessage();
-    assertNotNull(first);
-    var buttons = commands(first);
-    assertEquals(2, buttons.size());
-    assertTrue(buttons.getFirst().contains("tpaccept"));
-    command(a, "tpa Visitor");
-    Component second = b.nextComponentMessage();
-    var current = commands(second);
-    assertNotEquals(buttons, current);
-    command(b, buttons.getLast().substring(1)); // stale request token must preserve the replacement
-    command(b, current.getLast().substring(1));
-    assertTrue(b.nextMessage().contains("не найден"));
-    assertTrue(b.nextMessage().contains("Готово"));
+  void publicTpaHomesAndBackCommandsAreRemoved() {
+    for (String command : List.of("homes", "tpa", "tpahere", "tpaccept", "tpdeny", "back"))
+      assertNull(plugin.getCommand(command), command);
   }
 
   @Test
-  void rideRequiresConsentAndDismountsWhenItIsRevoked() throws Exception {
+  void rideIsPublicAndCarrierCanEjectWithCommandOrHit() throws Exception {
     var rider =
         new PlayerMock(server, "Rider") {
           @Override
@@ -192,12 +252,22 @@ class ComfortHologramTest {
     await(store.profile(target.getUniqueId(), "test.barrier", "true"));
     server.getScheduler().performTicks(3);
     command(rider, "ride Passenger");
-    assertFalse(target.getPassengers().contains(rider));
-    var grant = target.addAttachment(plugin, "loveessential.ride.accept", true);
-    command(rider, "le ride Passenger");
     assertTrue(target.getPassengers().contains(rider));
-    target.removeAttachment(grant);
-    server.getScheduler().performOneTick();
+    command(target, "сбросить");
+    assertFalse(target.getPassengers().contains(rider));
+    command(rider, "ride Passenger");
+    assertTrue(target.getPassengers().contains(rider));
+    var hit =
+        new org.bukkit.event.entity.EntityDamageByEntityEvent(
+            target,
+            rider,
+            org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+            org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.PLAYER_ATTACK)
+                .withCausingEntity(target)
+                .build(),
+            1);
+    server.getPluginManager().callEvent(hit);
+    assertTrue(hit.isCancelled());
     assertFalse(target.getPassengers().contains(rider));
   }
 
@@ -212,7 +282,8 @@ class ComfortHologramTest {
     assertEquals(p.getY() + 2, old.value().position().y(), .001);
     var line = old.value().pages().getFirst().lines().getFirst();
     assertTrue(
-        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"))
+        java.nio.file.Files.readString(
+                plugin.getDataFolder().toPath().resolve("modules/hologram/hologram.yml"))
             .contains("Первая строка"));
     command(p, "hologram addline " + id + " Вторая строка");
     waitFor(() -> holograms.get(id).orElseThrow().revision() > old.revision());
@@ -227,7 +298,7 @@ class ComfortHologramTest {
     waitFor(() -> holograms.get(id).orElseThrow().value().pages().size() == 2);
     command(p, "hologram edit " + id);
     var withPage = holograms.get(id).orElseThrow();
-    click(p, 4, ClickType.LEFT);
+    click(p, 3, ClickType.LEFT);
     waitFor(() -> holograms.get(id).orElseThrow().revision() > withPage.revision());
     assertFalse(holograms.get(id).orElseThrow().value().shadow());
   }

@@ -37,12 +37,47 @@ public final class NpcWizard implements Listener, AutoCloseable {
   private final Set<UUID> loading = new HashSet<>();
   private final Map<UUID, String> createIds = new HashMap<>();
 
-  private static final class ConditionMenu implements InventoryHolder {
+  private abstract static class RoutedMenu implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
+    String menuId = "gui.wizard-title";
+    final Map<Integer, Object> routes = new HashMap<>();
+
+    RoutedMenu() {
+      for (int slot = 0; slot < 54; slot++) routes.put(slot, slot);
+    }
+
+    public String guiId() {
+      return menuId;
+    }
+
+    public Map<Integer, ?> guiActions() {
+      return routes;
+    }
+
+    public void guiPut(int slot, Runnable action) {
+      routes.put(slot, action);
+    }
+
+    public Inventory getInventory() {
+      return inventory;
+    }
+
+    int original(int slot) {
+      Object route = routes.get(slot);
+      if (route instanceof Runnable action) {
+        action.run();
+        return -1;
+      }
+      return route instanceof Integer value ? value : -1;
+    }
+  }
+
+  private static final class ConditionMenu extends RoutedMenu {
     final String field;
 
     ConditionMenu(String field) {
       this.field = field;
+      menuId = "wizard.condition-title";
     }
 
     public Inventory getInventory() {
@@ -50,18 +85,18 @@ public final class NpcWizard implements Listener, AutoCloseable {
     }
   }
 
-  private static final class ActionMenu implements InventoryHolder {
-    Inventory inventory;
+  private static final class ActionMenu extends RoutedMenu {
 
-    ActionMenu() {}
+    ActionMenu() {
+      menuId = "wizard.action-title";
+    }
 
     public Inventory getInventory() {
       return inventory;
     }
   }
 
-  private static final class ChoiceMenu implements InventoryHolder {
-    Inventory inventory;
+  private static final class ChoiceMenu extends RoutedMenu {
     final String field;
     final int page;
     final List<String> values;
@@ -70,6 +105,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
       this.field = field;
       this.page = page;
       this.values = List.copyOf(values);
+      menuId = field.equals("sections") ? "wizard.sections-title" : "wizard.fields." + field;
     }
 
     public Inventory getInventory() {
@@ -77,7 +113,21 @@ public final class NpcWizard implements Listener, AutoCloseable {
     }
   }
 
-  private static final class EditorMenu implements InventoryHolder {
+  private static final class EditorMenu implements dev.lovelace.loveessential.gui.GuiLayout {
+    String menuId;
+
+    public String guiId() {
+      return menuId;
+    }
+
+    public Map<Integer, ?> guiActions() {
+      return actions;
+    }
+
+    public void guiPut(int slot, Runnable action) {
+      actions.put(slot, click -> action.run());
+    }
+
     Inventory inventory;
     final NpcDraft expected;
     final Map<Integer, Consumer<ClickType>> actions = new HashMap<>();
@@ -142,8 +192,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
       String current,
       Runnable back) {}
 
-  private static final class Menu implements InventoryHolder {
-    Inventory inventory;
+  private static final class Menu extends RoutedMenu {
     final int step;
 
     Menu(int step) {
@@ -981,7 +1030,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
   private EditorMenu editor(Player p, String title, Map<String, String> vars, Runnable back) {
     var m = new EditorMenu(require(p).draft);
-    m.inventory = Bukkit.createInventory(m, 54, lang.render(title, vars));
+    m.menuId = title;
+    m.inventory = Bukkit.createInventory(m, 54, MenuStyle.title(lang, title, vars));
     MenuStyle.frame(m.inventory);
     editorButton(m, 51, Material.ARROW, "common.back", c -> back.run());
     editorButton(m, 52, Material.BARRIER, "gui.close", c -> p.closeInventory());
@@ -1000,7 +1050,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
         22, MenuStyle.button(lang, Material.PAPER, title, "gui.confirm-warning"));
     editorButton(menu, 20, Material.LIME_CONCRETE, "gui.confirm", c -> action.run());
     editorButton(menu, 24, Material.RED_CONCRETE, "gui.cancel", c -> back.run());
-    p.openInventory(menu.inventory);
+    MenuStyle.open(p, menu.inventory);
   }
 
   private void routeList(Player p, int page) {
@@ -1065,7 +1115,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
       editorButton(menu, 36, Material.ARROW, "gui.previous", c -> routeList(p, page - 1));
     if ((page + 1) * 21 < points.size())
       editorButton(menu, 44, Material.ARROW, "common.next", c -> routeList(p, page + 1));
-    p.openInventory(menu.inventory);
+    MenuStyle.open(p, menu.inventory);
   }
 
   private void routePoint(Player p, int index) {
@@ -1159,7 +1209,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   routeList(p, 0);
                 },
                 () -> routePoint(p, index)));
-    p.openInventory(menu.inventory);
+    MenuStyle.open(p, menu.inventory);
   }
 
   private void actionList(Player p, int page) {
@@ -1210,7 +1260,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
       editorButton(menu, 36, Material.ARROW, "gui.previous", c -> actionList(p, page - 1));
     if ((page + 1) * 21 < actions.size())
       editorButton(menu, 44, Material.ARROW, "common.next", c -> actionList(p, page + 1));
-    p.openInventory(menu.inventory);
+    MenuStyle.open(p, menu.inventory);
   }
 
   @EventHandler
@@ -1244,7 +1294,9 @@ public final class NpcWizard implements Listener, AutoCloseable {
   private void showConditions(Player p, String field) {
     require(p);
     var holder = new ConditionMenu(field);
-    holder.inventory = Bukkit.createInventory(holder, 54, lang.render("wizard.condition-title"));
+    holder.inventory =
+        Bukkit.createInventory(
+            holder, 54, MenuStyle.title(lang, "wizard.condition-title", Map.of()));
     MenuStyle.frame(holder.inventory);
     holder.inventory.setItem(52, button(Material.BARRIER, "gui.close"));
     for (int i = 0; i < CONDITION_TYPES.size(); i++)
@@ -1253,7 +1305,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
           button(Material.TRIPWIRE_HOOK, "wizard.conditions." + CONDITION_TYPES.get(i)));
     holder.inventory.setItem(51, button(Material.ARROW, "common.back"));
     holder.inventory.setItem(50, button(Material.BARRIER, "wizard.clear-conditions"));
-    p.openInventory(holder.inventory);
+    MenuStyle.open(p, holder.inventory);
   }
 
   private void buildCondition(Player p, String field, String type) {
@@ -1325,7 +1377,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
   private void showActions(Player p) {
     require(p);
     var holder = new ActionMenu();
-    holder.inventory = Bukkit.createInventory(holder, 54, lang.render("wizard.action-title"));
+    holder.inventory =
+        Bukkit.createInventory(holder, 54, MenuStyle.title(lang, "wizard.action-title", Map.of()));
     MenuStyle.frame(holder.inventory);
     holder.inventory.setItem(52, button(Material.BARRIER, "gui.close"));
     for (int i = 0; i < ACTION_TYPES.size(); i++)
@@ -1335,7 +1388,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
     holder.inventory.setItem(51, button(Material.ARROW, "common.back"));
     holder.inventory.setItem(4, button(Material.WRITABLE_BOOK, "npc-editor.actions-title"));
     holder.inventory.setItem(50, button(Material.BARRIER, "wizard.clear-actions"));
-    p.openInventory(holder.inventory);
+    MenuStyle.open(p, holder.inventory);
   }
 
   private void buildAction(Player p, String type) {
@@ -1401,7 +1454,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
         Bukkit.createInventory(
             holder,
             54,
-            lang.render(
+            MenuStyle.title(
+                lang,
                 "gui.wizard-title",
                 Map.of(
                     "step", Integer.toString(step + 1), "total", Integer.toString(LAST_STEP + 1))));
@@ -1447,7 +1501,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
       item.setItemMeta(meta);
       inv.setItem(MenuStyle.slot(i, FIELDS[step].length), item);
     }
-    p.openInventory(inv);
+    MenuStyle.open(p, inv);
   }
 
   private ItemStack button(Material material, String key) {
@@ -1497,8 +1551,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
         Bukkit.createInventory(
             m,
             54,
-            lang.render(
-                field.equals("sections") ? "wizard.sections-title" : "wizard.fields." + field));
+            MenuStyle.title(
+                lang,
+                field.equals("sections") ? "wizard.sections-title" : "wizard.fields." + field,
+                Map.of()));
     MenuStyle.frame(m.inventory);
     int count = Math.min(21, values.size() - page * 21);
     for (int i = 0; i < count; i++) {
@@ -1528,7 +1584,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
       m.inventory.setItem(50, button(Material.WRITABLE_BOOK, "gui.manual-input"));
     m.inventory.setItem(51, button(Material.ARROW, "common.back"));
     m.inventory.setItem(52, button(Material.BARRIER, "gui.close"));
-    p.openInventory(m.inventory);
+    MenuStyle.open(p, m.inventory);
   }
 
   @EventHandler
@@ -1546,7 +1602,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   || p.getOpenInventory().getTopInventory().getHolder() != m) return;
               try {
                 require(p);
-                int slot = clickedSlot;
+                int slot = m.original(clickedSlot);
                 if (slot == 52) {
                   p.closeInventory();
                   return;
@@ -1600,20 +1656,21 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   || p.getOpenInventory().getTopInventory().getHolder() != m) return;
               try {
                 require(p);
-                if (clickedSlot == 52) {
+                int slot = m.original(clickedSlot);
+                if (slot == 52) {
                   p.closeInventory();
                   return;
                 }
-                if (clickedSlot == 51) {
+                if (slot == 51) {
                   show(p);
                   return;
                 }
-                if (clickedSlot == 50) {
+                if (slot == 50) {
                   set(p, m.field, gson.toJson(Condition.always()));
                   show(p);
                   return;
                 }
-                int i = fieldIndex(clickedSlot, CONDITION_TYPES.size());
+                int i = fieldIndex(slot, CONDITION_TYPES.size());
                 if (i >= 0 && i < CONDITION_TYPES.size()) {
                   buildCondition(p, m.field, CONDITION_TYPES.get(i));
                   if (!prompts.containsKey(p.getUniqueId())) show(p);
@@ -1639,19 +1696,20 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   || p.getOpenInventory().getTopInventory().getHolder() != m) return;
               try {
                 require(p);
-                if (clickedSlot == 52) {
+                int slot = m.original(clickedSlot);
+                if (slot == 52) {
                   p.closeInventory();
                   return;
                 }
-                if (clickedSlot == 51) {
+                if (slot == 51) {
                   show(p);
                   return;
                 }
-                if (clickedSlot == 4) {
+                if (slot == 4) {
                   actionList(p, 0);
                   return;
                 }
-                if (clickedSlot == 50) {
+                if (slot == 50) {
                   confirm(
                       p,
                       "wizard.clear-actions",
@@ -1662,7 +1720,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                       () -> showActions(p));
                   return;
                 }
-                int i = fieldIndex(clickedSlot, ACTION_TYPES.size());
+                int i = fieldIndex(slot, ACTION_TYPES.size());
                 if (i >= 0 && i < ACTION_TYPES.size()) {
                   buildAction(p, ACTION_TYPES.get(i));
                   if (!prompts.containsKey(p.getUniqueId())) show(p);
@@ -1689,7 +1747,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   || p.getOpenInventory().getTopInventory().getHolder() != menu) return;
               try {
                 require(p);
-                int slot = clickedSlot;
+                int slot = menu.original(clickedSlot);
                 if (slot == 52) {
                   p.closeInventory();
                   return;

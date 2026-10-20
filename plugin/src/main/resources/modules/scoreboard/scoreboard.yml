@@ -1,0 +1,23 @@
+# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+enabled: true
+refresh-ticks: 20
+default-enabled: true
+disabled-worlds: []
+enabled-worlds: []
+disabled-gamemodes: []
+display-permission: ''
+hide-while-afk: false
+hide-in-combat: false
+max-selected-lines: 8
+overrides:
+  allow-forced: true
+  max-seconds: 600
+  per-player-limit: 8
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

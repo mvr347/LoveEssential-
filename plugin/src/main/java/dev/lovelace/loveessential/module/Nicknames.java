@@ -114,13 +114,12 @@ public final class Nicknames implements Listener, AutoCloseable {
   }
 
   public boolean canUse(Player p) {
-    return plugin.module("nickname")
-        && love.authenticated(p)
-        && p.hasPermission("loveessential.nick");
+    return plugin.allows("nickname", p) && love.authenticated(p);
   }
 
   public CompletableFuture<Void> change(Player actor, Player target, String... args) {
     MainThread.require();
+    plugin.requireAccess("nickname", actor);
     if (!plugin.ready()
         || !canUse(actor)
         || !target.isOnline()
@@ -146,8 +145,6 @@ public final class Nicknames implements Listener, AutoCloseable {
         if (args.length == 2 && args[1].equalsIgnoreCase("reset"))
           next = new Settings(previous.name(), List.of());
         else {
-          if (!actor.hasPermission("loveessential.nick." + op))
-            throw new IllegalArgumentException("errors.permission");
           if (op.equals("color") && args.length != 2
               || op.equals("gradient") && (args.length < 3 || args.length > 6))
             throw new IllegalArgumentException("nick.usage");

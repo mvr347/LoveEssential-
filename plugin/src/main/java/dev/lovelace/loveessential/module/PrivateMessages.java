@@ -94,10 +94,10 @@ public final class PrivateMessages implements Listener, AutoCloseable {
   }
 
   private void access(Player p) {
+    plugin.requireAccess("messages", p);
     if (!plugin.ready() || !plugin.module("messages"))
       throw new IllegalArgumentException("messages.disabled");
-    if (!love.authenticated(p) || !p.hasPermission("loveessential.messages"))
-      throw new IllegalArgumentException("errors.permission");
+    if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
   }
 
   public Player target(Player viewer, String name) {

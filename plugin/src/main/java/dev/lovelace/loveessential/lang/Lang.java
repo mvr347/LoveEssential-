@@ -16,6 +16,7 @@ public final class Lang {
   private final Path file;
   private final Map<String, Object> defaults;
   private volatile Map<String, Object> values = Map.of();
+  private volatile Map<String, Path> owners = Map.of();
   private final MiniMessage mm = MiniMessage.miniMessage();
 
   public Lang(JavaPlugin plugin) throws Exception {
@@ -40,21 +41,66 @@ public final class Lang {
         changed = true;
       }
     if (changed || !Files.exists(file)) atomic(y);
-    values = flatten(y);
+    var combined = new HashMap<>(flatten(y));
+    var sources = new HashMap<String, Path>();
+    for (String module :
+        dev.lovelace.loveessential.LoveEssentialPlugin.MODULES.stream().sorted().toList()) {
+      for (String name : List.of(module + ".yml", "gui.yml")) {
+        Path local = file.getParent().resolve("modules/" + module + "/" + name);
+        if (!Files.exists(local)) continue;
+        var document = new YamlConfiguration();
+        document.load(local.toFile());
+        var texts = document.getConfigurationSection("texts");
+        if (texts == null) continue;
+        for (String key : texts.getKeys(true))
+          if (!texts.isConfigurationSection(key)) {
+            Object value = texts.get(key);
+            if (value instanceof String
+                || value instanceof Number
+                || value instanceof Boolean
+                || value instanceof List<?>) {
+              combined.put(key, value);
+              sources.put(key, local);
+            }
+          }
+      }
+    }
+    values = Map.copyOf(combined);
+    owners = Map.copyOf(sources);
   }
 
   public synchronized void putAll(Map<String, String> texts) throws Exception {
     if (texts.isEmpty()) return;
-    var y = new YamlConfiguration();
-    y.load(file.toFile());
-    for (var e : texts.entrySet()) {
-      if (!e.getKey().matches("[a-zA-Z0-9_.-]+") || e.getValue().length() > 8192)
-        throw new IllegalArgumentException("invalid-text");
-      y.set(e.getKey(), e.getValue());
+    synchronized (dev.lovelace.loveessential.config.ModuleConfigs.class) {
+      var documents = new LinkedHashMap<Path, YamlConfiguration>();
+      for (var entry : texts.entrySet()) {
+        if (!entry.getKey().matches("[a-zA-Z0-9_.-]+") || entry.getValue().length() > 8192)
+          throw new IllegalArgumentException("invalid-text");
+        Path target = owners.get(entry.getKey());
+        if (target == null) {
+          String module = dev.lovelace.loveessential.gui.GuiSettings.module(entry.getKey());
+          target = file.getParent().resolve("modules/" + module + "/" + module + ".yml");
+        }
+        var document = documents.get(target);
+        if (document == null) {
+          document = new YamlConfiguration();
+          if (Files.exists(target)) document.load(target.toFile());
+          documents.put(target, document);
+        }
+        document.set((target.equals(file) ? "" : "texts.") + entry.getKey(), entry.getValue());
+      }
+      for (var entry : documents.entrySet()) {
+        Path target = entry.getKey();
+        Files.createDirectories(target.getParent());
+        if (Files.exists(target))
+          Files.copy(
+              target,
+              target.resolveSibling(target.getFileName() + ".bak"),
+              StandardCopyOption.REPLACE_EXISTING);
+        atomic(target, entry.getValue());
+      }
+      reload();
     }
-    Files.copy(file, file.resolveSibling("lang.yml.bak"), StandardCopyOption.REPLACE_EXISTING);
-    atomic(y);
-    values = flatten(y);
   }
 
   private static Map<String, Object> flatten(YamlConfiguration y) {
@@ -69,6 +115,10 @@ public final class Lang {
   }
 
   private void atomic(YamlConfiguration y) throws IOException {
+    atomic(file, y);
+  }
+
+  private void atomic(Path file, YamlConfiguration y) throws IOException {
     var temp = Files.createTempFile(file.getParent(), "lang-", ".tmp");
     try {
       Files.writeString(temp, y.saveToString(), StandardCharsets.UTF_8);
@@ -87,6 +137,7 @@ public final class Lang {
   }
 
   public String text(String key) {
+    if (key != null && key.startsWith("@inline:")) return key.substring(8);
     Object v = values.get(key);
     return v == null
         ? "[" + key + "]"
@@ -105,15 +156,34 @@ public final class Lang {
   }
 
   public Component render(String key, Map<String, String> variables) {
+    return renderText(text(key), variables);
+  }
+
+  public Component renderText(String template, Map<String, String> variables) {
     var b = TagResolver.builder();
     variables.forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
-    return mm.deserialize(text(key), b.build());
+    return mm.deserialize(template, b.build());
   }
 
   public Component rich(String key, Map<String, Component> variables) {
     var b = TagResolver.builder();
     variables.forEach((k, v) -> b.resolver(Placeholder.component(k, v)));
     return mm.deserialize(text(key), b.build());
+  }
+
+  public void error(CommandSender to, Throwable error) {
+    while ((error instanceof java.util.concurrent.CompletionException
+            || error instanceof java.util.concurrent.ExecutionException)
+        && error.getCause() != null) error = error.getCause();
+    if (error instanceof dev.lovelace.loveessential.module.ModulePolicy.Denied denied) {
+      send(to, denied.getMessage(), denied.variables());
+      return;
+    }
+    send(
+        to,
+        error instanceof dev.lovelace.loveessential.storage.SqliteStore.Conflict
+            ? "errors.conflict"
+            : contains(error.getMessage()) ? error.getMessage() : "errors.input");
   }
 
   public void send(CommandSender to, String key) {
@@ -131,15 +201,6 @@ public final class Lang {
                       .clickEvent(
                           net.kyori.adventure.text.event.ClickEvent.runCommand(
                               "/loveessential:loveessential help")));
-    if (key.equals("teleport.done"))
-      message =
-          message
-              .append(Component.space())
-              .append(
-                  render("chat.back")
-                      .clickEvent(
-                          net.kyori.adventure.text.event.ClickEvent.runCommand(
-                              "/loveessential:back")));
     if (key.equals("wizard.published") && vars.containsKey("id"))
       message =
           message

@@ -1,0 +1,184 @@
+menus:
+  portal-ui-actions:
+    title-key: portal-ui.actions
+    size: 54
+  portal-ui-list:
+    title-key: portal-ui.list
+    size: 54
+  portal-ui-wizard:
+    title-key: portal-ui.wizard
+    size: 54
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+texts:
+  portal-ui:
+    list: <gold>Порталы
+    create: <gold>Создать портал
+    create-help: <green>ЛКМ <dark_gray>— <gray>открыть мастер или продолжить черновик
+    wizard: <gold>Мастер портала
+    new-name: <gold>Новый портал
+    migrated-name: <gold>Портал
+    id: '<gray>ID: <white><id>'
+    coordinates: '<gray>Точка: <white><x> <y> <z>'
+    not-set: <gray>Телепортация не назначена
+    destination-here: <gold>Назначить текущую позицию
+    destination-clear: <gold>Убрать телепортацию
+    destination-set: <green>Назначение установлено
+    action-count: '<gray>Действий: <white><count>'
+    first: <gold>Первая точка
+    first-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок первой точки
+    second: <gold>Вторая точка
+    second-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок второй точки
+    destination: <gold>Назначение
+    destination-help: <green>ЛКМ <dark_gray>— <gray>назначить своё текущее положение
+    actions: <gold>Действия портала
+    actions-help: <green>ЛКМ <dark_gray>— <gray>добавить, изменить или переставить команды
+    access: <gold>Условия входа
+    access-help: <gray>Доступ, игровые режимы, бой, задержка и транспорт.
+    effects: <gold>Оформление частиц
+    effects-help: <gray>Тип частиц, цвет, плотность и заполнение области.
+    preview: <gold>Предпросмотр
+    preview-help: <green>ЛКМ <dark_gray>— <gray>показать область только себе
+    name: <gold>Название портала
+    name-help: <gray>Название MiniMessage сохраняется в lang.yml. ID назначается автоматически.
+    publish: <green>Опубликовать портал
+    publish-help: <green>ЛКМ <dark_gray>— <gray>сохранить и показать анимацию создания
+    discard: <gray>Отменить черновик
+    discard-help: <green>ЛКМ <dark_gray>— <gray>удалить только несохранённые изменения
+    discard-confirm: <gold>Удалить черновик портала?
+    delete-confirm: <gold>Удалить опубликованный портал?
+    select-first: '<gray>Нажмите ПКМ по блоку первой точки. Отмена: /портал отмена.'
+    select-second: '<gray>Нажмите ПКМ по блоку второй точки. Отмена: /портал отмена.'
+    same-world: <gray>Обе точки должны находиться в одном мире.
+    draft-exists: '<gray>Сначала завершите или отмените текущий черновик: /портал мастер.'
+    no-draft: '<gray>Сначала откройте мастер: /портал мастер.'
+    permission: <gold>Право входа (пусто — всем)
+    modes: <gold>Режимы игры через запятую (пусто — все)
+    cooldown: <gold>Задержка повторного входа, секунды
+    warmup: <gold>Ожидание активации, тики
+    enabled: <gold>Портал включён
+    block-combat: <gold>Блокировать во время боя
+    vehicles: <gold>Разрешать вход в транспорте
+    particle: <gold>Тип частиц
+    color: '<gold>Цвет HEX без #'
+    fill: <gold>Заполнять область частицами
+    spacing: <gold>Расстояние между частицами
+    add-command: <gold>Добавить команду
+    command-help: <gray>Без начального /. {player} заменяется именем входящего игрока. Корень команды должен быть разрешён в modules/portal/portal.yml.
+    command-title: <gold>Действие <white><index>
+    command-title-base: <gold>Команда портала
+    command-value: '<gray>Команда: <white><value>'
+    sender: <gold>От чьего имени
+    command: <gold>Команда без /
+    command-denied: <gray>Разрешите корень команды в allowed-player-commands или allowed-console-commands файла modules/portal/portal.yml.
+    published: <gray>Портал опубликован.
+    warming: <gray>Подготовка портала…
+    no-action: <gray>Добавьте хотя бы одну команду или назначение телепортации.
+    invalid: <gray>Проверьте область, задержки и оформление портала.
+    limit: <gray>Достигнут лимит порталов.
+    usage: <gray>/портал [мастер | изменить ID | удалить ID | отмена]
+buttons:
+  portal-ui-list:
+    title-key: portal-ui.list
+    texture: ''
+  portal-ui-create:
+    title-key: portal-ui.create
+    texture: ''
+  portal-ui-wizard:
+    title-key: portal-ui.wizard
+    texture: ''
+  portal-ui-new-name:
+    title-key: portal-ui.new-name
+    texture: ''
+  portal-ui-migrated-name:
+    title-key: portal-ui.migrated-name
+    texture: ''
+  portal-ui-destination-here:
+    title-key: portal-ui.destination-here
+    texture: ''
+  portal-ui-destination-clear:
+    title-key: portal-ui.destination-clear
+    texture: ''
+  portal-ui-first:
+    title-key: portal-ui.first
+    texture: ''
+  portal-ui-second:
+    title-key: portal-ui.second
+    texture: ''
+  portal-ui-destination:
+    title-key: portal-ui.destination
+    texture: ''
+  portal-ui-actions:
+    title-key: portal-ui.actions
+    texture: ''
+  portal-ui-access:
+    title-key: portal-ui.access
+    texture: ''
+  portal-ui-effects:
+    title-key: portal-ui.effects
+    texture: ''
+  portal-ui-preview:
+    title-key: portal-ui.preview
+    texture: ''
+  portal-ui-name:
+    title-key: portal-ui.name
+    texture: ''
+  portal-ui-discard-confirm:
+    title-key: portal-ui.discard-confirm
+    texture: ''
+  portal-ui-delete-confirm:
+    title-key: portal-ui.delete-confirm
+    texture: ''
+  portal-ui-permission:
+    title-key: portal-ui.permission
+    texture: ''
+  portal-ui-modes:
+    title-key: portal-ui.modes
+    texture: ''
+  portal-ui-cooldown:
+    title-key: portal-ui.cooldown
+    texture: ''
+  portal-ui-warmup:
+    title-key: portal-ui.warmup
+    texture: ''
+  portal-ui-enabled:
+    title-key: portal-ui.enabled
+    texture: ''
+  portal-ui-block-combat:
+    title-key: portal-ui.block-combat
+    texture: ''
+  portal-ui-vehicles:
+    title-key: portal-ui.vehicles
+    texture: ''
+  portal-ui-particle:
+    title-key: portal-ui.particle
+    texture: ''
+  portal-ui-color:
+    title-key: portal-ui.color
+    texture: ''
+  portal-ui-fill:
+    title-key: portal-ui.fill
+    texture: ''
+  portal-ui-spacing:
+    title-key: portal-ui.spacing
+    texture: ''
+  portal-ui-add-command:
+    title-key: portal-ui.add-command
+    texture: ''
+  portal-ui-command-title:
+    title-key: portal-ui.command-title
+    texture: ''
+  portal-ui-command-title-base:
+    title-key: portal-ui.command-title-base
+    texture: ''
+  portal-ui-sender:
+    title-key: portal-ui.sender
+    texture: ''
+  portal-ui-command:
+    title-key: portal-ui.command
+    texture: ''

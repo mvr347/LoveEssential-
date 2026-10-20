@@ -1,0 +1,15 @@
+# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+enabled: false
+default-enabled: true
+stride: 0.65
+interval-ms: 180
+view-distance: 24.0
+color: 78644B
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

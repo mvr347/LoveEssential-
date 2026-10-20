@@ -80,15 +80,39 @@ public final class CommandSuggestions {
     if (sender instanceof Player p && !love.authenticated(p)) return List.of();
     if (command.equals("loveessential")) {
       if (args.length <= 1) {
-        var out = new ArrayList<>(List.of("menu", "help", "input"));
+        var out = new ArrayList<>(List.of("help", "помощь"));
         if (NPC_PERMISSIONS.values().stream()
             .anyMatch(v -> sender.hasPermission("loveessential.npc." + v))) out.add("npc");
         if (sender.hasPermission("loveessential.admin"))
-          out.addAll(List.of("module", "reload", "integrations", "backup", "tab"));
+          out.addAll(
+              List.of("menu", "меню", "module", "reload", "integrations", "backup", "tab", "таб"));
         for (String name : plugin.getDescription().getCommands().keySet())
           if (!name.equals("loveessential")
               && !name.equals("npc")
-              && (!name.equals("invsee") || sender.hasPermission("loveessential.invsee")))
+              && (sender.hasPermission("loveessential.admin")
+                  || Set.of(
+                          "home",
+                          "sethome",
+                          "delhome",
+                          "spawn",
+                          "afk",
+                          "skin",
+                          "sit",
+                          "lay",
+                          "eject",
+                          "ride",
+                          "hat",
+                          "traces",
+                          "profile",
+                          "nick",
+                          "msg",
+                          "reply",
+                          "ignore",
+                          "msgtoggle",
+                          "scoreboard",
+                          "report")
+                      .contains(name)
+                  || name.equals("invsee") && sender.hasPermission("loveessential.invsee")))
             out.add(name);
         return out;
       }
@@ -102,12 +126,10 @@ public final class CommandSuggestions {
         if (args.length == 3 && LoveEssentialPlugin.MODULES.contains(args[1]))
           return List.of("enable", "disable", "info", "settings", "reload");
       }
-      if (op.equals("tab") && args.length == 2) return List.of("export");
       return List.of();
     }
     if (command.equals("nick")) {
-      if (!plugin.module("nickname") || !sender.hasPermission("loveessential.nick"))
-        return List.of();
+      if (!plugin.module("nickname")) return List.of();
       int offset = 0;
       if (args.length > 0 && args[0].equalsIgnoreCase("player")) {
         if (!sender.hasPermission("loveessential.nick.others")) return List.of();
@@ -116,8 +138,8 @@ public final class CommandSuggestions {
       }
       if (args.length <= offset + 1) {
         var out = new ArrayList<>(List.of("set", "reset"));
-        if (sender.hasPermission("loveessential.nick.color")) out.add("color");
-        if (sender.hasPermission("loveessential.nick.gradient")) out.add("gradient");
+        out.add("color");
+        out.add("gradient");
         if (offset == 0 && sender.hasPermission("loveessential.nick.others")) out.add("player");
         return out;
       }
@@ -125,8 +147,7 @@ public final class CommandSuggestions {
       if (Set.of("color", "gradient").contains(op)) {
         var out = new ArrayList<String>();
         if (args.length == offset + 2) out.add("reset");
-        if (sender.hasPermission("loveessential.nick." + op)
-            && (op.equals("color") ? args.length == offset + 2 : args.length <= offset + 6)) {
+        if (op.equals("color") ? args.length == offset + 2 : args.length <= offset + 6) {
           out.addAll(net.kyori.adventure.text.format.NamedTextColor.NAMES.keys());
           out.addAll(List.of("#ff6699", "#ffcc66", "#55ffff"));
         }
@@ -188,7 +209,7 @@ public final class CommandSuggestions {
     }
     if (!(sender instanceof Player p)) return List.of();
     if (command.equals("profile")) {
-      if (!plugin.module("profile") || !p.hasPermission("loveessential.profile")) return List.of();
+      if (!plugin.module("profile")) return List.of();
       var names =
           Bukkit.getOnlinePlayers().stream()
               .filter(target -> profiles.canView(p, target))
@@ -197,7 +218,17 @@ public final class CommandSuggestions {
       if (args.length == 1) {
         var out = new ArrayList<>(names);
         out.addAll(
-            List.of("view", "list", "settings", "activity", "privacy", "hide", "show", "toggle"));
+            List.of(
+                "view",
+                "list",
+                "settings",
+                "stats",
+                "statistics",
+                "activity",
+                "privacy",
+                "hide",
+                "show",
+                "toggle"));
         return out;
       }
       if (args.length == 2)
@@ -212,7 +243,8 @@ public final class CommandSuggestions {
     if (Set.of("msg", "ignore", "invsee").contains(command)) {
       String module = command.equals("invsee") ? "inventory" : "messages";
       String permission = command.equals("invsee") ? "invsee" : module;
-      if (!plugin.module(module) || !p.hasPermission("loveessential." + permission))
+      if (!plugin.allows(module, p)
+          || command.equals("invsee") && !p.hasPermission("loveessential." + permission))
         return List.of();
       if (command.equals("invsee") && args.length == 2)
         return p.hasPermission("loveessential.invsee.edit")
@@ -224,8 +256,11 @@ public final class CommandSuggestions {
         return out;
       }
     }
-    if (command.equals("ride") && args.length == 1 && plugin.module("sitride"))
-      return players(sender);
+    if (command.equals("ride") && args.length == 1 && plugin.module("sitride")) {
+      var options = new ArrayList<>(players(sender));
+      options.addAll(List.of("eject", "сбросить"));
+      return options;
+    }
     if (command.equals("traces") && args.length == 1 && plugin.module("traces"))
       return List.of("on", "off");
     if (command.equals("gamemode")
@@ -241,11 +276,9 @@ public final class CommandSuggestions {
       skins.add("reset");
       return skins;
     }
-    if (Set.of("home", "delhome", "sethome").contains(command)
-        && args.length == 1
-        && plugin.module("home")) return gameplay.names(p, "home");
     if (Set.of("spawn", "setspawn").contains(command) && args.length == 1 && plugin.module("spawn"))
       return gameplay.names(p, "spawn");
+    if (command.equals("portal")) return gameplay.portals().suggestions(p, args);
     if (Set.of("hologram", "portal").contains(command)
         && sender.hasPermission("loveessential.admin")
         && plugin.module(command)) {

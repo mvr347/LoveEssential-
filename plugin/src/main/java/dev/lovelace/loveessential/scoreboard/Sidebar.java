@@ -91,8 +91,24 @@ public final class Sidebar implements Listener, AutoCloseable {
 
   private record View(Scoreboard board, Scoreboard previous) {}
 
-  private static final class Menu implements InventoryHolder {
+  private static final class Menu implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
+    String menuId = "sidebar.menu";
+
+    public String guiId() {
+      return menuId;
+    }
+
+    public Map<Integer, ?> guiActions() {
+      return clicks;
+    }
+
+    public void guiPut(int slot, Runnable action) {
+      clicks.put(slot, click -> action.run());
+    }
+
+    boolean adminOnly;
+    Runnable repaint;
     final Map<Integer, java.util.function.Consumer<ClickType>> clicks = new HashMap<>();
 
     public Inventory getInventory() {
@@ -120,10 +136,12 @@ public final class Sidebar implements Listener, AutoCloseable {
 
   private final Map<UUID, SqliteStore.Document<State>> states = new HashMap<>();
   private final Set<UUID> loading = new HashSet<>(), saving = new HashSet<>();
+  private final Map<UUID, UUID> loadSessions = new HashMap<>();
   private final Map<UUID, View> views = new HashMap<>();
   private final Set<Scoreboard> rendered = new HashSet<>();
   private final Map<UUID, Scoreboard> playerBoards = new HashMap<>();
   private final TweaksScoreboardBridge bridge;
+  private final SidebarOverrides overrides;
   private org.bukkit.scheduler.BukkitTask task;
   private boolean ownership = true;
   private static final Pattern PAPI = Pattern.compile("%([A-Za-z0-9]+)_[^%]+%");
@@ -138,6 +156,11 @@ public final class Sidebar implements Listener, AutoCloseable {
       TabModule tab,
       ContentLibrary texts) {
     this.plugin = plugin;
+    overrides =
+        new SidebarOverrides(
+            System::nanoTime,
+            () -> plugin.getConfig().getInt("scoreboard.overrides.max-seconds", 600),
+            () -> plugin.getConfig().getInt("scoreboard.overrides.per-player-limit", 8));
     this.main = main;
     this.store = store;
     this.lang = lang;
@@ -192,6 +215,23 @@ public final class Sidebar implements Listener, AutoCloseable {
                                             return null;
                                           })));
             })
+        .thenCompose(
+            v ->
+                main.call(
+                    () -> {
+                      var section =
+                          plugin.getConfig().getConfigurationSection("scoreboard.catalog");
+                      if (section != null && !section.getKeys(false).isEmpty())
+                        return CompletableFuture.<Void>completedFuture(null);
+                      return plugin.exportSection(
+                          "scoreboard",
+                          "catalog",
+                          dev.lovelace.loveessential.config.ModuleConfigs.snapshot(section),
+                          SidebarConfig.write(catalog, lang, Map.of()));
+                    }))
+        .thenCompose(future -> future)
+        .thenCompose(v -> main.call(this::reloadCatalog))
+        .thenCompose(future -> future)
         .thenCompose(v -> migratePlayers(folder));
   }
 
@@ -484,15 +524,22 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   public void start() {
+    Bukkit.getServicesManager()
+        .register(
+            dev.lovelace.loveessential.api.ScoreboardService.class,
+            overrides,
+            plugin,
+            org.bukkit.plugin.ServicePriority.Normal);
     ownership =
         bridge.take(
             (sender, command, label, args) -> {
               if (sender instanceof Player p)
                 try {
-                  if (args.length == 1 && args[0].equals("edit")) editCatalog(p, 0);
+                  if (args.length == 1 && (args[0].equals("edit") || args[0].equals("settings")))
+                    settings(p);
                   else open(p, "", 0);
                 } catch (RuntimeException e) {
-                  lang.send(p, lang.contains(e.getMessage()) ? e.getMessage() : "errors.input");
+                  lang.error(p, e);
                 }
               else lang.send(sender, "errors.player-only");
               return true;
@@ -517,14 +564,18 @@ public final class Sidebar implements Listener, AutoCloseable {
   private void loadPlayer(Player p) {
     UUID id = p.getUniqueId();
     if (states.containsKey(id) || !loading.add(id)) return;
+    UUID session = UUID.randomUUID();
+    loadSessions.put(id, session);
     store
         .get("scoreboard-player", id.toString(), State.class)
         .whenComplete(
             (saved, error) ->
                 main.execute(
                     () -> {
+                      if (!session.equals(loadSessions.get(id))) return;
                       loading.remove(id);
-                      if (error != null || !p.isOnline()) return;
+                      loadSessions.remove(id);
+                      if (error != null || !p.isOnline() || Bukkit.getPlayer(id) != p) return;
                       states.put(
                           id,
                           saved.orElseGet(
@@ -537,14 +588,15 @@ public final class Sidebar implements Listener, AutoCloseable {
         catalog.presets().stream()
             .filter(p -> p.id().equals(catalog.defaultPreset()))
             .findFirst()
-            .map(Preset::entries)
+            .map(preset -> preset.entries().stream().limit(maxSelected()).toList())
             .orElseGet(
                 () ->
                     catalog.lines().stream()
-                        .limit(catalog.max())
+                        .limit(maxSelected())
                         .map(l -> new Selection(l.id(), 0))
                         .toList());
-    return new State(true, false, entries);
+    return new State(
+        plugin.getConfig().getBoolean("scoreboard.default-enabled", true), false, entries);
   }
 
   private Line line(String id) {
@@ -592,18 +644,52 @@ public final class Sidebar implements Listener, AutoCloseable {
     return placeholders.renderRaw(result.toString(), p, p);
   }
 
+  private int maxSelected() {
+    return Math.min(
+        8, Math.min(plugin.getConfig().getInt("scoreboard.max-selected-lines", 8), catalog.max()));
+  }
+
+  public boolean eligible(Player p) {
+    String world = p.getWorld().getName();
+    var config = plugin.getConfig();
+    String permission = config.getString("scoreboard.display-permission", "");
+    var only = config.getStringList("scoreboard.enabled-worlds");
+    return plugin.allows("scoreboard", p)
+        && love.authenticated(p)
+        && catalog.disabledWorlds().stream().noneMatch(world::equalsIgnoreCase)
+        && config.getStringList("scoreboard.disabled-worlds").stream()
+            .noneMatch(world::equalsIgnoreCase)
+        && (only.isEmpty() || only.stream().anyMatch(world::equalsIgnoreCase))
+        && config.getStringList("scoreboard.disabled-gamemodes").stream()
+            .noneMatch(mode -> mode.equalsIgnoreCase(p.getGameMode().name()))
+        && (permission.isBlank() || p.hasPermission(permission))
+        && (!config.getBoolean("scoreboard.hide-while-afk", false)
+            || !"true".equals(placeholders.papi(p, p, "%loveessential_afk%")))
+        && (!config.getBoolean("scoreboard.hide-in-combat", false) || !love.combat(p));
+  }
+
+  private Optional<dev.lovelace.loveessential.api.ScoreboardService.Board> override(Player p) {
+    var s = state(p.getUniqueId());
+    return overrides.current(
+        p.getUniqueId(),
+        s != null && s.value().enabled(),
+        plugin.getConfig().getBoolean("scoreboard.overrides.allow-forced", true));
+  }
+
   public List<Component> lines(Player p) {
-    var d = states.get(p.getUniqueId());
-    if (d == null
-        || !d.value().enabled()
-        || !love.authenticated(p)
-        || catalog.disabledWorlds().contains(p.getWorld().getName())) return List.of();
+    var s = state(p.getUniqueId());
+    if (!eligible(p)) return List.of();
+    var forced = override(p);
+    if (forced.isPresent()) return forced.get().lines();
+    if (s == null || !s.value().enabled()) return List.of();
     var active = new ArrayList<Component>();
-    for (var s : d.value().entries()) {
-      var line = line(s.id());
+    for (var selection : s.value().entries()) {
+      var line = line(selection.id());
       if (line == null || !available(p, line)) continue;
-      active.add(value(p, line.variants().get(Math.floorMod(s.variant(), line.variants().size()))));
-      if (active.size() >= Math.min(8, catalog.max())) break;
+      active.add(
+          value(
+              p, line.variants().get(Math.floorMod(selection.variant(), line.variants().size()))));
+      if (active.size() >= maxSelected()) break;
     }
     if (active.isEmpty()) return List.of();
     var out = new ArrayList<Component>();
@@ -620,7 +706,20 @@ public final class Sidebar implements Listener, AutoCloseable {
     var old = board.getObjective("le_side");
     if (old != null) old.unregister();
     var obj = board.getObjective("le_sidebar");
-    var lines = plugin.module("scoreboard") && ownership ? lines(p) : List.<Component>of();
+    var forced =
+        eligible(p)
+            ? override(p)
+            : Optional.<dev.lovelace.loveessential.api.ScoreboardService.Board>empty();
+    var lines =
+        plugin.module("scoreboard") && ownership
+            ? forced
+                .map(dev.lovelace.loveessential.api.ScoreboardService.Board::lines)
+                .orElseGet(() -> lines(p))
+            : List.<Component>of();
+    var title =
+        forced
+            .map(dev.lovelace.loveessential.api.ScoreboardService.Board::title)
+            .orElseGet(() -> value(p, catalog.titleKey()));
     if (lines.isEmpty()) {
       if (obj != null) obj.unregister();
       return;
@@ -628,11 +727,11 @@ public final class Sidebar implements Listener, AutoCloseable {
     var existing = board.getObjective(DisplaySlot.SIDEBAR);
     if (existing != null && !existing.getName().equals("le_sidebar")) return;
     if (obj == null) {
-      obj = board.registerNewObjective("le_sidebar", Criteria.DUMMY, value(p, catalog.titleKey()));
+      obj = board.registerNewObjective("le_sidebar", Criteria.DUMMY, title);
       obj.setDisplaySlot(DisplaySlot.SIDEBAR);
       obj.numberFormat(NumberFormat.blank());
     }
-    obj.displayName(value(p, catalog.titleKey()));
+    obj.displayName(title);
     var previous = playerBoards.put(p.getUniqueId(), board);
     if (previous != null && previous != board) {
       var oldSidebar = previous.getObjective("le_sidebar");
@@ -657,11 +756,16 @@ public final class Sidebar implements Listener, AutoCloseable {
     }
     for (var p : Bukkit.getOnlinePlayers()) {
       loadPlayer(p);
-      if (!plugin.module("scoreboard") || !ownership) {
+      if (p.getOpenInventory().getTopInventory() != null
+          && p.getOpenInventory().getTopInventory().getHolder() instanceof Menu m
+          && m.repaint != null
+          && plugin.allows("scoreboard", p)
+          && love.authenticated(p)) m.repaint.run();
+      if (!plugin.module("scoreboard") || !ownership || !eligible(p)) {
         release(p);
         continue;
       }
-      if (tab.managesBoards()) {
+      if (tab.managesBoards() && plugin.allows("tab", p)) {
         if (tab.owns(p)) render(p, p.getScoreboard());
         continue;
       }
@@ -719,66 +823,144 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   public void open(Player p, String category, int page) {
-    if (!plugin.module("scoreboard")
-        || !p.hasPermission("loveessential.scoreboard")
-        || !love.authenticated(p)) throw new IllegalArgumentException("errors.permission");
-    var d = states.get(p.getUniqueId());
-    if (d == null) {
+    plugin.requireAccess("scoreboard", p);
+    if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
+    var doc = states.get(p.getUniqueId());
+    if (doc == null) {
       loadPlayer(p);
       lang.send(p, "errors.starting");
       return;
     }
-    var state = d.value();
-    var filtered =
-        catalog.lines().stream()
-            .filter(l -> state.viewAll() || category.isBlank() || l.category().equals(category))
-            .toList();
-    int actual = Math.max(0, Math.min(page, Math.max(0, (filtered.size() - 1) / 21)));
     var menu = new Menu();
-    menu.inventory = Bukkit.createInventory(menu, 54, lang.render("sidebar.menu"));
+    menu.menuId = "sidebar.slots-title";
+    menu.inventory =
+        Bukkit.createInventory(menu, 36, MenuStyle.title(lang, "sidebar.slots-title", Map.of()));
+    menu.repaint = () -> drawSlots(p, menu, doc);
+    menu.repaint.run();
+    MenuStyle.open(p, menu.inventory);
+  }
+
+  private List<Selection> compact(State state) {
+    return state.entries().stream().filter(e -> line(e.id()) != null).limit(8).toList();
+  }
+
+  private void drawSlots(Player p, Menu menu, SqliteStore.Document<State> doc) {
     MenuStyle.frame(menu.inventory);
+    menu.clicks.clear();
+    var selected = compact(doc.value());
     menu.inventory.setItem(
         0,
         dev.lovelace.loveessential.module.PlayerProfiles.head(
             p, lang.render("sidebar.profile"), List.of(lang.render("sidebar.profile-help"))));
-    menu.clicks.put(0, c -> p.performCommand("loveessential:loveessential profile"));
+    menu.clicks.put(0, c -> p.performCommand("loveessential:profile"));
     put(
         menu,
-        1,
+        4,
         Material.LEVER,
-        state.enabled() ? "sidebar.on" : "sidebar.off",
+        doc.value().enabled() ? "sidebar.on" : "sidebar.off",
         c ->
             save(
                 p,
-                new State(!state.enabled(), state.viewAll(), state.entries()),
-                () -> open(p, category, actual)));
-    put(
-        menu,
-        3,
-        Material.COMPASS,
-        "sidebar.category",
-        c -> {
-          var categories = new ArrayList<>(catalog.categories().keySet());
-          categories.sort(String::compareTo);
-          categories.addFirst("");
-          int index = categories.indexOf(category);
-          open(p, categories.get((index + 1) % categories.size()), 0);
-        });
-    put(
-        menu,
-        2,
-        Material.SPYGLASS,
-        "sidebar.view-all",
-        c ->
+                new State(!doc.value().enabled(), doc.value().viewAll(), selected),
+                () -> open(p, "", 0)));
+    String free =
+        plugin
+            .getConfig()
+            .getString(
+                "scoreboard.gui.free-texture",
+                "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjhkZGY4M2VhN2YwOGE3MmE1MmFjMjFkYzc0MDBhMDYxN2FjMmNiZTIxYTMxNzA0OGY0MmU3ZjI0OTk0NDgwZSJ9fX0=");
+    String occupied =
+        plugin
+            .getConfig()
+            .getString(
+                "scoreboard.gui.occupied-texture",
+                "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=");
+    for (int i = 0; i < 8; i++) {
+      int index = i, slot = 10 + i;
+      boolean filled = i < selected.size(), locked = i >= maxSelected() && !filled;
+      var lore = new ArrayList<Component>();
+      lore.add(
+          lang.render(
+              "sidebar.slot-position",
+              Map.of("position", "" + (i + 1), "limit", "" + maxSelected())));
+      Component title;
+      if (filled) {
+        var selection = selected.get(i);
+        var item = line(selection.id());
+        title =
+            lang.rich(
+                "sidebar.slot-selected",
+                Map.of("position", Component.text(i + 1), "name", lang.render(item.nameKey())));
+        lore.add(
+            value(
+                p,
+                item.variants().get(Math.floorMod(selection.variant(), item.variants().size()))));
+        if (!available(p, item))
+          lore.add(
+              lang.render(item.reasonKey().isBlank() ? "sidebar.unavailable" : item.reasonKey()));
+      } else
+        title =
+            lang.render(
+                locked ? "sidebar.slot-locked" : "sidebar.slot-empty",
+                Map.of("position", "" + (i + 1)));
+      lore.add(lang.render("gui.separator"));
+      lore.addAll(
+          lang
+              .lines(
+                  filled
+                      ? "sidebar.slot-controls"
+                      : locked ? "sidebar.slot-locked-help" : "sidebar.slot-empty-help")
+              .stream()
+              .map(t -> lang.renderText(t, Map.of()))
+              .toList());
+      menu.inventory.setItem(slot, MenuStyle.head(filled ? occupied : free, title, lore));
+      menu.clicks.put(
+          slot,
+          click -> {
+            if (states.get(p.getUniqueId()) != doc) {
+              open(p, "", 0);
+              return;
+            }
+            if (locked) {
+              lang.send(p, "sidebar.limit");
+              return;
+            }
+            var entries = new ArrayList<>(selected);
+            if (click == ClickType.RIGHT || !filled && click == ClickType.LEFT) {
+              picker(p, index, "", "name", false, 0, Map.of());
+              return;
+            }
+            if (!filled) return;
+            if (click == ClickType.LEFT) entries.remove(index);
+            else if (click == ClickType.SHIFT_LEFT && index > 0)
+              Collections.swap(entries, index, index - 1);
+            else if (click == ClickType.SHIFT_RIGHT && index + 1 < entries.size())
+              Collections.swap(entries, index, index + 1);
+            else return;
             save(
                 p,
-                new State(state.enabled(), !state.viewAll(), state.entries()),
-                () -> open(p, category, actual)));
-    if (p.hasPermission("loveessential.admin") && ui != null)
-      put(menu, 50, Material.COMPARATOR, "sidebar.edit", c -> editCatalog(p, 0));
-    for (int i = 0; i < Math.min(5, catalog.presets().size()); i++) {
+                new State(doc.value().enabled(), doc.value().viewAll(), entries),
+                () -> open(p, "", 0));
+          });
+    }
+    put(menu, 33, Material.ARROW, "common.back", c -> p.performCommand("loveessential:profile"));
+    put(menu, 34, Material.BARRIER, "gui.close", c -> p.closeInventory());
+    put(menu, 32, Material.BOOK, "sidebar.presets", c -> presetMenu(p));
+    if (p.getOpenInventory().getTopInventory() == menu.inventory)
+      MenuStyle.apply(p, menu.inventory);
+  }
+
+  private void presetMenu(Player p) {
+    var doc = state(p.getUniqueId());
+    if (doc == null) return;
+    var menu = new Menu();
+    menu.menuId = "sidebar.presets";
+    menu.inventory = Bukkit.createInventory(menu, 54, lang.render("sidebar.presets"));
+    MenuStyle.frame(menu.inventory);
+    int count = Math.min(21, catalog.presets().size());
+    for (int i = 0; i < count; i++) {
       var preset = catalog.presets().get(i);
-      int slot = 4 + i;
+      int slot = MenuStyle.slot(i, count);
       menu.inventory.setItem(
           slot,
           MenuStyle.item(
@@ -791,105 +973,260 @@ public final class Sidebar implements Listener, AutoCloseable {
               save(
                   p,
                   new State(
-                      true,
-                      state.viewAll(),
+                      doc.value().enabled(),
+                      false,
                       preset.entries().stream()
                           .filter(e -> line(e.id()) != null && available(p, line(e.id())))
-                          .limit(catalog.max())
+                          .limit(maxSelected())
                           .toList()),
-                  () -> open(p, category, actual)));
+                  () -> open(p, "", 0)));
     }
+    put(menu, 51, Material.ARROW, "common.back", c -> open(p, "", 0));
+    put(menu, 52, Material.BARRIER, "gui.close", c -> p.closeInventory());
+    MenuStyle.open(p, menu.inventory);
+  }
+
+  private void picker(
+      Player p,
+      int target,
+      String category,
+      String order,
+      boolean hideUnavailable,
+      int page,
+      Map<String, Integer> variants) {
+    plugin.requireAccess("scoreboard", p);
+    var doc = state(p.getUniqueId());
+    if (doc == null) return;
+    var selected = compact(doc.value());
+    var filtered =
+        catalog.lines().stream()
+            .filter(l -> category.isBlank() || l.category().equals(category))
+            .filter(l -> !hideUnavailable || available(p, l))
+            .sorted(
+                switch (order) {
+                  case "category" ->
+                      Comparator.comparing(Line::category)
+                          .thenComparing(
+                              l -> lang.text(l.nameKey()), String.CASE_INSENSITIVE_ORDER);
+                  case "available" ->
+                      Comparator.comparing((Line l) -> !available(p, l))
+                          .thenComparing(
+                              l -> lang.text(l.nameKey()), String.CASE_INSENSITIVE_ORDER);
+                  case "selected" ->
+                      Comparator.comparing(
+                              (Line l) -> selected.stream().noneMatch(e -> e.id().equals(l.id())))
+                          .thenComparing(
+                              l -> lang.text(l.nameKey()), String.CASE_INSENSITIVE_ORDER);
+                  default ->
+                      Comparator.comparing(
+                          l -> lang.text(l.nameKey()), String.CASE_INSENSITIVE_ORDER);
+                })
+            .toList();
+    int actual = Math.clamp(page, 0, Math.max(0, (filtered.size() - 1) / 21));
+    var menu = new Menu();
+    menu.menuId = "sidebar.picker-title";
+    menu.inventory =
+        Bukkit.createInventory(
+            menu,
+            54,
+            lang.render(
+                "sidebar.picker-title",
+                Map.of("position", "" + (Math.min(target, selected.size()) + 1))));
+    MenuStyle.frame(menu.inventory);
+    put(
+        menu,
+        2,
+        Material.COMPASS,
+        "sidebar.filter-category",
+        c -> {
+          var categories =
+              new ArrayList<>(catalog.categories().keySet().stream().sorted().toList());
+          categories.addFirst("");
+          int current = categories.indexOf(category);
+          picker(
+              p,
+              target,
+              categories.get((current + 1) % categories.size()),
+              order,
+              hideUnavailable,
+              0,
+              variants);
+        });
+    put(
+        menu,
+        4,
+        Material.COMPARATOR,
+        "sidebar.sort-" + order,
+        c -> {
+          var orders = List.of("name", "category", "available", "selected");
+          picker(
+              p,
+              target,
+              category,
+              orders.get((orders.indexOf(order) + 1) % orders.size()),
+              hideUnavailable,
+              0,
+              variants);
+        });
+    put(
+        menu,
+        6,
+        Material.SPYGLASS,
+        hideUnavailable ? "sidebar.filter-available" : "sidebar.filter-all",
+        c -> picker(p, target, category, order, !hideUnavailable, 0, variants));
     for (int i = actual * 21; i < Math.min(filtered.size(), (actual + 1) * 21); i++) {
-      var l = filtered.get(i);
-      int position = -1;
-      for (int j = 0; j < state.entries().size(); j++)
-        if (state.entries().get(j).id().equals(l.id())) position = j;
-      int selected = position;
+      var item = filtered.get(i);
+      int slot = MenuStyle.slot(i % 21, Math.min(21, filtered.size() - actual * 21));
+      int variant =
+          Math.floorMod(
+              variants.getOrDefault(
+                  item.id(),
+                  selected.stream()
+                      .filter(e -> e.id().equals(item.id()))
+                      .map(Selection::variant)
+                      .findFirst()
+                      .orElse(0)),
+              item.variants().size());
+      boolean valid = available(p, item);
       var lore = new ArrayList<Component>();
+      lore.add(value(p, item.variants().get(variant)));
       lore.add(
           lang.render(
-              selected < 0 ? "sidebar.not-selected" : "sidebar.selected",
-              Map.of("position", "" + (selected + 1))));
-      int variant =
-          selected < 0
-              ? 0
-              : Math.floorMod(state.entries().get(selected).variant(), l.variants().size());
-      lore.add(value(p, l.variants().get(variant)));
-      if (variant < l.variantNames().size() && !lang.text(l.variantNames().get(variant)).isBlank())
-        lore.add(value(p, l.variantNames().get(variant)));
-      for (String key : l.loreKeys()) lore.add(value(p, key));
-      lore.add(lang.render("sidebar.line-help"));
-      if (!available(p, l)) lore.add(lang.render("sidebar.unavailable"));
+              "sidebar.category-label",
+              Map.of(
+                  "category",
+                  lang.text(
+                      catalog.categories().getOrDefault(item.category(), "sidebar.general")))));
+      if (!valid)
+        lore.add(
+            lang.render(item.reasonKey().isBlank() ? "sidebar.unavailable" : item.reasonKey()));
+      lore.add(lang.render("gui.separator"));
+      lore.add(lang.render("sidebar.picker-select"));
+      if (item.variants().size() > 1) lore.add(lang.render("sidebar.picker-variant"));
       menu.inventory.setItem(
-          MenuStyle.slot(i % 21, Math.min(21, filtered.size() - actual * 21)),
+          slot,
           MenuStyle.item(
-              available(p, l) ? Material.PAPER : Material.GRAY_DYE,
-              lang.render(l.nameKey()),
-              lore));
+              valid ? Material.BOOK : Material.GRAY_DYE, lang.render(item.nameKey()), lore));
       menu.clicks.put(
-          MenuStyle.slot(i % 21, Math.min(21, filtered.size() - actual * 21)),
+          slot,
           c -> {
-            var entries = new ArrayList<>(state.entries());
-            if (c == ClickType.SHIFT_LEFT && selected >= 0)
-              entries.set(
-                  selected,
-                  new Selection(
-                      l.id(), (entries.get(selected).variant() + 1) % l.variants().size()));
-            else if (c == ClickType.SHIFT_RIGHT && selected > 0)
-              Collections.swap(entries, selected, selected - 1);
-            else if (c == ClickType.RIGHT && selected >= 0 && selected + 1 < entries.size())
-              Collections.swap(entries, selected, selected + 1);
-            else if (c == ClickType.LEFT) {
-              if (selected >= 0) entries.remove(selected);
-              else if (available(p, l) && entries.size() < catalog.max())
-                entries.add(new Selection(l.id(), 0));
-              else {
-                lang.send(p, "sidebar.limit");
-                return;
+            if (c == ClickType.RIGHT && item.variants().size() > 1) {
+              var next = new HashMap<>(variants);
+              next.put(item.id(), (variant + 1) % item.variants().size());
+              picker(p, target, category, order, hideUnavailable, actual, next);
+              return;
+            }
+            if (c != ClickType.LEFT) return;
+            if (states.get(p.getUniqueId()) != doc) {
+              open(p, "", 0);
+              return;
+            }
+            if (!available(p, item)) {
+              lang.send(p, "sidebar.unavailable");
+              return;
+            }
+            var entries = new ArrayList<>(selected);
+            int destination = Math.min(target, entries.size());
+            int existing = -1;
+            for (int n = 0; n < entries.size(); n++)
+              if (entries.get(n).id().equals(item.id())) {
+                existing = n;
+                break;
               }
-            } else return;
+            var chosen = new Selection(item.id(), variant);
+            if (existing >= 0) {
+              if (destination < entries.size()) {
+                Collections.swap(entries, existing, destination);
+                entries.set(destination, chosen);
+              } else {
+                entries.remove(existing);
+                entries.add(chosen);
+              }
+            } else if (destination < entries.size()) entries.set(destination, chosen);
+            else if (entries.size() < maxSelected()) entries.add(chosen);
+            else {
+              lang.send(p, "sidebar.limit");
+              return;
+            }
             save(
                 p,
-                new State(state.enabled(), state.viewAll(), entries),
-                () -> open(p, category, actual));
+                new State(doc.value().enabled(), doc.value().viewAll(), entries),
+                () -> open(p, "", 0));
           });
     }
     if (actual > 0)
-      put(menu, 36, Material.ARROW, "gui.previous", c -> open(p, category, actual - 1));
+      put(
+          menu,
+          36,
+          Material.ARROW,
+          "gui.previous",
+          c -> picker(p, target, category, order, hideUnavailable, actual - 1, variants));
     if ((actual + 1) * 21 < filtered.size())
-      put(menu, 44, Material.ARROW, "common.next", c -> open(p, category, actual + 1));
+      put(
+          menu,
+          44,
+          Material.ARROW,
+          "common.next",
+          c -> picker(p, target, category, order, hideUnavailable, actual + 1, variants));
+    put(menu, 51, Material.ARROW, "common.back", c -> open(p, "", 0));
     put(menu, 52, Material.BARRIER, "gui.close", c -> p.closeInventory());
-    p.openInventory(menu.inventory);
+    MenuStyle.open(p, menu.inventory);
   }
 
   private boolean admin(Player p) {
-    return plugin.module("scoreboard") && p.hasPermission("loveessential.admin");
+    return plugin.ready() && love.authenticated(p) && p.hasPermission("loveessential.admin");
+  }
+
+  private void requireAdmin(Player p) {
+    if (!plugin.ready()) throw new IllegalArgumentException("errors.starting");
+    if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
+    if (!p.hasPermission("loveessential.admin"))
+      throw new IllegalArgumentException("errors.permission");
+  }
+
+  public CompletableFuture<Void> reloadCatalog() {
+    MainThread.require();
+    var section = plugin.getConfig().getConfigurationSection("scoreboard.catalog");
+    if (section == null || section.getKeys(false).isEmpty())
+      return CompletableFuture.completedFuture(null);
+    var next = SidebarConfig.read(section);
+    if (next.equals(catalog)) return CompletableFuture.completedFuture(null);
+    return store
+        .save("scoreboard-catalog", "default", catalogRevision, next, "config")
+        .thenCompose(
+            revision ->
+                main.<Void>call(
+                    () -> {
+                      catalog = next;
+                      catalogRevision = revision;
+                      return null;
+                    }));
   }
 
   public CompletableFuture<Void> saveCatalog(
       Catalog value, long revision, String actor, Map<String, String> values) {
-    if (value.max() < 1
-        || value.max() > 8
-        || value.lines().size() > 256
-        || value.interval() < 2
-        || value.interval() > 1200) throw new IllegalArgumentException("errors.input");
-    var ids = new HashSet<String>();
-    for (var line : value.lines())
-      if (!line.id().matches("[A-Za-z0-9_-]{1,48}")
-          || !ids.add(line.id())
-          || line.variants().isEmpty()
-          || line.variants().size() > 8) throw new IllegalArgumentException("errors.input");
-    return texts
-        .texts(values)
-        .thenCompose(v -> store.save("scoreboard-catalog", "default", revision, value, actor))
+    MainThread.require();
+    if (value.lines().stream().map(Line::id).distinct().count() != value.lines().size())
+      throw new IllegalArgumentException("errors.input");
+    var encoded = SidebarConfig.write(value, lang, values);
+    var canonical = SidebarConfig.materialize(encoded);
+    Object expected =
+        dev.lovelace.loveessential.config.ModuleConfigs.snapshot(
+            plugin.getConfig().get("scoreboard.catalog"));
+    return store
+        .save("scoreboard-catalog", "default", revision, canonical, actor)
         .thenCompose(
             rev ->
-                main.call(
-                    () -> {
-                      catalog = value;
-                      catalogRevision = rev;
-                      return null;
-                    }));
+                plugin
+                    .exportSection("scoreboard", "catalog", expected, encoded)
+                    .thenCompose(
+                        v ->
+                            main.<Void>call(
+                                () -> {
+                                  catalog = canonical;
+                                  catalogRevision = rev;
+                                  return null;
+                                })));
   }
 
   private void saved(Player p, CompletableFuture<?> future, Runnable after) {
@@ -906,8 +1243,144 @@ public final class Sidebar implements Listener, AutoCloseable {
                 }));
   }
 
+  public void settings(Player p) {
+    requireAdmin(p);
+    var menu = new Menu();
+    menu.adminOnly = true;
+    menu.menuId = "sidebar.admin-menu";
+    menu.inventory =
+        Bukkit.createInventory(menu, 54, MenuStyle.title(lang, "sidebar.admin-menu", Map.of()));
+    MenuStyle.frame(menu.inventory);
+    boolean enabled = plugin.module("scoreboard");
+    menu.inventory.setItem(
+        4,
+        MenuStyle.button(
+            lang,
+            enabled ? Material.LIME_DYE : Material.GRAY_DYE,
+            enabled ? "sidebar.module-enabled" : "sidebar.module-disabled",
+            "sidebar.module-toggle-help"));
+    menu.clicks.put(
+        4,
+        click ->
+            saved(
+                p,
+                plugin.module("scoreboard", !plugin.module("scoreboard")),
+                () -> {
+                  if (p.getOpenInventory().getTopInventory() == menu.inventory) settings(p);
+                }));
+    menu.inventory.setItem(
+        20, MenuStyle.button(lang, Material.WRITABLE_BOOK, "sidebar.edit", "sidebar.edit-help"));
+    menu.clicks.put(20, click -> editCatalog(p, 0));
+    menu.inventory.setItem(
+        22,
+        MenuStyle.button(lang, Material.GRASS_BLOCK, "sidebar.world-menu", "sidebar.world-help"));
+    menu.clicks.put(22, click -> worlds(p, 0));
+    menu.inventory.setItem(
+        24,
+        MenuStyle.button(
+            lang, Material.COMPARATOR, "sidebar.module-settings", "sidebar.module-settings-help"));
+    menu.clicks.put(24, click -> moduleSettings.accept(p));
+    menu.inventory.setItem(
+        31,
+        MenuStyle.item(
+            Material.BOOK,
+            lang.render("sidebar.rules"),
+            List.of(lang.render("sidebar.rules-help"), lang.render("sidebar.api-help"))));
+    menu.inventory.setItem(
+        51, MenuStyle.button(lang, Material.ARROW, "common.back", "gui.click.open"));
+    menu.clicks.put(
+        51,
+        click -> {
+          if (plugin.module("scoreboard")) open(p, "", 0);
+          else moduleSettings.accept(p);
+        });
+    menu.inventory.setItem(
+        52, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
+    menu.clicks.put(52, click -> p.closeInventory());
+    MenuStyle.open(p, menu.inventory);
+  }
+
+  private java.util.function.Consumer<Player> moduleSettings = p -> {};
+
+  public void moduleSettings(java.util.function.Consumer<Player> opener) {
+    moduleSettings = opener;
+  }
+
+  public void worlds(Player p, int page) {
+    requireAdmin(p);
+    var names = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+    Bukkit.getWorlds().forEach(w -> names.add(w.getName()));
+    names.addAll(catalog.disabledWorlds());
+    names.addAll(plugin.getConfig().getStringList("scoreboard.enabled-worlds"));
+    names.addAll(plugin.getConfig().getStringList("scoreboard.disabled-worlds"));
+    var worlds = List.copyOf(names);
+    int actual = Math.max(0, Math.min(page, Math.max(0, (worlds.size() - 1) / 21)));
+    var menu = new Menu();
+    menu.adminOnly = true;
+    menu.menuId = "sidebar.world-menu";
+    menu.inventory =
+        Bukkit.createInventory(menu, 54, MenuStyle.title(lang, "sidebar.world-menu", Map.of()));
+    MenuStyle.frame(menu.inventory);
+    for (int i = actual * 21; i < Math.min(worlds.size(), (actual + 1) * 21); i++) {
+      String name = worlds.get(i);
+      boolean blocked = catalog.disabledWorlds().stream().anyMatch(name::equalsIgnoreCase);
+      boolean configBlocked =
+          plugin.getConfig().getStringList("scoreboard.disabled-worlds").stream()
+              .anyMatch(name::equalsIgnoreCase);
+      int slot = MenuStyle.CONTENT[i % 21];
+      menu.inventory.setItem(
+          slot,
+          MenuStyle.item(
+              blocked || configBlocked ? Material.RED_CONCRETE : Material.GRASS_BLOCK,
+              lang.render("sidebar.world-title", Map.of("world", name)),
+              List.of(
+                  lang.render(
+                      blocked || configBlocked ? "sidebar.world-blocked" : "sidebar.world-allowed"),
+                  lang.render(configBlocked ? "sidebar.world-config" : "sidebar.world-click"))));
+      if (!configBlocked)
+        menu.clicks.put(
+            slot,
+            click -> {
+              var current = catalog;
+              var disabled = new ArrayList<>(current.disabledWorlds());
+              if (!disabled.removeIf(name::equalsIgnoreCase)) disabled.add(name);
+              saved(
+                  p,
+                  saveCatalog(
+                      new Catalog(
+                          current.titleKey(),
+                          current.separatorKey(),
+                          current.bottomKey(),
+                          current.max(),
+                          current.interval(),
+                          disabled,
+                          current.categories(),
+                          current.lines(),
+                          current.presets(),
+                          current.defaultPreset()),
+                      catalogRevision,
+                      p.getUniqueId().toString(),
+                      Map.of()),
+                  () -> worlds(p, actual));
+            });
+    }
+    if (actual > 0) {
+      menu.inventory.setItem(36, MenuStyle.button(lang, Material.ARROW, "gui.previous"));
+      menu.clicks.put(36, click -> worlds(p, actual - 1));
+    }
+    if ((actual + 1) * 21 < worlds.size()) {
+      menu.inventory.setItem(44, MenuStyle.button(lang, Material.ARROW, "common.next"));
+      menu.clicks.put(44, click -> worlds(p, actual + 1));
+    }
+    menu.inventory.setItem(51, MenuStyle.button(lang, Material.ARROW, "common.back"));
+    menu.clicks.put(51, click -> settings(p));
+    menu.inventory.setItem(52, MenuStyle.button(lang, Material.BARRIER, "gui.close"));
+    menu.clicks.put(52, click -> p.closeInventory());
+    MenuStyle.open(p, menu.inventory);
+  }
+
   public void editCatalog(Player p, int page) {
-    if (!admin(p)) throw new IllegalArgumentException("errors.permission");
+    requireAdmin(p);
     var c = catalog;
     long revision = catalogRevision;
     var buttons = new ArrayList<dev.lovelace.loveessential.dialog.NativeDialogs.Button>();
@@ -991,7 +1464,10 @@ public final class Sidebar implements Listener, AutoCloseable {
               values.put(prefix + ".reason", v.get("reason"));
               var variants = new ArrayList<String>();
               int n = 0;
-              for (String value : v.get("variants").split("\\|", -1)) {
+              for (String value :
+                  java.util.stream.IntStream.range(0, old.variants().size())
+                      .mapToObj(i -> i == 0 ? v.get("variants") : lang.text(old.variants().get(i)))
+                      .toList()) {
                 String key = prefix + ".variant." + n++;
                 values.put(key, value);
                 variants.add(key);
@@ -1038,8 +1514,10 @@ public final class Sidebar implements Listener, AutoCloseable {
                       revision,
                       p.getUniqueId().toString(),
                       values),
-                  () -> editCatalog(p, 0));
+                  () -> settings(p));
             }));
+    if (index >= 0)
+      buttons.add(ui.button("formats", "sidebar.formats", v -> formats(p, c, revision, index)));
     if (index >= 0)
       buttons.add(
           ui.button(
@@ -1069,7 +1547,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                                 revision,
                                 p.getUniqueId().toString(),
                                 Map.of()),
-                            () -> editCatalog(p, 0));
+                            () -> settings(p));
                       },
                       () -> editLine(p, c, revision, index),
                       this::admin)));
@@ -1082,14 +1560,133 @@ public final class Sidebar implements Listener, AutoCloseable {
             ui.text("id", "sidebar.line-id", old.id(), 48),
             ui.text("name", "windows.label", lang.text(old.nameKey()), 256),
             ui.text("category", "sidebar.category-id", old.category(), 48),
-            ui.text(
-                "variants",
-                "sidebar.variants",
-                String.join("|", old.variants().stream().map(lang::text).toList()),
-                2048),
+            ui.text("variants", "sidebar.variants", lang.text(old.variants().getFirst()), 2048),
             ui.text("requirement", "sidebar.requirement", old.requirement(), 256),
             ui.text("expected", "sidebar.expected", old.expected(), 128),
             ui.text("reason", "sidebar.reason", lang.text(old.reasonKey()), 256)),
+        buttons,
+        this::admin);
+  }
+
+  private Catalog replaceLine(Catalog c, int index, Line value) {
+    var lines = new ArrayList<>(c.lines());
+    lines.set(index, value);
+    return new Catalog(
+        c.titleKey(),
+        c.separatorKey(),
+        c.bottomKey(),
+        c.max(),
+        c.interval(),
+        c.disabledWorlds(),
+        c.categories(),
+        lines,
+        c.presets(),
+        c.defaultPreset());
+  }
+
+  private void formats(Player p, Catalog c, long revision, int lineIndex) {
+    requireAdmin(p);
+    var line = c.lines().get(lineIndex);
+    var buttons = new ArrayList<dev.lovelace.loveessential.dialog.NativeDialogs.Button>();
+    for (int i = 0; i < line.variants().size(); i++) {
+      int index = i;
+      buttons.add(
+          new dev.lovelace.loveessential.dialog.NativeDialogs.Button(
+              "format" + i,
+              lang.render("sidebar.format-index", Map.of("index", "" + (i + 1))),
+              v -> format(p, c, revision, lineIndex, index)));
+    }
+    if (line.variants().size() < 8)
+      buttons.add(
+          ui.button("add", "sidebar.add-format", v -> format(p, c, revision, lineIndex, -1)));
+    buttons.add(ui.button("back", "common.back", v -> editLine(p, c, revision, lineIndex)));
+    ui.show(p, "sidebar.formats", "sidebar.formats-help", List.of(), buttons, this::admin);
+  }
+
+  private void format(Player p, Catalog c, long revision, int lineIndex, int index) {
+    var line = c.lines().get(lineIndex);
+    var buttons = new ArrayList<dev.lovelace.loveessential.dialog.NativeDialogs.Button>();
+    java.util.function.BiConsumer<List<String>, List<String>> persist =
+        (templates, names) ->
+            saved(
+                p,
+                saveCatalog(
+                    replaceLine(
+                        c,
+                        lineIndex,
+                        new Line(
+                            line.id(),
+                            line.nameKey(),
+                            line.category(),
+                            templates,
+                            line.requirement(),
+                            line.expected(),
+                            line.reasonKey(),
+                            names,
+                            line.loreKeys())),
+                    revision,
+                    p.getUniqueId().toString(),
+                    Map.of()),
+                () -> editCatalog(p, 0));
+    buttons.add(
+        ui.button(
+            "save",
+            "content.save",
+            v -> {
+              var templates = new ArrayList<>(line.variants());
+              var names = new ArrayList<>(line.variantNames());
+              if (index < 0) {
+                templates.add("@inline:" + v.get("template"));
+                names.add("@inline:" + v.get("name"));
+              } else {
+                templates.set(index, "@inline:" + v.get("template"));
+                names.set(index, "@inline:" + v.get("name"));
+              }
+              persist.accept(templates, names);
+            }));
+    if (index >= 0 && line.variants().size() > 1)
+      buttons.add(
+          ui.button(
+              "delete",
+              "gui.remove",
+              v -> {
+                var templates = new ArrayList<>(line.variants());
+                var names = new ArrayList<>(line.variantNames());
+                templates.remove(index);
+                names.remove(index);
+                persist.accept(templates, names);
+              }));
+    for (int direction : List.of(-1, 1)) {
+      int to = index + direction;
+      if (index >= 0 && to >= 0 && to < line.variants().size())
+        buttons.add(
+            ui.button(
+                direction < 0 ? "up" : "down",
+                direction < 0 ? "tab-editor.up" : "tab-editor.down",
+                v -> {
+                  var templates = new ArrayList<>(line.variants());
+                  var names = new ArrayList<>(line.variantNames());
+                  Collections.swap(templates, index, to);
+                  Collections.swap(names, index, to);
+                  persist.accept(templates, names);
+                }));
+    }
+    buttons.add(ui.button("back", "common.back", v -> formats(p, c, revision, lineIndex)));
+    ui.show(
+        p,
+        "sidebar.format-title",
+        "sidebar.formats-help",
+        List.of(
+            ui.text(
+                "name",
+                "windows.label",
+                index < 0 ? "" : lang.text(line.variantNames().get(index)),
+                128),
+            ui.text(
+                "template",
+                "sidebar.template",
+                index < 0 ? "" : lang.text(line.variants().get(index)),
+                2048)),
         buttons,
         this::admin);
   }
@@ -1104,8 +1701,9 @@ public final class Sidebar implements Listener, AutoCloseable {
   public void click(InventoryClickEvent e) {
     if (!(e.getView().getTopInventory().getHolder() instanceof Menu m)) return;
     e.setCancelled(true);
-    if (!(e.getWhoClicked() instanceof Player p) || e.getRawSlot() < 0 || e.getRawSlot() >= 54)
-      return;
+    if (!(e.getWhoClicked() instanceof Player p)
+        || e.getRawSlot() < 0
+        || e.getRawSlot() >= m.inventory.getSize()) return;
     var click = m.clicks.get(e.getRawSlot());
     if (click != null)
       Bukkit.getScheduler()
@@ -1113,11 +1711,15 @@ public final class Sidebar implements Listener, AutoCloseable {
               plugin,
               () -> {
                 if (plugin.ready()
-                    && plugin.module("scoreboard")
                     && love.authenticated(p)
-                    && p.hasPermission("loveessential.scoreboard")
+                    && (m.adminOnly ? admin(p) : plugin.allows("scoreboard", p))
+                    && p.getOpenInventory().getTopInventory() != null
                     && p.getOpenInventory().getTopInventory().getHolder() == m)
-                  click.accept(e.getClick());
+                  try {
+                    click.accept(e.getClick());
+                  } catch (RuntimeException error) {
+                    lang.error(p, error);
+                  }
               });
   }
 
@@ -1134,9 +1736,16 @@ public final class Sidebar implements Listener, AutoCloseable {
 
   @EventHandler
   public void quit(PlayerQuitEvent e) {
+    overrides.removePlayer(e.getPlayer().getUniqueId());
     release(e.getPlayer());
     states.remove(e.getPlayer().getUniqueId());
     loading.remove(e.getPlayer().getUniqueId());
+    loadSessions.remove(e.getPlayer().getUniqueId());
+  }
+
+  @EventHandler
+  public void ownerDisabled(org.bukkit.event.server.PluginDisableEvent e) {
+    overrides.removeOwner(e.getPlugin());
   }
 
   public void refresh() {
@@ -1156,6 +1765,9 @@ public final class Sidebar implements Listener, AutoCloseable {
   @Override
   public void close() {
     if (task != null) task.cancel();
+    overrides.close();
+    Bukkit.getServicesManager()
+        .unregister(dev.lovelace.loveessential.api.ScoreboardService.class, overrides);
     for (var p : Bukkit.getOnlinePlayers()) {
       if (p.getOpenInventory().getTopInventory() != null
           && p.getOpenInventory().getTopInventory().getHolder() instanceof Menu) p.closeInventory();
