@@ -68,7 +68,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
 
   private boolean allowed(Session s) {
     return plugin.ready()
-        && plugin.module("inventory")
+        && plugin.allows("inventory", s.viewer)
         && s.viewer.isOnline()
         && s.target.isOnline()
         && !s.viewer.isDead()
@@ -81,6 +81,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
   }
 
   public void open(Player viewer, Player target, boolean editing) {
+    plugin.requireAccess("inventory", viewer);
     if (viewer.equals(target)) throw new IllegalArgumentException("inventory.self");
     var s = new Session(viewer, target, editing);
     if (!allowed(s)) throw new IllegalArgumentException("errors.permission");

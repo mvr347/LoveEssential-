@@ -1,0 +1,144 @@
+menus:
+  tab-editor-title:
+    title-key: tab-editor.title
+    size: 54
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+texts:
+  tab-editor:
+    title: <gold>Редактор TAB
+    header: <gold>Строки шапки
+    footer: <gold>Строки подвала
+    groups: <gold>Группы игроков
+    placeholders: <gold>Плейсхолдеры
+    sorting: <gold>Порядок игроков
+    nametag: <gold>Имена над игроками
+    sidebar: <gold>Строки боковой панели TAB
+    advanced: <gold>Все параметры модуля
+    lines-title: <gold>Строки TAB
+    lines-help: <gray>Каждая строка редактируется отдельно. Доступны MiniMessage, %PAPI% и <placeholder:id>. Пустая строка создаёт отступ.
+    line: <gold>Строка <white><index>
+    add-line: <gold>Добавить строку
+    line-title: <gold>Редактирование строки
+    text: <gold>Текст с цветами и плейсхолдерами
+    up: <gold>Поднять
+    down: <gold>Опустить
+    add-group: <gold>Создать группу
+    add-placeholder: <gold>Добавить плейсхолдер
+    groups-help: <gray>Группа с меньшим приоритетом побеждает. Пустые списки игроков и миров не ограничивают группу.
+    group-title: <gold>Настройка группы
+    id: <gold>Идентификатор
+    permission: <gold>Дополнительное право (пусто — всем)
+    priority: <gold>Приоритет (меньше — выше)
+    name: <gold>Формат имени
+    prefix: <gold>Префикс
+    suffix: <gold>Суффикс
+    players: <gold>Имена или UUID игроков через запятую
+    worlds: <gold>Миры через запятую
+    placeholder-title: <gold>Настройка плейсхолдера
+    placeholder-help: <gray>Используйте в строках как <placeholder:id>. Значение может содержать цвет, встроенные теги и %PAPI%.
+    enabled: <gold>Включено
+    visible: <gold>Видно имя
+    collision: <gold>Столкновения
+    nametag-help: <gray>Показ имён и столкновения игроков. Группы задают префикс, имя и суффикс; эти переключатели управляют самим отображением.
+    sorting-help: '<gray>Критерии проверяются по порядку: group, name, number:%плейсхолдер% или number-desc:%плейсхолдер%. Цвета здесь не используются.'
+    sort-rule: <gold>Критерий сортировки
+buttons:
+  tab-editor-title:
+    title-key: tab-editor.title
+    texture: ''
+  tab-editor-header:
+    title-key: tab-editor.header
+    texture: ''
+  tab-editor-footer:
+    title-key: tab-editor.footer
+    texture: ''
+  tab-editor-groups:
+    title-key: tab-editor.groups
+    texture: ''
+  tab-editor-placeholders:
+    title-key: tab-editor.placeholders
+    texture: ''
+  tab-editor-sorting:
+    title-key: tab-editor.sorting
+    texture: ''
+  tab-editor-nametag:
+    title-key: tab-editor.nametag
+    texture: ''
+  tab-editor-sidebar:
+    title-key: tab-editor.sidebar
+    texture: ''
+  tab-editor-advanced:
+    title-key: tab-editor.advanced
+    texture: ''
+  tab-editor-lines-title:
+    title-key: tab-editor.lines-title
+    texture: ''
+  tab-editor-line:
+    title-key: tab-editor.line
+    texture: ''
+  tab-editor-add-line:
+    title-key: tab-editor.add-line
+    texture: ''
+  tab-editor-line-title:
+    title-key: tab-editor.line-title
+    texture: ''
+  tab-editor-text:
+    title-key: tab-editor.text
+    texture: ''
+  tab-editor-up:
+    title-key: tab-editor.up
+    texture: ''
+  tab-editor-down:
+    title-key: tab-editor.down
+    texture: ''
+  tab-editor-add-group:
+    title-key: tab-editor.add-group
+    texture: ''
+  tab-editor-add-placeholder:
+    title-key: tab-editor.add-placeholder
+    texture: ''
+  tab-editor-group-title:
+    title-key: tab-editor.group-title
+    texture: ''
+  tab-editor-id:
+    title-key: tab-editor.id
+    texture: ''
+  tab-editor-permission:
+    title-key: tab-editor.permission
+    texture: ''
+  tab-editor-priority:
+    title-key: tab-editor.priority
+    texture: ''
+  tab-editor-name:
+    title-key: tab-editor.name
+    texture: ''
+  tab-editor-prefix:
+    title-key: tab-editor.prefix
+    texture: ''
+  tab-editor-suffix:
+    title-key: tab-editor.suffix
+    texture: ''
+  tab-editor-players:
+    title-key: tab-editor.players
+    texture: ''
+  tab-editor-worlds:
+    title-key: tab-editor.worlds
+    texture: ''
+  tab-editor-placeholder-title:
+    title-key: tab-editor.placeholder-title
+    texture: ''
+  tab-editor-enabled:
+    title-key: tab-editor.enabled
+    texture: ''
+  tab-editor-visible:
+    title-key: tab-editor.visible
+    texture: ''
+  tab-editor-collision:
+    title-key: tab-editor.collision
+    texture: ''

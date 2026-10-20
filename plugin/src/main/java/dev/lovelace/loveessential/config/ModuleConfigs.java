@@ -44,86 +44,196 @@ public final class ModuleConfigs {
     return y;
   }
 
+  public Path configFile(String module) {
+    return directory.resolve("modules/" + module + "/" + module + ".yml");
+  }
+
+  public Path guiFile(String module) {
+    return directory.resolve("modules/" + module + "/gui.yml");
+  }
+
   public synchronized YamlConfiguration load() throws Exception {
-    Files.createDirectories(directory.resolve("modules"));
-    Path mainFile = directory.resolve("config.yml");
-    var original = read(mainFile);
-    var core = read(mainFile);
-    fill(core, resource("config.yml"));
-    var modules = new LinkedHashMap<String, YamlConfiguration>();
-    boolean migrated = core.contains("modules") || core.contains("actions");
-    for (String id : LoveEssentialPlugin.MODULES.stream().sorted().toList()) {
-      var module = read(directory.resolve("modules/" + id + ".yml"));
-      var legacy = new YamlConfiguration();
-      var section = original.getConfigurationSection(prefix(id));
-      if (section != null) {
-        copy(section, legacy, "");
-        migrated = true;
+    synchronized (ModuleConfigs.class) {
+      Path mainFile = directory.resolve("config.yml");
+      var original = read(mainFile);
+      var core = read(mainFile);
+      fill(core, resource("config.yml"));
+      var modules = new LinkedHashMap<String, YamlConfiguration>();
+      var guis = new LinkedHashMap<String, YamlConfiguration>();
+      var oldFiles = new ArrayList<Path>();
+      var oldLang = read(directory.resolve("lang.yml"));
+      boolean migrated = core.contains("modules") || core.contains("actions");
+      for (String id : LoveEssentialPlugin.MODULES.stream().sorted().toList()) {
+        var module = read(configFile(id));
+        Path oldFile = directory.resolve("modules/" + id + ".yml");
+        var legacy = read(oldFile);
+        if (Files.exists(oldFile)) oldFiles.add(oldFile);
+        var section = original.getConfigurationSection(prefix(id));
+        if (section != null) {
+          fill(legacy, section);
+          migrated = true;
+        }
+        if (original.contains("modules." + id) && !legacy.contains("enabled"))
+          legacy.set("enabled", original.get("modules." + id));
+        if (id.equals("npc") && original.isConfigurationSection("actions")) {
+          var actions = new YamlConfiguration();
+          copy(original.getConfigurationSection("actions"), actions, "actions.");
+          fill(legacy, actions);
+        }
+        fill(module, legacy);
+        var gui = read(guiFile(id));
+        if (module.isConfigurationSection("gui")) fill(gui, module.getConfigurationSection("gui"));
+        module.set("gui", null);
+        if (id.equals("profile"))
+          for (String key : List.of("textures", "cards", "adaptation-cards")) {
+            if (module.contains(key) && !gui.contains(key)) gui.set(key, module.get(key));
+            module.set(key, null);
+          }
+        var guiDefaults = resource("modules/" + id + "/gui.yml");
+        // The first migration retains customized legacy language entries.
+        if (!Files.exists(guiFile(id))) {
+          var textDefaults = guiDefaults.getConfigurationSection("texts");
+          if (textDefaults != null)
+            for (String key : textDefaults.getKeys(true))
+              if (!textDefaults.isConfigurationSection(key)
+                  && oldLang.contains(key)
+                  && !gui.contains("texts." + key)) gui.set("texts." + key, oldLang.get(key));
+        }
+        fill(gui, guiDefaults);
+        if (id.equals("tab")) {
+          module.set("engine", null);
+          module.set("external", null);
+          inlineTab(module, oldLang);
+        }
+        var moduleDefaults = resource("modules/" + id + "/" + id + ".yml");
+        var defaultsTexts = moduleDefaults.getConfigurationSection("texts");
+        if (!Files.exists(configFile(id)) && defaultsTexts != null)
+          for (String key : defaultsTexts.getKeys(true))
+            if (!defaultsTexts.isConfigurationSection(key)
+                && oldLang.contains(key)
+                && !module.contains("texts." + key)) module.set("texts." + key, oldLang.get(key));
+        fill(module, moduleDefaults);
+        if (!(module.get("enabled") instanceof Boolean))
+          throw new IllegalArgumentException("errors.config");
+        guis.put(id, gui);
+        module.createSection("gui", (Map<String, Object>) snapshot(gui));
+        modules.put(id, module);
+        core.set(prefix(id), null);
       }
-      if (original.contains("modules." + id)) legacy.set("enabled", original.get("modules." + id));
-      if (id.equals("npc") && original.isConfigurationSection("actions"))
-        copy(original.getConfigurationSection("actions"), legacy, "actions.");
-      fill(module, legacy);
-      fill(module, resource("modules/" + id + ".yml"));
-      if (!(module.get("enabled") instanceof Boolean))
-        throw new IllegalArgumentException("errors.config");
-      modules.put(id, module);
-      core.set(prefix(id), null);
+      core.set("modules", null);
+      core.set("actions", null);
+      core.set("config-version", 4);
+      var merged = merge(core, modules);
+      LoveEssentialPlugin.validateConfig(merged);
+      if (migrated && Files.exists(mainFile)) backup(mainFile, ".pre-modules.bak");
+      for (var entry : modules.entrySet()) {
+        entry.getValue().set("gui", null);
+        writeIfChanged(configFile(entry.getKey()), entry.getValue());
+        writeIfChanged(guiFile(entry.getKey()), guis.get(entry.getKey()));
+      }
+      writeIfChanged(mainFile, core);
+      for (Path old : oldFiles) {
+        backup(old, ".pre-folders.bak");
+        Files.delete(old);
+      }
+      return merged;
     }
-    core.set("modules", null);
-    core.set("actions", null);
-    core.set("config-version", 3);
-    var merged = merge(core, modules);
-    LoveEssentialPlugin.validateConfig(merged);
-    if (migrated && Files.exists(mainFile)) {
-      Path backup = directory.resolve("config.yml.pre-modules.bak");
-      if (!Files.exists(backup)) Files.copy(mainFile, backup);
+  }
+
+  private void inlineTab(YamlConfiguration module, YamlConfiguration legacyLanguage)
+      throws Exception {
+    var defaults = resource("lang.yml");
+    for (String path : List.copyOf(module.getKeys(true)))
+      if (path.endsWith("-key") && module.isString(path)) {
+        String local = path.substring(0, path.length() - 4);
+        if (module.contains(local)) continue;
+        String key = module.getString(path, "");
+        Object value = legacyLanguage.contains(key) ? legacyLanguage.get(key) : defaults.get(key);
+        if (value != null)
+          module.set(
+              local,
+              (local.equals("header-footer.header") || local.equals("header-footer.footer"))
+                      && value instanceof String text
+                  ? Arrays.asList(text.split("\n", -1))
+                  : value);
+      }
+    if (!module.contains("sidebar.lines") && module.contains("sidebar.line-keys")) {
+      var lines = new ArrayList<String>();
+      for (String key : module.getStringList("sidebar.line-keys"))
+        lines.add(legacyLanguage.getString(key, defaults.getString(key, "")));
+      module.set("sidebar.lines", lines);
     }
-    // All files were parsed and validated before the first write. Existing module values win.
-    for (var e : modules.entrySet())
-      writeIfChanged(directory.resolve("modules/" + e.getKey() + ".yml"), e.getValue());
-    writeIfChanged(mainFile, core);
-    return merged;
+  }
+
+  private static void backup(Path file, String suffix) throws IOException {
+    Path target = file.resolveSibling(file.getFileName() + suffix);
+    if (!Files.exists(target)) Files.copy(file, target);
+  }
+
+  public static Object snapshot(Object value) {
+    if (value instanceof ConfigurationSection section) {
+      var result = new LinkedHashMap<String, Object>();
+      for (String key : section.getKeys(false)) result.put(key, snapshot(section.get(key)));
+      return result;
+    }
+    if (value instanceof Map<?, ?> map) {
+      var result = new LinkedHashMap<String, Object>();
+      map.forEach((key, v) -> result.put(key.toString(), snapshot(v)));
+      return result;
+    }
+    if (value instanceof List<?> list) return list.stream().map(ModuleConfigs::snapshot).toList();
+    return value;
   }
 
   public synchronized YamlConfiguration update(
       String module, String path, Object expected, Object value) throws Exception {
-    if (!LoveEssentialPlugin.MODULES.contains(module) || path.isBlank() || path.equals("enabled"))
-      throw new IllegalArgumentException("errors.config");
-    var merged = load();
-    Path file = directory.resolve("modules/" + module + ".yml");
-    var y = read(file);
-    if (!Objects.equals(y.get(path), expected))
-      throw new IllegalArgumentException("errors.conflict");
-    if (y.isConfigurationSection(path)) throw new IllegalArgumentException("errors.config");
-    y.set(path, value);
-    merged.set(runtimePath(module, path), value);
-    LoveEssentialPlugin.validateConfig(merged);
-    Files.copy(
-        file,
-        file.resolveSibling(file.getFileName() + ".bak"),
-        StandardCopyOption.REPLACE_EXISTING);
-    writeIfChanged(file, y);
-    return load();
+    synchronized (ModuleConfigs.class) {
+      if (!LoveEssentialPlugin.MODULES.contains(module) || path.isBlank() || path.equals("enabled"))
+        throw new IllegalArgumentException("errors.config");
+      var merged = load();
+      boolean gui = path.startsWith("gui.");
+      Path file = gui ? guiFile(module) : configFile(module);
+      String local = gui ? path.substring(4) : path;
+      if (local.isBlank()) throw new IllegalArgumentException("errors.config");
+      var y = read(file);
+      if (!Objects.equals(snapshot(y.get(local)), snapshot(expected)))
+        throw new IllegalArgumentException("errors.conflict");
+      if (y.isConfigurationSection(local) && !(value instanceof Map<?, ?>))
+        throw new IllegalArgumentException("errors.config");
+      y.set(local, value);
+      merged.set(runtimePath(module, path), value);
+      var candidate = new YamlConfiguration();
+      candidate.loadFromString(merged.saveToString());
+      LoveEssentialPlugin.validateConfig(candidate);
+      Files.copy(
+          file,
+          file.resolveSibling(file.getFileName() + ".bak"),
+          StandardCopyOption.REPLACE_EXISTING);
+      writeIfChanged(file, y);
+      return load();
+    }
   }
 
-  /** Legacy saveConfig callers can persist runtime changes without rebuilding a monolithic file. */
   public synchronized void save(ConfigurationSection runtime) throws Exception {
-    var core = new YamlConfiguration();
-    copy(runtime, core, "");
-    var modules = new LinkedHashMap<String, YamlConfiguration>();
-    for (String id : LoveEssentialPlugin.MODULES) {
-      var y = view(runtime, id);
-      y.set("enabled", runtime.getBoolean("modules." + id, true));
-      modules.put(id, y);
-      core.set(prefix(id), null);
+    synchronized (ModuleConfigs.class) {
+      LoveEssentialPlugin.validateConfig(runtime);
+      var core = new YamlConfiguration();
+      copy(runtime, core, "");
+      for (String id : LoveEssentialPlugin.MODULES) {
+        var module = view(runtime, id);
+        var gui = new YamlConfiguration();
+        if (module.isConfigurationSection("gui"))
+          copy(module.getConfigurationSection("gui"), gui, "");
+        module.set("gui", null);
+        module.set("enabled", runtime.getBoolean("modules." + id, true));
+        writeIfChanged(configFile(id), module);
+        writeIfChanged(guiFile(id), gui);
+        core.set(prefix(id), null);
+      }
+      core.set("modules", null);
+      core.set("actions", null);
+      writeIfChanged(directory.resolve("config.yml"), core);
     }
-    core.set("modules", null);
-    core.set("actions", null);
-    LoveEssentialPlugin.validateConfig(runtime);
-    for (var e : modules.entrySet())
-      writeIfChanged(directory.resolve("modules/" + e.getKey() + ".yml"), e.getValue());
-    writeIfChanged(directory.resolve("config.yml"), core);
   }
 
   public static YamlConfiguration view(ConfigurationSection runtime, String id) {
@@ -155,7 +265,20 @@ public final class ModuleConfigs {
   }
 
   private static void fill(YamlConfiguration target, ConfigurationSection defaults) {
+    var preserve =
+        List.of(
+                "groups",
+                "placeholders",
+                "catalog",
+                "presets",
+                "users",
+                "worlds",
+                "header-footer.profiles")
+            .stream()
+            .filter(target::contains)
+            .toList();
     for (String key : defaults.getKeys(true)) {
+      if (preserve.stream().anyMatch(root -> key.startsWith(root + "."))) continue;
       if (defaults.isConfigurationSection(key)
           && target.contains(key)
           && !target.isConfigurationSection(key))

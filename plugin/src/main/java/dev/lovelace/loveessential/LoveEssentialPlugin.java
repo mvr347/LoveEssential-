@@ -71,6 +71,21 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.content.ContentLibrary content;
   private dev.lovelace.loveessential.content.ContentMenus contentMenus;
   private dev.lovelace.loveessential.content.StarterItems starter;
+  private dev.lovelace.loveessential.module.ModulePolicy modulePolicy;
+
+  public boolean environmentAllows(String module, org.bukkit.entity.Player p) {
+    return modulePolicy == null ? module(module) : modulePolicy.environmentAllowed(module, p);
+  }
+
+  public boolean allows(String module, org.bukkit.entity.Player p) {
+    return modulePolicy == null ? module(module) : modulePolicy.allowed(module, p);
+  }
+
+  public void requireAccess(String module, org.bukkit.entity.Player p) {
+    if (modulePolicy != null) modulePolicy.require(module, p);
+    else if (!module(module)) throw new IllegalArgumentException("errors.module-disabled");
+  }
+
   private Extensions extensions;
   private TabModule tab;
   private LoveExpansion expansion;
@@ -105,6 +120,36 @@ public class LoveEssentialPlugin extends JavaPlugin {
   public CompletableFuture<Void> editSetting(
       String module, String path, Object expected, Object value) {
     return changeSettings(() -> configFiles.update(module, path, expected, value));
+  }
+
+  public CompletableFuture<Void> editSection(
+      String module, String path, Map<String, Object> value) {
+    Object expected =
+        dev.lovelace.loveessential.config.ModuleConfigs.snapshot(
+            getConfig()
+                .get(dev.lovelace.loveessential.config.ModuleConfigs.runtimePath(module, path)));
+    return editSetting(module, path, expected, value);
+  }
+
+  /** Export during startup without restarting modules that are still loading. */
+  public CompletableFuture<Void> exportSection(
+      String module, String path, Object expected, Map<String, Object> value) {
+    return CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                return configFiles.update(module, path, expected, value);
+              } catch (Exception error) {
+                throw new CompletionException(error);
+              }
+            },
+            io)
+        .thenCompose(
+            candidate ->
+                main.<Void>call(
+                    () -> {
+                      settings = candidate;
+                      return null;
+                    }));
   }
 
   private record Loaded(SqliteStore store, Lang lang) {}
@@ -184,6 +229,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
   }
 
   private void setup() {
+    dev.lovelace.loveessential.gui.MenuStyle.configure(
+        new dev.lovelace.loveessential.gui.GuiSettings(this, lang));
     love = new LoveBridge();
     conditions = new ConditionEngine(love);
     actions = new ActionEngine(this, lang, love);
@@ -192,7 +239,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     dialogs = new DialogService(this, npcs, conditions, actions, lang, store, main, love);
     npcs.dialogs(dialogs);
     wizard = new NpcWizard(this, main, store, lang, npcs, love);
-    gameplay = new Gameplay(this, main, store, lang, love, this::module);
+    gameplay = new Gameplay(this, main, store, lang, love, this::module, actions);
+    modulePolicy = new dev.lovelace.loveessential.module.ModulePolicy(this, love, gameplay, lang);
     placeholders = new Placeholders(lang, love, gameplay::afk);
     gameplay.placeholders(placeholders);
     gameplay.holograms().setup(placeholders, actions);
@@ -246,9 +294,13 @@ public class LoveEssentialPlugin extends JavaPlugin {
         new Extensions(
             this, main, store, lang, love, conditions, actions, content, tab, placeholders);
     extensions.ui.beforeShow(menus::clearInput);
+    menus.nativeDialogs(extensions.ui);
+    profiles.nativeDialogs(extensions.ui);
     extensions.sidebar.moduleSettings(p -> menus.settings(p, "scoreboard", "", 0));
     menus.scoreboardEditor(extensions.sidebar::settings);
+    extensions.tabSettings.advanced = p -> menus.settings(p, "tab", "", 0);
     dialogs.nativeDialogs(extensions.ui);
+    gameplay.portals().ui(extensions.ui, content, p -> menus.modules(p));
     gameplay.motd(extensions.windows::motd);
     var commands =
         new Commands(
@@ -427,12 +479,17 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       extensions.refresh();
                       return null;
                     }))
+        .thenCompose(v -> main.call(() -> extensions.sidebar.reloadCatalog()))
+        .thenCompose(future -> future)
         .whenComplete((v, error) -> reloading.set(false));
   }
 
   public static void validateConfig(org.bukkit.configuration.ConfigurationSection config) {
-    if (!Set.of("native", "tab").contains(config.getString("tab.engine", "native")))
-      throw new IllegalArgumentException("errors.config");
+    for (String module : MODULES)
+      dev.lovelace.loveessential.module.ModulePolicy.validate(config, module);
+    var sidebarCatalog = config.getConfigurationSection("scoreboard.catalog");
+    if (sidebarCatalog != null && !sidebarCatalog.getKeys(false).isEmpty())
+      dev.lovelace.loveessential.scoreboard.SidebarConfig.read(sidebarCatalog);
     bounded(config, "storage.write-queue", 1, 65536);
     bounded(config, "crafting.max-recipes", 1, 10000);
     bounded(config, "worlds.max-worlds", 1, 256);
@@ -493,6 +550,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
     decimal(config, "traces.stride", .2, 3);
     decimal(config, "traces.view-distance", 4, 64);
     decimal(config, "sitride.ride-range", 1, 8);
+    bounded(config, "portal.max-portals", 1, 1024);
+    bounded(config, "portal.max-volume", 1, 262144);
+    bounded(config, "portal.default-cooldown-seconds", 0, 86400);
+    bounded(config, "portal.particles.refresh-ticks", 2, 1200);
+    bounded(config, "portal.particles.per-player-budget", 1, 1024);
+    bounded(config, "portal.particles.per-portal-budget", 1, 256);
+    bounded(config, "portal.particles.creation-ticks", 0, 1200);
+    decimal(config, "portal.particles.view-distance", 4, 96);
     if (config.contains("traces.color")
         && !config.getString("traces.color", "").matches("[0-9a-fA-F]{6}"))
       throw new IllegalArgumentException("errors.config");

@@ -41,7 +41,6 @@ public final class TeleportService {
     }
     UUID token = UUID.randomUUID();
     pending.put(p.getUniqueId(), token);
-    Position before = Position.of(p.getLocation());
     at.getWorld()
         .getChunkAtAsync(at.getBlockX() >> 4, at.getBlockZ() >> 4, false)
         .whenComplete(
@@ -65,54 +64,21 @@ public final class TeleportService {
                         lang.send(p, "errors.unsafe");
                         return;
                       }
-                      store
-                          .save(
-                              "back",
-                              p.getUniqueId().toString(),
-                              0,
-                              before,
-                              p.getUniqueId().toString())
-                          .exceptionallyCompose(
-                              e ->
-                                  store
-                                      .get("back", p.getUniqueId().toString(), Position.class)
-                                      .thenCompose(
-                                          old ->
-                                              store.save(
-                                                  "back",
-                                                  p.getUniqueId().toString(),
-                                                  old.orElseThrow().revision(),
-                                                  before,
-                                                  p.getUniqueId().toString())))
+                      if (!pending.remove(p.getUniqueId(), token)) return;
+                      if (!safe.getWorld()
+                          .isChunkLoaded(safe.getBlockX() >> 4, safe.getBlockZ() >> 4)) {
+                        lang.send(p, "errors.teleport-blocked");
+                        return;
+                      }
+                      p.teleportAsync(safe)
                           .whenComplete(
-                              (rev, saveError) ->
+                              (ok, failure) ->
                                   main.execute(
                                       () -> {
-                                        if (!pending.remove(p.getUniqueId(), token)
-                                            || !p.isOnline()) return;
-                                        if (saveError != null) {
-                                          lang.send(p, "errors.storage");
-                                          return;
-                                        }
-                                        if (!love.authenticated(p)
-                                            || love.combat(p)
-                                            || !love.territorialAccess(p, safe)
-                                            || !safe.getWorld()
-                                                .isChunkLoaded(
-                                                    safe.getBlockX() >> 4, safe.getBlockZ() >> 4)) {
+                                        if (!p.isOnline()) return;
+                                        if (failure != null || !Boolean.TRUE.equals(ok))
                                           lang.send(p, "errors.teleport-blocked");
-                                          return;
-                                        }
-                                        p.teleportAsync(safe)
-                                            .thenAccept(
-                                                ok ->
-                                                    main.execute(
-                                                        () -> {
-                                                          if (ok && p.isOnline()) {
-                                                            lang.send(p, "teleport.done");
-                                                            love.stat(p, "essential.teleports", 1);
-                                                          }
-                                                        }));
+                                        else love.stat(p, "essential.teleports", 1);
                                       }));
                     }));
   }

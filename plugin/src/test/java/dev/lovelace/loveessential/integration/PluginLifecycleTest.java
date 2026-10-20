@@ -15,6 +15,13 @@ import org.mockbukkit.mockbukkit.entity.PlayerMock;
 class PluginLifecycleTest {
   ServerMock server;
   LoveEssentialPlugin plugin;
+  dev.lovelace.loveessential.dialog.NativeDialogs dialogs;
+  final java.util.Map<java.util.UUID, dev.lovelace.loveessential.dialog.NativeDialogs.Form> forms =
+      new java.util.HashMap<>();
+
+  void respond(PlayerMock p, String button, java.util.Map<String, String> values) {
+    assertTrue(dialogs.respond(p, forms.get(p.getUniqueId()).token(), button, values));
+  }
 
   @BeforeEach
   void setup() throws Exception {
@@ -23,6 +30,8 @@ class PluginLifecycleTest {
     MockBukkit.createMockPlugin("LoveCore");
     plugin = MockBukkit.load(LoveEssentialPlugin.class);
     waitFor(plugin::ready);
+    dialogs = internal("extensions", dev.lovelace.loveessential.Extensions.class).ui;
+    dialogs.presenter((player, form) -> forms.put(player.getUniqueId(), form));
     plugin.getConfig().set("npc.max-active", 0);
     await(plugin.module("tab", false));
     await(plugin.module("scoreboard", false));
@@ -54,6 +63,64 @@ class PluginLifecycleTest {
   }
 
   @Test
+  void flatModuleMigratesWithBackupAndGuiHasCurrentEditableTemplates() throws Exception {
+    var directory = plugin.getDataFolder().toPath();
+    java.nio.file.Files.delete(directory.resolve("modules/home/home.yml"));
+    java.nio.file.Files.delete(directory.resolve("modules/home/gui.yml"));
+    String legacy =
+        "enabled: true\n"
+            + "default-limit: 19\n"
+            + "gui:\n"
+            + "  menus:\n"
+            + "    example:\n"
+            + "      title-key: common.back\n";
+    java.nio.file.Files.writeString(directory.resolve("modules/home.yml"), legacy);
+    await(plugin.reloadSettings());
+    assertEquals(19, plugin.getConfig().getInt("home.default-limit"));
+    assertEquals(
+        legacy,
+        java.nio.file.Files.readString(directory.resolve("modules/home.yml.pre-folders.bak")));
+    assertFalse(java.nio.file.Files.exists(directory.resolve("modules/home.yml")));
+    assertEquals("common.back", plugin.getConfig().getString("home.gui.menus.example.title-key"));
+    var gui =
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+            directory.resolve("modules/profile/gui.yml").toFile());
+    assertTrue(gui.contains("menus.profile-menu-title.buttons.12"));
+    assertTrue(gui.getString("texts.profile-menu.settings").contains("Настройки"));
+    var p = admin();
+    String previous = plugin.getConfig().getString("profile.gui.texts.profile-menu.settings");
+    await(
+        plugin.editSetting(
+            "profile", "gui.texts.profile-menu.settings", previous, "<gold>Мои параметры"));
+    server.dispatchCommand(p, "profile");
+    assertEquals(12, itemNamed(p, "Мои параметры"));
+    assertFalse(
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                directory.resolve("modules/profile/profile.yml").toFile())
+            .contains("gui"));
+  }
+
+  @Test
+  void moduleAccessStatesAreSelectedInGuiAndPersistOnlyInModuleFile() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le module home");
+    click(p, itemNamed(p, "Ограничения использования"));
+    click(p, itemNamed(p, "Запрещённые состояния"));
+    click(p, 50);
+    click(p, itemNamed(p, "бой"));
+    waitFor(() -> plugin.getConfig().getStringList("home.access.denied-states").contains("combat"));
+    var folder = plugin.getDataFolder().toPath();
+    var saved =
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+            folder.resolve("modules/home/home.yml").toFile());
+    assertEquals(java.util.List.of("combat"), saved.getStringList("access.denied-states"));
+    assertFalse(
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                folder.resolve("config.yml").toFile())
+            .contains("home"));
+  }
+
+  @Test
   void registersApiAndCreatesPersistentNpcThroughWizard() throws Exception {
     PlayerMock p = admin();
     assertTrue(server.dispatchCommand(p, "npc wizard"));
@@ -74,7 +141,8 @@ class PluginLifecycleTest {
     assertEquals(1, n.route().points().size());
     assertTrue(n.revision() > 0);
     String text =
-        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"));
+        java.nio.file.Files.readString(
+            plugin.getDataFolder().toPath().resolve("modules/npc/npc.yml"));
     assertTrue(text.contains("Страж ворот"));
     assertTrue(
         java.nio.file.Files.exists(plugin.getDataFolder().toPath().resolve("loveessential.db")));
@@ -140,7 +208,7 @@ class PluginLifecycleTest {
   }
 
   @Test
-  void allCommandsAreDiscoverableUnderLeAndHomesRoundTrip() throws Exception {
+  void allCommandsAreDiscoverableUnderLeAndHomeIsSingle() throws Exception {
     var p = admin();
     var names = suggestions(p, "loveessential", "");
     for (String name : plugin.getDescription().getCommands().keySet())
@@ -154,11 +222,26 @@ class PluginLifecycleTest {
     assertTrue(
         suggestions(p, "loveessential", "npc", "set", "interaction-mode", "")
             .contains("RIGHT_CLICK"));
-    server.dispatchCommand(p, "le sethome cabin");
-    waitFor(() -> suggestions(p, "loveessential", "home", "").contains("cabin"));
-    assertTrue(suggestions(p, "home", "").contains("cabin"));
-    server.dispatchCommand(p, "le удалитьдом cabin");
-    waitFor(() -> !suggestions(p, "home", "").contains("cabin"));
+    server.dispatchCommand(p, "le sethome");
+    var store = internal("store", dev.lovelace.loveessential.storage.SqliteStore.class);
+    await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    assertTrue(
+        await(
+                store.get(
+                    "place",
+                    "home:" + p.getUniqueId() + ":default",
+                    dev.lovelace.loveessential.module.Gameplay.Place.class))
+            .isPresent());
+    assertTrue(suggestions(p, "home", "").isEmpty());
+    server.dispatchCommand(p, "le удалитьдом");
+    await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    assertTrue(
+        await(
+                store.get(
+                    "place",
+                    "home:" + p.getUniqueId() + ":default",
+                    dev.lovelace.loveessential.module.Gameplay.Place.class))
+            .isEmpty());
   }
 
   @Test
@@ -167,7 +250,7 @@ class PluginLifecycleTest {
     server.dispatchCommand(p, "le npc");
     assertLayout(p);
     click(p, 50); // create prompt
-    server.dispatchCommand(p, "le input menu_guard");
+    respond(p, "save", java.util.Map.of("value", "menu_guard"));
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
@@ -223,7 +306,7 @@ class PluginLifecycleTest {
     assertEquals(
         7,
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                folder.resolve("modules/home.yml").toFile())
+                folder.resolve("modules/home/home.yml").toFile())
             .getInt("default-limit"));
     assertThrows(
         java.util.concurrent.ExecutionException.class,
@@ -236,8 +319,9 @@ class PluginLifecycleTest {
   @Test
   void legacyConfigMigratesWithoutLosingValuesAndKeepsBackup() throws Exception {
     var folder = plugin.getDataFolder().toPath();
-    try (var files = java.nio.file.Files.list(folder.resolve("modules"))) {
-      for (var path : files.toList()) java.nio.file.Files.delete(path);
+    try (var files = java.nio.file.Files.walk(folder.resolve("modules"))) {
+      for (var path : files.sorted(java.util.Comparator.reverseOrder()).toList())
+        java.nio.file.Files.delete(path);
     }
     String legacy =
         "config-version: 2\n"
@@ -259,7 +343,7 @@ class PluginLifecycleTest {
     await(plugin.reloadSettings());
     assertEquals(17, plugin.getConfig().getInt("home.default-limit"));
     assertEquals(25, plugin.getConfig().getInt("tab.refresh-ticks"));
-    assertEquals("preserved", plugin.getConfig().getString("tab.external.config.custom-value"));
+    assertNull(plugin.getConfig().getString("tab.external.config.custom-value"));
     assertEquals(42, plugin.getConfig().getInt("actions.max-economy-amount"));
     assertTrue(plugin.module("traces"));
     assertEquals(
@@ -273,7 +357,7 @@ class PluginLifecycleTest {
   @Test
   void malformedModuleFileDoesNotReplaceActiveConfiguration() throws Exception {
     var previous = plugin.getConfig();
-    var file = plugin.getDataFolder().toPath().resolve("modules/tab.yml");
+    var file = plugin.getDataFolder().toPath().resolve("modules/tab/tab.yml");
     String original = java.nio.file.Files.readString(file);
     String broken = "engine: [invalid yaml";
     java.nio.file.Files.writeString(file, broken);
@@ -282,7 +366,7 @@ class PluginLifecycleTest {
     assertSame(previous, plugin.getConfig());
     assertEquals(broken, java.nio.file.Files.readString(file));
     java.nio.file.Files.writeString(file, original);
-    var npcFile = plugin.getDataFolder().toPath().resolve("modules/npc.yml");
+    var npcFile = plugin.getDataFolder().toPath().resolve("modules/npc/npc.yml");
     String wrongType = "enabled: true\npathfinding: invalid-section\n";
     java.nio.file.Files.writeString(npcFile, wrongType);
     assertThrows(
@@ -307,7 +391,7 @@ class PluginLifecycleTest {
   @Test
   void tabBooleanCanBeEditedFromGuiAndSurvivesReload() throws Exception {
     var p = admin();
-    server.dispatchCommand(p, "le tab");
+    server.dispatchCommand(p, "le module tab");
     var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
     int slot = -1;
     var inventory = p.getOpenInventory().getTopInventory();
@@ -326,7 +410,7 @@ class PluginLifecycleTest {
                 && p.getOpenInventory().getTopInventory().getSize() == 54);
     await(plugin.reloadSettings());
     assertFalse(plugin.getConfig().getBoolean("tab.sorting-enabled"));
-    var file = plugin.getDataFolder().toPath().resolve("modules/tab.yml");
+    var file = plugin.getDataFolder().toPath().resolve("modules/tab/tab.yml");
     assertFalse(
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile())
             .getBoolean("sorting-enabled"));
@@ -602,15 +686,8 @@ class PluginLifecycleTest {
             .map(item -> String.valueOf(item.getItemMeta().getLore()))
             .collect(java.util.stream.Collectors.joining());
     assertFalse(lore.contains("Координаты:"));
-    assertTrue(
-        lore.contains("Адаптации")
-            || viewer
-                .getOpenInventory()
-                .getTopInventory()
-                .getItem(14)
-                .getItemMeta()
-                .getDisplayName()
-                .contains("Адаптации"));
+    assertTrue(lore.contains("Общая статистика"));
+    assertFalse(lore.contains("Нанесено урона"));
     server.dispatchCommand(viewer, "le profile activity");
     assertFalse(lore.contains("<health>"));
     viewer.setOp(true);
@@ -770,8 +847,8 @@ class PluginLifecycleTest {
     assertTrue(nick.settings(other).name().isEmpty());
     var permission = p.addAttachment(plugin, "loveessential.nick.gradient", false);
     server.dispatchCommand(p, "le nick gradient red blue");
-    assertTrue(nick.settings(p).colors().isEmpty());
-    assertFalse(suggestions(p, "loveessential", "nick", "").contains("gradient"));
+    waitFor(() -> nick.settings(p).colors().size() == 2);
+    assertTrue(suggestions(p, "loveessential", "nick", "").contains("gradient"));
     p.removeAttachment(permission);
     var admin = admin();
     nickReady(admin);
@@ -790,7 +867,7 @@ class PluginLifecycleTest {
     server.dispatchCommand(p, "le nick");
     assertLayout(p);
     click(p, 19);
-    server.dispatchCommand(p, "le input Princess");
+    respond(p, "save", java.util.Map.of("value", "Princess"));
     waitFor(() -> nick.settings(p).name().equals("Princess"));
     assertLayout(p);
     click(p, 21);
@@ -974,7 +1051,7 @@ class PluginLifecycleTest {
     String second = cancelButton(p);
     assertNotEquals(first, second);
     server.dispatchCommand(p, first); // old button must not remove the new prompt
-    server.dispatchCommand(p, "le input <gold>Универсальный");
+    ChatInput.submit(server, p, "<gold>Универсальный");
     assertLayout(p);
     server.dispatchCommand(p, "le npc publish");
     var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
@@ -999,12 +1076,12 @@ class PluginLifecycleTest {
     assertTrue(messages.contains("Радиус взгляда"));
     assertTrue(messages.contains("Пример ввода"));
     assertTrue(messages.contains("1–64"));
-    server.dispatchCommand(p, "le input nonsense");
+    ChatInput.submit(server, p, "nonsense");
     String cancel = cancelButton(p);
     server.dispatchCommand(p, cancel);
     assertLayout(p);
     click(p, itemNamed(p, "Радиус взгляда"));
-    server.dispatchCommand(p, "le input 12");
+    ChatInput.submit(server, p, "12");
     assertLayout(p);
     server.dispatchCommand(p, "le npc publish");
     var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
@@ -1026,11 +1103,11 @@ class PluginLifecycleTest {
             p.getOpenInventory().getTopInventory() != null
                 && p.getOpenInventory().getTopInventory().getSize() == 54);
     click(p, 50);
-    String command = cancelButton(p);
-    server.dispatchCommand(p, command);
+    assertNotNull(forms.get(p.getUniqueId()));
+    respond(p, "back", java.util.Map.of());
     assertLayout(p);
     click(p, 50);
-    server.dispatchCommand(p, "le input 8");
+    respond(p, "save", java.util.Map.of("value", "8"));
     waitFor(() -> plugin.getConfig().getInt("home.default-limit") == 8);
   }
 
@@ -1050,7 +1127,7 @@ class PluginLifecycleTest {
     click(p, itemNamed(p, "Точка 1"));
     assertLayout(p);
     click(p, itemNamed(p, "Ожидание в точке"));
-    server.dispatchCommand(p, "le input 40");
+    ChatInput.submit(server, p, "40");
     server.dispatchCommand(p, "le npc page 5");
     click(p, itemNamed(p, "Редактировать точку"));
     click(p, itemNamed(p, "Точка 2"));
@@ -1155,7 +1232,7 @@ class PluginLifecycleTest {
   }
 
   @Test
-  void moduleToggleAndEnginePickerPersistFromGui() throws Exception {
+  void moduleTogglePersistsAndTabHasOnlyNativeSettings() throws Exception {
     var p = admin();
     server.dispatchCommand(p, "le");
     int slot = itemNamed(p, "Дома");
@@ -1171,16 +1248,10 @@ class PluginLifecycleTest {
     assertTrue(toggle.isCancelled());
     waitFor(() -> !plugin.module("home"));
     server.dispatchCommand(p, "le tab");
-    click(p, itemNamed(p, "Движок списка игроков"));
     assertLayout(p);
-    click(p, itemNamed(p, "NEZNAMY"));
-    waitFor(() -> plugin.getConfig().getString("tab.engine").equals("tab"));
-    waitFor(
-        () ->
-            p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
+    assertNull(plugin.getConfig().get("tab.engine"));
     await(plugin.reloadSettings());
     assertFalse(plugin.module("home"));
-    assertEquals("tab", plugin.getConfig().getString("tab.engine"));
+    assertNull(plugin.getConfig().get("tab.engine"));
   }
 }

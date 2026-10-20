@@ -26,8 +26,6 @@ public final class Gameplay implements Listener, AutoCloseable {
     }
   }
 
-  private record Request(UUID sender, boolean here, long expires, String token) {}
-
   private final JavaPlugin plugin;
   private final MainThread main;
   private final SqliteStore store;
@@ -39,12 +37,11 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final Set<UUID> vanished = new HashSet<>(),
       loading = new HashSet<>(),
       manualAfk = new HashSet<>();
-  private final Map<UUID, Long> active = new HashMap<>(), portalCooldown = new HashMap<>();
-  private final Map<UUID, Request> requests = new HashMap<>();
+  private final Map<UUID, Long> active = new HashMap<>();
   private final Comfort comfort;
   private final Holograms hologramService;
+  private final dev.lovelace.loveessential.portal.Portals portals;
 
-  private final Map<UUID, Position> portalFirst = new HashMap<>();
   private BukkitTask task;
   private Placeholders placeholders;
   private long ticks;
@@ -55,7 +52,8 @@ public final class Gameplay implements Listener, AutoCloseable {
       SqliteStore store,
       Lang lang,
       LoveBridge love,
-      Predicate<String> enabled) {
+      Predicate<String> enabled,
+      dev.lovelace.loveessential.condition.ActionEngine actions) {
     this.plugin = plugin;
     this.main = main;
     this.store = store;
@@ -63,8 +61,15 @@ public final class Gameplay implements Listener, AutoCloseable {
     this.love = love;
     this.enabled = enabled;
     teleport = new TeleportService(plugin, main, store, lang, love);
+    portals =
+        new dev.lovelace.loveessential.portal.Portals(
+            (LoveEssentialPlugin) plugin, main, store, lang, love, teleport, actions);
     comfort = new Comfort((LoveEssentialPlugin) plugin, main, store, lang, love, this);
     hologramService = new Holograms((LoveEssentialPlugin) plugin, main, store, lang, love);
+  }
+
+  public dev.lovelace.loveessential.portal.Portals portals() {
+    return portals;
   }
 
   public Holograms holograms() {
@@ -86,7 +91,8 @@ public final class Gameplay implements Listener, AutoCloseable {
                       list.forEach(d -> places.put(d.id(), d));
                       return null;
                     }))
-        .thenCompose(v -> hologramService.load());
+        .thenCompose(v -> hologramService.load())
+        .thenCompose(v -> portals.load());
   }
 
   public void start() {
@@ -94,6 +100,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     for (var p : Bukkit.getOnlinePlayers()) loadPlayer(p, false);
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20, 20);
     comfort.start();
+    portals.start();
     hologramService.start();
   }
 
@@ -127,7 +134,9 @@ public final class Gameplay implements Listener, AutoCloseable {
                       loading.remove(p.getUniqueId());
                       if (Boolean.parseBoolean(v.orElse("false"))) vanished.add(p.getUniqueId());
                       applyVanish();
-                      if (announce && enabled.test("joinquit") && !vanished(p))
+                      if (announce
+                          && ((LoveEssentialPlugin) plugin).allows("joinquit", p)
+                          && !vanished(p))
                         for (var viewer : Bukkit.getOnlinePlayers())
                           if (viewer.canSee(p))
                             viewer.sendMessage(
@@ -150,6 +159,8 @@ public final class Gameplay implements Listener, AutoCloseable {
   }
 
   public List<String> names(Player p, String kind) {
+    if (kind.equals("portal"))
+      return portals.all().stream().map(SqliteStore.Document::id).sorted().toList();
     if (kind.equals("hologram"))
       return hologramService.all().stream().map(d -> d.value().id()).sorted().toList();
     String prefix = kind.equals("home") ? "home:" + p.getUniqueId() + ":" : kind + ":";
@@ -169,39 +180,26 @@ public final class Gameplay implements Listener, AutoCloseable {
     switch (cmd) {
       case "sethome" -> {
         check("home");
-        String id = home(p, name);
-        long count =
-            places.keySet().stream()
-                .filter(k -> k.startsWith("home:" + p.getUniqueId() + ":"))
-                .count();
-        int limit = plugin.getConfig().getInt("home.default-limit", 3);
-        for (int n : List.of(5, 10, 25, 100))
-          if (p.hasPermission("loveessential.home.limit." + n)) limit = n;
-        if (!places.containsKey(id) && count >= limit)
-          throw new IllegalArgumentException("errors.home-limit");
-        save(p, id, new Place(Position.of(p.getLocation()), Map.of(), List.of()));
+        ((LoveEssentialPlugin) plugin).requireAccess("home", p);
+        if (args.length != 0) throw new IllegalArgumentException("home.simple-usage");
+        save(p, home(p, "default"), new Place(Position.of(p.getLocation()), Map.of(), List.of()));
       }
       case "home" -> {
         check("home");
-        go(p, home(p, name));
+        ((LoveEssentialPlugin) plugin).requireAccess("home", p);
+        if (args.length != 0) throw new IllegalArgumentException("home.simple-usage");
+        var place = places.get(home(p, "default"));
+        if (place == null) {
+          lang.send(p, "home.none");
+          return;
+        }
+        teleport.teleport(p, place.value().position());
       }
       case "delhome" -> {
         check("home");
-        remove(p, home(p, name));
-      }
-      case "homes" -> {
-        check("home");
-        lang.send(
-            p,
-            "home.list",
-            Map.of(
-                "homes",
-                String.join(
-                    ", ",
-                    places.keySet().stream()
-                        .filter(k -> k.startsWith("home:" + p.getUniqueId() + ":"))
-                        .map(k -> k.substring(k.lastIndexOf(':') + 1))
-                        .toList())));
+        ((LoveEssentialPlugin) plugin).requireAccess("home", p);
+        if (args.length != 0) throw new IllegalArgumentException("home.simple-usage");
+        remove(p, home(p, "default"));
       }
       case "setspawn" -> {
         check("spawn");
@@ -210,79 +208,12 @@ public final class Gameplay implements Listener, AutoCloseable {
       }
       case "spawn" -> {
         check("spawn");
+        ((LoveEssentialPlugin) plugin).requireAccess("spawn", p);
         go(p, "spawn:" + name);
-      }
-      case "back" -> {
-        check("teleport");
-        store
-            .get("back", p.getUniqueId().toString(), Position.class)
-            .whenComplete(
-                (v, error) ->
-                    main.execute(
-                        () -> {
-                          if (error != null) {
-                            lang.send(p, "errors.storage");
-                            return;
-                          }
-                          if (v.isPresent()) teleport.teleport(p, v.get().value());
-                          else lang.send(p, "errors.not-found");
-                        }));
-      }
-      case "tpa", "tpahere" -> {
-        check("teleport");
-        var target = Bukkit.getPlayerExact(name);
-        if (target == null || !p.canSee(target) || target.equals(p) || !love.authenticated(target))
-          throw new IllegalArgumentException("errors.not-found");
-        requests.put(
-            target.getUniqueId(),
-            new Request(
-                p.getUniqueId(),
-                cmd.equals("tpahere"),
-                System.currentTimeMillis() + 60000,
-                UUID.randomUUID().toString()));
-        target.sendMessage(
-            lang.render(
-                    cmd.equals("tpahere") ? "chat.teleport-here" : "chat.teleport-request",
-                    Map.of("player", p.getName()))
-                .append(net.kyori.adventure.text.Component.space())
-                .append(
-                    lang.render("chat.accept")
-                        .clickEvent(
-                            net.kyori.adventure.text.event.ClickEvent.runCommand(
-                                "/loveessential:tpaccept "
-                                    + requests.get(target.getUniqueId()).token())))
-                .append(net.kyori.adventure.text.Component.space())
-                .append(
-                    lang.render("chat.deny")
-                        .clickEvent(
-                            net.kyori.adventure.text.event.ClickEvent.runCommand(
-                                "/loveessential:tpdeny "
-                                    + requests.get(target.getUniqueId()).token()))));
-        lang.send(p, "common.done");
-      }
-      case "tpaccept" -> {
-        check("teleport");
-        var request = requests.get(p.getUniqueId());
-        if (request != null && args.length > 0 && !request.token().equals(args[0]))
-          throw new IllegalArgumentException("errors.not-found");
-        requests.remove(p.getUniqueId());
-        if (request == null || request.expires() < System.currentTimeMillis())
-          throw new IllegalArgumentException("errors.not-found");
-        var sender = Bukkit.getPlayer(request.sender());
-        if (sender == null || !p.canSee(sender))
-          throw new IllegalArgumentException("errors.not-found");
-        if (request.here()) teleport.teleport(p, Position.of(sender.getLocation()));
-        else teleport.teleport(sender, Position.of(p.getLocation()));
-      }
-      case "tpdeny" -> {
-        var request = requests.get(p.getUniqueId());
-        if (request != null && args.length > 0 && !request.token().equals(args[0]))
-          throw new IllegalArgumentException("errors.not-found");
-        requests.remove(p.getUniqueId());
-        lang.send(p, "common.done");
       }
       case "vanish" -> {
         check("vanish");
+        ((LoveEssentialPlugin) plugin).requireAccess("vanish", p);
         if (!p.hasPermission("loveessential.vanish"))
           throw new IllegalArgumentException("errors.permission");
         boolean value = !vanished(p);
@@ -304,11 +235,13 @@ public final class Gameplay implements Listener, AutoCloseable {
       }
       case "afk" -> {
         check("afk");
+        ((LoveEssentialPlugin) plugin).requireAccess("afk", p);
         if (!manualAfk.add(p.getUniqueId())) manualAfk.remove(p.getUniqueId());
         lang.send(p, "afk.changed");
       }
       case "skin" -> {
         check("skin");
+        ((LoveEssentialPlugin) plugin).requireAccess("skin", p);
         String skin = name.equals("default") ? p.getName() : name;
         if (!skin.matches("[a-zA-Z0-9_]{1,16}")) throw new IllegalArgumentException("errors.input");
         var profile = Bukkit.createProfile(skin);
@@ -358,47 +291,32 @@ public final class Gameplay implements Listener, AutoCloseable {
   }
 
   public void portal(Player p, String op, String id) {
-    check("portal");
-    admin(p);
-    switch (op) {
-      case "pos1" -> {
-        portalFirst.put(p.getUniqueId(), Position.of(p.getLocation()));
-        lang.send(p, "common.done");
-      }
-      case "create" -> {
-        if (!id.isBlank() && !id.matches("[a-z0-9_-]{1,48}"))
-          throw new IllegalArgumentException("validation.id");
-        var first = portalFirst.get(p.getUniqueId());
-        if (first == null || !first.world().equals(p.getWorld().getUID()))
-          throw new IllegalArgumentException("errors.input");
-        Position second = Position.of(p.getLocation());
-        Map<String, String> options = new HashMap<>();
-        options.put("x2", Double.toString(second.x()));
-        options.put("y2", Double.toString(second.y()));
-        options.put("z2", Double.toString(second.z()));
-        if (id.isBlank())
-          id = "portal_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-        save(p, "portal:" + id, new Place(first, options, List.of()));
-      }
-      case "destination" -> {
-        var old = Objects.requireNonNull(places.get("portal:" + id));
-        var options = new HashMap<>(old.value().options());
-        options.put("destination", new com.google.gson.Gson().toJson(Position.of(p.getLocation())));
-        save(p, "portal:" + id, new Place(old.value().position(), options, List.of()));
-      }
-      case "delete" -> remove(p, "portal:" + id);
-      default -> throw new IllegalArgumentException("errors.input");
-    }
+    portals.command(p, id.isBlank() ? new String[] {op} : new String[] {op, id});
   }
 
   private void tick() {
     ticks += 20;
-    requests.values().removeIf(r -> r.expires() < System.currentTimeMillis());
     if (enabled.test("nightskip"))
       for (World w : Bukkit.getWorlds())
         if (w.getTime() > 12500 && w.getTime() < 23500) {
-          long eligible = w.getPlayers().stream().filter(p -> !vanished(p) && !afk(p)).count(),
-              sleeping = w.getPlayers().stream().filter(Player::isSleeping).count();
+          long
+              eligible =
+                  w.getPlayers().stream()
+                      .filter(
+                          p ->
+                              ((LoveEssentialPlugin) plugin).allows("nightskip", p)
+                                  && !vanished(p)
+                                  && !afk(p))
+                      .count(),
+              sleeping =
+                  w.getPlayers().stream()
+                      .filter(
+                          p ->
+                              ((LoveEssentialPlugin) plugin).allows("nightskip", p)
+                                  && !vanished(p)
+                                  && !afk(p)
+                                  && p.isSleeping())
+                      .count();
           if (sleeping > 0 && eligible > 0) {
             long extra =
                 (long)
@@ -413,7 +331,8 @@ public final class Gameplay implements Listener, AutoCloseable {
       long kick = plugin.getConfig().getLong("afk.kick-after-seconds", 0);
       if (kick > 0)
         for (var p : Bukkit.getOnlinePlayers())
-          if (!p.hasPermission("loveessential.afk.bypass")
+          if (((LoveEssentialPlugin) plugin).allows("afk", p)
+              && !p.hasPermission("loveessential.afk.bypass")
               && System.currentTimeMillis()
                       - active.getOrDefault(p.getUniqueId(), System.currentTimeMillis())
                   > kick * 1000) p.kick(lang.render("afk.kick"));
@@ -436,7 +355,8 @@ public final class Gameplay implements Listener, AutoCloseable {
                         return;
                       }
                       places.put(id, new SqliteStore.Document<>(id, rev, value));
-                      if (!id.startsWith("home:")) lang.send(p, "chat.saved");
+                      if (id.startsWith("home:")) lang.send(p, "home.point-set");
+                      else lang.send(p, "chat.saved");
                     }));
   }
 
@@ -489,14 +409,13 @@ public final class Gameplay implements Listener, AutoCloseable {
     var p = e.getPlayer();
     if (enabled.test("joinquit"))
       e.quitMessage(
-          vanished(p) ? null : lang.render("joinquit.quit", Map.of("player", p.getName())));
+          vanished(p) || !((LoveEssentialPlugin) plugin).allows("joinquit", p)
+              ? null
+              : lang.render("joinquit.quit", Map.of("player", p.getName())));
     vanished.remove(p.getUniqueId());
     loading.remove(p.getUniqueId());
     active.remove(p.getUniqueId());
     manualAfk.remove(p.getUniqueId());
-    requests.remove(p.getUniqueId());
-    portalCooldown.remove(p.getUniqueId());
-    portalFirst.remove(p.getUniqueId());
     teleport.forget(p);
   }
 
@@ -508,32 +427,6 @@ public final class Gameplay implements Listener, AutoCloseable {
     var p = e.getPlayer();
     active.put(p.getUniqueId(), System.currentTimeMillis());
     manualAfk.remove(p.getUniqueId());
-    if (enabled.test("portal")
-        && System.currentTimeMillis() - portalCooldown.getOrDefault(p.getUniqueId(), 0L) > 3000)
-      for (var entry : places.entrySet())
-        if (entry.getKey().startsWith("portal:")) {
-          var place = entry.getValue().value();
-          var a = place.position();
-          if (!a.world().equals(p.getWorld().getUID())
-              || !place.options().containsKey("destination")) continue;
-          double x2 = Double.parseDouble(place.options().get("x2")),
-              y2 = Double.parseDouble(place.options().get("y2")),
-              z2 = Double.parseDouble(place.options().get("z2"));
-          var at = p.getLocation();
-          if (at.getX() >= Math.min(a.x(), x2)
-              && at.getX() <= Math.max(a.x(), x2) + 1
-              && at.getY() >= Math.min(a.y(), y2)
-              && at.getY() <= Math.max(a.y(), y2) + 1
-              && at.getZ() >= Math.min(a.z(), z2)
-              && at.getZ() <= Math.max(a.z(), z2) + 1) {
-            portalCooldown.put(p.getUniqueId(), System.currentTimeMillis());
-            teleport.teleport(
-                p,
-                new com.google.gson.Gson()
-                    .fromJson(place.options().get("destination"), Position.class));
-            break;
-          }
-        }
   }
 
   @EventHandler
@@ -557,6 +450,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     HandlerList.unregisterAll(this);
     comfort.close();
     hologramService.close();
+    portals.close();
     for (var viewer : Bukkit.getOnlinePlayers())
       for (var target : Bukkit.getOnlinePlayers()) viewer.showPlayer(plugin, target);
   }

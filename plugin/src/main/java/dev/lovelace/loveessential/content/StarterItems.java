@@ -321,7 +321,7 @@ public final class StarterItems implements Listener, AutoCloseable {
 
   public void claim(Player p, boolean notify) {
     MainThread.require();
-    if (!plugin.ready() || !plugin.module("starter") || !p.isOnline() || !love.authenticated(p))
+    if (!plugin.ready() || !plugin.allows("starter", p) || !p.isOnline() || !love.authenticated(p))
       return;
     UUID id = p.getUniqueId();
     if (!busy.add(id)) return;
@@ -348,7 +348,7 @@ public final class StarterItems implements Listener, AutoCloseable {
                       if (!kit.value().enabled() || kit.value().items().isEmpty())
                         return CompletableFuture.<Void>completedFuture(null);
                       if (d.value().state().equals("pending")) return deliver(p, d);
-                      if (!p.isOnline() || !love.authenticated(p) || !plugin.module("starter"))
+                      if (!p.isOnline() || !love.authenticated(p) || !plugin.allows("starter", p))
                         return CompletableFuture.<Void>completedFuture(null);
                       var items = new ArrayList<ContentItems>();
                       var texts = new HashMap<String, String>();
@@ -415,7 +415,7 @@ public final class StarterItems implements Listener, AutoCloseable {
   }
 
   private CompletableFuture<Void> deliver(Player p, SqliteStore.Document<Delivery> d) {
-    if (!p.isOnline() || !plugin.ready() || !plugin.module("starter") || !love.authenticated(p))
+    if (!p.isOnline() || !plugin.ready() || !plugin.allows("starter", p) || !love.authenticated(p))
       return CompletableFuture.completedFuture(null);
     if (received(p)) return finish(p.getUniqueId(), d.revision());
     var stacks = d.value().items().stream().map(i -> i.item(lang)).toList();

@@ -1,0 +1,116 @@
+menus:
+  holo-line-title:
+    title-key: holo.line-title
+    size: 54
+  holo-title:
+    title-key: holo.title
+    size: 54
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+texts:
+  holo:
+    position: '<gray>Нижняя строка: <x> <y> <z>'
+    move-adjust: '<gray>Shift+ЛКМ: выше на 0.25; Shift+ПКМ: ниже на 0.25.'
+    render-failed: Не удалось отобразить голограмму; повтор через 10 секунд.
+    handler-failed: Ошибка обработчика нажатия голограммы.
+    'on': включена
+    'off': выключена
+    title: <gold><id> <dark_gray>· <gray>страница <page>/<pages>
+    usage: <gray>/hologram create [текст] · edit <id> · move <id> · addline <id> <текст> · delete <id>
+    saved: <green>Голограмма <white><id> <green>сохранена.
+    limit: <red>Достигнут лимит голограмм.
+    create-help: <gray>Введите первую строку. ID назначится автоматически; появится редактор.
+    portal-create-help: <gray>Сначала отметьте pos1. Эта точка станет вторым углом; ID назначится автоматически.
+    prompt-text: <yellow>Введите текст строки. Поддерживаются MiniMessage и плейсхолдеры. Кнопка отмены ниже.
+    text-example: <gold>Добро пожаловать, <player>!
+    line: <gold>Строка <number>
+    line-title: <gold>Редактор строки <number>
+    preview: <gold>Сейчас отображается
+    item-line: <gray>Предметная строка. Копия предмета хранится в SQLite.
+    line-help: <gray>Нажмите для редактирования. Shift+ЛКМ — выше, Shift+ПКМ — ниже.
+    background: '<gold>Фон: <white><value>'
+    background-help: '<gray>Цвет AARRGGBB: первые две цифры — прозрачность. 00000000 — без фона.'
+    prompt-background: '<yellow>Введите цвет фона из 8 шестнадцатеричных цифр AARRGGBB. Например: 80000000.'
+    shadow: '<gold>Тень: <white><value>'
+    shadow-help: <gray>Переключить тень под буквами.
+    spacing: '<gold>Интервал строк: <white><value>'
+    spacing-help: '<gray>Расстояние между текстовыми строками: 0.2–2 блока.'
+    prompt-spacing: '<yellow>Введите расстояние между строками: 0.2–2 блока.'
+    range: '<gold>Дальность: <white><value>'
+    range-help: '<gray>Расстояние видимости: 4–96 блоков. Чанки принудительно не загружаются.'
+    prompt-range: '<yellow>Введите дальность видимости: 4–96 блоков.'
+    move-help: <gray>Поставить нижнюю строку на два блока выше вашего положения.
+    previous-page: <gold>Предыдущая страница
+    next-page: <gold>Следующая страница
+    add-page: <green>Добавить страницу
+    delete-page: <red>Удалить эту страницу
+    page-help: <gray>ПКМ по голограмме переключает страницы отдельно для каждого игрока.
+    action: <gold>Действие страницы по ПКМ
+    action-value: '<gray>Сейчас: <white><value>'
+    page-next: Следующая страница
+    action-help: <gray>Команда от имени игрока из разрешённого списка NPC actions. reset — вернуть перелистывание.
+    prompt-action: <yellow>Введите команду игрока без / или reset. Она должна быть разрешена в modules/npc/npc.yml → actions.allowed-player-commands.
+    add-text: <green>Добавить текстовую строку
+    edit-text: <gold>Изменить текст
+    text-help: <gray>Текст сохраняется в lang.yml; виден текущий текст и работают плейсхолдеры.
+    add-item: <green>Добавить предмет из руки
+    replace-item: <gold>Заменить предметом из руки
+    item-help: <gray>Возьмите предмет в основную руку перед открытием GUI. Создаётся копия, предмет не расходуется.
+    item-required: <yellow>Сначала возьмите предмет в основную руку.
+    up: <gold>Переместить выше
+    down: <gold>Переместить ниже
+    reorder-help: <gray>Поменять эту строку с соседней.
+buttons:
+  holo-title:
+    title-key: holo.title
+    texture: ''
+  holo-text-example:
+    title-key: holo.text-example
+    texture: ''
+  holo-line:
+    title-key: holo.line
+    texture: ''
+  holo-line-title:
+    title-key: holo.line-title
+    texture: ''
+  holo-preview:
+    title-key: holo.preview
+    texture: ''
+  holo-background:
+    title-key: holo.background
+    texture: ''
+  holo-shadow:
+    title-key: holo.shadow
+    texture: ''
+  holo-spacing:
+    title-key: holo.spacing
+    texture: ''
+  holo-range:
+    title-key: holo.range
+    texture: ''
+  holo-previous-page:
+    title-key: holo.previous-page
+    texture: ''
+  holo-next-page:
+    title-key: holo.next-page
+    texture: ''
+  holo-action:
+    title-key: holo.action
+    texture: ''
+  holo-edit-text:
+    title-key: holo.edit-text
+    texture: ''
+  holo-replace-item:
+    title-key: holo.replace-item
+    texture: ''
+  holo-up:
+    title-key: holo.up
+    texture: ''
+  holo-down:
+    title-key: holo.down
+    texture: ''

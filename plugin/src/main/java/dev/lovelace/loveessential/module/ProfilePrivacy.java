@@ -168,10 +168,7 @@ public final class ProfilePrivacy implements Listener, AutoCloseable {
 
   public CompletableFuture<Preferences> change(Player p, UnaryOperator<Preferences> update) {
     MainThread.require();
-    if (!plugin.ready()
-        || !plugin.module("profile")
-        || !love.authenticated(p)
-        || !p.hasPermission("loveessential.profile"))
+    if (!plugin.ready() || !plugin.module("profile") || !love.authenticated(p))
       throw new IllegalArgumentException("errors.permission");
     var old = states.get(p.getUniqueId());
     if (old == null) throw new IllegalArgumentException("profile-menu.loading");

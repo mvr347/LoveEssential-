@@ -164,13 +164,7 @@ public final class NativeDialogs implements Listener, AutoCloseable {
   }
 
   public void error(Player p, Throwable e) {
-    while (e.getCause() != null) e = e.getCause();
-    String key = e.getMessage();
-    lang.send(
-        p,
-        e instanceof dev.lovelace.loveessential.storage.SqliteStore.Conflict
-            ? "errors.conflict"
-            : lang.contains(key) ? key : "errors.input");
+    lang.error(p, e);
   }
 
   private void paper(Player p, Form form) {

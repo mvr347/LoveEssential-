@@ -259,12 +259,18 @@ class ProfilePrivacyTest {
         (org.bukkit.inventory.meta.SkullMeta)
             p.getOpenInventory().getTopInventory().getItem(12).getItemMeta();
     // MockBukkit does not decode texture properties into URLs. Assert the exact client payload.
-    String expected = plugin.getConfig().getString("profile.textures.profile-menu.settings");
+    String expected = plugin.getConfig().getString("profile.gui.textures.profile-menu.settings");
     assertTrue(
         meta.getPlayerProfile().getProperties().stream()
             .anyMatch(
                 property ->
-                    property.getName().equals("textures") && property.getValue().equals(expected)));
+                    property.getName().equals("textures") && property.getValue().equals(expected)),
+        "expected="
+            + expected
+            + " actual="
+            + meta.getPlayerProfile().getProperties()
+            + " cfg="
+            + plugin.getConfig().getConfigurationSection("profile.gui").getKeys(true));
   }
 
   @Test
@@ -276,20 +282,31 @@ class ProfilePrivacyTest {
     target.setStatistic(Statistic.PLAY_ONE_MINUTE, 72000);
     target.setStatistic(Statistic.MINE_BLOCK, Material.DIAMOND_ORE, 17);
     command(viewer, "profile Target");
-    assertEquals("Статистика игрока", title(viewer, 16));
-    click(viewer, 16);
-    assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
-    assertTrue(lore(viewer).contains("Убийств игроков: 9"));
-    assertTrue(lore(viewer).contains("K/D: 3.0"));
-    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
-    assertTrue(lore(viewer).contains("Добыто блоков: 17"));
-    command(viewer, "profile stats");
-    assertTrue(lore(viewer).contains("Убийств игроков: 0"));
+    assertTrue(lore(viewer).contains("Общая статистика"));
+    assertFalse(lore(viewer).contains("K/D:"));
+    click(viewer, 12); // public summary has no drill-down
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    command(target, "profile");
+    assertEquals(
+        List.of("Безопасность", "Настройки", "Поведение", "Статистика", "Адаптации"),
+        java.util.stream.IntStream.rangeClosed(11, 15)
+            .mapToObj(slot -> title(target, slot))
+            .toList());
+    click(target, 14);
+    assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
+    click(target, 12); // world category
+    assertEquals(54, target.getOpenInventory().getTopInventory().getSize());
+    assertTrue(lore(target).contains("Убийств игроков: 9"));
+    assertTrue(lore(target).contains("K/D: 3.0"));
+    assertTrue(lore(target).contains("В игре: 1 ч 0 мин"));
+    assertTrue(lore(target).contains("Добыто блоков: 17"));
+    click(target, 51);
+    click(target, 24);
+    assertEquals("Настройки", title(target, 12));
   }
 
   @Test
-  void offlineProfileLoadsSqlSnapshotSkinStatisticsAndAdaptations() throws Exception {
-    enablePapi();
+  void offlineProfileLoadsSqlSnapshotSkinAndPublicSummary() throws Exception {
     var viewer = player("Viewer");
     var target = player("Target");
     String url = "https://textures.minecraft.net/texture/" + "a".repeat(64);
@@ -298,7 +315,7 @@ class ProfilePrivacyTest {
     textures.setSkin(java.net.URI.create(url).toURL());
     profile.setTextures(textures);
     target.setPlayerProfile(profile);
-    target.setStatistic(Statistic.PLAYER_KILLS, 9);
+    target.setStatistic(Statistic.PLAY_ONE_MINUTE, 72000);
     command(target, "profile");
     target.disconnect();
     profiles.openProfile(viewer, "target");
@@ -306,18 +323,15 @@ class ProfilePrivacyTest {
         () ->
             viewer.getOpenInventory().getTopInventory() != null
                 && viewer.getOpenInventory().getTopInventory().getSize() == 27);
-    assertTrue(lore(viewer).contains("Не в сети"));
+    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
     var meta =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(url, meta.getPlayerProfile().getTextures().getSkin().toExternalForm());
-    click(viewer, 14);
-    assertTrue(lore(viewer).contains("Target:water_progress"));
-    assertFalse(lore(viewer).contains("Viewer:water_progress"));
-    click(viewer, 51);
-    click(viewer, 16);
-    assertTrue(lore(viewer).contains("Убийств игроков: 9"));
-    assertTrue(lore(viewer).contains("Последние данные:"));
+    assertFalse(lore(viewer).contains("K/D:"));
+    assertEquals("Пожаловаться", title(viewer, 5));
+    click(viewer, 24);
+    assertEquals("Настройки", title(viewer, 12));
   }
 
   @Test
@@ -362,10 +376,11 @@ class ProfilePrivacyTest {
   }
 
   @Test
-  void targetContextAndCurrentSkinAreUsedForAllProfileSections() throws Exception {
+  void publicSummaryUsesTargetSnapshotAndCurrentSkin() throws Exception {
     enablePapi();
     var viewer = player("Viewer");
     var target = player("Target");
+    target.setStatistic(Statistic.PLAY_ONE_MINUTE, 72000);
     var skin = target.getPlayerProfile();
     var textures = skin.getTextures();
     textures.setSkin(java.net.URI.create("https://textures.minecraft.net/texture/abcd").toURL());
@@ -373,22 +388,14 @@ class ProfilePrivacyTest {
     target.setPlayerProfile(skin);
     command(viewer, "le profile view Target");
     assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
-    assertEquals("Адаптации", title(viewer, 14));
-    assertTrue(lore(viewer).contains("Target:current_name"));
-    assertFalse(lore(viewer).contains("Viewer:current_name"));
-    var renderer = internal("placeholders", Placeholders.class);
-    assertEquals(
-        "нет",
-        PlainTextComponentSerializer.plainText()
-            .serialize(renderer.renderRaw("<papi:missing_value:'нет'>", viewer, target)));
+    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
+    assertFalse(lore(viewer).contains("Координаты:"));
     var skull =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
-    click(viewer, 14);
-    assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
-    assertTrue(lore(viewer).contains("Target:water_progress"));
-    assertFalse(lore(viewer).contains("Viewer:water_progress"));
+    click(viewer, 12);
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
   }
 
   @Test
@@ -419,26 +426,23 @@ class ProfilePrivacyTest {
   }
 
   @Test
-  void activityCanBeHiddenWithoutHidingAdaptations() throws Exception {
+  void activityCanBeHiddenWithoutHidingOwnAdaptations() throws Exception {
+    neighbor("LoveAdaptation", "loveadaptation");
     enablePapi();
     var owner = player("Owner");
     var viewer = player("Viewer");
     owner.setStatistic(Statistic.PLAY_ONE_MINUTE, 20 * 60 * 60 * 77);
     command(viewer, "profile Owner");
-    click(viewer, 12);
     assertTrue(lore(viewer).contains("77"));
     command(owner, "profile activity hide");
     waitFor(() -> !profiles.privacy().preferences(owner).activityVisible());
-    assertFalse(
-        viewer.getOpenInventory().getTopInventory() != null
-            && viewer.getOpenInventory().getTopInventory().getSize() == 54);
     command(viewer, "profile Owner");
     assertTrue(profiles.canView(viewer, owner));
     assertFalse(lore(viewer).contains("77"));
-    click(viewer, 12);
-    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
-    click(viewer, 14);
-    assertTrue(lore(viewer).contains("Owner:current_name"));
+    command(owner, "profile");
+    owner.addAttachment(plugin, "loveadaptation.use", true);
+    click(owner, 15);
+    assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu", calls.getLast());
     command(owner, "profile settings");
     click(owner, 19);
     assertTrue(title(owner, 3).contains("доступен"));
@@ -515,10 +519,10 @@ class ProfilePrivacyTest {
     viewer.addAttachment(plugin, "lovebehavior.rep", true);
     viewer.addAttachment(plugin, "lovebehavior.behavior", true);
     command(viewer, "profile Target");
-    click(viewer, 15);
+    click(viewer, 3);
     assertEquals(List.of("LoveBehavior:rep:Viewer:Target"), calls);
     command(viewer, "profile");
-    click(viewer, 15);
+    click(viewer, 13);
     assertEquals("LoveBehavior:behavior:Viewer:", calls.getLast());
   }
 

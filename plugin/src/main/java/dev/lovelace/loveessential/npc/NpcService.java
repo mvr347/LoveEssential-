@@ -418,6 +418,7 @@ public final class NpcService implements Listener, AutoCloseable {
     eligiblePlayers =
         Bukkit.getOnlinePlayers().stream()
             .filter(love::authenticated)
+            .filter(p -> !(plugin instanceof LoveEssentialPlugin le) || le.allows("npc", p))
             .filter(p -> !vanished.test(p))
             .toList();
     if (tick % 10 == 0) {
@@ -530,7 +531,8 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public boolean visible(Player p, NpcDefinition n) {
-    return (!n.flag("require-auth", true) || love.authenticated(p))
+    return (!(plugin instanceof LoveEssentialPlugin le) || le.allows("npc", p))
+        && (!n.flag("require-auth", true) || love.authenticated(p))
         && conditions.test(p, n.visibility()) == Verdict.ALLOW;
   }
 
