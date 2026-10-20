@@ -183,7 +183,8 @@ class ExtensionsIntegrationTest {
     var d = await(store.get("motd", "default", Windows.Motd.class)).orElseThrow();
     assertTrue(lang.text(d.value().firstKey()).contains("Новое королевство"));
     assertTrue(
-        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"))
+        java.nio.file.Files.readString(
+                plugin.getDataFolder().toPath().resolve("modules/motd/motd.yml"))
             .contains("Добро пожаловать"));
     var visitor = server.addPlayer("Visitor");
     assertThrows(IllegalArgumentException.class, () -> ext.windows.motdEditor(visitor));
@@ -481,6 +482,115 @@ class ExtensionsIntegrationTest {
                         new Scenarios.Step(
                             -1, Condition.always(), new Action("message", Map.of())))),
                 32));
+  }
+
+  @Test
+  void tabGroupsAndIndividualHeaderLinesPersistInModuleConfig() throws Exception {
+    await(plugin.module("scoreboard", false));
+    var p = admin();
+    ext.tabSettings.groups(p, 0);
+    respond(p, "add", Map.of());
+    respond(
+        p,
+        "save",
+        Map.of(
+            "id",
+            "staff",
+            "permission",
+            "",
+            "priority",
+            "7",
+            "name",
+            "<player>",
+            "prefix",
+            "<red>[Страж] ",
+            "suffix",
+            " <gray>| <placeholder:clan>",
+            "players",
+            "Builder",
+            "worlds",
+            "world"));
+    waitFor(() -> plugin.getConfig().contains("tab.groups.staff"));
+    var file = plugin.getDataFolder().toPath().resolve("modules/tab/tab.yml");
+    var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
+    assertEquals(List.of("Builder"), saved.getStringList("groups.staff.players"));
+    assertEquals("<red>[Страж] ", saved.getString("groups.staff.prefix"));
+    waitFor(() -> plain(form(p).title()).contains("Группы игроков"));
+    ext.tabSettings.lines(p, "header-footer.header", 0);
+    respond(p, "add", Map.of());
+    respond(p, "save", Map.of("text", "<gold>Стражи | %loveessential_real_name%"));
+    waitFor(
+        () ->
+            plugin
+                .getConfig()
+                .getStringList("tab.header-footer.header")
+                .contains("<gold>Стражи | %loveessential_real_name%"));
+    waitFor(() -> plain(form(p).title()).contains("Строки TAB"));
+    var expected =
+        dev.lovelace.loveessential.config.ModuleConfigs.snapshot(
+            plugin.getConfig().get("tab.groups"));
+    @SuppressWarnings("unchecked")
+    var next = new LinkedHashMap<>((Map<String, Object>) expected);
+    next.remove("admin");
+    next.remove("staff");
+    await(plugin.editSetting("tab", "groups", expected, next));
+    await(plugin.reloadSettings());
+    assertFalse(
+        plugin.getConfig().contains("tab.groups.admin"),
+        "deleted built-in groups must not be refilled from defaults");
+    assertFalse(plugin.getConfig().contains("tab.groups.staff"));
+    assertTrue(
+        plugin
+            .getConfig()
+            .getStringList("tab.header-footer.header")
+            .contains("<gold>Стражи | %loveessential_real_name%"));
+  }
+
+  @Test
+  void scoreboardConfigAndSqlMirrorStaySynchronizedWithoutSplittingPipes() throws Exception {
+    await(plugin.module("scoreboard", false));
+    var p = admin();
+    var current =
+        await(store.get("scoreboard-catalog", "default", Sidebar.Catalog.class)).orElseThrow();
+    var line =
+        new Sidebar.Line(
+            "custom",
+            "@inline:<gold>Моя строка",
+            "general",
+            List.of("@inline:<gray>Мир | <world>"),
+            "",
+            "",
+            "@inline:");
+    var catalog =
+        new Sidebar.Catalog(
+            "@inline:<gold>Королевство",
+            "@inline:",
+            "@inline:",
+            8,
+            20,
+            List.of(),
+            Map.of("general", "@inline:<gold>Общие"),
+            List.of(line),
+            List.of(),
+            "");
+    await(
+        ext.sidebar.saveCatalog(catalog, current.revision(), p.getUniqueId().toString(), Map.of()));
+    var file = plugin.getDataFolder().toPath().resolve("modules/scoreboard/scoreboard.yml");
+    var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
+    assertEquals("<gold>Королевство", saved.getString("catalog.title"));
+    assertEquals(
+        "<gray>Мир | <world>",
+        saved.getMapList("catalog.placeholders.custom.variants").getFirst().get("template"));
+    saved.set("catalog.title", "<gold>Новый заголовок");
+    saved.save(file.toFile());
+    await(plugin.reloadSettings());
+    assertEquals("<gold>Новый заголовок", lang.text(ext.sidebar.catalog().titleKey()));
+    assertEquals(1, ext.sidebar.catalog().lines().getFirst().variants().size());
+    assertEquals(
+        ext.sidebar.catalog(),
+        await(store.get("scoreboard-catalog", "default", Sidebar.Catalog.class))
+            .orElseThrow()
+            .value());
   }
 
   @Test
@@ -1107,6 +1217,8 @@ class ExtensionsIntegrationTest {
     await(store.delete("scoreboard-catalog", "default", catalog.revision(), "test"));
     var marker = await(store.get("migration", "scoreboard-players", Boolean.class)).orElseThrow();
     await(store.delete("migration", "scoreboard-players", marker.revision(), "test"));
+    plugin.getConfig().set("scoreboard.catalog", null);
+    plugin.saveConfig();
     var side =
         new Sidebar(
             plugin,

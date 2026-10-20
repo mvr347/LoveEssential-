@@ -50,6 +50,6 @@
 
 ## Права групп TAB и карточек профиля
 
-В `modules/tab.yml` поля `permission` задают доступ к группам; в стандартной конфигурации это `loveessential.group.admin` и `loveessential.group.knight`. В `modules/profile.yml` карточка также может содержать своё поле `permission`. Эти имена настраиваемые и не являются отдельными зарегистрированными нодами `plugin.yml`.
+В `modules/tab/tab.yml` поля `permission` задают доступ к группам; в стандартной конфигурации это `loveessential.group.admin` и `loveessential.group.knight`. В `modules/profile/profile.yml` карточка также может содержать своё поле `permission`. Эти имена настраиваемые и не являются отдельными зарегистрированными нодами `plugin.yml`.
 
 Редактор MOTD и серверного каталога scoreboard требуют `loveessential.admin`. Все новые административные права входят в него. Диалоги и миры могут дополнительно требовать собственное настроенное право.

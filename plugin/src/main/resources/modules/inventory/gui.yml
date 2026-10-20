@@ -1,0 +1,36 @@
+menus: {}
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+texts:
+  inventory:
+    title: <gold>Инвентарь <dark_gray>| <yellow><player>
+    owner: <gold><player>
+    self: <yellow>Свой инвентарь откройте обычной клавишей инвентаря.
+    usage: <yellow>/le invsee <игрок> [view|edit]
+    layout:
+    - <gray>Ряды 1–3 — основной инвентарь.
+    - <gray>Ряд 4 — панель быстрого доступа.
+    - <gray>Ряд 5 — ботинки, поножи, нагрудник, шлем, вторая рука.
+    instructions: <gold>Управление предметами
+    controls-left: <gray>ЛКМ — взять, положить или обменять стек.
+    controls-right: <gray>ПКМ — взять половину или положить один предмет.
+    controls-restricted: <gray>Shift, цифры, двойной клик и перетаскивание отключены.
+    editing: <green>Редактирование включено
+    readonly: <gray>Только просмотр
+    toggle: <gray>ЛКМ — сменить режим. Для редактирования нужно отдельное право.
+    changed: <yellow>Игрок изменил этот слот. Экран обновлён — повторите действие.
+buttons:
+  inventory-title:
+    title-key: inventory.title
+    texture: ''
+  inventory-owner:
+    title-key: inventory.owner
+    texture: ''
+  inventory-instructions:
+    title-key: inventory.instructions
+    texture: ''

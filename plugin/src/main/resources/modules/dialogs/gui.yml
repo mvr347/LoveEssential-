@@ -1,0 +1,103 @@
+menus: {}
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+texts:
+  windows:
+    title: <gold>Диалоговые окна
+    help: <gray>Выберите окно. Администратор может изменить его, игрок — открыть доступное.
+    entry: <gold><id>
+    create: <gold>Новое диалоговое окно
+    create-help: <gray>Введите ID из строчных латинских букв, цифр, _ и -.
+    id: <gold>ID окна
+    default-title: <gold>Окно королевства
+    default-body: <gray>Текст диалогового окна.
+    edit: <gold>Редактор диалогового окна
+    edit-help: <gray>Заголовок и текст поддерживают MiniMessage и плейсхолдеры LoveEssential. Все тексты сохраняются в lang.yml.
+    heading: <gold>Заголовок
+    body: <gold>Текст
+    answers: <gold>Кнопки ответов
+    answers-help: <gray>Откройте кнопку для изменения подписи, права и действия.
+    add-answer: <green>Добавить ответ
+    answer: <gold>Настройка ответа
+    answer-help: <gray>Выберите действие. Для сообщения — MiniMessage; для диалога/мира — ID. В параметрах можно использовать ${имя_поля}. Команды
+      выполняются с обычными правами игрока.
+    label: <gold>Подпись
+    preview: <gold>Предпросмотр
+    delete-confirm: <yellow>Удалить это диалоговое окно?
+    inputs: <gold>Поля ввода
+    inputs-help: <gray>Укажите ID поля для добавления, изменения или удаления. В параметрах действий доступна подстановка ${ID}.
+    input-id: <gold>ID поля (a-z, 0-9, _)
+    initial: <gold>Начальное значение
+    limit: <red>Достигнут лимит окон, полей или ответов.
+    add-input: <green>Добавить или заменить поле
+    remove-input: <red>Удалить поле по ID
+    usage: <yellow>/le dialog [list|create|edit|open|delete] [ID]
+    motd-title: <gold>Редактор MOTD сервера
+    motd-help: <gray>Две строки описания в списке серверов. Поддерживается MiniMessage. Предпросмотр не публикует изменения; «Сохранить» применяет
+      их.
+    motd-first: <gold>Первая строка
+    motd-second: <gold>Вторая строка
+    input-limit: <gold>Максимум символов (1–2048)
+buttons:
+  windows-title:
+    title-key: windows.title
+    texture: ''
+  windows-entry:
+    title-key: windows.entry
+    texture: ''
+  windows-create:
+    title-key: windows.create
+    texture: ''
+  windows-id:
+    title-key: windows.id
+    texture: ''
+  windows-default-title:
+    title-key: windows.default-title
+    texture: ''
+  windows-edit:
+    title-key: windows.edit
+    texture: ''
+  windows-heading:
+    title-key: windows.heading
+    texture: ''
+  windows-body:
+    title-key: windows.body
+    texture: ''
+  windows-answers:
+    title-key: windows.answers
+    texture: ''
+  windows-answer:
+    title-key: windows.answer
+    texture: ''
+  windows-label:
+    title-key: windows.label
+    texture: ''
+  windows-preview:
+    title-key: windows.preview
+    texture: ''
+  windows-inputs:
+    title-key: windows.inputs
+    texture: ''
+  windows-input-id:
+    title-key: windows.input-id
+    texture: ''
+  windows-initial:
+    title-key: windows.initial
+    texture: ''
+  windows-motd-title:
+    title-key: windows.motd-title
+    texture: ''
+  windows-motd-first:
+    title-key: windows.motd-first
+    texture: ''
+  windows-motd-second:
+    title-key: windows.motd-second
+    texture: ''
+  windows-input-limit:
+    title-key: windows.input-limit
+    texture: ''

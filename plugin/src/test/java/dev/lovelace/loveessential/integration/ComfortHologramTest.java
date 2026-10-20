@@ -96,6 +96,56 @@ class ComfortHologramTest {
   }
 
   @Test
+  void laySurvivesServerPoseResetAndSecondCommandRestoresStanding() throws Exception {
+    var world =
+        new org.mockbukkit.mockbukkit.world.WorldMock() {
+          @Override
+          public org.mockbukkit.mockbukkit.block.BlockMock createBlock(
+              org.mockbukkit.mockbukkit.world.Coordinate coordinate) {
+            return new org.mockbukkit.mockbukkit.block.BlockMock(
+                coordinate.y < 64 ? Material.STONE : Material.AIR,
+                new Location(this, coordinate.x, coordinate.y, coordinate.z)) {
+              @Override
+              public boolean isPassable() {
+                return getType().isAir();
+              }
+
+              @Override
+              public org.bukkit.util.VoxelShape getCollisionShape() {
+                var boxes =
+                    getType().isAir()
+                        ? List.<org.bukkit.util.BoundingBox>of()
+                        : List.of(new org.bukkit.util.BoundingBox(0, 0, 0, 1, 1, 1));
+                return new org.bukkit.util.VoxelShape() {
+                  public Collection<org.bukkit.util.BoundingBox> getBoundingBoxes() {
+                    return boxes;
+                  }
+
+                  public boolean overlaps(org.bukkit.util.BoundingBox box) {
+                    return boxes.stream().anyMatch(b -> b.overlaps(box));
+                  }
+                };
+              }
+            };
+          }
+        };
+    world.setName("lay-test");
+    server.addWorld(world);
+    var p = server.addPlayer("Lounger");
+    p.teleport(new Location(world, .5, 64, .5));
+    command(p, "lay");
+    assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
+    p.setPose(org.bukkit.entity.Pose.STANDING, false); // A server/client update must not end /lay.
+    server.getScheduler().performTicks(5);
+    assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
+    assertTrue(p.hasFixedPose());
+    command(p, "лежать");
+    server.getScheduler().performTicks(3);
+    assertEquals(org.bukkit.entity.Pose.STANDING, p.getPose());
+    assertFalse(p.hasFixedPose());
+  }
+
+  @Test
   void hatSwapsBothItemsAndRejectsStackWithoutLoss() {
     var p = admin();
     var inv = p.getInventory();
@@ -232,7 +282,8 @@ class ComfortHologramTest {
     assertEquals(p.getY() + 2, old.value().position().y(), .001);
     var line = old.value().pages().getFirst().lines().getFirst();
     assertTrue(
-        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"))
+        java.nio.file.Files.readString(
+                plugin.getDataFolder().toPath().resolve("modules/hologram/hologram.yml"))
             .contains("Первая строка"));
     command(p, "hologram addline " + id + " Вторая строка");
     waitFor(() -> holograms.get(id).orElseThrow().revision() > old.revision());

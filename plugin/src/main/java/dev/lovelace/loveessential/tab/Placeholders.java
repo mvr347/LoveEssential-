@@ -84,6 +84,7 @@ public final class Placeholders {
 
   private Component renderText(String template, Player viewer, Player target, int depth) {
     if (depth > 4) return Component.empty();
+    template = template.replaceAll("%([a-zA-Z0-9_:.]+)%", "<papi:'$1'>");
     var b = TagResolver.builder();
     Map<String, String> variables =
         Map.ofEntries(

@@ -319,7 +319,7 @@ public final class Comfort implements Listener, AutoCloseable {
 
   private void unlay(Player p) {
     var state = lying.remove(p.getUniqueId());
-    if (state != null && p.getPose() == Pose.SLEEPING) p.setPose(state.previous(), state.fixed());
+    if (state != null) p.setPose(state.previous(), state.fixed());
   }
 
   private void eject(Player carrier) {
@@ -444,10 +444,10 @@ public final class Comfort implements Listener, AutoCloseable {
       else if (!plugin.environmentAllows("sitride", p)
           || !love.authenticated(p)
           || love.combat(p)
-          || p.getPose() != Pose.SLEEPING
           || state.support().isPassable()
           || !p.getWorld().equals(state.anchor().getWorld())
           || p.isInsideVehicle()) unlay(p);
+      else if (p.getPose() != Pose.SLEEPING || !p.hasFixedPose()) p.setPose(Pose.SLEEPING, true);
     }
     for (UUID id : new ArrayList<>(seats.keySet())) {
       var p = Bukkit.getPlayer(id);

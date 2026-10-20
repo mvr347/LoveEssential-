@@ -260,7 +260,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                                   .deserialize(line)),
                   java.util.stream.Stream.of(
                       lang.render(enabled ? "gui.enabled" : "gui.disabled"),
-                      lang.render("gui.file", Map.of("path", "modules/" + id + ".yml")),
+                      lang.render("gui.file", Map.of("path", "modules/" + id + "/" + id + ".yml")),
                       lang.render("gui.separator"),
                       lang.render("gui.click.settings"),
                       lang.render("gui.click.toggle")))

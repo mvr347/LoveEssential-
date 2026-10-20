@@ -259,12 +259,18 @@ class ProfilePrivacyTest {
         (org.bukkit.inventory.meta.SkullMeta)
             p.getOpenInventory().getTopInventory().getItem(12).getItemMeta();
     // MockBukkit does not decode texture properties into URLs. Assert the exact client payload.
-    String expected = plugin.getConfig().getString("profile.textures.profile-menu.settings");
+    String expected = plugin.getConfig().getString("profile.gui.textures.profile-menu.settings");
     assertTrue(
         meta.getPlayerProfile().getProperties().stream()
             .anyMatch(
                 property ->
-                    property.getName().equals("textures") && property.getValue().equals(expected)));
+                    property.getName().equals("textures") && property.getValue().equals(expected)),
+        "expected="
+            + expected
+            + " actual="
+            + meta.getPlayerProfile().getProperties()
+            + " cfg="
+            + plugin.getConfig().getConfigurationSection("profile.gui").getKeys(true));
   }
 
   @Test
@@ -421,6 +427,7 @@ class ProfilePrivacyTest {
 
   @Test
   void activityCanBeHiddenWithoutHidingOwnAdaptations() throws Exception {
+    neighbor("LoveAdaptation", "loveadaptation");
     enablePapi();
     var owner = player("Owner");
     var viewer = player("Viewer");
@@ -433,8 +440,9 @@ class ProfilePrivacyTest {
     assertTrue(profiles.canView(viewer, owner));
     assertFalse(lore(viewer).contains("77"));
     command(owner, "profile");
+    owner.addAttachment(plugin, "loveadaptation.use", true);
     click(owner, 15);
-    assertTrue(lore(owner).contains("Owner:water_progress"));
+    assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu", calls.getLast());
     command(owner, "profile settings");
     click(owner, 19);
     assertTrue(title(owner, 3).contains("доступен"));
@@ -515,7 +523,6 @@ class ProfilePrivacyTest {
     assertEquals(List.of("LoveBehavior:rep:Viewer:Target"), calls);
     command(viewer, "profile");
     click(viewer, 13);
-    click(viewer, 24);
     assertEquals("LoveBehavior:behavior:Viewer:", calls.getLast());
   }
 

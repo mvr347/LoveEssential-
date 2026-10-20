@@ -182,7 +182,8 @@ class ContentIntegrationTest {
                     .getItemMeta()
                     .displayName()));
     assertTrue(
-        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"))
+        java.nio.file.Files.readString(
+                plugin.getDataFolder().toPath().resolve("modules/crafting/crafting.yml"))
             .contains("Создан через редактор крафтов"));
     click(p, 22, true); // edit from catalog
     p.getInventory().setItemInMainHand(new ItemStack(Material.EMERALD, 5));

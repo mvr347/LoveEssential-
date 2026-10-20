@@ -30,7 +30,7 @@ public interface ScoreboardService {
   /**
    * Highest priority wins; for equal priority the newest lease wins. TTL must be positive and
    * within the configured maximum. force requests can bypass a personal toggle only when allowed in
-   * modules/scoreboard.yml; server world/authentication restrictions always apply. Leases expire
+   * modules/scoreboard/scoreboard.yml; server world/authentication restrictions always apply. Leases expire
    * automatically on TTL, player disconnect or owner plugin disable.
    */
   Lease show(Plugin owner, UUID player, int priority, Duration ttl, boolean force, Board board);

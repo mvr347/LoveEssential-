@@ -1,0 +1,115 @@
+# Собственный TAB. Каждая строка и цвет задаются прямо здесь. <placeholder:id> — локальный шаблон, %id% — PAPI.
+enabled: true
+refresh-ticks: 10
+respect-other-scoreboards: true
+sorting-enabled: true
+sorting:
+- group
+- name
+name-enabled: true
+groups:
+  admin:
+    permission: loveessential.group.admin
+    priority: 0
+    name: <red><player>
+    prefix: '<red>[Страж] '
+    suffix: ' <suffix><afk>'
+    players: []
+    worlds: []
+  knight:
+    permission: loveessential.group.knight
+    priority: 20
+    name: <gold><player>
+    prefix: '<gold>[Рыцарь] '
+    suffix: ' <suffix><afk>'
+    players: []
+    worlds: []
+  default:
+    permission: ''
+    priority: 10000
+    name: <player>
+    prefix: ''
+    suffix: ' <suffix><afk>'
+    players: []
+    worlds: []
+nametag:
+  enabled: true
+  collision: false
+  visible: true
+header-footer:
+  enabled: true
+  profiles: {}
+  header: &id001
+  - <gold><animation:kingdom>
+  - '<gray>Игроков: <white><visible_online>'
+  footer: &id002
+  - '<gray>Клан: <clan> · Репутация: <reputation>'
+  - '<gray>Территория: <territory> · Ping: <ping>'
+playerlist-objective:
+  enabled: true
+  value: ping
+  title: <gold>Связь
+below-name:
+  enabled: false
+  value: health
+  title: <red>Здоровье
+sidebar:
+  enabled: false
+  title: <gold>Королевство
+  lines:
+  - '<gray>Путник: <white><player>'
+  - '<gray>Клан: <white><clan>'
+  - '<gray>Репутация: <white><reputation>'
+  - '<gray>Игроков: <white><visible_online>'
+bossbars:
+  kingdom:
+    enabled: false
+    progress: 1.0
+    color: YELLOW
+    overlay: PROGRESS
+    text: <gold>Добро пожаловать в королевство, <player>
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+texts:
+  tab:
+    header: *id001
+    footer: *id002
+    name: <player>
+    prefix: ''
+    suffix: ' <suffix><afk>'
+    objective: <gold>Связь
+    health: <red>Здоровье
+    ping: '<gray>Ping: <ping>'
+    bossbar: <gold>Добро пожаловать в королевство, <player>
+    exported: '<green>Настройки TAB экспортированы. Резервные копии: *.loveessential.bak.'
+    status:
+      afk: ' <gray>[Отошёл]'
+    animations:
+      kingdom:
+      - <gold>Королевство Love
+      - <yellow>Королевство Love
+    groups:
+      admin:
+        name: <red><player>
+        prefix: '<red>[Страж] '
+      knight:
+        name: <gold><player>
+        prefix: '<gold>[Рыцарь] '
+    sidebar:
+      title: <gold>Королевство
+      player: '<gray>Путник: <white><player>'
+      clan: '<gray>Клан: <white><clan>'
+      reputation: '<gray>Репутация: <white><reputation>'
+      online: '<gray>Игроков: <white><visible_online>'
+    layout:
+      title: <gold>Королевство Love
+      remaining: <gray>Ещё %s игроков
+placeholders:
+  online: <visible_online>
+  clan: <clan>

@@ -520,56 +520,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     show(m);
   }
 
-  private void savedCard(
-      Menu m, int slot, String title, String lore, Map<String, String> values, Runnable action) {
-    m.inventory.setItem(
-        slot,
-        icon(
-            title,
-            Material.BOOK,
-            lang.render(title, values),
-            lang.lines(lore).stream().map(t -> lang.renderText(t, values)).toList()));
-    if (action != null) m.actions.put(slot, action);
-  }
-
-  private void savedAdaptations(Player viewer, Saved saved) {
-    var m =
-        menu(
-            viewer, "profile-menu.adaptations", Map.of(), () -> savedAllowed(viewer, saved, false));
-    m.subject = saved.id();
-    m.inventory.setItem(0, savedHead(saved));
-    String[] types = {"water", "nether", "cave", "height", "abyss", "combat", "travel"};
-    for (int i = 0; i < types.length; i++) {
-      String type = types[i];
-      var values = new HashMap<String, String>();
-      for (String field : List.of("status", "progress")) {
-        String raw = saved.data().getOrDefault("external_loveadaptation_" + type + "_" + field, "");
-        values.put(
-            field,
-            raw.isBlank()
-                ? lang.text("profile-menu.no-data")
-                : PlainTextComponentSerializer.plainText()
-                    .serialize(placeholders.legacyOrMini(raw)));
-      }
-      m.inventory.setItem(
-          MenuStyle.slot(i, types.length),
-          MenuStyle.item(
-              Material.HEART_OF_THE_SEA,
-              lang.render("profile-menu.adaptation-" + type),
-              lang.lines("profile-menu.saved-adaptation-detail").stream()
-                  .map(t -> lang.renderText(t, values))
-                  .toList()));
-    }
-    button(
-        m,
-        51,
-        Material.ARROW,
-        "common.back",
-        "gui.click.open",
-        () -> offlineProfile(viewer, saved));
-    show(m);
-  }
-
   private List<String> statisticCategories() {
     var config = plugin.getConfig().getConfigurationSection("profile.statistics.categories");
     if (config == null) return List.of();
@@ -611,7 +561,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                 plugin
                     .getConfig()
                     .getString(
-                        "profile.textures.profile-menu.statistics",
+                        "profile.gui.textures.profile-menu.statistics",
                         "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb"));
     return MenuStyle.head(texture, lang.render(title, values), snapshotLines(lore, values));
   }
@@ -822,31 +772,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     show(m);
   }
 
-  private void behavior(Player p) {
-    var m = menu(p, "profile-menu.behavior", Map.of(), () -> access(p));
-    m.subject = p.getUniqueId();
-    capture(p);
-    var values = displayValues(snapshots.get(p.getUniqueId()));
-    m.inventory.setItem(
-        20,
-        icon(
-            "profile-menu.reputation",
-            Material.SUNFLOWER,
-            lang.render("profile-menu.behavior"),
-            snapshotLines("profile-stats.behavior-lore", values)));
-    link(
-        m,
-        24,
-        "behavior",
-        "profile-menu.open-behavior",
-        "profile-menu.behavior-lore",
-        Material.SUNFLOWER,
-        p,
-        true);
-    button(m, 51, Material.ARROW, "common.back", "gui.click.open", () -> profile(p, p));
-    show(m);
-  }
-
   public static ItemStack head(Player target, Component title, List<Component> lore) {
     var item = MenuStyle.item(Material.PLAYER_HEAD, title, lore);
     var meta = (SkullMeta) item.getItemMeta();
@@ -921,7 +846,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             target,
             lang.render("players.title", Map.of("player", target.getName())),
             List.of(placeholders.render("nick.profile-name", viewer, target))));
-    var cards = plugin.getConfig().getConfigurationSection("profile.cards");
+    var cards = plugin.getConfig().getConfigurationSection("profile.gui.cards");
     if (cards != null) {
       var keys =
           cards.getKeys(false).stream()
@@ -1111,7 +1036,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   private ItemStack icon(String key, Material fallback, Component title, List<Component> lore) {
-    String texture = plugin.getConfig().getString("profile.textures." + key, "");
+    String texture = plugin.getConfig().getString("profile.gui.textures." + key, "");
     return texture.isBlank()
         ? MenuStyle.item(fallback, title, lore)
         : MenuStyle.head(texture, title, lore);
@@ -1276,7 +1201,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
           "profile-menu.behavior",
           "profile-menu.behavior-lore",
           target,
-          () -> behavior(viewer));
+          () -> invoke("behavior", viewer, viewer, true));
       card(
           m,
           contentSlot(m, 3, 5),
@@ -1292,7 +1217,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
           "profile-menu.adaptations",
           "profile-menu.adaptations-lore",
           target,
-          () -> adaptations(viewer, viewer));
+          () -> invoke("adaptations", viewer, viewer, true));
     } else {
       drawSummary(
           m,
@@ -1500,20 +1425,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     show(m);
   }
 
-  private void adaptations(Player viewer, Player target) {
-    if (!canView(viewer, target)) throw new IllegalArgumentException("profile-menu.hidden");
-    var m =
-        menu(
-            viewer,
-            "profile-menu.adaptations",
-            Map.of(),
-            () -> access(viewer) && canView(viewer, target));
-    m.subject = target.getUniqueId();
-    m.repaint = () -> drawAdaptations(m, target);
-    drawAdaptations(m, target);
-    show(m);
-  }
-
   private void drawAdaptations(Menu m, Player target) {
     var viewer = m.viewer;
     m.actions.clear();
@@ -1533,7 +1444,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             target,
             placeholders.render("profile-menu.heading", viewer, target),
             textLines("profile-menu.adaptations-lore", viewer, target)));
-    var cards = plugin.getConfig().getConfigurationSection("profile.adaptation-cards");
+    var cards = plugin.getConfig().getConfigurationSection("profile.gui.adaptation-cards");
     if (cards != null) {
       int i = 0;
       for (String id : cards.getKeys(false)) {

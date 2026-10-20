@@ -1,0 +1,31 @@
+# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+enabled: true
+min-length: 3
+max-length: 24
+prevent-impersonation: true
+default-color: ''
+apply-display-name: true
+apply-to-tab: true
+apply-to-messages: true
+gradients:
+  kingdom:
+  - '#ffcc66'
+  - '#fff2cc'
+  sunset:
+  - '#ff6699'
+  - '#ffaa33'
+  - '#ffdd77'
+  ocean:
+  - '#3388ff'
+  - '#55ffff'
+  forest:
+  - '#228844'
+  - '#bbff88'
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

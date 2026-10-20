@@ -83,22 +83,70 @@ public final class TabModule implements Listener, AutoCloseable {
                 Math.max(2, plugin.getConfig().getLong("tab.refresh-ticks", 10)));
   }
 
+  private String source(ConfigurationSection section, String field, String fallback) {
+    if (section != null && section.contains(field)) {
+      String text =
+          section.isList(field)
+              ? String.join("\n", section.getStringList(field))
+              : section.getString(field, "");
+      return "@inline:"
+          + expandAliases(plugin.getConfig().getConfigurationSection("tab.placeholders"), text);
+    }
+    String key = section == null ? fallback : section.getString(field + "-key", fallback);
+    return "@inline:"
+        + expandAliases(
+            plugin.getConfig().getConfigurationSection("tab.placeholders"), lang.text(key));
+  }
+
+  public static String expandAliases(ConfigurationSection aliases, String template) {
+    if (aliases == null) return template;
+    String text = template;
+    var pattern = java.util.regex.Pattern.compile("<placeholder:([A-Za-z0-9_-]+)>");
+    for (int depth = 0; depth < 8; depth++) {
+      var matcher = pattern.matcher(text);
+      var result = new StringBuilder();
+      boolean found = false;
+      while (matcher.find()) {
+        found = true;
+        matcher.appendReplacement(
+            result,
+            java.util.regex.Matcher.quoteReplacement(aliases.getString(matcher.group(1), "")));
+        if (result.length() > 16384) throw new IllegalArgumentException("errors.config");
+      }
+      matcher.appendTail(result);
+      text = result.toString();
+      if (text.length() > 16384) throw new IllegalArgumentException("errors.config");
+      if (!found) return text;
+    }
+    return pattern.matcher(text).replaceAll("");
+  }
+
   private Group group(Player p) {
     var root = plugin.getConfig().getConfigurationSection("tab.groups");
-    Group best = new Group("default", 1000, "tab.name", "tab.prefix", "tab.suffix");
+    Group best = new Group("default", Integer.MAX_VALUE, "tab.name", "tab.prefix", "tab.suffix");
     if (root != null)
       for (String id : root.getKeys(false)) {
         var s = root.getConfigurationSection(id);
         int priority = s.getInt("priority", 1000);
         if (priority < best.priority()
-            && p.hasPermission(s.getString("permission", "loveessential.group." + id)))
+            && (s.getString("permission", "").isBlank()
+                || p.hasPermission(s.getString("permission")))
+            && (s.getStringList("players").isEmpty()
+                || s.getStringList("players").stream()
+                    .anyMatch(
+                        player ->
+                            player.equalsIgnoreCase(p.getName())
+                                || player.equalsIgnoreCase(p.getUniqueId().toString())))
+            && (s.getStringList("worlds").isEmpty()
+                || s.getStringList("worlds").stream()
+                    .anyMatch(world -> world.equalsIgnoreCase(p.getWorld().getName()))))
           best =
               new Group(
                   id,
                   priority,
-                  s.getString("name-key", "tab.name"),
-                  s.getString("prefix-key", "tab.prefix"),
-                  s.getString("suffix-key", "tab.suffix"));
+                  source(s, "name", "tab.name"),
+                  source(s, "prefix", "tab.prefix"),
+                  source(s, "suffix", "tab.suffix"));
       }
     for (var section :
         List.of("tab.worlds." + p.getWorld().getName(), "tab.users." + p.getUniqueId())) {
@@ -108,9 +156,15 @@ public final class TabModule implements Listener, AutoCloseable {
             new Group(
                 best.id(),
                 override.getInt("priority", best.priority()),
-                override.getString("name-key", best.name()),
-                override.getString("prefix-key", best.prefix()),
-                override.getString("suffix-key", best.suffix()));
+                override.contains("name") || override.contains("name-key")
+                    ? source(override, "name", "tab.name")
+                    : best.name(),
+                override.contains("prefix") || override.contains("prefix-key")
+                    ? source(override, "prefix", "tab.prefix")
+                    : best.prefix(),
+                override.contains("suffix") || override.contains("suffix-key")
+                    ? source(override, "suffix", "tab.suffix")
+                    : best.suffix());
     }
     return best;
   }
@@ -193,15 +247,26 @@ public final class TabModule implements Listener, AutoCloseable {
       views.put(p.getUniqueId(), view);
     }
     if (plugin.getConfig().getBoolean("tab.header-footer.enabled", true)) {
-      String header = plugin.getConfig().getString("tab.header-footer.header-key", "tab.header"),
-          footer = plugin.getConfig().getString("tab.header-footer.footer-key", "tab.footer");
+      String
+          header =
+              source(
+                  plugin.getConfig().getConfigurationSection("tab.header-footer"),
+                  "header",
+                  "tab.header"),
+          footer =
+              source(
+                  plugin.getConfig().getConfigurationSection("tab.header-footer"),
+                  "footer",
+                  "tab.footer");
       var profiles = plugin.getConfig().getConfigurationSection("tab.header-footer.profiles");
       if (profiles != null)
         for (String id : profiles.getKeys(false)) {
           var profile = profiles.getConfigurationSection(id);
           if (allowed(p, profile)) {
-            header = profile.getString("header-key", header);
-            footer = profile.getString("footer-key", footer);
+            if (profile.contains("header") || profile.contains("header-key"))
+              header = source(profile, "header", "tab.header");
+            if (profile.contains("footer") || profile.contains("footer-key"))
+              footer = source(profile, "footer", "tab.footer");
             break;
           }
         }
@@ -274,12 +339,22 @@ public final class TabModule implements Listener, AutoCloseable {
           view.board.registerNewObjective(
               "le_side",
               Criteria.DUMMY,
-              placeholders.render(section.getString("title-key", "tab.sidebar.title"), p, p));
+              placeholders.render(source(section, "title", "tab.sidebar.title"), p, p));
       obj.setDisplaySlot(DisplaySlot.SIDEBAR);
       obj.numberFormat(NumberFormat.blank());
     }
-    obj.displayName(placeholders.render(section.getString("title-key", "tab.sidebar.title"), p, p));
-    List<String> keys = section.getStringList("line-keys");
+    obj.displayName(placeholders.render(source(section, "title", "tab.sidebar.title"), p, p));
+    List<String> keys =
+        section.contains("lines")
+            ? section.getStringList("lines").stream()
+                .map(
+                    line ->
+                        "@inline:"
+                            + expandAliases(
+                                plugin.getConfig().getConfigurationSection("tab.placeholders"),
+                                line))
+                .toList()
+            : section.getStringList("line-keys");
     for (int i = 0; i < 15; i++) {
       String entry = "le_line_" + i;
       var score = obj.getScore(entry);
@@ -304,7 +379,7 @@ public final class TabModule implements Listener, AutoCloseable {
           view.board.registerNewObjective(
               name,
               Criteria.DUMMY,
-              placeholders.render(section.getString("title-key", "tab.objective"), viewer, viewer));
+              placeholders.render(source(section, "title", "tab.objective"), viewer, viewer));
       obj.setDisplaySlot(slot);
     }
     Set<String> expected = new HashSet<>();
@@ -351,7 +426,7 @@ public final class TabModule implements Listener, AutoCloseable {
           view.bars.put(id, bar);
           p.showBossBar(bar);
         }
-        bar.name(placeholders.render(s.getString("text-key", "tab.bossbar"), p, p));
+        bar.name(placeholders.render(source(s, "text", "tab.bossbar"), p, p));
         bar.progress(progress);
       }
     for (var it = view.bars.entrySet().iterator(); it.hasNext(); ) {

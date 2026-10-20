@@ -18,12 +18,22 @@ public final class GuiSettings {
   }
 
   public static String module(String id) {
+    if (id.startsWith("tab-") || id.startsWith("tab.")) return "tab";
     if (id.startsWith("portal-")) return "portal";
     if (id.startsWith("sidebar")) return "scoreboard";
+    if (id.startsWith("scenario")) return "scenarios";
+    if (id.startsWith("world")) return "worlds";
+    if (id.startsWith("windows") || id.startsWith("dialog")) return "dialogs";
+    if (id.startsWith("motd")) return "motd";
+    if (id.startsWith("comfort")) return "sitride";
+    if (id.startsWith("inventory")) return "inventory";
     if (id.startsWith("profile") || id.startsWith("public-profile") || id.startsWith("players"))
       return "profile";
     if (id.startsWith("messages")) return "messages";
-    if (id.contains("starter")) return "starter";
+    if (id.startsWith("starter")
+        || id.startsWith("content.starter")
+        || id.startsWith("content-text.starter")
+        || id.startsWith("content.kit")) return "starter";
     if (id.startsWith("content")) return "crafting";
     if (id.contains("nick")) return "nickname";
     if (id.contains("module") || id.startsWith("gui.settings")) return "npc";
@@ -36,7 +46,41 @@ public final class GuiSettings {
   }
 
   public net.kyori.adventure.text.Component title(String id, Map<String, String> vars) {
-    return lang.render(plugin.getConfig().getString(path(id) + ".title-key", id), vars);
+    String inline = plugin.getConfig().getString(path(id) + ".title", "");
+    return inline.isBlank()
+        ? lang.render(plugin.getConfig().getString(path(id) + ".title-key", id), vars)
+        : lang.renderText(inline, vars);
+  }
+
+  public Material frameMaterial(String id) {
+    String name =
+        plugin.getConfig().getString(module(id) + ".gui.frame.material", "GRAY_STAINED_GLASS_PANE");
+    Material material = Material.matchMaterial(name);
+    if (material == null || !material.name().endsWith("STAINED_GLASS_PANE"))
+      throw new IllegalArgumentException("gui-layout.invalid");
+    return material;
+  }
+
+  public ItemStack styleButton(String key, ItemStack item) {
+    String root = module(key) + ".gui.buttons." + key.replace('.', '-');
+    String texture = plugin.getConfig().getString(root + ".texture", "");
+    var meta = item.getItemMeta();
+    String title = plugin.getConfig().getString(root + ".title", "");
+    if (!title.isBlank()) meta.displayName(lang.renderText(title, Map.of()));
+    else {
+      String replacement = plugin.getConfig().getString(root + ".title-key", key);
+      if (!replacement.equals(key)) meta.displayName(lang.render(replacement));
+    }
+    if (plugin.getConfig().isList(root + ".lore"))
+      meta.lore(
+          plugin.getConfig().getStringList(root + ".lore").stream()
+              .map(text -> lang.renderText(text, Map.of()))
+              .toList());
+    item.setItemMeta(meta);
+    return texture.isBlank()
+        ? item
+        : MenuStyle.head(
+            texture, meta.displayName(), Objects.requireNonNullElse(meta.lore(), List.of()));
   }
 
   public int refresh(String module, int fallback) {
@@ -45,6 +89,22 @@ public final class GuiSettings {
 
   public void apply(Player p, Inventory inventory, GuiLayout layout) {
     standard(p, inventory, layout);
+    for (var nav :
+        Map.of("back", inventory.getSize() - 3, "close", inventory.getSize() - 2).entrySet()) {
+      var current = inventory.getItem(nav.getValue());
+      String texture =
+          plugin
+              .getConfig()
+              .getString(
+                  module(layout.guiId()) + ".gui.navigation." + nav.getKey() + ".texture", "");
+      if (current != null && current.getType() == Material.PLAYER_HEAD && !texture.isBlank())
+        inventory.setItem(
+            nav.getValue(),
+            MenuStyle.head(
+                texture,
+                current.getItemMeta().displayName(),
+                Objects.requireNonNullElse(current.getItemMeta().lore(), List.of())));
+    }
     String root = path(layout.guiId());
     var variables = new HashMap<String, String>(Map.of("player", p.getName()));
     variables.putAll(layout.guiVariables());
@@ -71,7 +131,10 @@ public final class GuiSettings {
           || !legal(from, to, inventory.getSize(), layout.guiId())
           || !destinations.add(to)) throw new IllegalArgumentException("gui-layout.invalid");
       var current = inventory.getItem(from);
-      if (current == null || current.getType().isAir()) continue;
+      if (current == null
+          || current.getType().isAir()
+          || current.getType().name().endsWith("STAINED_GLASS_PANE") && !actions.containsKey(from))
+        continue;
       if (!section.getBoolean(source + ".enabled", true)) {
         if (from == 0 || from == inventory.getSize() - 2 || from == inventory.getSize() - 3)
           continue;
@@ -79,12 +142,25 @@ public final class GuiSettings {
         callbacks.put(to, null);
         continue;
       }
+      if (from == to
+          && section.getString(source + ".title-key", "").isBlank()
+          && section.getString(source + ".lore-key", "").isBlank()
+          && section.getString(source + ".texture", "").isBlank()
+          && !section.contains(source + ".title")
+          && !section.contains(source + ".lore")) continue;
       var item = current.clone();
       var meta = item.getItemMeta();
       String title = section.getString(source + ".title-key", "");
       String lore = section.getString(source + ".lore-key", "");
-      if (!title.isBlank()) meta.displayName(lang.render(title, variables));
-      if (!lore.isBlank())
+      if (section.isString(source + ".title"))
+        meta.displayName(lang.renderText(section.getString(source + ".title"), variables));
+      else if (!title.isBlank()) meta.displayName(lang.render(title, variables));
+      if (section.isList(source + ".lore"))
+        meta.lore(
+            section.getStringList(source + ".lore").stream()
+                .map(text -> lang.renderText(text, variables))
+                .toList());
+      else if (!lore.isBlank())
         meta.lore(lang.lines(lore).stream().map(t -> lang.renderText(t, variables)).toList());
       item.setItemMeta(meta);
       String texture = section.getString(source + ".texture", "");
@@ -112,7 +188,7 @@ public final class GuiSettings {
             from,
             frameSlot(from, inventory.getSize())
                 ? MenuStyle.item(
-                    Material.GRAY_STAINED_GLASS_PANE,
+                    frameMaterial(layout.guiId()),
                     net.kyori.adventure.text.Component.empty(),
                     List.of())
                 : null);
@@ -125,7 +201,7 @@ public final class GuiSettings {
           slot,
           entry.getValue() == null && frameSlot(slot, inventory.getSize())
               ? MenuStyle.item(
-                  Material.GRAY_STAINED_GLASS_PANE,
+                  frameMaterial(layout.guiId()),
                   net.kyori.adventure.text.Component.empty(),
                   List.of())
               : entry.getValue());
@@ -148,7 +224,7 @@ public final class GuiSettings {
       inventory.setItem(
           slot,
           MenuStyle.item(
-              Material.GRAY_STAINED_GLASS_PANE,
+              frameMaterial(layout.guiId()),
               net.kyori.adventure.text.Component.empty(),
               List.of()));
     }

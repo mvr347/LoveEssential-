@@ -108,7 +108,7 @@ public final class MenuStyle {
           };
       item = head(texture, lang.render(title), Arrays.stream(lore).map(lang::render).toList());
     }
-    return item;
+    return settings == null ? item : settings.styleButton(title, item);
   }
 
   public static ItemStack head(String texture, Component title, List<Component> lore) {
@@ -179,7 +179,16 @@ public final class MenuStyle {
   }
 
   public static void frame(Inventory inventory) {
-    var filler = item(Material.GRAY_STAINED_GLASS_PANE, Component.empty(), List.of());
+    var filler =
+        item(
+            settings == null
+                ? Material.GRAY_STAINED_GLASS_PANE
+                : settings.frameMaterial(
+                    inventory.getHolder() instanceof GuiLayout layout
+                        ? layout.guiId()
+                        : "gui.wizard-title"),
+            Component.empty(),
+            List.of());
     inventory.clear();
     for (int i = 0; i < (inventory.getSize() >= 45 ? 18 : 9); i++) inventory.setItem(i, filler);
     for (int i = inventory.getSize() - 9; i < inventory.getSize(); i++)

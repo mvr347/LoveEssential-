@@ -122,6 +122,36 @@ public class LoveEssentialPlugin extends JavaPlugin {
     return changeSettings(() -> configFiles.update(module, path, expected, value));
   }
 
+  public CompletableFuture<Void> editSection(
+      String module, String path, Map<String, Object> value) {
+    Object expected =
+        dev.lovelace.loveessential.config.ModuleConfigs.snapshot(
+            getConfig()
+                .get(dev.lovelace.loveessential.config.ModuleConfigs.runtimePath(module, path)));
+    return editSetting(module, path, expected, value);
+  }
+
+  /** Export during startup without restarting modules that are still loading. */
+  public CompletableFuture<Void> exportSection(
+      String module, String path, Object expected, Map<String, Object> value) {
+    return CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                return configFiles.update(module, path, expected, value);
+              } catch (Exception error) {
+                throw new CompletionException(error);
+              }
+            },
+            io)
+        .thenCompose(
+            candidate ->
+                main.<Void>call(
+                    () -> {
+                      settings = candidate;
+                      return null;
+                    }));
+  }
+
   private record Loaded(SqliteStore store, Lang lang) {}
 
   @Override
@@ -268,6 +298,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     profiles.nativeDialogs(extensions.ui);
     extensions.sidebar.moduleSettings(p -> menus.settings(p, "scoreboard", "", 0));
     menus.scoreboardEditor(extensions.sidebar::settings);
+    extensions.tabSettings.advanced = p -> menus.settings(p, "tab", "", 0);
     dialogs.nativeDialogs(extensions.ui);
     gameplay.portals().ui(extensions.ui, content, p -> menus.modules(p));
     gameplay.motd(extensions.windows::motd);
@@ -448,12 +479,17 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       extensions.refresh();
                       return null;
                     }))
+        .thenCompose(v -> main.call(() -> extensions.sidebar.reloadCatalog()))
+        .thenCompose(future -> future)
         .whenComplete((v, error) -> reloading.set(false));
   }
 
   public static void validateConfig(org.bukkit.configuration.ConfigurationSection config) {
     for (String module : MODULES)
       dev.lovelace.loveessential.module.ModulePolicy.validate(config, module);
+    var sidebarCatalog = config.getConfigurationSection("scoreboard.catalog");
+    if (sidebarCatalog != null && !sidebarCatalog.getKeys(false).isEmpty())
+      dev.lovelace.loveessential.scoreboard.SidebarConfig.read(sidebarCatalog);
     bounded(config, "storage.write-queue", 1, 65536);
     bounded(config, "crafting.max-recipes", 1, 10000);
     bounded(config, "worlds.max-worlds", 1, 256);

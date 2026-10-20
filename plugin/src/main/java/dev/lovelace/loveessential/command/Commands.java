@@ -174,7 +174,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
           case "tab", "таб" -> {
             admin(sender);
             if (args.length != 1) throw new IllegalArgumentException("errors.input");
-            if (sender instanceof Player p) menus.direct(p, () -> menus.settings(p, "tab", "", 0));
+            if (sender instanceof Player p) extensions.tabSettings.open(p);
             else lang.send(sender, "help.tab-settings");
           }
           default -> {

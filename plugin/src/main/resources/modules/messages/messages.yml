@@ -1,0 +1,13 @@
+# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+enabled: true
+max-length: 512
+cooldown-ms: 750
+max-ignored: 200
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

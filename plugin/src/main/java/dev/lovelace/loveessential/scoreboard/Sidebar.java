@@ -215,6 +215,23 @@ public final class Sidebar implements Listener, AutoCloseable {
                                             return null;
                                           })));
             })
+        .thenCompose(
+            v ->
+                main.call(
+                    () -> {
+                      var section =
+                          plugin.getConfig().getConfigurationSection("scoreboard.catalog");
+                      if (section != null && !section.getKeys(false).isEmpty())
+                        return CompletableFuture.<Void>completedFuture(null);
+                      return plugin.exportSection(
+                          "scoreboard",
+                          "catalog",
+                          dev.lovelace.loveessential.config.ModuleConfigs.snapshot(section),
+                          SidebarConfig.write(catalog, lang, Map.of()));
+                    }))
+        .thenCompose(future -> future)
+        .thenCompose(v -> main.call(this::reloadCatalog))
+        .thenCompose(future -> future)
         .thenCompose(v -> migratePlayers(folder));
   }
 
@@ -1167,30 +1184,49 @@ public final class Sidebar implements Listener, AutoCloseable {
       throw new IllegalArgumentException("errors.permission");
   }
 
-  public CompletableFuture<Void> saveCatalog(
-      Catalog value, long revision, String actor, Map<String, String> values) {
-    if (value.max() < 1
-        || value.max() > 8
-        || value.lines().size() > 256
-        || value.interval() < 2
-        || value.interval() > 1200) throw new IllegalArgumentException("errors.input");
-    var ids = new HashSet<String>();
-    for (var line : value.lines())
-      if (!line.id().matches("[A-Za-z0-9_-]{1,48}")
-          || !ids.add(line.id())
-          || line.variants().isEmpty()
-          || line.variants().size() > 8) throw new IllegalArgumentException("errors.input");
-    return texts
-        .texts(values)
-        .thenCompose(v -> store.save("scoreboard-catalog", "default", revision, value, actor))
+  public CompletableFuture<Void> reloadCatalog() {
+    MainThread.require();
+    var section = plugin.getConfig().getConfigurationSection("scoreboard.catalog");
+    if (section == null || section.getKeys(false).isEmpty())
+      return CompletableFuture.completedFuture(null);
+    var next = SidebarConfig.read(section);
+    if (next.equals(catalog)) return CompletableFuture.completedFuture(null);
+    return store
+        .save("scoreboard-catalog", "default", catalogRevision, next, "config")
         .thenCompose(
-            rev ->
-                main.call(
+            revision ->
+                main.<Void>call(
                     () -> {
-                      catalog = value;
-                      catalogRevision = rev;
+                      catalog = next;
+                      catalogRevision = revision;
                       return null;
                     }));
+  }
+
+  public CompletableFuture<Void> saveCatalog(
+      Catalog value, long revision, String actor, Map<String, String> values) {
+    MainThread.require();
+    if (value.lines().stream().map(Line::id).distinct().count() != value.lines().size())
+      throw new IllegalArgumentException("errors.input");
+    var encoded = SidebarConfig.write(value, lang, values);
+    var canonical = SidebarConfig.materialize(encoded);
+    Object expected =
+        dev.lovelace.loveessential.config.ModuleConfigs.snapshot(
+            plugin.getConfig().get("scoreboard.catalog"));
+    return store
+        .save("scoreboard-catalog", "default", revision, canonical, actor)
+        .thenCompose(
+            rev ->
+                plugin
+                    .exportSection("scoreboard", "catalog", expected, encoded)
+                    .thenCompose(
+                        v ->
+                            main.<Void>call(
+                                () -> {
+                                  catalog = canonical;
+                                  catalogRevision = rev;
+                                  return null;
+                                })));
   }
 
   private void saved(Player p, CompletableFuture<?> future, Runnable after) {
@@ -1428,7 +1464,10 @@ public final class Sidebar implements Listener, AutoCloseable {
               values.put(prefix + ".reason", v.get("reason"));
               var variants = new ArrayList<String>();
               int n = 0;
-              for (String value : v.get("variants").split("\\|", -1)) {
+              for (String value :
+                  java.util.stream.IntStream.range(0, old.variants().size())
+                      .mapToObj(i -> i == 0 ? v.get("variants") : lang.text(old.variants().get(i)))
+                      .toList()) {
                 String key = prefix + ".variant." + n++;
                 values.put(key, value);
                 variants.add(key);
@@ -1478,6 +1517,8 @@ public final class Sidebar implements Listener, AutoCloseable {
                   () -> settings(p));
             }));
     if (index >= 0)
+      buttons.add(ui.button("formats", "sidebar.formats", v -> formats(p, c, revision, index)));
+    if (index >= 0)
       buttons.add(
           ui.button(
               "delete",
@@ -1519,14 +1560,133 @@ public final class Sidebar implements Listener, AutoCloseable {
             ui.text("id", "sidebar.line-id", old.id(), 48),
             ui.text("name", "windows.label", lang.text(old.nameKey()), 256),
             ui.text("category", "sidebar.category-id", old.category(), 48),
-            ui.text(
-                "variants",
-                "sidebar.variants",
-                String.join("|", old.variants().stream().map(lang::text).toList()),
-                2048),
+            ui.text("variants", "sidebar.variants", lang.text(old.variants().getFirst()), 2048),
             ui.text("requirement", "sidebar.requirement", old.requirement(), 256),
             ui.text("expected", "sidebar.expected", old.expected(), 128),
             ui.text("reason", "sidebar.reason", lang.text(old.reasonKey()), 256)),
+        buttons,
+        this::admin);
+  }
+
+  private Catalog replaceLine(Catalog c, int index, Line value) {
+    var lines = new ArrayList<>(c.lines());
+    lines.set(index, value);
+    return new Catalog(
+        c.titleKey(),
+        c.separatorKey(),
+        c.bottomKey(),
+        c.max(),
+        c.interval(),
+        c.disabledWorlds(),
+        c.categories(),
+        lines,
+        c.presets(),
+        c.defaultPreset());
+  }
+
+  private void formats(Player p, Catalog c, long revision, int lineIndex) {
+    requireAdmin(p);
+    var line = c.lines().get(lineIndex);
+    var buttons = new ArrayList<dev.lovelace.loveessential.dialog.NativeDialogs.Button>();
+    for (int i = 0; i < line.variants().size(); i++) {
+      int index = i;
+      buttons.add(
+          new dev.lovelace.loveessential.dialog.NativeDialogs.Button(
+              "format" + i,
+              lang.render("sidebar.format-index", Map.of("index", "" + (i + 1))),
+              v -> format(p, c, revision, lineIndex, index)));
+    }
+    if (line.variants().size() < 8)
+      buttons.add(
+          ui.button("add", "sidebar.add-format", v -> format(p, c, revision, lineIndex, -1)));
+    buttons.add(ui.button("back", "common.back", v -> editLine(p, c, revision, lineIndex)));
+    ui.show(p, "sidebar.formats", "sidebar.formats-help", List.of(), buttons, this::admin);
+  }
+
+  private void format(Player p, Catalog c, long revision, int lineIndex, int index) {
+    var line = c.lines().get(lineIndex);
+    var buttons = new ArrayList<dev.lovelace.loveessential.dialog.NativeDialogs.Button>();
+    java.util.function.BiConsumer<List<String>, List<String>> persist =
+        (templates, names) ->
+            saved(
+                p,
+                saveCatalog(
+                    replaceLine(
+                        c,
+                        lineIndex,
+                        new Line(
+                            line.id(),
+                            line.nameKey(),
+                            line.category(),
+                            templates,
+                            line.requirement(),
+                            line.expected(),
+                            line.reasonKey(),
+                            names,
+                            line.loreKeys())),
+                    revision,
+                    p.getUniqueId().toString(),
+                    Map.of()),
+                () -> editCatalog(p, 0));
+    buttons.add(
+        ui.button(
+            "save",
+            "content.save",
+            v -> {
+              var templates = new ArrayList<>(line.variants());
+              var names = new ArrayList<>(line.variantNames());
+              if (index < 0) {
+                templates.add("@inline:" + v.get("template"));
+                names.add("@inline:" + v.get("name"));
+              } else {
+                templates.set(index, "@inline:" + v.get("template"));
+                names.set(index, "@inline:" + v.get("name"));
+              }
+              persist.accept(templates, names);
+            }));
+    if (index >= 0 && line.variants().size() > 1)
+      buttons.add(
+          ui.button(
+              "delete",
+              "gui.remove",
+              v -> {
+                var templates = new ArrayList<>(line.variants());
+                var names = new ArrayList<>(line.variantNames());
+                templates.remove(index);
+                names.remove(index);
+                persist.accept(templates, names);
+              }));
+    for (int direction : List.of(-1, 1)) {
+      int to = index + direction;
+      if (index >= 0 && to >= 0 && to < line.variants().size())
+        buttons.add(
+            ui.button(
+                direction < 0 ? "up" : "down",
+                direction < 0 ? "tab-editor.up" : "tab-editor.down",
+                v -> {
+                  var templates = new ArrayList<>(line.variants());
+                  var names = new ArrayList<>(line.variantNames());
+                  Collections.swap(templates, index, to);
+                  Collections.swap(names, index, to);
+                  persist.accept(templates, names);
+                }));
+    }
+    buttons.add(ui.button("back", "common.back", v -> formats(p, c, revision, lineIndex)));
+    ui.show(
+        p,
+        "sidebar.format-title",
+        "sidebar.formats-help",
+        List.of(
+            ui.text(
+                "name",
+                "windows.label",
+                index < 0 ? "" : lang.text(line.variantNames().get(index)),
+                128),
+            ui.text(
+                "template",
+                "sidebar.template",
+                index < 0 ? "" : lang.text(line.variants().get(index)),
+                2048)),
         buttons,
         this::admin);
   }

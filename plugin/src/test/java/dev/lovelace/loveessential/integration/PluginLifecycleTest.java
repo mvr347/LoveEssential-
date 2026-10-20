@@ -63,6 +63,44 @@ class PluginLifecycleTest {
   }
 
   @Test
+  void flatModuleMigratesWithBackupAndGuiHasCurrentEditableTemplates() throws Exception {
+    var directory = plugin.getDataFolder().toPath();
+    java.nio.file.Files.delete(directory.resolve("modules/home/home.yml"));
+    java.nio.file.Files.delete(directory.resolve("modules/home/gui.yml"));
+    String legacy =
+        "enabled: true\n"
+            + "default-limit: 19\n"
+            + "gui:\n"
+            + "  menus:\n"
+            + "    example:\n"
+            + "      title-key: common.back\n";
+    java.nio.file.Files.writeString(directory.resolve("modules/home.yml"), legacy);
+    await(plugin.reloadSettings());
+    assertEquals(19, plugin.getConfig().getInt("home.default-limit"));
+    assertEquals(
+        legacy,
+        java.nio.file.Files.readString(directory.resolve("modules/home.yml.pre-folders.bak")));
+    assertFalse(java.nio.file.Files.exists(directory.resolve("modules/home.yml")));
+    assertEquals("common.back", plugin.getConfig().getString("home.gui.menus.example.title-key"));
+    var gui =
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+            directory.resolve("modules/profile/gui.yml").toFile());
+    assertTrue(gui.contains("menus.profile-menu-title.buttons.12"));
+    assertTrue(gui.getString("texts.profile-menu.settings").contains("Настройки"));
+    var p = admin();
+    String previous = plugin.getConfig().getString("profile.gui.texts.profile-menu.settings");
+    await(
+        plugin.editSetting(
+            "profile", "gui.texts.profile-menu.settings", previous, "<gold>Мои параметры"));
+    server.dispatchCommand(p, "profile");
+    assertEquals(12, itemNamed(p, "Мои параметры"));
+    assertFalse(
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                directory.resolve("modules/profile/profile.yml").toFile())
+            .contains("gui"));
+  }
+
+  @Test
   void moduleAccessStatesAreSelectedInGuiAndPersistOnlyInModuleFile() throws Exception {
     var p = admin();
     server.dispatchCommand(p, "le module home");
@@ -74,7 +112,7 @@ class PluginLifecycleTest {
     var folder = plugin.getDataFolder().toPath();
     var saved =
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-            folder.resolve("modules/home.yml").toFile());
+            folder.resolve("modules/home/home.yml").toFile());
     assertEquals(java.util.List.of("combat"), saved.getStringList("access.denied-states"));
     assertFalse(
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
@@ -103,7 +141,8 @@ class PluginLifecycleTest {
     assertEquals(1, n.route().points().size());
     assertTrue(n.revision() > 0);
     String text =
-        java.nio.file.Files.readString(plugin.getDataFolder().toPath().resolve("lang.yml"));
+        java.nio.file.Files.readString(
+            plugin.getDataFolder().toPath().resolve("modules/npc/npc.yml"));
     assertTrue(text.contains("Страж ворот"));
     assertTrue(
         java.nio.file.Files.exists(plugin.getDataFolder().toPath().resolve("loveessential.db")));
@@ -267,7 +306,7 @@ class PluginLifecycleTest {
     assertEquals(
         7,
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                folder.resolve("modules/home.yml").toFile())
+                folder.resolve("modules/home/home.yml").toFile())
             .getInt("default-limit"));
     assertThrows(
         java.util.concurrent.ExecutionException.class,
@@ -280,8 +319,9 @@ class PluginLifecycleTest {
   @Test
   void legacyConfigMigratesWithoutLosingValuesAndKeepsBackup() throws Exception {
     var folder = plugin.getDataFolder().toPath();
-    try (var files = java.nio.file.Files.list(folder.resolve("modules"))) {
-      for (var path : files.toList()) java.nio.file.Files.delete(path);
+    try (var files = java.nio.file.Files.walk(folder.resolve("modules"))) {
+      for (var path : files.sorted(java.util.Comparator.reverseOrder()).toList())
+        java.nio.file.Files.delete(path);
     }
     String legacy =
         "config-version: 2\n"
@@ -317,7 +357,7 @@ class PluginLifecycleTest {
   @Test
   void malformedModuleFileDoesNotReplaceActiveConfiguration() throws Exception {
     var previous = plugin.getConfig();
-    var file = plugin.getDataFolder().toPath().resolve("modules/tab.yml");
+    var file = plugin.getDataFolder().toPath().resolve("modules/tab/tab.yml");
     String original = java.nio.file.Files.readString(file);
     String broken = "engine: [invalid yaml";
     java.nio.file.Files.writeString(file, broken);
@@ -326,7 +366,7 @@ class PluginLifecycleTest {
     assertSame(previous, plugin.getConfig());
     assertEquals(broken, java.nio.file.Files.readString(file));
     java.nio.file.Files.writeString(file, original);
-    var npcFile = plugin.getDataFolder().toPath().resolve("modules/npc.yml");
+    var npcFile = plugin.getDataFolder().toPath().resolve("modules/npc/npc.yml");
     String wrongType = "enabled: true\npathfinding: invalid-section\n";
     java.nio.file.Files.writeString(npcFile, wrongType);
     assertThrows(
@@ -351,7 +391,7 @@ class PluginLifecycleTest {
   @Test
   void tabBooleanCanBeEditedFromGuiAndSurvivesReload() throws Exception {
     var p = admin();
-    server.dispatchCommand(p, "le tab");
+    server.dispatchCommand(p, "le module tab");
     var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
     int slot = -1;
     var inventory = p.getOpenInventory().getTopInventory();
@@ -370,7 +410,7 @@ class PluginLifecycleTest {
                 && p.getOpenInventory().getTopInventory().getSize() == 54);
     await(plugin.reloadSettings());
     assertFalse(plugin.getConfig().getBoolean("tab.sorting-enabled"));
-    var file = plugin.getDataFolder().toPath().resolve("modules/tab.yml");
+    var file = plugin.getDataFolder().toPath().resolve("modules/tab/tab.yml");
     assertFalse(
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile())
             .getBoolean("sorting-enabled"));

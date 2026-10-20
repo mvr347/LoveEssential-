@@ -1,0 +1,13 @@
+menus: {}
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+texts:
+  afk:
+    changed: <gray>Статус AFK изменён.
+    kick: <gray>Вы отключены за длительное бездействие.
+buttons: {}

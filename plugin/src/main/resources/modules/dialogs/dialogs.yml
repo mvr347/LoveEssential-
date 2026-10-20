@@ -1,0 +1,11 @@
+# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+enabled: true
+max-definitions: 256
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

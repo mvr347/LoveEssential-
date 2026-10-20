@@ -1,0 +1,32 @@
+menus: {}
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+texts:
+  comfort:
+    no-passenger: <gray>На вас никто не сидит.
+    passenger-ejected: <gray>Пассажир снят.
+    prompt-mode: <yellow>Введите survival, creative, adventure или spectator.
+    prompt-speed: <yellow>Введите скорость от 0 до 10. При полёте меняется скорость полёта, иначе — ходьбы.
+    usage: <gray>/sit · /ride [игрок] · /hat · /traces [on|off] · /speed <0–10> · /gamemode <режим>
+    healed: <green>Здоровье восстановлено.
+    fed: <green>Сытость восстановлена.
+    fly-on: <green>Полёт разрешён.
+    fly-off: <gray>Полёт выключен.
+    traces-on: <green>Следы включены.
+    traces-off: <gray>Следы выключены.
+    repair-item: <yellow>Возьмите в основную руку предмет, который нужно починить.
+    hat-single: <yellow>Для /hat возьмите ровно один предмет в основную руку. Шлем вернётся в эту руку.
+    hat-binding: <red>Нельзя снять шлем с проклятием несъёмности.
+    hat-done: <green>Предмет надет. Предыдущий шлем теперь в руке.
+    seat-surface: <yellow>Здесь нет подходящей поверхности для посадки.
+    seat-state: <yellow>Сначала выйдите из транспорта и завершите полёт, плавание или бой.
+    seat-space: <yellow>Над сиденьем недостаточно свободного места.
+    seat-occupied: <yellow>Это место уже занято.
+    ride-target: '<yellow>Посмотрите на свободную живую цель поблизости или укажите игрока: /ride <ник>.'
+    ride-consent: <yellow>Игрок должен разрешить посадку правом loveessential.ride.accept и находиться вне боя.
+buttons: {}
