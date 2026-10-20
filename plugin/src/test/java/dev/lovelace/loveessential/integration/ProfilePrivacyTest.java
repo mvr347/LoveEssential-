@@ -162,7 +162,9 @@ class ProfilePrivacyTest {
     var instance = PlaceholderAPIPlugin.class.getDeclaredField("instance");
     instance.setAccessible(true);
     instance.set(null, papi);
-    for (String id : List.of("loveadaptation", "lovebehavior", "lovesubnames")) {
+    for (String id :
+        List.of(
+            "loveadaptation", "lovebehavior", "lovesubnames", "clans", "lovetrades", "lovechat")) {
       expansions.put(
           id,
           new PlaceholderExpansion() {
@@ -180,6 +182,8 @@ class ProfilePrivacyTest {
 
             @Override
             public String onPlaceholderRequest(Player target, String params) {
+              if (id.equals("clans") || id.equals("lovetrades")) return "yes";
+              if (id.equals("lovechat")) return params.equals("channel") ? "global" : "false";
               return "&a" + target.getName() + ":" + params;
             }
           });
@@ -231,6 +235,117 @@ class ProfilePrivacyTest {
     assertFalse(root.contains("workbench"));
     assertFalse(root.contains("enderchest"));
     assertNotNull(plugin.getCommand("crafts"));
+  }
+
+  @Test
+  void settingsUseReferenceHeadsAndRussianStatesWithoutChangingRawPlaceholders() throws Exception {
+    enablePapi();
+    var p = player("Owner");
+    command(p, "profile settings");
+    var inventory = p.getOpenInventory().getTopInventory();
+    assertEquals(Material.PLAYER_HEAD, inventory.getItem(21).getType());
+    assertEquals(Material.PLAYER_HEAD, inventory.getItem(22).getType());
+    assertEquals(Material.PLAYER_HEAD, inventory.getItem(23).getType());
+    String text = lore(p);
+    assertTrue(text.contains("Да"));
+    assertTrue(text.contains("Выключено"));
+    assertTrue(text.contains("Глобальный"));
+    assertFalse(text.contains("yes"));
+    assertFalse(text.contains("false"));
+    assertEquals(
+        "yes", internal("placeholders", Placeholders.class).papi(p, p, "%clans_invites_enabled%"));
+    command(p, "profile");
+    var meta =
+        (org.bukkit.inventory.meta.SkullMeta)
+            p.getOpenInventory().getTopInventory().getItem(12).getItemMeta();
+    // MockBukkit does not decode texture properties into URLs. Assert the exact client payload.
+    String expected = plugin.getConfig().getString("profile.textures.profile-menu.settings");
+    assertTrue(
+        meta.getPlayerProfile().getProperties().stream()
+            .anyMatch(
+                property ->
+                    property.getName().equals("textures") && property.getValue().equals(expected)));
+  }
+
+  @Test
+  void statisticsAreRealAndHaveTheirOwnMenu() throws Exception {
+    var viewer = player("Viewer");
+    var target = player("Target");
+    target.setStatistic(Statistic.PLAYER_KILLS, 9);
+    target.setStatistic(Statistic.DEATHS, 3);
+    target.setStatistic(Statistic.PLAY_ONE_MINUTE, 72000);
+    target.setStatistic(Statistic.MINE_BLOCK, Material.DIAMOND_ORE, 17);
+    command(viewer, "profile Target");
+    assertEquals("Статистика игрока", title(viewer, 16));
+    click(viewer, 16);
+    assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
+    assertTrue(lore(viewer).contains("Убийств игроков: 9"));
+    assertTrue(lore(viewer).contains("K/D: 3.0"));
+    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
+    assertTrue(lore(viewer).contains("Добыто блоков: 17"));
+    command(viewer, "profile stats");
+    assertTrue(lore(viewer).contains("Убийств игроков: 0"));
+  }
+
+  @Test
+  void offlineProfileLoadsSqlSnapshotSkinStatisticsAndAdaptations() throws Exception {
+    enablePapi();
+    var viewer = player("Viewer");
+    var target = player("Target");
+    String url = "https://textures.minecraft.net/texture/" + "a".repeat(64);
+    var profile = target.getPlayerProfile();
+    var textures = profile.getTextures();
+    textures.setSkin(java.net.URI.create(url).toURL());
+    profile.setTextures(textures);
+    target.setPlayerProfile(profile);
+    target.setStatistic(Statistic.PLAYER_KILLS, 9);
+    command(target, "profile");
+    target.disconnect();
+    profiles.openProfile(viewer, "target");
+    waitFor(
+        () ->
+            viewer.getOpenInventory().getTopInventory() != null
+                && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+    assertTrue(lore(viewer).contains("Не в сети"));
+    var meta =
+        (org.bukkit.inventory.meta.SkullMeta)
+            viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
+    assertEquals(url, meta.getPlayerProfile().getTextures().getSkin().toExternalForm());
+    click(viewer, 14);
+    assertTrue(lore(viewer).contains("Target:water_progress"));
+    assertFalse(lore(viewer).contains("Viewer:water_progress"));
+    click(viewer, 51);
+    click(viewer, 16);
+    assertTrue(lore(viewer).contains("Убийств игроков: 9"));
+    assertTrue(lore(viewer).contains("Последние данные:"));
+  }
+
+  @Test
+  void offlineProfileDoesNotBypassPrivacyOrLeakHiddenActivity() throws Exception {
+    var viewer = player("Viewer");
+    viewer.setOp(true);
+    var target = player("Target");
+    await(profiles.privacy().change(target, old -> new ProfilePrivacy.Preferences(true, false)));
+    target.disconnect();
+    profiles.openProfile(viewer, "Target");
+    waitFor(
+        () ->
+            viewer.getOpenInventory().getTopInventory() != null
+                && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+    var menu = viewer.getOpenInventory().getTopInventory();
+    click(viewer, 16);
+    assertSame(menu, viewer.getOpenInventory().getTopInventory());
+    target.reconnect();
+    waitFor(() -> profiles.privacy().loaded(target.getUniqueId()));
+    await(profiles.privacy().change(target, old -> new ProfilePrivacy.Preferences(false, false)));
+    target.disconnect();
+    viewer.closeInventory();
+    profiles.openProfile(viewer, "Target");
+    var requests = PlayerProfiles.class.getDeclaredField("requests");
+    requests.setAccessible(true);
+    var pending = (Map<?, ?>) requests.get(profiles);
+    waitFor(() -> !pending.containsKey(viewer.getUniqueId()));
+    assertNull(viewer.getOpenInventory().getTopInventory());
   }
 
   @Test

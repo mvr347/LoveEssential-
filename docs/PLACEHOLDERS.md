@@ -76,6 +76,26 @@
 | `%loveessential_damage_taken%` | `<damage_taken>` | Полученный урон: Bukkit DAMAGE_TAKEN / 10 |
 | `%loveessential_walk_km%` | `<walk_km>` | Пеший путь в километрах: Bukkit WALK_ONE_CM / 100000 |
 
+Дополнительные показатели доступны в снимке онлайн-игрока без синхронного SQL:
+
+| PlaceholderAPI | Значение |
+| --- | --- |
+| `%loveessential_kd_ratio%` | Убийства / max(1, смерти), одна цифра после точки |
+| `%loveessential_sprint_km%` | Пройдено бегом, км |
+| `%loveessential_swim_km%` | Проплыто, км |
+| `%loveessential_fly_km%` | Пролетено на элитрах, км |
+| `%loveessential_time_since_death_hours%` | Игровые часы после смерти |
+| `%loveessential_blocks_mined%` | Сумма MINE_BLOCK по материалам |
+| `%loveessential_blocks_used%` | Сумма USE_ITEM для предметов-блоков; не точный счётчик установок |
+| `%loveessential_fish_caught%` | Поймано рыбы |
+| `%loveessential_animals_bred%` | Разведено животных |
+| `%loveessential_villager_trades%` | Сделок с жителями |
+| `%loveessential_first_join_local%` | Первый вход, dd.MM.yyyy HH:mm Europe/Kiev |
+| `%loveessential_last_seen_local%` | Последний снимок, dd.MM.yyyy HH:mm Europe/Kiev |
+| `%loveessential_online_state%` | Локализованное состояние подключения |
+
+Родной тег совпадает с частью после `loveessential_`, например `<kd_ratio>`. Агрегаты блоков обновляются раз в 30 секунд. Эти PAPI-значения рассчитаны на онлайн-снимок; офлайн-профиль отдельно загружает сохранённые сведения из SQLite и помечает их как архивные.
+
 ## Логические статусы
 
 | PlaceholderAPI | Тег LoveEssential | Значение |

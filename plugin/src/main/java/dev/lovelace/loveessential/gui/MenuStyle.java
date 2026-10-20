@@ -68,11 +68,42 @@ public final class MenuStyle {
   }
 
   public static ItemStack head(String texture, Component title, List<Component> lore) {
+    if (texture.startsWith("basehead-")) texture = texture.substring(9);
+    String textureValue = texture;
+    if (!texture.matches("[a-fA-F0-9]{32,64}")) {
+      try {
+        String decoded =
+            new String(
+                Base64.getDecoder().decode(texture), java.nio.charset.StandardCharsets.UTF_8);
+        String url =
+            com.google.gson.JsonParser.parseString(decoded)
+                .getAsJsonObject()
+                .getAsJsonObject("textures")
+                .getAsJsonObject("SKIN")
+                .get("url")
+                .getAsString();
+        var uri = java.net.URI.create(url);
+        if (!"textures.minecraft.net".equalsIgnoreCase(uri.getHost())
+            || !uri.getPath().matches("/texture/[a-fA-F0-9]{32,64}"))
+          throw new IllegalArgumentException("errors.input");
+        texture = uri.getPath().substring(9);
+      } catch (RuntimeException e) {
+        throw new IllegalArgumentException("errors.input", e);
+      }
+    } else
+      textureValue =
+          Base64.getEncoder()
+              .encodeToString(
+                  ("{\"textures\":{\"SKIN\":{\"url\":\"https://textures.minecraft.net/texture/"
+                          + texture
+                          + "\"}}}")
+                      .getBytes(java.nio.charset.StandardCharsets.UTF_8));
     var item = item(Material.PLAYER_HEAD, title, lore);
     var meta = (org.bukkit.inventory.meta.SkullMeta) item.getItemMeta();
     var profile =
-        org.bukkit.Bukkit.createPlayerProfile(
-            UUID.nameUUIDFromBytes(texture.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        org.bukkit.Bukkit.createProfile(
+            UUID.nameUUIDFromBytes(texture.getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+            "LoveTexture");
     var textures = profile.getTextures();
     try {
       textures.setSkin(
@@ -81,7 +112,9 @@ public final class MenuStyle {
       throw new IllegalArgumentException(e);
     }
     profile.setTextures(textures);
-    meta.setOwnerProfile(profile);
+    profile.setProperty(
+        new com.destroystokyo.paper.profile.ProfileProperty("textures", textureValue));
+    meta.setPlayerProfile(profile);
     item.setItemMeta(meta);
     return item;
   }

@@ -254,6 +254,12 @@ public final class ControlMenus implements Listener, AutoCloseable {
     p.openInventory(m.inventory);
   }
 
+  private java.util.function.Consumer<Player> scoreboardEditor = p -> {};
+
+  public void scoreboardEditor(java.util.function.Consumer<Player> opener) {
+    scoreboardEditor = opener;
+  }
+
   public void settings(Player p, String id, String path, int page) {
     if (!LoveEssentialPlugin.MODULES.contains(id))
       throw new IllegalArgumentException("errors.module");
@@ -267,6 +273,14 @@ public final class ControlMenus implements Listener, AutoCloseable {
             "gui.settings-title",
             Map.of("module", lang.text("gui.module-labels." + id), "path", path),
             this::admin);
+    if (id.equals("scoreboard"))
+      entry(
+          m,
+          8,
+          Material.WRITABLE_BOOK,
+          lang.render("sidebar.admin-menu"),
+          List.of(lang.render("sidebar.edit-help")),
+          click -> scoreboardEditor.accept(p));
     for (int i = page * 21; i < Math.min(keys.size(), (page + 1) * 21); i++) {
       String key = keys.get(i), full = path.isEmpty() ? key : path + "." + key;
       Object value = section.get(key);
@@ -300,7 +314,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
                     "value",
                     (value instanceof List<?> values
                         ? lang.text("gui.list-count") + " " + values.size()
-                        : String.valueOf(value)))));
+                        : value instanceof Boolean flag
+                            ? lang.text(flag ? "players.yes" : "players.no")
+                            : String.valueOf(value)))));
       lore.add(lang.render("gui.separator"));
       lore.add(
           lang.render(

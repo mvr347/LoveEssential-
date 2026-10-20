@@ -144,7 +144,7 @@ public final class Placeholders {
     return mm.deserialize(template, b.build());
   }
 
-  private Component legacyOrMini(String value) {
+  public Component legacyOrMini(String value) {
     if (value == null || value.startsWith("%") && value.endsWith("%")) return Component.empty();
     return value.contains("§")
         ? LegacyComponentSerializer.legacySection().deserialize(value)

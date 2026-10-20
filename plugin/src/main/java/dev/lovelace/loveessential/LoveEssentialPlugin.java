@@ -246,6 +246,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
         new Extensions(
             this, main, store, lang, love, conditions, actions, content, tab, placeholders);
     extensions.ui.beforeShow(menus::clearInput);
+    extensions.sidebar.moduleSettings(p -> menus.settings(p, "scoreboard", "", 0));
+    menus.scoreboardEditor(extensions.sidebar::settings);
     dialogs.nativeDialogs(extensions.ui);
     gameplay.motd(extensions.windows::motd);
     var commands =
@@ -439,6 +441,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "scenarios.max-starts-per-minute", 1, 10000);
     bounded(config, "dialogs.max-definitions", 1, 10000);
     bounded(config, "scoreboard.refresh-ticks", 2, 1200);
+    bounded(config, "scoreboard.max-selected-lines", 1, 8);
+    bounded(config, "scoreboard.overrides.max-seconds", 1, 86400);
+    bounded(config, "scoreboard.overrides.per-player-limit", 1, 32);
+    for (String mode : config.getStringList("scoreboard.disabled-gamemodes")) {
+      try {
+        org.bukkit.GameMode.valueOf(mode.toUpperCase(java.util.Locale.ROOT));
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("errors.config");
+      }
+    }
     bounded(config, "nickname.min-length", 1, 32);
     bounded(config, "nickname.max-length", 1, 32);
     if (config.getInt("nickname.min-length", 3) > config.getInt("nickname.max-length", 24))

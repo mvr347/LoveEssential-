@@ -93,6 +93,7 @@ public final class Sidebar implements Listener, AutoCloseable {
 
   private static final class Menu implements InventoryHolder {
     Inventory inventory;
+    boolean adminOnly;
     final Map<Integer, java.util.function.Consumer<ClickType>> clicks = new HashMap<>();
 
     public Inventory getInventory() {
@@ -120,10 +121,12 @@ public final class Sidebar implements Listener, AutoCloseable {
 
   private final Map<UUID, SqliteStore.Document<State>> states = new HashMap<>();
   private final Set<UUID> loading = new HashSet<>(), saving = new HashSet<>();
+  private final Map<UUID, UUID> loadSessions = new HashMap<>();
   private final Map<UUID, View> views = new HashMap<>();
   private final Set<Scoreboard> rendered = new HashSet<>();
   private final Map<UUID, Scoreboard> playerBoards = new HashMap<>();
   private final TweaksScoreboardBridge bridge;
+  private final SidebarOverrides overrides;
   private org.bukkit.scheduler.BukkitTask task;
   private boolean ownership = true;
   private static final Pattern PAPI = Pattern.compile("%([A-Za-z0-9]+)_[^%]+%");
@@ -138,6 +141,11 @@ public final class Sidebar implements Listener, AutoCloseable {
       TabModule tab,
       ContentLibrary texts) {
     this.plugin = plugin;
+    overrides =
+        new SidebarOverrides(
+            System::nanoTime,
+            () -> plugin.getConfig().getInt("scoreboard.overrides.max-seconds", 600),
+            () -> plugin.getConfig().getInt("scoreboard.overrides.per-player-limit", 8));
     this.main = main;
     this.store = store;
     this.lang = lang;
@@ -484,12 +492,19 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   public void start() {
+    Bukkit.getServicesManager()
+        .register(
+            dev.lovelace.loveessential.api.ScoreboardService.class,
+            overrides,
+            plugin,
+            org.bukkit.plugin.ServicePriority.Normal);
     ownership =
         bridge.take(
             (sender, command, label, args) -> {
               if (sender instanceof Player p)
                 try {
-                  if (args.length == 1 && args[0].equals("edit")) editCatalog(p, 0);
+                  if (args.length == 1 && (args[0].equals("edit") || args[0].equals("settings")))
+                    settings(p);
                   else open(p, "", 0);
                 } catch (RuntimeException e) {
                   lang.send(p, lang.contains(e.getMessage()) ? e.getMessage() : "errors.input");
@@ -517,14 +532,18 @@ public final class Sidebar implements Listener, AutoCloseable {
   private void loadPlayer(Player p) {
     UUID id = p.getUniqueId();
     if (states.containsKey(id) || !loading.add(id)) return;
+    UUID session = UUID.randomUUID();
+    loadSessions.put(id, session);
     store
         .get("scoreboard-player", id.toString(), State.class)
         .whenComplete(
             (saved, error) ->
                 main.execute(
                     () -> {
+                      if (!session.equals(loadSessions.get(id))) return;
                       loading.remove(id);
-                      if (error != null || !p.isOnline()) return;
+                      loadSessions.remove(id);
+                      if (error != null || !p.isOnline() || Bukkit.getPlayer(id) != p) return;
                       states.put(
                           id,
                           saved.orElseGet(
@@ -537,14 +556,15 @@ public final class Sidebar implements Listener, AutoCloseable {
         catalog.presets().stream()
             .filter(p -> p.id().equals(catalog.defaultPreset()))
             .findFirst()
-            .map(Preset::entries)
+            .map(preset -> preset.entries().stream().limit(maxSelected()).toList())
             .orElseGet(
                 () ->
                     catalog.lines().stream()
-                        .limit(catalog.max())
+                        .limit(maxSelected())
                         .map(l -> new Selection(l.id(), 0))
                         .toList());
-    return new State(true, false, entries);
+    return new State(
+        plugin.getConfig().getBoolean("scoreboard.default-enabled", true), false, entries);
   }
 
   private Line line(String id) {
@@ -592,18 +612,51 @@ public final class Sidebar implements Listener, AutoCloseable {
     return placeholders.renderRaw(result.toString(), p, p);
   }
 
+  private int maxSelected() {
+    return Math.min(
+        8, Math.min(plugin.getConfig().getInt("scoreboard.max-selected-lines", 8), catalog.max()));
+  }
+
+  public boolean eligible(Player p) {
+    String world = p.getWorld().getName();
+    var config = plugin.getConfig();
+    String permission = config.getString("scoreboard.display-permission", "");
+    var only = config.getStringList("scoreboard.enabled-worlds");
+    return love.authenticated(p)
+        && catalog.disabledWorlds().stream().noneMatch(world::equalsIgnoreCase)
+        && config.getStringList("scoreboard.disabled-worlds").stream()
+            .noneMatch(world::equalsIgnoreCase)
+        && (only.isEmpty() || only.stream().anyMatch(world::equalsIgnoreCase))
+        && config.getStringList("scoreboard.disabled-gamemodes").stream()
+            .noneMatch(mode -> mode.equalsIgnoreCase(p.getGameMode().name()))
+        && (permission.isBlank() || p.hasPermission(permission))
+        && (!config.getBoolean("scoreboard.hide-while-afk", false)
+            || !"true".equals(placeholders.papi(p, p, "%loveessential_afk%")))
+        && (!config.getBoolean("scoreboard.hide-in-combat", false) || !love.combat(p));
+  }
+
+  private Optional<dev.lovelace.loveessential.api.ScoreboardService.Board> override(Player p) {
+    var s = state(p.getUniqueId());
+    return overrides.current(
+        p.getUniqueId(),
+        s != null && s.value().enabled(),
+        plugin.getConfig().getBoolean("scoreboard.overrides.allow-forced", true));
+  }
+
   public List<Component> lines(Player p) {
-    var d = states.get(p.getUniqueId());
-    if (d == null
-        || !d.value().enabled()
-        || !love.authenticated(p)
-        || catalog.disabledWorlds().contains(p.getWorld().getName())) return List.of();
+    var s = state(p.getUniqueId());
+    if (!eligible(p)) return List.of();
+    var forced = override(p);
+    if (forced.isPresent()) return forced.get().lines();
+    if (s == null || !s.value().enabled()) return List.of();
     var active = new ArrayList<Component>();
-    for (var s : d.value().entries()) {
-      var line = line(s.id());
+    for (var selection : s.value().entries()) {
+      var line = line(selection.id());
       if (line == null || !available(p, line)) continue;
-      active.add(value(p, line.variants().get(Math.floorMod(s.variant(), line.variants().size()))));
-      if (active.size() >= Math.min(8, catalog.max())) break;
+      active.add(
+          value(
+              p, line.variants().get(Math.floorMod(selection.variant(), line.variants().size()))));
+      if (active.size() >= maxSelected()) break;
     }
     if (active.isEmpty()) return List.of();
     var out = new ArrayList<Component>();
@@ -620,7 +673,20 @@ public final class Sidebar implements Listener, AutoCloseable {
     var old = board.getObjective("le_side");
     if (old != null) old.unregister();
     var obj = board.getObjective("le_sidebar");
-    var lines = plugin.module("scoreboard") && ownership ? lines(p) : List.<Component>of();
+    var forced =
+        eligible(p)
+            ? override(p)
+            : Optional.<dev.lovelace.loveessential.api.ScoreboardService.Board>empty();
+    var lines =
+        plugin.module("scoreboard") && ownership
+            ? forced
+                .map(dev.lovelace.loveessential.api.ScoreboardService.Board::lines)
+                .orElseGet(() -> lines(p))
+            : List.<Component>of();
+    var title =
+        forced
+            .map(dev.lovelace.loveessential.api.ScoreboardService.Board::title)
+            .orElseGet(() -> value(p, catalog.titleKey()));
     if (lines.isEmpty()) {
       if (obj != null) obj.unregister();
       return;
@@ -628,11 +694,11 @@ public final class Sidebar implements Listener, AutoCloseable {
     var existing = board.getObjective(DisplaySlot.SIDEBAR);
     if (existing != null && !existing.getName().equals("le_sidebar")) return;
     if (obj == null) {
-      obj = board.registerNewObjective("le_sidebar", Criteria.DUMMY, value(p, catalog.titleKey()));
+      obj = board.registerNewObjective("le_sidebar", Criteria.DUMMY, title);
       obj.setDisplaySlot(DisplaySlot.SIDEBAR);
       obj.numberFormat(NumberFormat.blank());
     }
-    obj.displayName(value(p, catalog.titleKey()));
+    obj.displayName(title);
     var previous = playerBoards.put(p.getUniqueId(), board);
     if (previous != null && previous != board) {
       var oldSidebar = previous.getObjective("le_sidebar");
@@ -657,7 +723,7 @@ public final class Sidebar implements Listener, AutoCloseable {
     }
     for (var p : Bukkit.getOnlinePlayers()) {
       loadPlayer(p);
-      if (!plugin.module("scoreboard") || !ownership) {
+      if (!plugin.module("scoreboard") || !ownership || !eligible(p)) {
         release(p);
         continue;
       }
@@ -775,7 +841,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                 new State(state.enabled(), !state.viewAll(), state.entries()),
                 () -> open(p, category, actual)));
     if (p.hasPermission("loveessential.admin") && ui != null)
-      put(menu, 50, Material.COMPARATOR, "sidebar.edit", c -> editCatalog(p, 0));
+      put(menu, 50, Material.COMPARATOR, "sidebar.edit", c -> settings(p));
     for (int i = 0; i < Math.min(5, catalog.presets().size()); i++) {
       var preset = catalog.presets().get(i);
       int slot = 4 + i;
@@ -795,7 +861,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                       state.viewAll(),
                       preset.entries().stream()
                           .filter(e -> line(e.id()) != null && available(p, line(e.id())))
-                          .limit(catalog.max())
+                          .limit(maxSelected())
                           .toList()),
                   () -> open(p, category, actual)));
     }
@@ -841,7 +907,7 @@ public final class Sidebar implements Listener, AutoCloseable {
               Collections.swap(entries, selected, selected + 1);
             else if (c == ClickType.LEFT) {
               if (selected >= 0) entries.remove(selected);
-              else if (available(p, l) && entries.size() < catalog.max())
+              else if (available(p, l) && entries.size() < maxSelected())
                 entries.add(new Selection(l.id(), 0));
               else {
                 lang.send(p, "sidebar.limit");
@@ -904,6 +970,116 @@ public final class Sidebar implements Listener, AutoCloseable {
                     if (admin(p)) after.run();
                   }
                 }));
+  }
+
+  public void settings(Player p) {
+    if (!admin(p)) throw new IllegalArgumentException("errors.permission");
+    var menu = new Menu();
+    menu.adminOnly = true;
+    menu.inventory = Bukkit.createInventory(menu, 54, lang.render("sidebar.admin-menu"));
+    MenuStyle.frame(menu.inventory);
+    menu.inventory.setItem(
+        20, MenuStyle.button(lang, Material.WRITABLE_BOOK, "sidebar.edit", "sidebar.edit-help"));
+    menu.clicks.put(20, click -> editCatalog(p, 0));
+    menu.inventory.setItem(
+        22,
+        MenuStyle.button(lang, Material.GRASS_BLOCK, "sidebar.world-menu", "sidebar.world-help"));
+    menu.clicks.put(22, click -> worlds(p, 0));
+    menu.inventory.setItem(
+        24,
+        MenuStyle.button(
+            lang, Material.COMPARATOR, "sidebar.module-settings", "sidebar.module-settings-help"));
+    menu.clicks.put(24, click -> moduleSettings.accept(p));
+    menu.inventory.setItem(
+        31,
+        MenuStyle.item(
+            Material.BOOK,
+            lang.render("sidebar.rules"),
+            List.of(lang.render("sidebar.rules-help"), lang.render("sidebar.api-help"))));
+    menu.inventory.setItem(
+        51, MenuStyle.button(lang, Material.ARROW, "common.back", "gui.click.open"));
+    menu.clicks.put(51, click -> open(p, "", 0));
+    menu.inventory.setItem(
+        52, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
+    menu.clicks.put(52, click -> p.closeInventory());
+    p.openInventory(menu.inventory);
+  }
+
+  private java.util.function.Consumer<Player> moduleSettings = p -> {};
+
+  public void moduleSettings(java.util.function.Consumer<Player> opener) {
+    moduleSettings = opener;
+  }
+
+  public void worlds(Player p, int page) {
+    if (!admin(p)) throw new IllegalArgumentException("errors.permission");
+    var names = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+    Bukkit.getWorlds().forEach(w -> names.add(w.getName()));
+    names.addAll(catalog.disabledWorlds());
+    names.addAll(plugin.getConfig().getStringList("scoreboard.enabled-worlds"));
+    names.addAll(plugin.getConfig().getStringList("scoreboard.disabled-worlds"));
+    var worlds = List.copyOf(names);
+    int actual = Math.max(0, Math.min(page, Math.max(0, (worlds.size() - 1) / 21)));
+    var menu = new Menu();
+    menu.adminOnly = true;
+    menu.inventory = Bukkit.createInventory(menu, 54, lang.render("sidebar.world-menu"));
+    MenuStyle.frame(menu.inventory);
+    for (int i = actual * 21; i < Math.min(worlds.size(), (actual + 1) * 21); i++) {
+      String name = worlds.get(i);
+      boolean blocked = catalog.disabledWorlds().stream().anyMatch(name::equalsIgnoreCase);
+      boolean configBlocked =
+          plugin.getConfig().getStringList("scoreboard.disabled-worlds").stream()
+              .anyMatch(name::equalsIgnoreCase);
+      int slot = MenuStyle.CONTENT[i % 21];
+      menu.inventory.setItem(
+          slot,
+          MenuStyle.item(
+              blocked || configBlocked ? Material.RED_CONCRETE : Material.GRASS_BLOCK,
+              lang.render("sidebar.world-title", Map.of("world", name)),
+              List.of(
+                  lang.render(
+                      blocked || configBlocked ? "sidebar.world-blocked" : "sidebar.world-allowed"),
+                  lang.render(configBlocked ? "sidebar.world-config" : "sidebar.world-click"))));
+      if (!configBlocked)
+        menu.clicks.put(
+            slot,
+            click -> {
+              var current = catalog;
+              var disabled = new ArrayList<>(current.disabledWorlds());
+              if (!disabled.removeIf(name::equalsIgnoreCase)) disabled.add(name);
+              saved(
+                  p,
+                  saveCatalog(
+                      new Catalog(
+                          current.titleKey(),
+                          current.separatorKey(),
+                          current.bottomKey(),
+                          current.max(),
+                          current.interval(),
+                          disabled,
+                          current.categories(),
+                          current.lines(),
+                          current.presets(),
+                          current.defaultPreset()),
+                      catalogRevision,
+                      p.getUniqueId().toString(),
+                      Map.of()),
+                  () -> worlds(p, actual));
+            });
+    }
+    if (actual > 0) {
+      menu.inventory.setItem(36, MenuStyle.button(lang, Material.ARROW, "gui.previous"));
+      menu.clicks.put(36, click -> worlds(p, actual - 1));
+    }
+    if ((actual + 1) * 21 < worlds.size()) {
+      menu.inventory.setItem(44, MenuStyle.button(lang, Material.ARROW, "common.next"));
+      menu.clicks.put(44, click -> worlds(p, actual + 1));
+    }
+    menu.inventory.setItem(51, MenuStyle.button(lang, Material.ARROW, "common.back"));
+    menu.clicks.put(51, click -> settings(p));
+    menu.inventory.setItem(52, MenuStyle.button(lang, Material.BARRIER, "gui.close"));
+    menu.clicks.put(52, click -> p.closeInventory());
+    p.openInventory(menu.inventory);
   }
 
   public void editCatalog(Player p, int page) {
@@ -1038,7 +1214,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                       revision,
                       p.getUniqueId().toString(),
                       values),
-                  () -> editCatalog(p, 0));
+                  () -> settings(p));
             }));
     if (index >= 0)
       buttons.add(
@@ -1069,7 +1245,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                                 revision,
                                 p.getUniqueId().toString(),
                                 Map.of()),
-                            () -> editCatalog(p, 0));
+                            () -> settings(p));
                       },
                       () -> editLine(p, c, revision, index),
                       this::admin)));
@@ -1116,6 +1292,8 @@ public final class Sidebar implements Listener, AutoCloseable {
                     && plugin.module("scoreboard")
                     && love.authenticated(p)
                     && p.hasPermission("loveessential.scoreboard")
+                    && (!m.adminOnly || admin(p))
+                    && p.getOpenInventory().getTopInventory() != null
                     && p.getOpenInventory().getTopInventory().getHolder() == m)
                   click.accept(e.getClick());
               });
@@ -1134,9 +1312,16 @@ public final class Sidebar implements Listener, AutoCloseable {
 
   @EventHandler
   public void quit(PlayerQuitEvent e) {
+    overrides.removePlayer(e.getPlayer().getUniqueId());
     release(e.getPlayer());
     states.remove(e.getPlayer().getUniqueId());
     loading.remove(e.getPlayer().getUniqueId());
+    loadSessions.remove(e.getPlayer().getUniqueId());
+  }
+
+  @EventHandler
+  public void ownerDisabled(org.bukkit.event.server.PluginDisableEvent e) {
+    overrides.removeOwner(e.getPlugin());
   }
 
   public void refresh() {
@@ -1156,6 +1341,9 @@ public final class Sidebar implements Listener, AutoCloseable {
   @Override
   public void close() {
     if (task != null) task.cancel();
+    overrides.close();
+    Bukkit.getServicesManager()
+        .unregister(dev.lovelace.loveessential.api.ScoreboardService.class, overrides);
     for (var p : Bukkit.getOnlinePlayers()) {
       if (p.getOpenInventory().getTopInventory() != null
           && p.getOpenInventory().getTopInventory().getHolder() instanceof Menu) p.closeInventory();

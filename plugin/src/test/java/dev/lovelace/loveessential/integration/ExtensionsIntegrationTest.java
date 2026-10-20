@@ -526,6 +526,73 @@ class ExtensionsIntegrationTest {
   }
 
   @Test
+  void scoreboardWorldRulesGamemodesPermissionsAndForcedApiAreEnforced() throws Exception {
+    var p = admin();
+    waitFor(() -> ext.sidebar.state(p.getUniqueId()) != null);
+    assertTrue(ext.sidebar.eligible(p));
+    plugin.getConfig().set("scoreboard.disabled-worlds", List.of("WORLD"));
+    assertFalse(ext.sidebar.eligible(p));
+    var service =
+        Bukkit.getServicesManager().load(dev.lovelace.loveessential.api.ScoreboardService.class);
+    assertNotNull(service);
+    var owner = MockBukkit.createMockPlugin("LoveArena");
+    var layout =
+        new dev.lovelace.loveessential.api.ScoreboardService.Board(
+            Component.text("Arena"), List.of(Component.text("Round 1")));
+    var lease = service.show(owner, p.getUniqueId(), 10, Duration.ofMinutes(1), true, layout);
+    assertTrue(ext.sidebar.lines(p).isEmpty());
+    plugin.getConfig().set("scoreboard.disabled-worlds", List.of());
+    assertEquals(layout.lines(), ext.sidebar.lines(p));
+    plugin.getConfig().set("scoreboard.enabled-worlds", List.of("other"));
+    assertFalse(ext.sidebar.eligible(p));
+    plugin.getConfig().set("scoreboard.enabled-worlds", List.of("WORLD"));
+    assertTrue(ext.sidebar.eligible(p));
+    plugin.getConfig().set("scoreboard.disabled-gamemodes", List.of("SURVIVAL"));
+    assertFalse(ext.sidebar.eligible(p));
+    plugin.getConfig().set("scoreboard.disabled-gamemodes", List.of());
+    plugin.getConfig().set("scoreboard.display-permission", "test.sidebar");
+    p.addAttachment(plugin, "test.sidebar", false);
+    assertFalse(ext.sidebar.eligible(p));
+    p.addAttachment(plugin, "test.sidebar", true);
+    assertTrue(ext.sidebar.eligible(p));
+    var board = paperBoard(Bukkit.getScoreboardManager().getNewScoreboard());
+    ext.sidebar.render(p, board);
+    assertEquals("Arena", plain(board.getObjective("le_sidebar").displayName()));
+    lease.close();
+    ext.sidebar.render(p, board);
+    assertNotEquals("Arena", plain(board.getObjective("le_sidebar").displayName()));
+  }
+
+  @Test
+  void scoreboardHasSeparateAdminMenuAndSqlWorldToggle() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le scoreboard settings");
+    assertEquals(
+        Material.GRASS_BLOCK, p.getOpenInventory().getTopInventory().getItem(22).getType());
+    ext.sidebar.worlds(p, 0);
+    var event =
+        new InventoryClickEvent(
+            p.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            19,
+            ClickType.LEFT,
+            InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(event);
+    server.getScheduler().performOneTick();
+    assertTrue(event.isCancelled());
+    waitFor(() -> ext.sidebar.catalog().disabledWorlds().contains("world"));
+    assertFalse(ext.sidebar.eligible(p));
+    assertTrue(
+        await(store.get("scoreboard-catalog", "default", Sidebar.Catalog.class))
+            .orElseThrow()
+            .value()
+            .disabledWorlds()
+            .contains("world"));
+    p.setOp(false);
+    assertThrows(IllegalArgumentException.class, () -> ext.sidebar.settings(p));
+  }
+
+  @Test
   void scoreboardCatalogCanBeEditedThroughNativeForm() throws Exception {
     var p = admin();
     ext.sidebar.editCatalog(p, 0);

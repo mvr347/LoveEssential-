@@ -105,9 +105,13 @@ public final class Lang {
   }
 
   public Component render(String key, Map<String, String> variables) {
+    return renderText(text(key), variables);
+  }
+
+  public Component renderText(String template, Map<String, String> variables) {
     var b = TagResolver.builder();
     variables.forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
-    return mm.deserialize(text(key), b.build());
+    return mm.deserialize(template, b.build());
   }
 
   public Component rich(String key, Map<String, Component> variables) {

@@ -197,7 +197,17 @@ public final class CommandSuggestions {
       if (args.length == 1) {
         var out = new ArrayList<>(names);
         out.addAll(
-            List.of("view", "list", "settings", "activity", "privacy", "hide", "show", "toggle"));
+            List.of(
+                "view",
+                "list",
+                "settings",
+                "stats",
+                "statistics",
+                "activity",
+                "privacy",
+                "hide",
+                "show",
+                "toggle"));
         return out;
       }
       if (args.length == 2)

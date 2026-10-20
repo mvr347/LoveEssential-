@@ -1,2 +1,18 @@
 enabled: true
+# Scheduling and rules; displayed texts are in lang.yml, layouts and choices in SQLite.
 refresh-ticks: 20
+default-enabled: true
+# Both this deny-list and the editor's SQLite deny-list apply. Empty allow-list permits any world.
+disabled-worlds: []
+enabled-worlds: []
+disabled-gamemodes: []
+# Empty means no extra permission. The normal scoreboard command permission still applies.
+display-permission: ''
+hide-while-afk: false
+hide-in-combat: false
+# Additional cap; the server layout's limit can be lower. Minecraft allows at most 15 rendered rows.
+max-selected-lines: 8
+overrides:
+  allow-forced: true
+  max-seconds: 600
+  per-player-limit: 8

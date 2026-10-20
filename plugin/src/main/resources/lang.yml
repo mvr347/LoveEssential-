@@ -509,6 +509,30 @@ gui:
     scoreboard:
       refresh-ticks:
         _label: <gold>Интервал обновления табло (тики)
+      default-enabled:
+        _label: Включать новым игрокам
+      disabled-worlds:
+        _label: Запрещённые миры
+      enabled-worlds:
+        _label: Разрешённые миры
+      disabled-gamemodes:
+        _label: Запрещённые режимы
+      display-permission:
+        _label: Право на отображение
+      hide-while-afk:
+        _label: Скрывать в AFK
+      hide-in-combat:
+        _label: Скрывать в бою
+      max-selected-lines:
+        _label: Лимит выбранных строк
+      overrides:
+        _label: Временные табло Love
+        allow-forced:
+          _label: Разрешить принудительную замену
+        max-seconds:
+          _label: Максимальный срок замены
+        per-player-limit:
+          _label: Лимит запросов на игрока
     crafting:
       max-recipes:
         _label: <gold>Максимум своих рецептов
@@ -1624,6 +1648,33 @@ module-help:
       _description: <gray>Разрешает применять имя, префикс и суффикс игрока в TAB.
     external:
       _description: <gray>Параметры внешнего TAB. После изменения примените экспорт через /le tab export.
+  scoreboard:
+    refresh-ticks:
+      _description: 'Интервал в тиках: 20 = секунда. От 2 до 1200.'
+    default-enabled:
+      _description: Применяется только при отсутствии сохранённых предпочтений игрока.
+    disabled-worlds:
+      _description: Имена миров без учёта регистра. Дополняет запреты миров из редактора SQLite.
+    enabled-worlds:
+      _description: Пустой список допускает все миры. При заполнении табло видно только в этих мирах.
+    disabled-gamemodes:
+      _description: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR. Пусто — любой режим.
+    display-permission:
+      _description: Дополнительное permission для показа. Пустая строка — без дополнительной проверки.
+    hide-while-afk:
+      _description: Скрывать табло, пока LoveEssential считает игрока AFK.
+    hide-in-combat:
+      _description: Учитывает состояние боя из LoveCore.
+    max-selected-lines:
+      _description: От 1 до 8. Лимит редактора может дополнительно уменьшать это значение.
+    overrides:
+      _description: API для арен, заданий и событий. Личные настройки сохраняются.
+      allow-forced:
+        _description: Разрешает временный показ даже при личном выключении табло. Запреты миров действуют всегда.
+      max-seconds:
+        _description: От 1 до 86400 секунд. После истечения возвращается личное табло.
+      per-player-limit:
+        _description: От 1 до 32 одновременных запросов. Выигрывает запрос с большим приоритетом.
 logs-ui:
   npc-tracking-failed: Не удалось обновить взгляд NPC; повтор через 10 секунд.
 
@@ -1844,6 +1895,19 @@ windows:
   motd-second: <gold>Вторая строка
   input-limit: <gold>Максимум символов (1–2048)
 sidebar:
+  admin-menu: <gold>Управление боковой панелью
+  world-menu: <gold>Миры и видимость табло
+  world-help: <gray>Запретите показ в отдельных мирах. ЛКМ — открыть список.
+  module-settings: <gold>Правила показа и обновления
+  module-settings-help: <gray>Интервал, доступ, режимы игры и временные табло Love.
+  rules: <gold>Как применяются правила
+  rules-help: <gray>Запреты в файле модуля и редакторе действуют вместе.
+  api-help: <gray>Временное табло Love соблюдает запреты миров и авторизацию.
+  world-title: <gold><world>
+  world-blocked: <red>Показ запрещён
+  world-allowed: <green>Показ разрешён правилами миров редактора
+  world-config: <gray>Запрет задан в modules/scoreboard.yml → disabled-worlds.
+  world-click: <gray>ЛКМ — переключить запрет в редакторе.
   profile: <gold>Ваш профиль
   profile-help: <gray>ЛКМ — открыть профиль игрока.
   edit: <gold>Редактор табло сервера
@@ -1966,6 +2030,62 @@ input-extra:
   hologram-context: '<gold>Редактор голограммы'
 
 profile-menu:
+  no-data: —
+  saved-activity-lore:
+  - <gray>Время игры и статистика на момент выхода.
+  - <gray>Видимость определяется отдельной настройкой активности.
+  - <green>ЛКМ — открыть сохранённые данные.
+  saved-customization-lore:
+  - '<gray>Ник: <white><display_name>'
+  - '<gray>Пометка: <white><external_lovesubnames_current>'
+  saved-adaptations-lore:
+  - '<gray>Текущая: <white><external_loveadaptation_current_name>'
+  - '<gray>Прогресс: <white><external_loveadaptation_current_progress>'
+  - <green>ЛКМ — посмотреть сохранённые адаптации.
+  saved-reputation-lore:
+  - '<gray>Репутация: <white><reputation>'
+  - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
+  - '<gray>Стиль: <white><external_lovebehavior_playstyle_name>'
+  - <gray>Это сохранённые сведения на момент выхода.
+  saved-adaptation-detail:
+  - '<gray>Статус: <white><status>'
+  - '<gray>Прогресс: <white><progress>'
+  - <gray>Данные на момент последнего сохранения.
+  settings-overview: <gold>Настройте игру под себя
+  settings-overview-lore:
+  - <gray>Верхний ряд — приватность, ЛС и интерфейс.
+  - <gray>Ниже — чат, приглашения и обмен.
+  - <gray>Кнопки показывают текущее состояние.
+  statistics: <gold>Статистика игрока
+  statistics-lore:
+  - <gray>Реальные счётчики Minecraft и сохранённые данные.
+  - <gray>Время, бои, путешествия, добыча и торговля.
+  - <green>ЛКМ <dark_gray>— <gray>открыть подробную статистику
+  online: В сети
+  offline: Не в сети
+  offline-loading: <gray>Загружаю сохранённый профиль…
+  no-snapshot: <yellow>Сохранённый профиль не найден. Игрок должен хотя бы раз зайти после установки LoveEssential.
+  saved-heading: <gold>Профиль <dark_gray>| <white><player>
+  saved-heading-lore:
+  - '<gray>Состояние: <white><online_state>'
+  - '<gray>Последний визит: <white><last_seen_local>'
+  - '<gray>Часовой пояс: Europe/Kiev'
+  - <gray>Показаны данные на момент последнего сохранения.
+  saved-information: <gold>Об игроке
+  saved-information-lore:
+  - '<gray>Ник: <white><display_name>'
+  - '<gray>Первый вход: <white><first_join_local>'
+  - '<gray>Клан: <white><clan>'
+  - '<gray>Репутация: <white><reputation>'
+  - <gray>Редактирование и живые команды доступны в сети.
+  states:
+    'yes': Да
+    'no': Нет
+    'true': Включено
+    'false': Выключено
+    global: Глобальный
+    local: Локальный
+    admin: Административный
   title: <gold>Профиль <dark_gray>| <white><player>
   heading: <gold>Профиль <dark_gray>| <nickname>
   heading-lore:
@@ -2138,3 +2258,50 @@ profile-menu:
   - '<gray>Статус: <white><papi:loveadaptation_travel_status:"—">'
   - '<gray>Прогресс: <white><papi:loveadaptation_travel_progress:"—">'
   - <papi:loveadaptation_travel_bar:"—">
+
+profile-statistics:
+  time:
+    title: <gold>Время и визиты
+    lore:
+    - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+    - '<gray>Первый вход: <first_join_local>'
+    - '<gray>Последние данные: <last_seen_local>'
+    - '<gray>Часовой пояс: Europe/Kiev'
+  combat:
+    title: <gold>Бои и выживание
+    lore:
+    - '<gray>Убийств игроков: <kills>'
+    - '<gray>Смертей: <deaths>'
+    - '<gray>K/D: <kd_ratio>'
+    - '<gray>Побеждено мобов: <mob_kills>'
+    - '<gray>Нанесено урона: <damage_dealt>'
+    - '<gray>Получено урона: <damage_taken>'
+    - '<gray>После смерти: <time_since_death_hours> ч'
+  travel:
+    title: <gold>Путешествия
+    lore:
+    - '<gray>Пешком: <walk_km> км'
+    - '<gray>Бегом: <sprint_km> км'
+    - '<gray>Вплавь: <swim_km> км'
+    - '<gray>На элитрах: <fly_km> км'
+    - '<gray>Прыжков: <jumps>'
+  building:
+    title: <gold>Добыча и строительство
+    lore:
+    - '<gray>Добыто блоков: <blocks_mined>'
+    - '<gray>Использовано блоков-предметов: <blocks_used>'
+    - <gray>Счётчик использования Minecraft включает установки и другие применения.
+  economy:
+    title: <gold>Хозяйство и торговля
+    lore:
+    - '<gray>Поймано рыбы: <fish_caught>'
+    - '<gray>Разведено животных: <animals_bred>'
+    - '<gray>Сделок с жителями: <villager_trades>'
+    - '<gray>Баланс: <balance> <currency>'
+  progress:
+    title: <gold>Прогресс
+    lore:
+    - '<gray>Уровень: <level>'
+    - '<gray>Опыт Minecraft: <total_exp>'
+    - '<gray>Домов LoveEssential: <homes>'
+    - <gray>Адаптации доступны отдельной кнопкой в профиле.

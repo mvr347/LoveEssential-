@@ -104,6 +104,20 @@ public final class ProfilePrivacy implements Listener, AutoCloseable {
                     }));
   }
 
+  public CompletableFuture<Preferences> offline(UUID id) {
+    MainThread.require();
+    var pending = writes.get(id);
+    var defaults =
+        new Preferences(
+            plugin.getConfig().getBoolean("profile.privacy.default-visible", true),
+            plugin.getConfig().getBoolean("profile.privacy.default-activity-visible", true));
+    return (pending == null
+            ? CompletableFuture.completedFuture(null)
+            : pending.handle((v, e) -> null))
+        .thenCompose(ignored -> store.get("profile-preferences", id.toString(), Preferences.class))
+        .thenApply(saved -> saved.map(SqliteStore.Document::value).orElse(defaults));
+  }
+
   public boolean loaded(UUID id) {
     return states.containsKey(id);
   }

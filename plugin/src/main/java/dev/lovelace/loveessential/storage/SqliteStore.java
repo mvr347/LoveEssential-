@@ -75,6 +75,7 @@ public final class SqliteStore implements AutoCloseable {
                 + " NULL,revision INTEGER NOT NULL,PRIMARY KEY(kind,id))");
         s.execute("INSERT OR IGNORE INTO document_versions SELECT kind,id,revision FROM documents");
         s.execute("CREATE INDEX IF NOT EXISTS audit_document ON audit(kind,id,sequence)");
+        s.execute("CREATE INDEX IF NOT EXISTS profile_key ON profile(key)");
         s.execute("INSERT OR IGNORE INTO schema_version VALUES(2)");
         c.commit();
       } catch (Exception e) {
@@ -250,6 +251,26 @@ public final class SqliteStore implements AutoCloseable {
       s.setLong(6, System.currentTimeMillis());
       s.executeUpdate();
     }
+  }
+
+  public record SavedPlayer(UUID id, String json) {}
+
+  public CompletableFuture<Optional<SavedPlayer>> findPlayerProfile(String name) {
+    return read(
+        c -> {
+          try (var s =
+              c.prepareStatement(
+                  "SELECT player,value FROM profile WHERE key='loveessential.player-info' AND"
+                      + " (json_extract(value,'$.player')=? COLLATE NOCASE OR player=?) LIMIT 1")) {
+            s.setString(1, name);
+            s.setString(2, name);
+            try (var r = s.executeQuery()) {
+              return r.next()
+                  ? Optional.of(new SavedPlayer(UUID.fromString(r.getString(1)), r.getString(2)))
+                  : Optional.empty();
+            }
+          }
+        });
   }
 
   public CompletableFuture<Optional<String>> profile(UUID player, String key) {

@@ -48,7 +48,7 @@
 | `/scenario [операция] [ID]` | `/scenarios`, `/сценарий` | Сценарии событий: create, edit, run, reset, delete |
 | `/dialog [операция] [ID]` | `/dialogs`, `/диалог` | Нативные диалоги: create, edit, open, delete |
 | `/motd` | `/мотд` | Диалоговый редактор MOTD и предпросмотр |
-| `/scoreboard [edit]` | `/sb`, `/скорборд` | Личные настройки табло; edit — редактор администратора |
+| `/scoreboard [edit\|settings\|worlds]` | `/sb`, `/скорборд` | Личное меню, отдельное управление табло и запреты миров |
 | `/starter [preview\|claim\|edit]` | `/startitems`, `/старт` | Стартовый набор, получение ожидающего набора и редактор |
 
 Создание, редактирование и удаление содержимого требуют `loveessential.content.edit`. Для `recipes` доступны `list`, `open <ID>`, `create <ID>`, `edit <ID>`, `delete <ID>` (с подтверждением). [Пошаговое руководство](CUSTOM_CONTENT.md).
@@ -225,3 +225,5 @@ JSON для `path point … condition/actions` передавайте компа
 Подробные операции миров, примеры сценариев и условия переноса scoreboard: [руководство](WORLDS_AND_AUTOMATION.md).
 
 Создание через GUI назначает ID автоматически для NPC, рецептов, порталов, сценариев и диалогов. Подробности посадки, следов, голограмм и API: [руководство](COMFORT_AND_HOLOGRAMS.md).
+
+`/profile stats` (также `statistics`) открывает отдельное GUI полезной статистики. `/profile view <ник>` поддерживает сохранённые офлайн-профили. [Правила scoreboard и API временных табло](SCOREBOARD.md).
