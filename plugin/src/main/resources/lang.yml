@@ -1895,6 +1895,9 @@ windows:
   motd-second: <gold>Вторая строка
   input-limit: <gold>Максимум символов (1–2048)
 sidebar:
+  module-enabled: '<green>Модуль scoreboard включён'
+  module-disabled: '<gray>Модуль scoreboard выключен'
+  module-toggle-help: '<gray>ЛКМ — включить или выключить показ. Редактор доступен в обоих состояниях.'
   admin-menu: <gold>Управление боковой панелью
   world-menu: <gold>Миры и видимость табло
   world-help: <gray>Запретите показ в отдельных мирах. ЛКМ — открыть список.

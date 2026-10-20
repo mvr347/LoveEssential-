@@ -564,6 +564,82 @@ class ExtensionsIntegrationTest {
   }
 
   @Test
+  void scoreboardEditorWorksForOpWhenModuleIsDisabled() throws Exception {
+    var p = admin();
+    await(plugin.module("scoreboard", false));
+    assertTrue(p.isOp());
+    assertTrue(p.hasPermission("loveessential.admin"));
+    server.dispatchCommand(p, "le scoreboard edit");
+    assertNotNull(p.getOpenInventory().getTopInventory());
+    assertEquals(
+        Material.WRITABLE_BOOK, p.getOpenInventory().getTopInventory().getItem(20).getType());
+    var event =
+        new InventoryClickEvent(
+            p.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            20,
+            ClickType.LEFT,
+            InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(event);
+    server.getScheduler().performOneTick();
+    assertNotNull(forms.get(p.getUniqueId()));
+    assertFalse(plugin.module("scoreboard"));
+  }
+
+  @Test
+  void scoreboardAdminCanEditWithoutPersonalPermissionAndToggleDisabledModule() throws Exception {
+    var p = server.addPlayer("Staff");
+    p.addAttachment(plugin, "loveessential.admin", true);
+    p.addAttachment(plugin, "loveessential.scoreboard", false);
+    await(plugin.module("scoreboard", false));
+    assertFalse(p.isOp());
+    server.dispatchCommand(p, "le scoreboard worlds");
+    assertNotNull(p.getOpenInventory().getTopInventory());
+    var edit =
+        new InventoryClickEvent(
+            p.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            19,
+            ClickType.LEFT,
+            InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(edit);
+    server.getScheduler().performOneTick();
+    waitFor(() -> ext.sidebar.catalog().disabledWorlds().contains("world"));
+    server.dispatchCommand(p, "le scoreboard edit");
+    assertEquals(Material.GRAY_DYE, p.getOpenInventory().getTopInventory().getItem(4).getType());
+    var enable =
+        new InventoryClickEvent(
+            p.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            4,
+            ClickType.LEFT,
+            InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(enable);
+    server.getScheduler().performOneTick();
+    waitFor(() -> plugin.module("scoreboard"));
+    assertEquals(Material.LIME_DYE, p.getOpenInventory().getTopInventory().getItem(4).getType());
+    assertTrue(await(store.get("module", "scoreboard", Boolean.class)).orElseThrow().value());
+  }
+
+  @Test
+  void scoreboardDisabledMessageAndAdminPermissionAreDistinct() throws Exception {
+    var p = server.addPlayer("Player");
+    await(plugin.module("scoreboard", false));
+    assertEquals(
+        "errors.module-disabled",
+        assertThrows(IllegalArgumentException.class, () -> ext.sidebar.open(p, "", 0))
+            .getMessage());
+    assertEquals(
+        "errors.permission",
+        assertThrows(IllegalArgumentException.class, () -> ext.sidebar.settings(p)).getMessage());
+    p.setOp(true);
+    p.addAttachment(plugin, "loveessential.admin", false);
+    assertEquals(
+        "errors.permission",
+        assertThrows(IllegalArgumentException.class, () -> ext.sidebar.settings(p)).getMessage());
+  }
+
+  @Test
   void scoreboardHasSeparateAdminMenuAndSqlWorldToggle() throws Exception {
     var p = admin();
     server.dispatchCommand(p, "le scoreboard settings");

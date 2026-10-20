@@ -785,9 +785,10 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   public void open(Player p, String category, int page) {
-    if (!plugin.module("scoreboard")
-        || !p.hasPermission("loveessential.scoreboard")
-        || !love.authenticated(p)) throw new IllegalArgumentException("errors.permission");
+    if (!plugin.module("scoreboard")) throw new IllegalArgumentException("errors.module-disabled");
+    if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
+    if (!p.hasPermission("loveessential.scoreboard"))
+      throw new IllegalArgumentException("errors.permission");
     var d = states.get(p.getUniqueId());
     if (d == null) {
       loadPlayer(p);
@@ -929,7 +930,14 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   private boolean admin(Player p) {
-    return plugin.module("scoreboard") && p.hasPermission("loveessential.admin");
+    return plugin.ready() && love.authenticated(p) && p.hasPermission("loveessential.admin");
+  }
+
+  private void requireAdmin(Player p) {
+    if (!plugin.ready()) throw new IllegalArgumentException("errors.starting");
+    if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
+    if (!p.hasPermission("loveessential.admin"))
+      throw new IllegalArgumentException("errors.permission");
   }
 
   public CompletableFuture<Void> saveCatalog(
@@ -973,11 +981,28 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   public void settings(Player p) {
-    if (!admin(p)) throw new IllegalArgumentException("errors.permission");
+    requireAdmin(p);
     var menu = new Menu();
     menu.adminOnly = true;
     menu.inventory = Bukkit.createInventory(menu, 54, lang.render("sidebar.admin-menu"));
     MenuStyle.frame(menu.inventory);
+    boolean enabled = plugin.module("scoreboard");
+    menu.inventory.setItem(
+        4,
+        MenuStyle.button(
+            lang,
+            enabled ? Material.LIME_DYE : Material.GRAY_DYE,
+            enabled ? "sidebar.module-enabled" : "sidebar.module-disabled",
+            "sidebar.module-toggle-help"));
+    menu.clicks.put(
+        4,
+        click ->
+            saved(
+                p,
+                plugin.module("scoreboard", !plugin.module("scoreboard")),
+                () -> {
+                  if (p.getOpenInventory().getTopInventory() == menu.inventory) settings(p);
+                }));
     menu.inventory.setItem(
         20, MenuStyle.button(lang, Material.WRITABLE_BOOK, "sidebar.edit", "sidebar.edit-help"));
     menu.clicks.put(20, click -> editCatalog(p, 0));
@@ -998,7 +1023,13 @@ public final class Sidebar implements Listener, AutoCloseable {
             List.of(lang.render("sidebar.rules-help"), lang.render("sidebar.api-help"))));
     menu.inventory.setItem(
         51, MenuStyle.button(lang, Material.ARROW, "common.back", "gui.click.open"));
-    menu.clicks.put(51, click -> open(p, "", 0));
+    menu.clicks.put(
+        51,
+        click -> {
+          if (plugin.module("scoreboard") && p.hasPermission("loveessential.scoreboard"))
+            open(p, "", 0);
+          else moduleSettings.accept(p);
+        });
     menu.inventory.setItem(
         52, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
     menu.clicks.put(52, click -> p.closeInventory());
@@ -1012,7 +1043,7 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   public void worlds(Player p, int page) {
-    if (!admin(p)) throw new IllegalArgumentException("errors.permission");
+    requireAdmin(p);
     var names = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
     Bukkit.getWorlds().forEach(w -> names.add(w.getName()));
     names.addAll(catalog.disabledWorlds());
@@ -1083,7 +1114,7 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   public void editCatalog(Player p, int page) {
-    if (!admin(p)) throw new IllegalArgumentException("errors.permission");
+    requireAdmin(p);
     var c = catalog;
     long revision = catalogRevision;
     var buttons = new ArrayList<dev.lovelace.loveessential.dialog.NativeDialogs.Button>();
@@ -1289,10 +1320,11 @@ public final class Sidebar implements Listener, AutoCloseable {
               plugin,
               () -> {
                 if (plugin.ready()
-                    && plugin.module("scoreboard")
                     && love.authenticated(p)
-                    && p.hasPermission("loveessential.scoreboard")
-                    && (!m.adminOnly || admin(p))
+                    && (m.adminOnly
+                        ? admin(p)
+                        : plugin.module("scoreboard")
+                            && p.hasPermission("loveessential.scoreboard"))
                     && p.getOpenInventory().getTopInventory() != null
                     && p.getOpenInventory().getTopInventory().getHolder() == m)
                   click.accept(e.getClick());
