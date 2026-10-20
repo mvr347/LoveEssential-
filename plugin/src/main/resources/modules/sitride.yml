@@ -2,3 +2,15 @@
 enabled: true
 click-to-sit: true
 ride-range: 4.0
+
+player-riding-enabled: true
+
+# Пустые списки не ограничивают. Запрет важнее разрешения; required — все состояния, allowed — любое.
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

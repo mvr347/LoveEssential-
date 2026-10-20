@@ -41,15 +41,54 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   private final Map<UUID, Menu> menus = new HashMap<>();
   private final Gson gson = new Gson();
   private final ProfilePrivacy privacy;
+  private dev.lovelace.loveessential.dialog.NativeDialogs nativeUi;
+  private final PlayerReports reports;
+
+  public void nativeDialogs(dev.lovelace.loveessential.dialog.NativeDialogs ui) {
+    nativeUi = ui;
+    reports.ui(ui);
+  }
+
+  public void reportsCommand(Player p, String[] args) {
+    reports.command(p, args);
+  }
+
+  public void reportCommand(Player p, String name) {
+    Player target = messages.target(p, name);
+    if (!canView(p, target)) throw new IllegalArgumentException("profile-menu.hidden");
+    reports.create(
+        p, target.getUniqueId(), target.getName(), () -> access(p) && canView(p, target));
+  }
+
   private BukkitTask task;
   private long ticks;
 
-  private static final class Menu implements InventoryHolder {
+  private static final class Menu implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
+    String menuId = "gui.menu";
+
+    public String guiId() {
+      return menuId;
+    }
+
+    public Map<Integer, ?> guiActions() {
+      return actions;
+    }
+
+    public void guiPut(int slot, Runnable action) {
+      actions.put(slot, action);
+    }
+
     final Map<Integer, Runnable> actions = new HashMap<>();
     final Player viewer;
     final BooleanSupplier allowed;
     UUID subject;
+    Map<String, String> variables = Map.of();
+
+    public Map<String, String> guiVariables() {
+      return variables;
+    }
+
     Runnable repaint;
 
     Menu(Player viewer, BooleanSupplier allowed) {
@@ -79,6 +118,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     this.placeholders = placeholders;
     this.messages = messages;
     this.inventories = inventories;
+    reports = new PlayerReports(plugin, store, lang, love);
     privacy = new ProfilePrivacy(plugin, store, love, lang);
     privacy.changed(this::protectOpenMenus);
   }
@@ -92,7 +132,9 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                 plugin,
                 () -> {
                   ticks++;
-                  if (ticks % 20 == 0) {
+                  if (ticks
+                          % Math.max(1, plugin.getConfig().getInt("profile.gui.refresh-ticks", 20))
+                      == 0) {
                     for (var m : List.copyOf(menus.values()))
                       if (!permitted(m)) m.viewer.closeInventory();
                       else if (m.repaint != null) m.repaint.run();
@@ -232,6 +274,20 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         m.put("external_" + id, savedPlaceholder(p, id));
       }
     }
+    var statistics = plugin.getConfig().getConfigurationSection("profile.statistics.placeholders");
+    if (statistics != null)
+      for (String alias : statistics.getKeys(false)) {
+        String id = statistics.getString(alias, "");
+        if (alias.matches("[a-z0-9_]{1,100}") && id.matches("[A-Za-z0-9_]{1,150}")) {
+          String raw = savedPlaceholder(p, id);
+          m.put(
+              alias,
+              raw.isBlank() || Set.of("ERROR", "N/A", "None").contains(raw)
+                  ? lang.text("profile-menu.no-data")
+                  : PlainTextComponentSerializer.plainText()
+                      .serialize(placeholders.legacyOrMini(raw)));
+        }
+      }
     snapshots.put(p.getUniqueId(), Map.copyOf(m));
   }
 
@@ -347,7 +403,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   private Map<String, String> savedValues(Saved saved) {
-    var values = new HashMap<>(saved.data());
+    var values = new HashMap<>(displayValues(saved.data()));
     for (String id :
         List.of(
             "kd_ratio",
@@ -426,45 +482,41 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     var m =
         menu(
             viewer,
-            "profile-menu.title",
+            "public-profile.title",
             Map.of("player", saved.data().getOrDefault("player", "")),
             () -> savedAllowed(viewer, saved, false));
     m.subject = saved.id();
     m.inventory.setItem(0, savedHead(saved));
-    var vars = savedValues(saved);
-    m.inventory.setItem(
-        11,
-        icon(
-            "profile-menu.account",
-            Material.BOOK,
-            lang.render("profile-menu.saved-information"),
-            lang.lines("profile-menu.saved-information-lore").stream()
-                .map(t -> lang.renderText(t, vars))
-                .toList()));
-    savedCard(
+    m.variables = savedValues(saved);
+    drawSummary(m, m.variables, false, saved.preferences().activityVisible());
+    button(
         m,
-        12,
-        "profile-menu.activity",
-        "profile-menu.saved-activity-lore",
-        vars,
-        () -> savedStatistics(viewer, saved, true));
-    savedCard(
-        m, 13, "profile-menu.customization", "profile-menu.saved-customization-lore", vars, null);
-    savedCard(
+        3,
+        Material.SUNFLOWER,
+        "profile-menu.reputation",
+        "public-profile.offline-feedback",
+        () -> {
+          throw new IllegalArgumentException("public-profile.offline-feedback");
+        });
+    button(
         m,
-        14,
-        "profile-menu.adaptations",
-        "profile-menu.saved-adaptations-lore",
-        vars,
-        () -> savedAdaptations(viewer, saved));
-    savedCard(m, 15, "profile-menu.reputation", "profile-menu.saved-reputation-lore", vars, null);
-    savedCard(
+        5,
+        Material.WRITABLE_BOOK,
+        "public-profile.report",
+        "public-profile.report-help",
+        () ->
+            reports.create(
+                viewer,
+                saved.id(),
+                saved.data().getOrDefault("player", ""),
+                () -> savedAllowed(viewer, saved, false)));
+    button(
         m,
-        16,
-        "profile-menu.statistics",
-        "profile-menu.statistics-lore",
-        vars,
-        () -> savedStatistics(viewer, saved, false));
+        m.inventory.getSize() - 3,
+        Material.ARROW,
+        "common.back",
+        "gui.click.open",
+        () -> profile(viewer, viewer));
     show(m);
   }
 
@@ -518,96 +570,281 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     show(m);
   }
 
-  private void savedStatistics(Player viewer, Saved saved, boolean activity) {
-    if (!savedAllowed(viewer, saved, true))
-      throw new IllegalArgumentException("profile-menu.activity-hidden");
-    var m =
-        menu(
-            viewer,
-            activity ? "profile-menu.activity" : "profile-menu.statistics",
-            Map.of(),
-            () -> savedAllowed(viewer, saved, true));
-    m.subject = saved.id();
-    m.inventory.setItem(0, savedHead(saved));
-    drawStatistics(m, savedValues(saved));
-    button(
-        m,
-        51,
-        Material.ARROW,
-        "common.back",
-        "gui.click.open",
-        () -> offlineProfile(viewer, saved));
-    show(m);
+  private List<String> statisticCategories() {
+    var config = plugin.getConfig().getConfigurationSection("profile.statistics.categories");
+    if (config == null) return List.of();
+    return config.getKeys(false).stream()
+        .filter(id -> config.getBoolean(id + ".enabled", true))
+        .filter(
+            id -> {
+              String owner = config.getString(id + ".plugin", "");
+              return owner.isBlank()
+                  || love.installed(owner)
+                  || !plugin.getConfig().getBoolean("profile.statistics.hide-unavailable", true);
+            })
+        .toList();
+  }
+
+  private int contentSlot(Menu m, int index, int count) {
+    return MenuStyle.slot(index, count) + (m.inventory.getSize() >= 45 ? 0 : -9);
+  }
+
+  private int contentCapacity(Menu m) {
+    return (m.inventory.getSize() / 9 - (m.inventory.getSize() >= 45 ? 3 : 2)) * 7;
+  }
+
+  private String statisticPath(String id) {
+    return "profile.statistics.categories." + id;
+  }
+
+  private List<Component> snapshotLines(String key, Map<String, String> values) {
+    return lang.lines(key).stream().map(t -> lang.renderText(t, values)).toList();
+  }
+
+  private ItemStack statisticIcon(
+      String path, String title, String lore, Map<String, String> values) {
+    String texture =
+        plugin
+            .getConfig()
+            .getString(
+                path + ".texture",
+                plugin
+                    .getConfig()
+                    .getString(
+                        "profile.textures.profile-menu.statistics",
+                        "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb"));
+    return MenuStyle.head(texture, lang.render(title, values), snapshotLines(lore, values));
+  }
+
+  private void drawSummary(Menu m, Map<String, String> values, boolean own, boolean activity) {
+    m.variables = values;
+    var ids = statisticCategories();
+    int count = Math.min(contentCapacity(m), ids.size());
+    for (int i = 0; i < count; i++) {
+      String id = ids.get(i), path = statisticPath(id);
+      int slot = contentSlot(m, i, count);
+      String title =
+          plugin.getConfig().getString(path + ".title-key", "profile-stats." + id + ".title");
+      boolean sensitive = plugin.getConfig().getBoolean(path + ".activity-sensitive", false);
+      if (!own && sensitive && !activity) {
+        m.inventory.setItem(
+            slot,
+            icon(
+                "disabled",
+                Material.GRAY_DYE,
+                lang.render(title),
+                List.of(lang.render("profile-menu.activity-hidden-lore"))));
+        continue;
+      }
+      String owner = plugin.getConfig().getString(path + ".plugin", "");
+      if (!owner.isBlank() && !love.installed(owner)) {
+        m.inventory.setItem(
+            slot,
+            icon(
+                "disabled",
+                Material.GRAY_DYE,
+                lang.render(title),
+                List.of(lang.render("profile-menu.integration-unavailable"))));
+        continue;
+      }
+      String lore =
+          plugin
+              .getConfig()
+              .getString(
+                  path + (own ? ".summary-key" : ".public-key"),
+                  "profile-stats." + id + (own ? ".summary" : ".public"));
+      m.inventory.setItem(slot, statisticIcon(path, title, lore, values));
+      if (own) m.actions.put(slot, () -> statisticsCategory(m.viewer, id, 0));
+    }
   }
 
   public void statistics(Player viewer, Player target) {
-    if (!canView(viewer, target) || !privacy.canViewActivity(viewer, target))
-      throw new IllegalArgumentException("profile-menu.activity-hidden");
-    var m =
-        menu(
-            viewer,
-            "profile-menu.statistics",
-            Map.of(),
-            () ->
-                access(viewer)
-                    && canView(viewer, target)
-                    && privacy.canViewActivity(viewer, target));
-    m.subject = target.getUniqueId();
+    if (!canView(viewer, target)) throw new IllegalArgumentException("profile-menu.hidden");
+    if (!viewer.equals(target)) {
+      profile(viewer, target);
+      return;
+    }
+    var m = menu(viewer, "profile-menu.statistics", Map.of(), () -> access(viewer));
+    m.subject = viewer.getUniqueId();
     m.repaint =
         () -> {
-          capture(target);
+          capture(viewer);
+          MenuStyle.frame(m.inventory);
+          m.actions.clear();
           m.inventory.setItem(
               0,
               head(
-                  target,
-                  placeholders.render("profile-menu.heading", viewer, target),
-                  textLines("profile-menu.heading-lore", viewer, target)));
-          drawStatistics(m, snapshots.get(target.getUniqueId()));
+                  viewer,
+                  placeholders.render("profile-menu.heading", viewer, viewer),
+                  textLines("profile-menu.heading-lore", viewer, viewer)));
+          drawSummary(m, displayValues(snapshots.get(viewer.getUniqueId())), true, true);
+          button(
+              m,
+              m.inventory.getSize() - 3,
+              Material.ARROW,
+              "common.back",
+              "gui.click.open",
+              () -> profile(viewer, viewer));
+          button(
+              m,
+              m.inventory.getSize() - 2,
+              Material.BARRIER,
+              "gui.close",
+              "gui.click.close",
+              viewer::closeInventory);
+          if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
         };
     m.repaint.run();
-    button(m, 51, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, target));
     show(m);
   }
 
-  private void drawStatistics(Menu m, Map<String, String> values) {
-    var display = new HashMap<>(values);
+  private Map<String, String> displayValues(Map<String, String> source) {
+    var values = new HashMap<>(Objects.requireNonNullElse(source, Map.<String, String>of()));
+    var aliases = plugin.getConfig().getConfigurationSection("profile.statistics.placeholders");
+    if (aliases != null)
+      for (String alias : aliases.getKeys(false))
+        values.putIfAbsent(alias, lang.text("profile-menu.no-data"));
     for (String key :
         List.of(
-            "balance",
-            "currency",
             "kd_ratio",
+            "playtime_hours",
+            "playtime_minutes",
+            "kills",
+            "deaths",
+            "mob_kills",
+            "blocks_mined",
+            "blocks_used",
+            "walk_km",
             "sprint_km",
             "swim_km",
             "fly_km",
+            "jumps",
+            "damage_dealt",
+            "damage_taken",
             "time_since_death_hours",
             "fish_caught",
             "animals_bred",
             "villager_trades",
-            "blocks_mined",
-            "blocks_used")) {
-      if (display.getOrDefault(key, "").isBlank())
-        display.put(key, lang.text("profile-menu.no-data"));
-    }
-    String[] ids = {"time", "combat", "travel", "building", "economy", "progress"};
-    Material[] icons = {
-      Material.CLOCK,
-      Material.IRON_SWORD,
-      Material.COMPASS,
-      Material.DIAMOND_PICKAXE,
-      Material.EMERALD,
-      Material.EXPERIENCE_BOTTLE
-    };
-    for (int i = 0; i < ids.length; i++) {
-      String prefix = "profile-statistics." + ids[i];
-      m.inventory.setItem(
-          MenuStyle.slot(i, ids.length),
-          MenuStyle.item(
-              icons[i],
-              lang.render(prefix + ".title"),
-              lang.lines(prefix + ".lore").stream()
-                  .map(t -> lang.renderText(t, display))
-                  .toList()));
-    }
+            "balance",
+            "currency",
+            "homes",
+            "first_join_local",
+            "last_seen_local")) values.putIfAbsent(key, lang.text("profile-menu.no-data"));
+    for (var entry : List.copyOf(values.entrySet()))
+      if (entry.getValue().isBlank()) values.put(entry.getKey(), lang.text("profile-menu.no-data"));
+    return Map.copyOf(values);
+  }
+
+  private void statisticsCategory(Player p, String id, int page) {
+    if (!access(p) || !statisticCategories().contains(id))
+      throw new IllegalArgumentException("profile-menu.hidden");
+    String path = statisticPath(id);
+    var section = plugin.getConfig().getConfigurationSection(path + ".details");
+    if (section == null) return;
+    var cards = List.copyOf(section.getKeys(false));
+    var m =
+        menu(
+            p,
+            "profile-stats.details-title",
+            Map.of(
+                "category",
+                lang.text(
+                    plugin
+                        .getConfig()
+                        .getString(path + ".title-key", "profile-stats." + id + ".title"))),
+            () -> access(p));
+    m.subject = p.getUniqueId();
+    int capacity = contentCapacity(m),
+        actual = Math.clamp(page, 0, Math.max(0, (cards.size() - 1) / capacity));
+    m.repaint =
+        () -> {
+          capture(p);
+          var values = displayValues(snapshots.get(p.getUniqueId()));
+          MenuStyle.frame(m.inventory);
+          m.actions.clear();
+          m.inventory.setItem(
+              0,
+              head(
+                  p,
+                  placeholders.render("profile-menu.heading", p, p),
+                  textLines("profile-menu.heading-lore", p, p)));
+          for (int i = actual * capacity;
+              i < Math.min(cards.size(), (actual + 1) * capacity);
+              i++) {
+            String card = cards.get(i), prefix = path + ".details." + card;
+            m.inventory.setItem(
+                contentSlot(m, i % capacity, Math.min(capacity, cards.size() - actual * capacity)),
+                statisticIcon(
+                    prefix,
+                    plugin
+                        .getConfig()
+                        .getString(
+                            prefix + ".title-key", "profile-stats." + id + "." + card + ".title"),
+                    plugin
+                        .getConfig()
+                        .getString(
+                            prefix + ".lore-key", "profile-stats." + id + "." + card + ".lore"),
+                    values));
+          }
+          if (m.inventory.getSize() == 54 && actual > 0)
+            button(
+                m,
+                36,
+                Material.ARROW,
+                "gui.previous",
+                "gui.click.open",
+                () -> statisticsCategory(p, id, actual - 1));
+          if (m.inventory.getSize() == 54 && (actual + 1) * capacity < cards.size())
+            button(
+                m,
+                44,
+                Material.ARROW,
+                "common.next",
+                "gui.click.open",
+                () -> statisticsCategory(p, id, actual + 1));
+          button(
+              m,
+              m.inventory.getSize() - 3,
+              Material.ARROW,
+              "common.back",
+              "gui.click.open",
+              () -> statistics(p, p));
+          button(
+              m,
+              m.inventory.getSize() - 2,
+              Material.BARRIER,
+              "gui.close",
+              "gui.click.close",
+              p::closeInventory);
+          if (menus.get(p.getUniqueId()) == m) MenuStyle.apply(p, m.inventory);
+        };
+    m.repaint.run();
+    show(m);
+  }
+
+  private void behavior(Player p) {
+    var m = menu(p, "profile-menu.behavior", Map.of(), () -> access(p));
+    m.subject = p.getUniqueId();
+    capture(p);
+    var values = displayValues(snapshots.get(p.getUniqueId()));
+    m.inventory.setItem(
+        20,
+        icon(
+            "profile-menu.reputation",
+            Material.SUNFLOWER,
+            lang.render("profile-menu.behavior"),
+            snapshotLines("profile-stats.behavior-lore", values)));
+    link(
+        m,
+        24,
+        "behavior",
+        "profile-menu.open-behavior",
+        "profile-menu.behavior-lore",
+        Material.SUNFLOWER,
+        p,
+        true);
+    button(m, 51, Material.ARROW, "common.back", "gui.click.open", () -> profile(p, p));
+    show(m);
   }
 
   public static ItemStack head(Player target, Component title, List<Component> lore) {
@@ -634,29 +871,29 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     requests.remove(viewer.getUniqueId());
     var m = new Menu(viewer, allowed);
     if (!permitted(m)) throw new IllegalArgumentException("errors.permission");
-    int size = title.equals("profile-menu.title") ? 27 : 54;
-    m.inventory = Bukkit.createInventory(m, size, lang.render(title, vars));
-    if (size == 54) MenuStyle.frame(m.inventory);
-    else {
-      var fill = MenuStyle.item(Material.GRAY_STAINED_GLASS_PANE, Component.empty(), List.of());
-      for (int i = 0; i < 9; i++) {
-        m.inventory.setItem(i, fill);
-        m.inventory.setItem(18 + i, fill);
-      }
-    }
+    int defaultSize =
+        Set.of("profile-menu.title", "public-profile.title", "profile-menu.statistics")
+                .contains(title)
+            ? 27
+            : 54;
+    int size =
+        defaultSize == 27
+            ? plugin
+                .getConfig()
+                .getInt("profile.gui.menus." + title.replace('.', '-') + ".size", defaultSize)
+            : 54;
+    if (!Set.of(27, 36, 45, 54).contains(size))
+      throw new IllegalArgumentException("gui-layout.invalid");
+    m.menuId = title;
+    m.inventory = Bukkit.createInventory(m, size, MenuStyle.title(lang, title, vars));
+    MenuStyle.frame(m.inventory);
     m.inventory.setItem(0, head(viewer, lang.render(title, vars), List.of()));
-    button(
-        m,
-        size == 27 ? 26 : 52,
-        Material.BARRIER,
-        "gui.close",
-        "gui.click.close",
-        viewer::closeInventory);
+    button(m, size - 2, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
     return m;
   }
 
   private void show(Menu m) {
-    if (m.viewer.openInventory(m.inventory) != null) menus.put(m.viewer.getUniqueId(), m);
+    if (MenuStyle.open(m.viewer, m.inventory) != null) menus.put(m.viewer.getUniqueId(), m);
   }
 
   private void button(Menu m, int slot, Material icon, String title, String hint, Runnable action) {
@@ -674,7 +911,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             Map.of("player", target.getName()),
             () ->
                 plugin.module("profile")
-                    && viewer.hasPermission("loveessential.profile")
                     && canView(viewer, target)
                     && privacy.canViewActivity(viewer, target));
     m.subject = target.getUniqueId();
@@ -717,34 +953,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                 : MenuStyle.item(icon, title, lore));
       }
     }
-    if (!viewer.equals(target)
-        && plugin.module("messages")
-        && viewer.hasPermission("loveessential.messages")) {
-      button(
-          m,
-          3,
-          Material.WRITABLE_BOOK,
-          "players.message",
-          "gui.click.open",
-          () -> suggestMessage(viewer, target));
-      button(
-          m,
-          5,
-          Material.REDSTONE,
-          "players.ignore",
-          "gui.click.run",
-          () -> messages.command(viewer, "ignore", new String[] {target.getName()}));
-    }
-    if (!viewer.equals(target)
-        && plugin.module("inventory")
-        && viewer.hasPermission("loveessential.invsee"))
-      button(
-          m,
-          7,
-          Material.CHEST,
-          "players.inventory",
-          "gui.click.open",
-          () -> inventories.open(viewer, target, false));
     if (viewer.equals(target)) {
       var prefs = privacy.loaded(target.getUniqueId()) ? privacy.preferences(target) : null;
       button(
@@ -789,14 +997,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   private boolean access(Player p) {
-    return plugin.ready()
-        && plugin.module("profile")
-        && p.hasPermission("loveessential.profile")
-        && love.authenticated(p);
+    return plugin.ready() && plugin.allows("profile", p) && love.authenticated(p);
   }
 
   public void command(Player p, String[] args) {
-    if (!plugin.module("profile")) throw new IllegalArgumentException("errors.module-disabled");
+    plugin.requireAccess("profile", p);
     if (!access(p)) throw new IllegalArgumentException("errors.permission");
     if (args.length == 0) {
       profile(p, p);
@@ -993,7 +1198,9 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     String permission = plugin.getConfig().getString("profile.links." + id + ".permission", "");
     return command != null
         && command.testPermissionSilent(viewer)
-        && (permission.isBlank() || viewer.hasPermission(permission));
+        && (Set.of("nickname", "scoreboard").contains(id)
+            || permission.isBlank()
+            || viewer.hasPermission(permission));
   }
 
   private void invoke(String id, Player viewer, Player target, boolean close) {
@@ -1022,7 +1229,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     var m =
         menu(
             viewer,
-            "profile-menu.title",
+            viewer.equals(target) ? "profile-menu.title" : "public-profile.title",
             Map.of("player", target.getName()),
             () -> access(viewer) && canView(viewer, target));
     m.subject = target.getUniqueId();
@@ -1033,8 +1240,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
   private void drawProfile(Menu m, Player target) {
     capture(target);
+    m.variables = displayValues(snapshots.get(target.getUniqueId()));
     var viewer = m.viewer;
     boolean own = viewer.equals(target);
+    MenuStyle.frame(m.inventory);
     m.actions.clear();
     m.inventory.setItem(
         0,
@@ -1042,11 +1251,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             target,
             placeholders.render("profile-menu.heading", viewer, target),
             textLines("profile-menu.heading-lore", viewer, target)));
-    m.actions.put(0, () -> drawProfile(m, target));
     if (own) {
       link(
           m,
-          11,
+          contentSlot(m, 0, 5),
           "account",
           "profile-menu.account",
           "profile-menu.account-lore",
@@ -1055,7 +1263,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
           true);
       card(
           m,
-          12,
+          contentSlot(m, 1, 5),
           Material.COMPARATOR,
           "profile-menu.settings",
           "profile-menu.settings-lore",
@@ -1063,92 +1271,71 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
           () -> settings(viewer));
       card(
           m,
-          13,
-          Material.NAME_TAG,
-          "profile-menu.customization",
-          "profile-menu.customization-lore",
+          contentSlot(m, 2, 5),
+          Material.SUNFLOWER,
+          "profile-menu.behavior",
+          "profile-menu.behavior-lore",
           target,
-          () -> customization(viewer));
+          () -> behavior(viewer));
+      card(
+          m,
+          contentSlot(m, 3, 5),
+          Material.KNOWLEDGE_BOOK,
+          "profile-menu.statistics",
+          "profile-menu.statistics-lore",
+          target,
+          () -> statistics(viewer, viewer));
+      card(
+          m,
+          contentSlot(m, 4, 5),
+          Material.HEART_OF_THE_SEA,
+          "profile-menu.adaptations",
+          "profile-menu.adaptations-lore",
+          target,
+          () -> adaptations(viewer, viewer));
     } else {
-      card(
+      drawSummary(
           m,
-          11,
-          Material.TRIPWIRE_HOOK,
-          "profile-menu.account",
-          "profile-menu.public-account-lore",
-          target,
-          null);
-      card(
+          displayValues(snapshots.get(target.getUniqueId())),
+          false,
+          privacy.canViewActivity(viewer, target));
+      link(
           m,
-          12,
-          privacy.canViewActivity(viewer, target) ? Material.CLOCK : Material.GRAY_DYE,
-          "profile-menu.activity",
-          privacy.canViewActivity(viewer, target)
-              ? "profile-menu.public-activity-lore"
-              : "profile-menu.activity-hidden-lore",
+          3,
+          "reputation",
+          "profile-menu.reputation",
+          "profile-menu.reputation-lore",
+          Material.SUNFLOWER,
           target,
-          () -> activity(viewer, target));
-      card(
-          m,
-          13,
-          Material.NAME_TAG,
-          "profile-menu.customization",
-          "profile-menu.public-customization-lore",
-          target,
-          null);
-    }
-    card(
-        m,
-        14,
-        Material.HEART_OF_THE_SEA,
-        "profile-menu.adaptations",
-        "profile-menu.adaptations-lore",
-        target,
-        () -> adaptations(viewer, target));
-    link(
-        m,
-        15,
-        own ? "behavior" : "reputation",
-        "profile-menu.reputation",
-        own ? "profile-menu.behavior-lore" : "profile-menu.reputation-lore",
-        Material.SUNFLOWER,
-        target,
-        true);
-    card(
-        m,
-        16,
-        Material.KNOWLEDGE_BOOK,
-        "profile-menu.statistics",
-        "profile-menu.statistics-lore",
-        target,
-        () -> statistics(viewer, target));
-    if (!own && plugin.module("messages") && viewer.hasPermission("loveessential.messages"))
+          true);
       button(
           m,
-          6,
+          5,
           Material.WRITABLE_BOOK,
-          "players.message",
-          "gui.click.open",
-          () -> suggestMessage(viewer, target));
-    if (!own && plugin.module("inventory") && viewer.hasPermission("loveessential.invsee"))
+          "public-profile.report",
+          "public-profile.report-help",
+          () ->
+              reports.create(
+                  viewer,
+                  target.getUniqueId(),
+                  target.getName(),
+                  () -> access(viewer) && canView(viewer, target)));
       button(
           m,
-          8,
-          Material.CHEST,
-          "players.inventory",
+          m.inventory.getSize() - 3,
+          Material.ARROW,
+          "common.back",
           "gui.click.open",
-          () -> inventories.open(viewer, target, false));
+          () -> profile(viewer, viewer));
+    }
     button(
         m,
-        25,
-        Material.ARROW,
-        "common.back",
-        "gui.click.open",
-        () -> {
-          if (own) viewer.closeInventory();
-          else players(viewer, "profile", 0);
-        });
-    button(m, 26, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
+        m.inventory.getSize() - 2,
+        Material.BARRIER,
+        "gui.close",
+        "gui.click.close",
+        viewer::closeInventory);
+    if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
   }
 
   public void settings(Player p) {
@@ -1450,12 +1637,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   public void preferences(Player viewer, int page) {
-    var m =
-        menu(
-            viewer,
-            "messages.settings",
-            Map.of(),
-            () -> plugin.module("messages") && viewer.hasPermission("loveessential.messages"));
+    var m = menu(viewer, "messages.settings", Map.of(), () -> plugin.module("messages"));
     var prefs = messages.preferences(viewer);
     var ignored = prefs.ignored().entrySet().stream().sorted(Map.Entry.comparingByValue()).toList();
     button(
@@ -1537,9 +1719,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                 try {
                   action.run();
                 } catch (IllegalArgumentException error) {
-                  lang.send(
-                      m.viewer,
-                      lang.contains(error.getMessage()) ? error.getMessage() : "errors.input");
+                  lang.error(m.viewer, error);
                 }
               });
   }
@@ -1575,6 +1755,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     requests.clear();
     blockStatistics.clear();
     menus.clear();
+    reports.close();
     HandlerList.unregisterAll(this);
   }
 }

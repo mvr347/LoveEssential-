@@ -120,6 +120,21 @@ public final class Lang {
     return mm.deserialize(text(key), b.build());
   }
 
+  public void error(CommandSender to, Throwable error) {
+    while ((error instanceof java.util.concurrent.CompletionException
+            || error instanceof java.util.concurrent.ExecutionException)
+        && error.getCause() != null) error = error.getCause();
+    if (error instanceof dev.lovelace.loveessential.module.ModulePolicy.Denied denied) {
+      send(to, denied.getMessage(), denied.variables());
+      return;
+    }
+    send(
+        to,
+        error instanceof dev.lovelace.loveessential.storage.SqliteStore.Conflict
+            ? "errors.conflict"
+            : contains(error.getMessage()) ? error.getMessage() : "errors.input");
+  }
+
   public void send(CommandSender to, String key) {
     send(to, key, Map.of());
   }
@@ -135,15 +150,6 @@ public final class Lang {
                       .clickEvent(
                           net.kyori.adventure.text.event.ClickEvent.runCommand(
                               "/loveessential:loveessential help")));
-    if (key.equals("teleport.done"))
-      message =
-          message
-              .append(Component.space())
-              .append(
-                  render("chat.back")
-                      .clickEvent(
-                          net.kyori.adventure.text.event.ClickEvent.runCommand(
-                              "/loveessential:back")));
     if (key.equals("wizard.published") && vars.containsKey("id"))
       message =
           message

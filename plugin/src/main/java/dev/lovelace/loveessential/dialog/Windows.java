@@ -109,7 +109,7 @@ public final class Windows {
   }
 
   private boolean permitted(Player p, Definition d) {
-    return plugin.module("dialogs")
+    return plugin.allows("dialogs", p)
         && love.authenticated(p)
         && (d.permission().isBlank() || p.hasPermission(d.permission()));
   }

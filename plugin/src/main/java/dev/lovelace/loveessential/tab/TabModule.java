@@ -74,16 +74,6 @@ public final class TabModule implements Listener, AutoCloseable {
   public void start() {
     enabled = true;
     if (task != null) task.cancel();
-    if (plugin.getConfig().getString("tab.engine", "native").equals("tab")) {
-      if (!Bukkit.getPluginManager().isPluginEnabled("TAB")
-          || !Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI"))
-        plugin.getLogger().warning(lang.text("errors.tab-engine"));
-      return;
-    }
-    if (Bukkit.getPluginManager().isPluginEnabled("TAB")) {
-      plugin.getLogger().warning(lang.text("logs.tab-conflict"));
-      return;
-    }
     task =
         Bukkit.getScheduler()
             .runTaskTimer(
@@ -166,6 +156,8 @@ public final class TabModule implements Listener, AutoCloseable {
     var sorted = sorted();
     for (int i = 0; i < sorted.size(); i++) {
       var target = sorted.get(i);
+      if (plugin instanceof dev.lovelace.loveessential.LoveEssentialPlugin le
+          && !le.allows("tab", target)) continue;
       if (plugin.getConfig().getBoolean("tab.sorting-enabled", true)) target.setPlayerListOrder(i);
       if (plugin.getConfig().getBoolean("tab.name-enabled", true)) {
         var g = group(target);
@@ -189,6 +181,11 @@ public final class TabModule implements Listener, AutoCloseable {
   }
 
   private void update(Player p, List<Player> sorted) {
+    if (plugin instanceof dev.lovelace.loveessential.LoveEssentialPlugin le
+        && !le.allows("tab", p)) {
+      release(p);
+      return;
+    }
     var view = views.get(p.getUniqueId());
     if (view == null) {
       var board = Bukkit.getScoreboardManager().getNewScoreboard();

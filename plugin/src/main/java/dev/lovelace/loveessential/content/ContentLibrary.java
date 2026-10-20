@@ -65,7 +65,7 @@ public final class ContentLibrary implements Listener, AutoCloseable {
   }
 
   public boolean allowed(Player p, Craft c) {
-    return plugin.module("crafting")
+    return plugin.allows("crafting", p)
         && c.enabled()
         && love.authenticated(p)
         && (c.permission().isBlank() || p.hasPermission(c.permission()));

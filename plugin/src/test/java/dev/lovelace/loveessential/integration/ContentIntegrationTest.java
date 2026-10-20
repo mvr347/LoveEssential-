@@ -187,7 +187,7 @@ class ContentIntegrationTest {
     click(p, 22, true); // edit from catalog
     p.getInventory().setItemInMainHand(new ItemStack(Material.EMERALD, 5));
     click(p, 24, false);
-    click(p, 1, false);
+    click(p, 2, false);
     click(p, 3, false); // shapeless, material comparison
     click(p, 19, true);
     p.getInventory().setItemInMainHand(new ItemStack(Material.STONE));

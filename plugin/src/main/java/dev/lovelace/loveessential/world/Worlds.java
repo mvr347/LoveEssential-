@@ -156,6 +156,7 @@ public final class Worlds implements Listener, AutoCloseable {
   }
 
   private void access(Player p, String world) {
+    plugin.requireAccess("worlds", p);
     if (!plugin.module("worlds")
         || !love.authenticated(p)
         || !p.hasPermission("loveessential.worlds.teleport"))

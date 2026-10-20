@@ -8,7 +8,6 @@ depend:
 - LoveCore
 softdepend:
 - PlaceholderAPI
-- TAB
 - LoveAuth
 - LoveBehavior
 - LoveSubnames
@@ -46,31 +45,12 @@ commands:
   delhome:
     aliases:
     - удалитьдом
-  homes:
-    aliases:
-    - дома
   spawn:
     aliases:
     - спавн
   setspawn:
     aliases:
     - установитьспавн
-  tpa:
-    aliases:
-    - тпа
-    - тпзапрос
-  tpahere:
-    aliases:
-    - тпасюда
-  tpaccept:
-    aliases:
-    - тпапринять
-  tpdeny:
-    aliases:
-    - тпаотклонить
-  back:
-    aliases:
-    - назад
   vanish:
     aliases:
     - v
@@ -87,9 +67,17 @@ commands:
   sit:
     aliases:
     - сесть
+  lay:
+    aliases: [лежать, лечь]
+  eject:
+    aliases: [сбросить]
   ride:
     aliases:
     - оседлать
+  report:
+    aliases: [жалоба]
+  reports:
+    aliases: [жалобы]
   profile:
     aliases:
     - userinfo
@@ -128,7 +116,7 @@ commands:
   motd:
     aliases: [мотд]
   scoreboard:
-    aliases: [sb, скорборд]
+    aliases: [sb, скорборд, табло]
   hat:
     aliases: [шляпа]
   traces:
@@ -136,9 +124,9 @@ commands:
   heal:
     aliases: [вылечить]
   feed:
-    aliases: [сытость]
+    aliases: [сытость, накормить]
   fly:
-    aliases: [полёт]
+    aliases: [полёт, полет]
   speed:
     aliases: [скорость]
   gamemode:
@@ -205,6 +193,7 @@ permissions:
       loveessential.vanish: true
       loveessential.vanish.see: true
       loveessential.sit: true
+      loveessential.lay: true
       loveessential.hat: true
       loveessential.traces: true
       loveessential.heal: true
@@ -247,6 +236,8 @@ permissions:
   loveessential.npc.export:
     default: op
   loveessential.sit:
+    default: true
+  loveessential.lay:
     default: true
   loveessential.hat:
     default: true

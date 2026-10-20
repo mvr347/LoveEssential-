@@ -1,3 +1,13 @@
 # Настройки модуля. Тексты находятся в lang.yml.
 enabled: true
 default-limit: 3
+
+# Пустые списки не ограничивают. Запрет важнее разрешения; required — все состояния, allowed — любое.
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []

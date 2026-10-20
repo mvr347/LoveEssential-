@@ -64,6 +64,10 @@ public final class ModuleConfigs {
       if (id.equals("npc") && original.isConfigurationSection("actions"))
         copy(original.getConfigurationSection("actions"), legacy, "actions.");
       fill(module, legacy);
+      if (id.equals("tab")) {
+        module.set("engine", null);
+        module.set("external", null);
+      }
       fill(module, resource("modules/" + id + ".yml"));
       if (!(module.get("enabled") instanceof Boolean))
         throw new IllegalArgumentException("errors.config");
@@ -78,6 +82,13 @@ public final class ModuleConfigs {
     if (migrated && Files.exists(mainFile)) {
       Path backup = directory.resolve("config.yml.pre-modules.bak");
       if (!Files.exists(backup)) Files.copy(mainFile, backup);
+    }
+    Path oldTabFile = directory.resolve("modules/tab.yml");
+    if (Files.exists(oldTabFile)) {
+      var oldTab = read(oldTabFile);
+      Path tabBackup = directory.resolve("modules/tab.yml.pre-native.bak");
+      if ((oldTab.contains("engine") || oldTab.contains("external")) && !Files.exists(tabBackup))
+        Files.copy(oldTabFile, tabBackup);
     }
     // All files were parsed and validated before the first write. Existing module values win.
     for (var e : modules.entrySet())

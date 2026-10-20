@@ -484,6 +484,182 @@ class ExtensionsIntegrationTest {
   }
 
   @Test
+  void commandPortalIsPersistentEdgeTriggeredAndHonorsModuleWorldRules() throws Exception {
+    var p = admin();
+    var portals = internal("gameplay", dev.lovelace.loveessential.module.Gameplay.class).portals();
+    plugin
+        .getConfig()
+        .set(
+            "portal.particles.per-player-budget",
+            0); // geometry is tested separately; MockBukkit cannot display particles
+    var calls = new java.util.concurrent.atomic.AtomicInteger();
+    server
+        .getCommandMap()
+        .register(
+            "test",
+            new org.bukkit.command.Command("portalprobe") {
+              public boolean execute(
+                  org.bukkit.command.CommandSender sender, String label, String[] args) {
+                assertSame(p, sender);
+                assertArrayEquals(new String[] {p.getName()}, args);
+                calls.incrementAndGet();
+                return true;
+              }
+            });
+    plugin.getConfig().set("portal.allowed-player-commands", List.of("portalprobe"));
+    var at = p.getLocation();
+    var first = Position.of(at.clone().subtract(1, 0, 1));
+    var second = Position.of(at.clone().add(1, 2, 1));
+    var definition =
+        new dev.lovelace.loveessential.portal.PortalDefinition(
+            "portal_probe",
+            "common.done",
+            first,
+            second,
+            null,
+            true,
+            "",
+            List.of("SURVIVAL"),
+            0,
+            0,
+            true,
+            false,
+            "DUST",
+            "B68CFF",
+            true,
+            .5,
+            List.of(
+                new Action(
+                    "portal-command",
+                    Map.of("sender", "player", "value", "portalprobe {player}"))));
+    await(portals.save(definition, 0, p.getUniqueId().toString()));
+    assertTrue(
+        await(
+                store.get(
+                    "portal",
+                    "portal_probe",
+                    dev.lovelace.loveessential.portal.PortalDefinition.class))
+            .isPresent());
+    var outside = at.clone().add(20, 0, 0);
+    plugin.getConfig().set("portal.access.denied-worlds", List.of("world"));
+    portals.move(new org.bukkit.event.player.PlayerMoveEvent(p, outside, at));
+    server.getScheduler().performTicks(4);
+    assertEquals(0, calls.get());
+    portals.move(new org.bukkit.event.player.PlayerMoveEvent(p, at, outside));
+    plugin.getConfig().set("portal.access.denied-worlds", List.of());
+    portals.move(new org.bukkit.event.player.PlayerMoveEvent(p, outside, at));
+    server.getScheduler().performTicks(4);
+    assertEquals(1, calls.get());
+    portals.move(new org.bukkit.event.player.PlayerMoveEvent(p, at, at.clone().add(.1, 0, 0)));
+    server.getScheduler().performTicks(4);
+    assertEquals(1, calls.get(), "moving inside the same portal must not repeat its action");
+    plugin.getConfig().set("portal.allowed-player-commands", List.of());
+    assertThrows(IllegalArgumentException.class, () -> portals.validate(definition, true));
+  }
+
+  @Test
+  void scoreboardEightSlotsCompactReorderAndUseExactTextures() throws Exception {
+    var catalog =
+        await(store.get("scoreboard-catalog", "default", Sidebar.Catalog.class)).orElseThrow();
+    var selections =
+        List.of(
+            new Sidebar.Selection("one", 0),
+            new Sidebar.Selection("two", 0),
+            new Sidebar.Selection("three", 0));
+    var lines =
+        selections.stream()
+            .map(
+                selection ->
+                    new Sidebar.Line(
+                        selection.id(),
+                        "common.done",
+                        "general",
+                        List.of("common.done"),
+                        "",
+                        "",
+                        "common.done"))
+            .toList();
+    await(
+        ext.sidebar.saveCatalog(
+            new Sidebar.Catalog(
+                "common.done",
+                "",
+                "",
+                8,
+                20,
+                List.of(),
+                Map.of("general", "common.done"),
+                lines,
+                List.of(new Sidebar.Preset("test", "common.done", selections)),
+                "test"),
+            catalog.revision(),
+            "test",
+            Map.of()));
+    var p = admin();
+    waitFor(() -> ext.sidebar.state(p.getUniqueId()) != null);
+    var initial = ext.sidebar.state(p.getUniqueId()).value().entries();
+    assertTrue(initial.size() >= 3);
+    ext.sidebar.open(p, "", 0);
+    var inventory = p.getOpenInventory().getTopInventory();
+    assertEquals(36, inventory.getSize());
+    for (int index = 0; index < 8; index++) {
+      var meta = (org.bukkit.inventory.meta.SkullMeta) inventory.getItem(10 + index).getItemMeta();
+      String expected =
+          plugin
+              .getConfig()
+              .getString(
+                  "scoreboard.gui."
+                      + (index < initial.size() ? "occupied-texture" : "free-texture"));
+      assertTrue(
+          meta.getPlayerProfile().getProperties().stream()
+              .anyMatch(
+                  property ->
+                      property.getName().equals("textures")
+                          && property.getValue().equals(expected)));
+    }
+    clickSidebar(p, 10, ClickType.LEFT);
+    waitFor(
+        () -> ext.sidebar.state(p.getUniqueId()).value().entries().size() == initial.size() - 1);
+    var compact = List.copyOf(initial.subList(1, initial.size()));
+    assertEquals(compact, ext.sidebar.state(p.getUniqueId()).value().entries());
+    clickSidebar(p, 10, ClickType.SHIFT_RIGHT);
+    var moved = new ArrayList<>(compact);
+    Collections.swap(moved, 0, 1);
+    waitFor(() -> ext.sidebar.state(p.getUniqueId()).value().entries().equals(moved));
+    clickSidebar(p, 11, ClickType.SHIFT_LEFT);
+    waitFor(() -> ext.sidebar.state(p.getUniqueId()).value().entries().equals(compact));
+    assertEquals(
+        compact,
+        await(store.get("scoreboard-player", p.getUniqueId().toString(), Sidebar.State.class))
+            .orElseThrow()
+            .value()
+            .entries());
+    clickSidebar(p, 10, ClickType.RIGHT);
+    assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
+    assertTrue(
+        plain(p.getOpenInventory().getTopInventory().getItem(2).getItemMeta().displayName())
+            .contains("Категория"));
+    assertTrue(
+        plain(p.getOpenInventory().getTopInventory().getItem(4).getItemMeta().displayName())
+            .contains("Сортировка"));
+    clickSidebar(p, 51, ClickType.LEFT);
+    assertEquals(36, p.getOpenInventory().getTopInventory().getSize());
+  }
+
+  void clickSidebar(PlayerMock p, int slot, ClickType type) {
+    var event =
+        new InventoryClickEvent(
+            p.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            slot,
+            type,
+            InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(event);
+    assertTrue(event.isCancelled());
+    server.getScheduler().performOneTick();
+  }
+
+  @Test
   void scoreboardKeepsOtherTeamsAndSavesPlayerToggle() throws Exception {
     var p = admin();
     waitFor(() -> ext.sidebar.state(p.getUniqueId()) != null);
@@ -498,7 +674,7 @@ class ExtensionsIntegrationTest {
         new InventoryClickEvent(
             p.getOpenInventory(),
             InventoryType.SlotType.CONTAINER,
-            1,
+            4,
             ClickType.LEFT,
             InventoryAction.PICKUP_ALL);
     server.getPluginManager().callEvent(event);
@@ -572,7 +748,7 @@ class ExtensionsIntegrationTest {
     server.dispatchCommand(p, "le scoreboard edit");
     assertNotNull(p.getOpenInventory().getTopInventory());
     assertEquals(
-        Material.WRITABLE_BOOK, p.getOpenInventory().getTopInventory().getItem(20).getType());
+        Material.PLAYER_HEAD, p.getOpenInventory().getTopInventory().getItem(20).getType());
     var event =
         new InventoryClickEvent(
             p.getOpenInventory(),
@@ -606,7 +782,7 @@ class ExtensionsIntegrationTest {
     server.getScheduler().performOneTick();
     waitFor(() -> ext.sidebar.catalog().disabledWorlds().contains("world"));
     server.dispatchCommand(p, "le scoreboard edit");
-    assertEquals(Material.GRAY_DYE, p.getOpenInventory().getTopInventory().getItem(4).getType());
+    assertEquals(Material.PLAYER_HEAD, p.getOpenInventory().getTopInventory().getItem(4).getType());
     var enable =
         new InventoryClickEvent(
             p.getOpenInventory(),
@@ -617,7 +793,7 @@ class ExtensionsIntegrationTest {
     server.getPluginManager().callEvent(enable);
     server.getScheduler().performOneTick();
     waitFor(() -> plugin.module("scoreboard"));
-    assertEquals(Material.LIME_DYE, p.getOpenInventory().getTopInventory().getItem(4).getType());
+    assertEquals(Material.PLAYER_HEAD, p.getOpenInventory().getTopInventory().getItem(4).getType());
     assertTrue(await(store.get("module", "scoreboard", Boolean.class)).orElseThrow().value());
   }
 
@@ -644,7 +820,7 @@ class ExtensionsIntegrationTest {
     var p = admin();
     server.dispatchCommand(p, "le scoreboard settings");
     assertEquals(
-        Material.GRASS_BLOCK, p.getOpenInventory().getTopInventory().getItem(22).getType());
+        Material.PLAYER_HEAD, p.getOpenInventory().getTopInventory().getItem(22).getType());
     ext.sidebar.worlds(p, 0);
     var event =
         new InventoryClickEvent(

@@ -81,7 +81,7 @@ help:
   tab: '<gray>Настройки: modules/tab.yml; /le tab — GUI; /le tab export — применить в TAB. Для внешнего движка нужны TAB и PlaceholderAPI.'
   overview: *id001
   npc-commands: *id002
-  tab-settings: '<gray>Настройки: modules/tab.yml; /le tab — GUI; /le tab export — применить в TAB. Для внешнего движка нужны TAB и PlaceholderAPI.'
+  tab-settings: '<gray>Настройки собственного TAB: modules/tab.yml; /le tab — меню настройки.'
 modules:
   list: '<gray>Модули: <modules>'
   state: '<gray><module>: <state>'
@@ -262,6 +262,9 @@ wizard:
 dialog:
   finished: <gray>Разговор завершён.
 home:
+  point-set: '<gray>Точка дома установлена.'
+  none: '<gray>У вас ещё нет дома.'
+  simple-usage: '<gray>/дом · /установитьдом · /удалитьдом'
   list: '<gold>Ваши дома: <white><homes>'
 vanish:
   changed: '<gray>Невидимость: <state>'
@@ -1895,6 +1898,32 @@ windows:
   motd-second: <gold>Вторая строка
   input-limit: <gold>Максимум символов (1–2048)
 sidebar:
+  slots-title: <gold>Моё табло
+  slot-position: '<gray>Позиция: <white><position><gray> · лимит: <white><limit>'
+  slot-selected: <gold>Строка <position> <dark_gray>| <name>
+  slot-empty: <gray>Свободный слот <white><position>
+  slot-locked: <gray>Слот <white><position> <dark_gray>| <red>Недоступно
+  slot-controls:
+  - <green>ЛКМ <dark_gray>— <gray>убрать строку
+  - <gold>ПКМ <dark_gray>— <gray>выбрать замену
+  - <yellow>Shift+ЛКМ <dark_gray>— <gray>переместить выше
+  - <yellow>Shift+ПКМ <dark_gray>— <gray>переместить ниже
+  slot-empty-help:
+  - <green>ЛКМ <dark_gray>— <gray>выбрать плейсхолдер
+  slot-locked-help:
+  - '<red>Причина: <gray>достигнут серверный лимит строк.'
+  presets: <gold>Готовые наборы
+  picker-title: <gold>Выбор строки <dark_gray>| <white><position>
+  filter-category: <gold>Категория
+  filter-available: <gold>Фильтр <dark_gray>| <green>Доступные
+  filter-all: <gold>Фильтр <dark_gray>| <white>Все
+  sort-name: <gold>Сортировка <dark_gray>| <white>По имени
+  sort-category: <gold>Сортировка <dark_gray>| <white>По категории
+  sort-available: <gold>Сортировка <dark_gray>| <white>Доступные сначала
+  sort-selected: <gold>Сортировка <dark_gray>| <white>Выбранные сначала
+  category-label: '<gray>Категория: <white><category>'
+  picker-select: <green>ЛКМ <dark_gray>— <gray>установить в слот
+  picker-variant: <gold>ПКМ <dark_gray>— <gray>следующий формат
   module-enabled: '<green>Модуль scoreboard включён'
   module-disabled: '<gray>Модуль scoreboard выключен'
   module-toggle-help: '<gray>ЛКМ — включить или выключить показ. Редактор доступен в обоих состояниях.'
@@ -1956,6 +1985,8 @@ chat:
   deny: '<red>[Отклонить]'
   reply: '<aqua>[Ответить]'
 comfort:
+  no-passenger: '<gray>На вас никто не сидит.'
+  passenger-ejected: '<gray>Пассажир снят.'
   prompt-mode: '<yellow>Введите survival, creative, adventure или spectator.'
   prompt-speed: '<yellow>Введите скорость от 0 до 10. При полёте меняется скорость полёта, иначе — ходьбы.'
   usage: '<gray>/sit · /ride [игрок] · /hat · /traces [on|off] · /speed <0–10> · /gamemode <режим>'
@@ -2033,6 +2064,8 @@ input-extra:
   hologram-context: '<gold>Редактор голограммы'
 
 profile-menu:
+  behavior: <gold>Поведение
+  open-behavior: <gold>Открыть LoveBehavior
   no-data: —
   saved-activity-lore:
   - <gray>Время игры и статистика на момент выхода.
@@ -2059,7 +2092,7 @@ profile-menu:
   - <gray>Верхний ряд — приватность, ЛС и интерфейс.
   - <gray>Ниже — чат, приглашения и обмен.
   - <gray>Кнопки показывают текущее состояние.
-  statistics: <gold>Статистика игрока
+  statistics: <gold>Статистика
   statistics-lore:
   - <gray>Реальные счётчики Minecraft и сохранённые данные.
   - <gray>Время, бои, путешествия, добыча и торговля.
@@ -2308,3 +2341,371 @@ profile-statistics:
     - '<gray>Опыт Minecraft: <total_exp>'
     - '<gray>Домов LoveEssential: <homes>'
     - <gray>Адаптации доступны отдельной кнопкой в профиле.
+
+portal-ui:
+  list: <gold>Порталы
+  create: <gold>Создать портал
+  create-help: <green>ЛКМ <dark_gray>— <gray>открыть мастер или продолжить черновик
+  wizard: <gold>Мастер портала
+  new-name: <gold>Новый портал
+  migrated-name: <gold>Портал
+  id: '<gray>ID: <white><id>'
+  coordinates: '<gray>Точка: <white><x> <y> <z>'
+  not-set: <gray>Телепортация не назначена
+  destination-here: <gold>Назначить текущую позицию
+  destination-clear: <gold>Убрать телепортацию
+  destination-set: <green>Назначение установлено
+  action-count: '<gray>Действий: <white><count>'
+  first: <gold>Первая точка
+  first-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок первой точки
+  second: <gold>Вторая точка
+  second-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок второй точки
+  destination: <gold>Назначение
+  destination-help: <green>ЛКМ <dark_gray>— <gray>назначить своё текущее положение
+  actions: <gold>Действия портала
+  actions-help: <green>ЛКМ <dark_gray>— <gray>добавить, изменить или переставить команды
+  access: <gold>Условия входа
+  access-help: <gray>Доступ, игровые режимы, бой, задержка и транспорт.
+  effects: <gold>Оформление частиц
+  effects-help: <gray>Тип частиц, цвет, плотность и заполнение области.
+  preview: <gold>Предпросмотр
+  preview-help: <green>ЛКМ <dark_gray>— <gray>показать область только себе
+  name: <gold>Название портала
+  name-help: <gray>Название MiniMessage сохраняется в lang.yml. ID назначается автоматически.
+  publish: <green>Опубликовать портал
+  publish-help: <green>ЛКМ <dark_gray>— <gray>сохранить и показать анимацию создания
+  discard: <gray>Отменить черновик
+  discard-help: <green>ЛКМ <dark_gray>— <gray>удалить только несохранённые изменения
+  discard-confirm: <gold>Удалить черновик портала?
+  delete-confirm: <gold>Удалить опубликованный портал?
+  select-first: '<gray>Нажмите ПКМ по блоку первой точки. Отмена: /портал отмена.'
+  select-second: '<gray>Нажмите ПКМ по блоку второй точки. Отмена: /портал отмена.'
+  same-world: <gray>Обе точки должны находиться в одном мире.
+  draft-exists: '<gray>Сначала завершите или отмените текущий черновик: /портал мастер.'
+  no-draft: '<gray>Сначала откройте мастер: /портал мастер.'
+  permission: <gold>Право входа (пусто — всем)
+  modes: <gold>Режимы игры через запятую (пусто — все)
+  cooldown: <gold>Задержка повторного входа, секунды
+  warmup: <gold>Ожидание активации, тики
+  enabled: <gold>Портал включён
+  block-combat: <gold>Блокировать во время боя
+  vehicles: <gold>Разрешать вход в транспорте
+  particle: <gold>Тип частиц
+  color: '<gold>Цвет HEX без #'
+  fill: <gold>Заполнять область частицами
+  spacing: <gold>Расстояние между частицами
+  add-command: <gold>Добавить команду
+  command-help: <gray>Без начального /. {player} заменяется именем входящего игрока. Корень команды должен быть разрешён в modules/portal.yml.
+  command-title: <gold>Действие <white><index>
+  command-title-base: <gold>Команда портала
+  command-value: '<gray>Команда: <white><value>'
+  sender: <gold>От чьего имени
+  command: <gold>Команда без /
+  command-denied: <gray>Разрешите корень команды в allowed-player-commands или allowed-console-commands файла modules/portal.yml.
+  published: <gray>Портал опубликован.
+  warming: <gray>Подготовка портала…
+  no-action: <gray>Добавьте хотя бы одну команду или назначение телепортации.
+  invalid: <gray>Проверьте область, задержки и оформление портала.
+  limit: <gray>Достигнут лимит порталов.
+  usage: <gray>/портал [мастер | изменить ID | удалить ID | отмена]
+
+public-profile:
+  title: <gold>Профиль <dark_gray>| <white><player>
+  report: <gold>Пожаловаться
+  report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
+  offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
+profile-stats:
+  details-title: <gold>Статистика <dark_gray>| <white><category>
+  behavior-lore:
+  - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
+  - '<gray>Стиль: <white><external_lovebehavior_playstyle_name>'
+  - '<gray>Репутация: <white><reputation>'
+  world:
+    title: <gold>Мир и выживание
+    summary:
+    - <dark_gray>Личная статистика
+    - ''
+    - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+    - '<gray>Смертей: <deaths>'
+    - <dark_gray><st>─────────────────────
+    - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+    public:
+    - <dark_gray>Общая статистика
+    - ''
+    - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+    - '<gray>Первый вход: <first_join_local>'
+    visits:
+      title: <gold>Время и визиты
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+      - '<gray>Первый вход: <first_join_local>'
+      - '<gray>Последние данные: <last_seen_local>'
+      - '<gray>Часовой пояс: Europe/Kiev'
+    movement:
+      title: <gold>Передвижение
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Пешком: <walk_km> км'
+      - '<gray>Бегом: <sprint_km> км'
+      - '<gray>Вплавь: <swim_km> км'
+      - '<gray>На элитрах: <fly_km> км'
+      - '<gray>Прыжков: <jumps>'
+    mining:
+      title: <gold>Добыча и использование
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Добыто блоков: <blocks_mined>'
+      - '<gray>Использовано предметов-блоков: <blocks_used>'
+      - <gray>Использование включает установки и другие действия.
+    survival:
+      title: <gold>Выживание и бои
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Убийств игроков: <kills>'
+      - '<gray>Побеждено мобов: <mob_kills>'
+      - '<gray>Смертей: <deaths>'
+      - '<gray>K/D: <kd_ratio>'
+      - '<gray>Нанесено урона: <damage_dealt>'
+      - '<gray>Получено урона: <damage_taken>'
+      - '<gray>После смерти: <time_since_death_hours> ч'
+  duels:
+    title: <gold>Дуэли
+    summary:
+    - <dark_gray>Личная статистика
+    - ''
+    - '<gray>Побед: <duels_wins>'
+    - '<gray>Честь: <duels_honor>'
+    - <dark_gray><st>─────────────────────
+    - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+    public:
+    - <dark_gray>Общая статистика
+    - ''
+    - '<gray>Побед: <duels_wins>'
+    - '<gray>Честь: <duels_honor>'
+    results:
+      title: <gold>Результаты
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Побед: <duels_wins>'
+      - '<gray>Поражений: <duels_losses>'
+      - '<gray>Побед: <duels_winrate>'
+    streaks:
+      title: <gold>Серии
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Текущая серия: <duels_streak>'
+      - '<gray>Лучшая серия: <duels_best_streak>'
+    rewards:
+      title: <gold>Честь и награды
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Честь: <duels_honor>'
+      - '<gray>Выиграно: <duels_money_won>'
+  hunt:
+    title: <gold>Охота
+    summary:
+    - <dark_gray>Личная статистика
+    - ''
+    - '<gray>Ранг: <hunt_rank>'
+    - '<gray>Выполнено: <hunt_completed>'
+    - <dark_gray><st>─────────────────────
+    - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+    public:
+    - <dark_gray>Общая статистика
+    - ''
+    - '<gray>Ранг: <hunt_rank>'
+    - '<gray>Выполнено: <hunt_completed>'
+    orders:
+      title: <gold>Заказы
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Выполнено: <hunt_completed>'
+      - '<gray>Провалено: <hunt_failed>'
+    rating:
+      title: <gold>Рейтинг
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Рейтинг: <hunt_rating>'
+      - '<gray>Ранг: <hunt_rank>'
+      - '<gray>Модификатор награды: <hunt_reward_modifier>%'
+  contracts:
+    title: <gold>Контракты
+    summary:
+    - <dark_gray>Личная статистика
+    - ''
+    - '<gray>Выполнено: <contracts_completed>'
+    - '<gray>Успешность: <contracts_success_rate>'
+    - <dark_gray><st>─────────────────────
+    - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+    public:
+    - <dark_gray>Общая статистика
+    - ''
+    - '<gray>Выполнено: <contracts_completed>'
+    - '<gray>Успешность: <contracts_success_rate>'
+    completed:
+      title: <gold>Выполнение
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Выполнено всего: <contracts_completed>'
+      - '<gray>Сегодня: <contracts_daily_completed>'
+      - '<gray>Принято: <contracts_accepted>'
+      - '<gray>Провалено: <contracts_failed>'
+      - '<gray>Успешность: <contracts_success_rate>'
+    streaks:
+      title: <gold>Серии контрактов
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Текущая: <contracts_streak>'
+      - '<gray>Лучшая: <contracts_best_streak>'
+  activities:
+    title: <gold>Активности
+    summary:
+    - <dark_gray>Личная статистика
+    - ''
+    - '<gray>Побед: <activities_wins>'
+    - '<gray>Побед: <activities_winrate>'
+    - <dark_gray><st>─────────────────────
+    - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+    public:
+    - <dark_gray>Общая статистика
+    - ''
+    - '<gray>Побед: <activities_wins>'
+    - '<gray>Побед: <activities_winrate>'
+    results:
+      title: <gold>Общие результаты
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Побед: <activities_wins>'
+      - '<gray>Поражений: <activities_losses>'
+      - '<gray>Побед: <activities_winrate>'
+    money:
+      title: <gold>Итоги наград
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Выиграно: <activities_money_won>'
+      - '<gray>Проиграно: <activities_money_lost>'
+  economy:
+    title: <gold>Хозяйство
+    summary:
+    - <dark_gray>Личная статистика
+    - ''
+    - '<gray>Поймано рыбы: <fish_caught>'
+    - '<gray>Сделок с жителями: <villager_trades>'
+    - <dark_gray><st>─────────────────────
+    - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+    public:
+    - <dark_gray>Общая статистика
+    - ''
+    - '<gray>Поймано рыбы: <fish_caught>'
+    - '<gray>Сделок с жителями: <villager_trades>'
+    fishing:
+      title: <gold>Рыбалка и животные
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Поймано рыбы: <fish_caught>'
+      - '<gray>Разведено животных: <animals_bred>'
+    villagers:
+      title: <gold>Торговля с жителями
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Совершено сделок: <villager_trades>'
+    wallet:
+      title: <gold>Кошелёк
+      lore:
+      - <dark_gray>Подробности категории
+      - ''
+      - '<gray>Баланс: <balance> <currency>'
+profile-reports:
+  title: <gold>Жалобы игроков
+  create: <gold>Отправить жалобу
+  help: <gray>Опишите ситуацию. Жалоба сохраняется для проверки администрацией и сама по себе не изменяет репутацию.
+  reason: <gold>Причина жалобы
+  send: <gold>Отправить
+  sent: <gray>Жалоба отправлена администрации.
+  reason-length: '<gray>Опишите ситуацию: от 8 до 1024 символов.'
+  cooldown: <gray>Вы недавно отправляли жалобу. Попробуйте позже.
+  entry: <gold>Жалоба на <white><player>
+  author: '<gray>Автор: <white><player>'
+  new: <yellow>Не рассмотрена
+  resolved: <gray>Рассмотрена
+  detail: <gold>Рассмотрение жалобы
+  detail-help: <gray>Это сохранённые сведения. Изменение полей здесь не меняет исходную жалобу.
+  author-label: <gold>Автор
+  target-label: <gold>Игрок
+  resolve: <gold>Отметить рассмотренной
+  usage: <gray>/жалоба <ник>
+gui-layout:
+  invalid: <gray>Некорректная раскладка меню. Проверьте gui.menus в файле модуля.
+  occupied: <gray>Два элемента меню занимают один слот.
+  header-limit: <gray>В шапке меню допускается не более шести кнопок.
+
+module-access:
+  world: '<gray>Это действие недоступно в мире <white><world><gray>.'
+  gamemode: '<gray>Это действие недоступно в режиме <white><mode><gray>.'
+  denied-state: '<gray>Действие недоступно: <white><states><gray>.'
+  required-state: '<gray>Для этого действия нужны состояния: <white><states><gray>.'
+  allowed-state: '<gray>Нужно одно из состояний: <white><states><gray>.'
+
+  states:
+    normal: обычное состояние
+    combat: бой
+    afk: AFK
+    vanished: невидимость
+    flying: полёт
+    gliding: полёт на элитрах
+    swimming: плавание
+    sneaking: приседание
+    sleeping: сон или положение лёжа
+    vehicle: в транспорте
+    ground: на земле
+    airborne: в воздухе
+    authenticated: авторизован
+    unauthenticated: не авторизован
+  gamemodes:
+    survival: Выживание
+    creative: Творческий
+    adventure: Приключение
+    spectator: Наблюдатель
+
+access-editor:
+  choice-title: <gold>Выбор условия
+  access:
+    title: <gold>Ограничения использования
+    help: <gray>Правила для действий игрока и показа модуля. Административный редактор доступен по своему праву.
+  allowed-worlds:
+    title: <gold>Разрешённые миры
+    help: <gray>Пустой список разрешает все миры. Поддерживаются шаблоны world_*; регистр не учитывается.
+  denied-worlds:
+    title: <gold>Запрещённые миры
+    help: <gray>Запрет имеет приоритет над разрешением. Название мира или шаблон, например arena_*.
+  allowed-gamemodes:
+    title: <gold>Разрешённые режимы
+    help: <gray>Пустой список разрешает все игровые режимы. Выберите нужные режимы в меню.
+  denied-gamemodes:
+    title: <gold>Запрещённые режимы
+    help: <gray>Игрок не может использовать модуль в любом из выбранных режимов.
+  allowed-states:
+    title: <gold>Допустимые состояния
+    help: <gray>Нужно хотя бы одно выбранное состояние. Пустой список не добавляет ограничений.
+  denied-states:
+    title: <gold>Запрещённые состояния
+    help: '<gray>Любое совпадение блокирует действие: например бой, AFK или полёт.'
+  required-states:
+    title: <gold>Обязательные состояния
+    help: <gray>Нужны сразу все выбранные состояния, например авторизован и на земле.

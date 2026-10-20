@@ -180,3 +180,151 @@ textures:
   profile-menu.channel-admin: 'eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTY3ZDgxM2FlN2ZmZTViZTk1MWE0ZjQxZjJhYTYxOWE1ZTM4OTRlODVlYTVkNDk4NmY4NDk0OWM2M2Q3NjcyZSJ9fX0='
   profile-menu.nickname: 'eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0='
   profile-menu.suffixes: 'eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ=='
+
+reports:
+  cooldown-seconds: 300
+statistics:
+  hide-unavailable: true
+  placeholders:
+    duels_honor: loveduels_honor
+    duels_wins: loveduels_wins
+    duels_losses: loveduels_losses
+    duels_winrate: loveduels_winrate
+    duels_streak: loveduels_streak
+    duels_best_streak: loveduels_best_streak
+    duels_money_won: loveduels_money_won
+    hunt_rank: lovehunt_rank
+    hunt_rating: lovehunt_rating
+    hunt_completed: lovehunt_completed
+    hunt_failed: lovehunt_failed
+    hunt_reward_modifier: lovehunt_reward_modifier
+    contracts_completed: lovecontracts_total_completed
+    contracts_failed: lovecontracts_total_failed
+    contracts_accepted: lovecontracts_total_accepted
+    contracts_daily_completed: lovecontracts_daily_completed
+    contracts_success_rate: lovecontracts_success_rate
+    contracts_streak: lovecontracts_current_streak
+    contracts_best_streak: lovecontracts_best_streak
+    activities_wins: loveactivities_wins_total
+    activities_losses: loveactivities_losses_total
+    activities_winrate: loveactivities_winrate_total
+    activities_money_won: loveactivities_won_money_total
+    activities_money_lost: loveactivities_lost_money_total
+  categories:
+    world:
+      enabled: true
+      plugin: ''
+      title-key: profile-stats.world.title
+      summary-key: profile-stats.world.summary
+      public-key: profile-stats.world.public
+      activity-sensitive: true
+      details:
+        visits:
+          title-key: profile-stats.world.visits.title
+          lore-key: profile-stats.world.visits.lore
+        movement:
+          title-key: profile-stats.world.movement.title
+          lore-key: profile-stats.world.movement.lore
+        mining:
+          title-key: profile-stats.world.mining.title
+          lore-key: profile-stats.world.mining.lore
+        survival:
+          title-key: profile-stats.world.survival.title
+          lore-key: profile-stats.world.survival.lore
+    duels:
+      enabled: true
+      plugin: LoveDuels
+      title-key: profile-stats.duels.title
+      summary-key: profile-stats.duels.summary
+      public-key: profile-stats.duels.public
+      activity-sensitive: false
+      details:
+        results:
+          title-key: profile-stats.duels.results.title
+          lore-key: profile-stats.duels.results.lore
+        streaks:
+          title-key: profile-stats.duels.streaks.title
+          lore-key: profile-stats.duels.streaks.lore
+        rewards:
+          title-key: profile-stats.duels.rewards.title
+          lore-key: profile-stats.duels.rewards.lore
+    hunt:
+      enabled: true
+      plugin: LoveHunt
+      title-key: profile-stats.hunt.title
+      summary-key: profile-stats.hunt.summary
+      public-key: profile-stats.hunt.public
+      activity-sensitive: false
+      details:
+        orders:
+          title-key: profile-stats.hunt.orders.title
+          lore-key: profile-stats.hunt.orders.lore
+        rating:
+          title-key: profile-stats.hunt.rating.title
+          lore-key: profile-stats.hunt.rating.lore
+    contracts:
+      enabled: true
+      plugin: LoveContracts
+      title-key: profile-stats.contracts.title
+      summary-key: profile-stats.contracts.summary
+      public-key: profile-stats.contracts.public
+      activity-sensitive: false
+      details:
+        completed:
+          title-key: profile-stats.contracts.completed.title
+          lore-key: profile-stats.contracts.completed.lore
+        streaks:
+          title-key: profile-stats.contracts.streaks.title
+          lore-key: profile-stats.contracts.streaks.lore
+    activities:
+      enabled: true
+      plugin: LoveActivities
+      title-key: profile-stats.activities.title
+      summary-key: profile-stats.activities.summary
+      public-key: profile-stats.activities.public
+      activity-sensitive: false
+      details:
+        results:
+          title-key: profile-stats.activities.results.title
+          lore-key: profile-stats.activities.results.lore
+        money:
+          title-key: profile-stats.activities.money.title
+          lore-key: profile-stats.activities.money.lore
+    economy:
+      enabled: true
+      plugin: ''
+      title-key: profile-stats.economy.title
+      summary-key: profile-stats.economy.summary
+      public-key: profile-stats.economy.public
+      activity-sensitive: false
+      details:
+        fishing:
+          title-key: profile-stats.economy.fishing.title
+          lore-key: profile-stats.economy.fishing.lore
+        villagers:
+          title-key: profile-stats.economy.villagers.title
+          lore-key: profile-stats.economy.villagers.lore
+        wallet:
+          title-key: profile-stats.economy.wallet.title
+          lore-key: profile-stats.economy.wallet.lore
+
+# Пустые списки не ограничивают. Запрет важнее разрешения; required — все состояния, allowed — любое.
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+
+# Тексты кнопок задаются ключами lang.yml; оформление не меняет права и обработчики.
+gui:
+  refresh-ticks: 20
+  menus:
+    profile-menu-title:
+      size: 27
+    public-profile-title:
+      size: 27
+    profile-menu-statistics:
+      size: 27

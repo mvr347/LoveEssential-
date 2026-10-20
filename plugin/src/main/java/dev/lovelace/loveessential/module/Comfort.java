@@ -22,9 +22,23 @@ import org.bukkit.inventory.meta.Damageable;
 /** Temporary vehicles are owned, bounded and removed on every exit path. */
 public final class Comfort implements Listener, AutoCloseable {
   public static final Set<String> COMMANDS =
-      Set.of("sit", "ride", "hat", "traces", "heal", "feed", "fly", "speed", "gamemode", "repair");
+      Set.of(
+          "sit",
+          "lay",
+          "ride",
+          "eject",
+          "hat",
+          "traces",
+          "heal",
+          "feed",
+          "fly",
+          "speed",
+          "gamemode",
+          "repair");
 
   private record Seat(ArmorStand entity, Location stand, Block block) {}
+
+  private record Lying(Location anchor, Block support, Pose previous, boolean fixed) {}
 
   private record Step(Location at, long time, boolean left) {}
 
@@ -35,6 +49,7 @@ public final class Comfort implements Listener, AutoCloseable {
   private final SqliteStore store;
   private final Gameplay gameplay;
   private final Map<UUID, Seat> seats = new HashMap<>();
+  private final Map<UUID, Lying> lying = new HashMap<>();
   private final Map<UUID, Entity> rides = new HashMap<>();
   private final Map<UUID, Step> steps = new HashMap<>();
   private final Map<UUID, Boolean> traces = new HashMap<>();
@@ -83,14 +98,31 @@ public final class Comfort implements Listener, AutoCloseable {
   public void command(Player p, String command, String[] args) {
     MainThread.require();
     String module =
-        Set.of("sit", "ride", "hat").contains(command)
+        Set.of("sit", "lay", "ride", "eject", "hat").contains(command)
             ? "sitride"
             : command.equals("traces") ? "traces" : "utilities";
-    if (!plugin.module(module)) throw new IllegalArgumentException("errors.module-disabled");
-    if (!love.authenticated(p) || !p.hasPermission("loveessential." + command))
+    plugin.requireAccess(module, p);
+    boolean ejecting =
+        command.equals("eject")
+            || command.equals("ride")
+                && args.length == 1
+                && Set.of("eject", "сбросить").contains(args[0].toLowerCase(Locale.ROOT));
+    if (!love.authenticated(p)
+        || !Set.of("sit", "lay", "ride", "eject", "hat", "traces").contains(command)
+            && !p.hasPermission("loveessential." + command))
       throw new IllegalArgumentException("errors.permission");
     switch (command) {
+      case "eject" -> {
+        if (args.length != 0) throw new IllegalArgumentException("comfort.usage");
+        eject(p);
+      }
+      case "lay" -> {
+        if (args.length != 0) throw new IllegalArgumentException("comfort.usage");
+        if (lying.containsKey(p.getUniqueId())) unlay(p);
+        else lay(p);
+      }
       case "sit" -> {
+        unlay(p);
         if (seats.containsKey(p.getUniqueId())) {
           release(p, true);
           return;
@@ -104,7 +136,13 @@ public final class Comfort implements Listener, AutoCloseable {
           block = at.clone().subtract(0, 1, 0).getBlock();
         sit(p, block, false);
       }
-      case "ride" -> ride(p, args);
+      case "ride" -> {
+        if (ejecting) eject(p);
+        else {
+          unlay(p);
+          ride(p, args);
+        }
+      }
       case "hat" -> hat(p);
       case "traces" -> {
         if (args.length > 1 || args.length == 1 && !Set.of("on", "off").contains(args[0]))
@@ -208,6 +246,8 @@ public final class Comfort implements Listener, AutoCloseable {
   }
 
   public void sit(Player p, Block block, boolean clicked) {
+    plugin.requireAccess("sitride", p);
+    unlay(p);
     if (p.isInsideVehicle() || p.isFlying() || p.isSwimming() || p.isGliding() || love.combat(p))
       throw new IllegalArgumentException("comfort.seat-state");
     if (!love.territorialAccess(p, block.getLocation()))
@@ -255,6 +295,74 @@ public final class Comfort implements Listener, AutoCloseable {
     seats.put(p.getUniqueId(), new Seat(seat, at.clone(), block));
   }
 
+  private void lay(Player p) {
+    if (p.isInsideVehicle()
+        || p.isFlying()
+        || p.isSwimming()
+        || p.isGliding()
+        || p.isSleeping()
+        || p.hasFixedPose()
+        || love.combat(p)
+        || !p.getPassengers().isEmpty()) throw new IllegalArgumentException("comfort.seat-state");
+    release(p, true);
+    var at = p.getLocation();
+    Block block = at.clone().subtract(0, .05, 0).getBlock();
+    if (block.isPassable()) block = at.clone().subtract(0, 1, 0).getBlock();
+    if (!love.territorialAccess(p, block.getLocation()))
+      throw new IllegalArgumentException("errors.territory");
+    double y = surface(block, at.getX() - block.getX(), at.getZ() - block.getZ());
+    at.setY(y);
+    if (!clear(at, 1.8)) throw new IllegalArgumentException("comfort.seat-space");
+    lying.put(p.getUniqueId(), new Lying(at.clone(), block, p.getPose(), p.hasFixedPose()));
+    p.setPose(Pose.SLEEPING, true);
+  }
+
+  private void unlay(Player p) {
+    var state = lying.remove(p.getUniqueId());
+    if (state != null && p.getPose() == Pose.SLEEPING) p.setPose(state.previous(), state.fixed());
+  }
+
+  private void eject(Player carrier) {
+    boolean found = false;
+    for (var passenger : List.copyOf(carrier.getPassengers())) {
+      if (passenger instanceof Player rider && rides.get(rider.getUniqueId()) == carrier) {
+        if (rider.leaveVehicle()) {
+          rides.remove(rider.getUniqueId());
+          found = true;
+        }
+      }
+    }
+    if (!found) throw new IllegalArgumentException("comfort.no-passenger");
+    lang.send(carrier, "comfort.passenger-ejected");
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST)
+  public void hitPassenger(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+    if (e.getDamager() instanceof Player carrier
+        && e.getEntity() instanceof Player rider
+        && rides.get(rider.getUniqueId()) == carrier
+        && rider.getVehicle() == carrier) {
+      e.setCancelled(true);
+      if (rider.leaveVehicle()) rides.remove(rider.getUniqueId());
+    }
+  }
+
+  @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+  public void lyingMove(PlayerMoveEvent e) {
+    if (e.getTo() == null
+        || e instanceof PlayerTeleportEvent
+        || !lying.containsKey(e.getPlayer().getUniqueId())) return;
+    var anchor = lying.get(e.getPlayer().getUniqueId()).anchor().clone();
+    anchor.setYaw(e.getTo().getYaw());
+    anchor.setPitch(e.getTo().getPitch());
+    e.setTo(anchor);
+  }
+
+  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+  public void standUp(PlayerToggleSneakEvent e) {
+    if (e.isSneaking()) unlay(e.getPlayer());
+  }
+
   private void ride(Player p, String[] args) {
     if (rides.containsKey(p.getUniqueId())) {
       p.leaveVehicle();
@@ -291,7 +399,7 @@ public final class Comfort implements Listener, AutoCloseable {
         && (!p.canSee(other)
             || !love.authenticated(other)
             || gameplay.vanished(other)
-            || !other.hasPermission("loveessential.ride.accept")
+            || !plugin.getConfig().getBoolean("sitride.player-riding-enabled", true)
             || love.combat(other))) throw new IllegalArgumentException("comfort.ride-consent");
     if (!love.territorialAccess(p, target.getLocation()))
       throw new IllegalArgumentException("errors.territory");
@@ -329,11 +437,23 @@ public final class Comfort implements Listener, AutoCloseable {
   }
 
   private void maintain() {
+    for (var entry : List.copyOf(lying.entrySet())) {
+      var p = Bukkit.getPlayer(entry.getKey());
+      var state = entry.getValue();
+      if (p == null) lying.remove(entry.getKey());
+      else if (!plugin.environmentAllows("sitride", p)
+          || !love.authenticated(p)
+          || love.combat(p)
+          || p.getPose() != Pose.SLEEPING
+          || state.support().isPassable()
+          || !p.getWorld().equals(state.anchor().getWorld())
+          || p.isInsideVehicle()) unlay(p);
+    }
     for (UUID id : new ArrayList<>(seats.keySet())) {
       var p = Bukkit.getPlayer(id);
       var seat = seats.get(id);
       if (p == null
-          || !plugin.module("sitride")
+          || !plugin.environmentAllows("sitride", p)
           || !love.authenticated(p)
           || !seat.entity().isValid()
           || !seat.entity().getPassengers().contains(p)
@@ -354,14 +474,16 @@ public final class Comfort implements Listener, AutoCloseable {
               var target = e.getValue();
               boolean stop =
                   p == null
-                      || !plugin.module("sitride")
+                      || !plugin.environmentAllows("sitride", p)
                       || !target.isValid()
                       || !target.getPassengers().contains(p)
                       || !love.authenticated(p)
                       || love.combat(p)
                       || target instanceof Player other
                           && (!love.authenticated(other)
-                              || !other.hasPermission("loveessential.ride.accept")
+                              || !plugin
+                                  .getConfig()
+                                  .getBoolean("sitride.player-riding-enabled", true)
                               || gameplay.vanished(other)
                               || love.combat(other));
               if (stop && p != null && target.getPassengers().contains(p)) p.leaveVehicle();
@@ -374,14 +496,13 @@ public final class Comfort implements Listener, AutoCloseable {
     var p = e.getPlayer();
     var b = e.getClickedBlock();
     if (!plugin.ready()
-        || !plugin.module("sitride")
+        || !plugin.allows("sitride", p)
         || !plugin.getConfig().getBoolean("sitride.click-to-sit", true)
         || e.getAction() != Action.RIGHT_CLICK_BLOCK
         || e.getHand() != EquipmentSlot.HAND
         || b == null
         || p.isSneaking()
         || !p.getInventory().getItemInMainHand().getType().isAir()
-        || !p.hasPermission("loveessential.sit")
         || !love.authenticated(p)) return;
     String type = b.getType().name();
     if (!(type.endsWith("_STAIRS") || type.endsWith("_SLAB") || type.endsWith("CARPET"))) return;
@@ -401,7 +522,7 @@ public final class Comfort implements Listener, AutoCloseable {
         || e instanceof PlayerTeleportEvent
         || !e.getFrom().getWorld().equals(to.getWorld())
         || e.getFrom().distanceSquared(to) < .0001) return;
-    if (!plugin.module("traces")
+    if (!plugin.allows("traces", p)
         || !traces.getOrDefault(p.getUniqueId(), false)
         || !love.authenticated(p)
         || gameplay.vanished(p)
@@ -468,18 +589,29 @@ public final class Comfort implements Listener, AutoCloseable {
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void damage(EntityDamageEvent e) {
-    if (e.getEntity() instanceof Player p) release(p, true);
+    if (e.getEntity() instanceof Player p) {
+      release(p, true);
+      unlay(p);
+    }
   }
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void teleport(PlayerTeleportEvent e) {
+    unlay(e.getPlayer());
     release(e.getPlayer(), false);
     steps.remove(e.getPlayer().getUniqueId());
   }
 
   @EventHandler
   public void quit(PlayerQuitEvent e) {
+    unlay(e.getPlayer());
     release(e.getPlayer(), false);
+    for (var rider : List.copyOf(e.getPlayer().getPassengers())) {
+      if (rider instanceof Player && rides.get(rider.getUniqueId()) == e.getPlayer()) {
+        rider.leaveVehicle();
+        rides.remove(rider.getUniqueId());
+      }
+    }
     rides.remove(e.getPlayer().getUniqueId());
     steps.remove(e.getPlayer().getUniqueId());
     traces.remove(e.getPlayer().getUniqueId());
@@ -488,6 +620,11 @@ public final class Comfort implements Listener, AutoCloseable {
   public void close() {
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
+    for (UUID id : List.copyOf(lying.keySet())) {
+      var p = Bukkit.getPlayer(id);
+      if (p != null) unlay(p);
+    }
+    lying.clear();
     seats.values().forEach(s -> s.entity().remove());
     seats.clear();
     rides.forEach(

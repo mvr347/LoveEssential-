@@ -6,7 +6,7 @@ default-enabled: true
 disabled-worlds: []
 enabled-worlds: []
 disabled-gamemodes: []
-# Empty means no extra permission. The normal scoreboard command permission still applies.
+# Пустое значение не требует дополнительного права для показа. Личное меню доступно всем.
 display-permission: ''
 hide-while-afk: false
 hide-in-combat: false
@@ -16,3 +16,19 @@ overrides:
   allow-forced: true
   max-seconds: 600
   per-player-limit: 8
+
+# Пустые списки не ограничивают. Запрет важнее разрешения; required — все состояния, allowed — любое.
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+
+# Eight adjacent slots are the explicit layout exception requested for the personal editor.
+gui:
+  free-texture: 'eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjhkZGY4M2VhN2YwOGE3MmE1MmFjMjFkYzc0MDBhMDYxN2FjMmNiZTIxYTMxNzA0OGY0MmU3ZjI0OTk0NDgwZSJ9fX0='
+  occupied-texture: 'eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0='
+  menus: {}

@@ -7,7 +7,6 @@ import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.module.Gameplay;
 import dev.lovelace.loveessential.npc.*;
 import dev.lovelace.loveessential.storage.SqliteStore;
-import dev.lovelace.loveessential.tab.TabExport;
 import dev.lovelace.loveessential.wizard.NpcWizard;
 import java.util.*;
 import java.util.concurrent.*;
@@ -80,7 +79,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
       boolean inputCommand =
           cmd.equals("loveessential")
               && args.length > 0
-              && Set.of("input", "cancel").contains(args[0].toLowerCase(Locale.ROOT));
+              && Set.of("cancel").contains(args[0].toLowerCase(Locale.ROOT));
       if (!inputCommand && sender instanceof Player p) {
         extensions.ui.cancel(p);
         menus.cancelInput(p);
@@ -112,11 +111,6 @@ public final class Commands implements CommandExecutor, TabCompleter {
             if (args.length != 2
                 || !menus.cancelPrompt(p, args[1]) && !wizard.cancelPrompt(p, args[1]))
               lang.send(p, "input.stale-cancel");
-          }
-          case "input" -> {
-            var p = player(sender);
-            String input = String.join(" ", slice(args, 1));
-            if (!menus.input(p, input)) wizard.input(p, input);
           }
           case "reload", "перезагрузить" -> {
             admin(sender);
@@ -177,34 +171,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
                         .resolve("backups/backup-" + System.currentTimeMillis() + ".db")),
                 "chat.saved");
           }
-          case "tab" -> {
+          case "tab", "таб" -> {
             admin(sender);
-            if (args.length > 1 && args[1].equals("export")) {
-              if (!love.installed("TAB") || !love.installed("PlaceholderAPI"))
-                throw new IllegalArgumentException("errors.tab-engine");
-              var files = TabExport.snapshot(plugin, lang);
-              var target = Bukkit.getPluginManager().getPlugin("TAB").getDataFolder().toPath();
-              complete(
-                  sender,
-                  CompletableFuture.runAsync(
-                          () -> {
-                            try {
-                              TabExport.write(target, files);
-                            } catch (Exception e) {
-                              throw new CompletionException(e);
-                            }
-                          },
-                          plugin.io())
-                      .thenCompose(
-                          v ->
-                              main.call(
-                                  () -> {
-                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "tab reload");
-                                    return null;
-                                  })),
-                  "tab.exported");
-            } else if (sender instanceof Player p)
-              menus.direct(p, () -> menus.settings(p, "tab", "", 0));
+            if (args.length != 1) throw new IllegalArgumentException("errors.input");
+            if (sender instanceof Player p) menus.direct(p, () -> menus.settings(p, "tab", "", 0));
             else lang.send(sender, "help.tab-settings");
           }
           default -> {
@@ -237,6 +207,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       if (cmd.equals("nick")) {
+        plugin.requireAccess("nickname", p);
         if (args.length == 0) menus.direct(p, () -> menus.nickname(p));
         else {
           Player target = p;
@@ -250,6 +221,15 @@ public final class Commands implements CommandExecutor, TabCompleter {
           }
           complete(p, nicknames.change(p, target, options), "nick.saved");
         }
+        return true;
+      }
+      if (cmd.equals("report")) {
+        if (args.length != 1) throw new IllegalArgumentException("profile-reports.usage");
+        profiles.reportCommand(p, args[0]);
+        return true;
+      }
+      if (cmd.equals("reports")) {
+        profiles.reportsCommand(p, args);
         return true;
       }
       if (cmd.equals("profile")) {
@@ -272,19 +252,11 @@ public final class Commands implements CommandExecutor, TabCompleter {
         npc(p, args);
         return true;
       }
-      if (cmd.equals("skin") && args.length == 0) {
-        menus.direct(p, () -> menus.skin(p));
-        return true;
-      }
       if (cmd.equals("skin") && args.length == 1 && args[0].equalsIgnoreCase("reset")) {
         gameplay.command(p, "skin", new String[] {p.getName()});
         return true;
       }
-      if (cmd.equals("homes") && args.length == 0) {
-        menus.direct(p, () -> menus.places(p, "home", 0));
-        return true;
-      }
-      if (Set.of("hologram", "portal").contains(cmd) && args.length == 0) {
+      if (cmd.equals("hologram") && args.length == 0) {
         menus.direct(p, () -> menus.places(p, cmd, 0));
         return true;
       }
@@ -293,11 +265,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       if (cmd.equals("portal")) {
-        if (args.length < 1) throw new IllegalArgumentException("errors.input");
-        gameplay.portal(p, args[0], args.length > 1 ? args[1] : "");
+        gameplay.portals().command(p, args);
         return true;
       }
       gameplay.command(p, cmd, args);
+    } catch (dev.lovelace.loveessential.module.ModulePolicy.Denied e) {
+      lang.send(sender, e.getMessage(), e.variables());
     } catch (RuntimeException e) {
       String key = e.getMessage();
       lang.send(sender, key != null && lang.contains(key) ? key : "errors.input");

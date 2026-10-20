@@ -302,7 +302,7 @@ public final class Holograms implements HologramService, Listener, AutoCloseable
     int perPlayer = plugin.getConfig().getInt("hologram.max-visible-per-player", 24);
     if (plugin.module("hologram"))
       for (var p : Bukkit.getOnlinePlayers())
-        if (love.authenticated(p)) {
+        if (love.authenticated(p) && plugin.allows("hologram", p)) {
           var at = p.getLocation();
           definitions.values().stream()
               .filter(
@@ -463,7 +463,7 @@ public final class Holograms implements HologramService, Listener, AutoCloseable
         || e.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
     e.setCancelled(true);
     var p = e.getPlayer();
-    if (!plugin.module("hologram")
+    if (!plugin.allows("hologram", p)
         || !love.authenticated(p)
         || !love.territorialAccess(p, e.getRightClicked().getLocation())
         || p.getLocation().distanceSquared(e.getRightClicked().getLocation()) > 36) return;

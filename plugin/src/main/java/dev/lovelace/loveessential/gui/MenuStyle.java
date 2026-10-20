@@ -12,6 +12,29 @@ public final class MenuStyle {
     19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43
   };
 
+  private static GuiSettings settings;
+
+  public static void configure(GuiSettings value) {
+    settings = value;
+  }
+
+  public static net.kyori.adventure.text.Component title(
+      Lang lang, String key, Map<String, String> vars) {
+    return settings == null ? lang.render(key, vars) : settings.title(key, vars);
+  }
+
+  public static org.bukkit.inventory.InventoryView open(
+      org.bukkit.entity.Player player, Inventory inventory) {
+    if (settings != null && inventory.getHolder() instanceof GuiLayout layout)
+      settings.apply(player, inventory, layout);
+    return player.openInventory(inventory);
+  }
+
+  public static void apply(org.bukkit.entity.Player player, Inventory inventory) {
+    if (settings != null && inventory.getHolder() instanceof GuiLayout layout)
+      settings.apply(player, inventory, layout);
+  }
+
   private MenuStyle() {}
 
   public static List<Component> description(Lang lang, String key) {
@@ -36,6 +59,25 @@ public final class MenuStyle {
   }
 
   public static ItemStack item(Material icon, Component title, List<Component> lore) {
+    if (icon != Material.PLAYER_HEAD
+        && icon != Material.GRAY_STAINED_GLASS_PANE
+        && !icon.name().endsWith("STAINED_GLASS_PANE")) {
+      String texture =
+          switch (icon) {
+            case BARRIER, RED_DYE, RED_CONCRETE ->
+                "c618731e063379aebf82f1d64c419c90d7f0c1648c548e9b6151b1baba66d723";
+            case LIME_DYE, LIME_CONCRETE ->
+                "badc048a7ce78f7dad72a07da27d85c0916881e5522eeed1e3daf217a38c1a";
+            case CLOCK, COMPASS ->
+                "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb";
+            case EMERALD, SUNFLOWER ->
+                "fae6344cebacd21d8c6ca0d2e34b3c3492dc79bf443140d12a50887ae3eb7f8f";
+            case NAME_TAG, FLOWER_BANNER_PATTERN ->
+                "c545c4aa97c19bed7cac1817fc5103fe8dd589fa120835a3e4e12f352230a5a6";
+            default -> "d0d5a4eba140cbb34d45e40d62dd3f7e6584b2ab0b4155a0bcc603d5d750f793";
+          };
+      return head(texture, title, lore);
+    }
     var item = new ItemStack(icon);
     var meta = item.getItemMeta();
     meta.displayName(title.decoration(TextDecoration.ITALIC, false));
@@ -50,7 +92,9 @@ public final class MenuStyle {
     if (title.equals("gui.close")
         || title.equals("common.back")
         || title.equals("gui.confirm")
-        || title.equals("gui.cancel")) {
+        || title.equals("gui.cancel")
+        || title.equals("gui.previous")
+        || title.equals("common.next")) {
       String texture =
           switch (title) {
             case "gui.close" -> "3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025";
@@ -59,7 +103,7 @@ public final class MenuStyle {
             case "gui.previous" ->
                 "84df2cefad48c10063d735399f904faa4608fd466def1de9e55b1a3665e38603";
             case "common.next" ->
-                "9c8c2a011be8e26498b036bc407977408873a61a742612c497a225359a30b4cd3";
+                "8a6d2f471b54047148b355255c7f556e2187fd4e8338b111dbf3adcd2850c498";
             default -> "c618731e063379aebf82f1d64c419c90d7f0c1648c548e9b6151b1baba66d723";
           };
       item = head(texture, lang.render(title), Arrays.stream(lore).map(lang::render).toList());
@@ -137,7 +181,8 @@ public final class MenuStyle {
   public static void frame(Inventory inventory) {
     var filler = item(Material.GRAY_STAINED_GLASS_PANE, Component.empty(), List.of());
     inventory.clear();
-    for (int i = 0; i < 18; i++) inventory.setItem(i, filler);
-    for (int i = 45; i < 54; i++) inventory.setItem(i, filler);
+    for (int i = 0; i < (inventory.getSize() >= 45 ? 18 : 9); i++) inventory.setItem(i, filler);
+    for (int i = inventory.getSize() - 9; i < inventory.getSize(); i++)
+      inventory.setItem(i, filler);
   }
 }

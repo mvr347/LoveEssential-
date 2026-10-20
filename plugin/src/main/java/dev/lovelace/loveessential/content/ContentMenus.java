@@ -34,8 +34,22 @@ public final class ContentMenus implements Listener, AutoCloseable {
   private final List<LoveEssentialService.Registration> registrations = new ArrayList<>();
   private static final int[] GRID = {19, 20, 21, 28, 29, 30, 37, 38, 39};
 
-  private static final class View implements InventoryHolder {
+  private static final class View implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
+    String menuId = "gui.menu";
+
+    public String guiId() {
+      return menuId;
+    }
+
+    public Map<Integer, ?> guiActions() {
+      return clicks;
+    }
+
+    public void guiPut(int slot, Runnable action) {
+      clicks.put(slot, click -> action.run());
+    }
+
     final Predicate<Player> allowed;
     final Map<Integer, Consumer<InventoryClickEvent>> clicks = new HashMap<>();
 
@@ -141,7 +155,8 @@ public final class ContentMenus implements Listener, AutoCloseable {
       throw new IllegalArgumentException("errors.permission");
     controls.clearInput(p);
     var v = new View(allowed);
-    v.inventory = Bukkit.createInventory(v, 54, lang.render(title, vars));
+    v.menuId = title;
+    v.inventory = Bukkit.createInventory(v, 54, MenuStyle.title(lang, title, vars));
     MenuStyle.frame(v.inventory);
     put(v, 52, Material.BARRIER, "gui.close", e -> p.closeInventory());
     return v;
@@ -241,15 +256,16 @@ public final class ContentMenus implements Listener, AutoCloseable {
           action.run();
         });
     put(v, 24, Material.RED_CONCRETE, "gui.cancel", e -> back.run());
-    p.openInventory(v.inventory);
+    MenuStyle.open(p, v.inventory);
   }
 
   public void command(Player p, String command, String[] args) {
     if (command.equals("starter")) {
       if (!plugin.module("starter")) throw new IllegalArgumentException("errors.module-disabled");
-      if (args.length == 0 || args.length == 1 && args[0].equals("preview")) previewKit(p, 0);
+      requireEditor(p, "starter");
+      if (args.length == 1 && args[0].equals("preview")) previewKit(p, 0);
       else if (args.length == 1 && args[0].equals("claim")) starter.claim(p, true);
-      else if (args.length == 1 && args[0].equals("edit")) {
+      else if (args.length == 0 || args.length == 1 && args[0].equals("edit")) {
         requireEditor(p, "starter");
         var d = new KitDraft(starter.kit());
         drafts.put(p.getUniqueId(), d);
@@ -308,7 +324,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
     if (!plugin.module(module)) return List.of();
     if (command.equals("starter"))
       return args.length == 1
-          ? (editor(p, module) ? List.of("preview", "claim", "edit") : List.of("preview", "claim"))
+          ? (editor(p, module) ? List.of("preview", "claim", "edit") : List.of())
           : List.of();
     if (args.length == 1) {
       var out = new ArrayList<>(List.of("list", "open"));
@@ -357,7 +373,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
           "content.create",
           e -> command(p, "recipes", new String[] {"create"}));
     nav(v, p, actual, ids.size(), n -> list(p, n), null);
-    p.openInventory(v.inventory);
+    MenuStyle.open(p, v.inventory);
   }
 
   private boolean active(Player p, Object draft, String module) {
@@ -515,7 +531,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
               () -> d.saving = false);
         });
     nav(v, p, 0, 0, n -> {}, () -> list(p, 0));
-    p.openInventory(v.inventory);
+    MenuStyle.open(p, v.inventory);
   }
 
   private void previewRecipe(Player p, String id) {
@@ -548,7 +564,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
           "content.edit",
           e -> command(p, "recipes", new String[] {"edit", id}));
     nav(v, p, 0, 0, n -> {}, () -> list(p, 0));
-    p.openInventory(v.inventory);
+    MenuStyle.open(p, v.inventory);
   }
 
   private void previewKit(Player p, int page) {
@@ -572,7 +588,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
           "content.edit",
           e -> command(p, "starter", new String[] {"edit"}));
     nav(v, p, actual, entries.size(), n -> previewKit(p, n), null);
-    p.openInventory(v.inventory);
+    MenuStyle.open(p, v.inventory);
   }
 
   private ItemStack kitIcon(StarterItems.Entry e) {
@@ -701,7 +717,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
               () -> d.saving = false);
         });
     nav(v, p, actual, d.items.size(), n -> kitEditor(p, d, n), () -> previewKit(p, 0));
-    p.openInventory(v.inventory);
+    MenuStyle.open(p, v.inventory);
   }
 
   @EventHandler(priority = EventPriority.HIGHEST)

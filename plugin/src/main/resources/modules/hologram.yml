@@ -4,3 +4,17 @@ max-holograms: 256
 creation-height: 2.0
 max-visible-per-player: 24
 max-display-entities: 4096
+
+# Пустые списки не ограничивают. Запрет важнее разрешения; required — все состояния, allowed — любое.
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+
+# Тексты кнопок задаются ключами lang.yml; оформление не меняет права и обработчики.
+gui:
+  menus: {}

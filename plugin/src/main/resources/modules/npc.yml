@@ -36,3 +36,17 @@ actions:
   - brew
   - spawn
   - home
+
+# Пустые списки не ограничивают. Запрет важнее разрешения; required — все состояния, allowed — любое.
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+
+# Тексты кнопок задаются ключами lang.yml; оформление не меняет права и обработчики.
+gui:
+  menus: {}
