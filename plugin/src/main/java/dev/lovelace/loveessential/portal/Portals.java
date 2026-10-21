@@ -54,6 +54,10 @@ public final class Portals implements Listener, AutoCloseable {
     public Inventory getInventory() {
       return inventory;
     }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
   }
 
   private final LoveEssentialPlugin plugin;
@@ -535,12 +539,11 @@ public final class Portals implements Listener, AutoCloseable {
 
   public void list(Player p, int page) {
     var values = List.copyOf(portals.values());
-    int actual = Math.clamp(page, 0, Math.max(0, (values.size() - 1) / 21));
+    int actual = Math.clamp(page, 0, Math.max(0, (values.size() - 1) / 20));
     var m = menu(p, 54, "portal-ui.list", null);
-    button(m, 4, "portal-ui.create", "portal-ui.create-help", () -> resume(p));
-    for (int i = actual * 21; i < Math.min(values.size(), (actual + 1) * 21); i++) {
+    for (int i = actual * 20; i < Math.min(values.size(), (actual + 1) * 20); i++) {
       var d = values.get(i);
-      int slot = MenuStyle.CONTENT[i % 21];
+      int slot = MenuStyle.slot(i % 20, Math.min(20, values.size() - actual * 20) + 1);
       m.inventory.setItem(
           slot,
           MenuStyle.head(
@@ -554,8 +557,15 @@ public final class Portals implements Listener, AutoCloseable {
                   lang.render("gui.click.edit"))));
       m.actions.put(slot, () -> edit(p, d.id()));
     }
+    int shown = Math.min(20, values.size() - actual * 20);
+    button(
+        m,
+        MenuStyle.slot(shown, shown + 1),
+        "portal-ui.create",
+        "portal-ui.create-help",
+        () -> resume(p));
     if (actual > 0) button(m, 36, "gui.previous", "gui.click.open", () -> list(p, actual - 1));
-    if ((actual + 1) * 21 < values.size())
+    if ((actual + 1) * 20 < values.size())
       button(m, 44, "common.next", "gui.click.open", () -> list(p, actual + 1));
     MenuStyle.open(p, m.inventory);
   }
@@ -1179,7 +1189,7 @@ public final class Portals implements Listener, AutoCloseable {
               () -> {
                 if (!admin(p) || p.getOpenInventory().getTopInventory() != m.inventory) return;
                 try {
-                  action.run();
+                  MenuStyle.action(p, action);
                 } catch (RuntimeException error) {
                   ui.error(p, error);
                 }

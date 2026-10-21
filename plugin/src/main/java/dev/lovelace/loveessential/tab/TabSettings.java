@@ -43,6 +43,10 @@ public final class TabSettings implements Listener {
     public Inventory getInventory() {
       return inventory;
     }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
   }
 
   public TabSettings(LoveEssentialPlugin plugin, NativeDialogs ui, Lang lang, LoveBridge love) {
@@ -475,7 +479,7 @@ public final class TabSettings implements Listener {
               () -> {
                 if (admin(p) && p.getOpenInventory().getTopInventory() == menu.inventory)
                   try {
-                    action.run();
+                    MenuStyle.action(p, action);
                   } catch (RuntimeException error) {
                     ui.error(p, error);
                   }

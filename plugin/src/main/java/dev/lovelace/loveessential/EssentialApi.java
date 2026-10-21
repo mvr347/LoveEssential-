@@ -8,21 +8,24 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public final class EssentialApi implements LoveEssentialService {
-  private record ProfileKey(UUID player, String key) {}
+  private final dev.lovelace.loveessential.cache.ProfileCache profiles;
 
-  private final com.github.benmanes.caffeine.cache.Cache<
-          ProfileKey, CompletableFuture<Optional<String>>>
-      profiles =
-          com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
-              .maximumSize(20000)
-              .expireAfterAccess(java.time.Duration.ofMinutes(5))
-              .build();
+  public void close() {
+    profiles.close();
+  }
+
   private final NpcService npcs;
   private final ConditionEngine conditions;
   private final ActionEngine actions;
   private final SqliteStore store;
 
   public EssentialApi(NpcService n, ConditionEngine c, ActionEngine a, SqliteStore s) {
+    this(n, c, a, s, 16L * 1024 * 1024);
+  }
+
+  public EssentialApi(
+      NpcService n, ConditionEngine c, ActionEngine a, SqliteStore s, long cacheBytes) {
+    profiles = new dev.lovelace.loveessential.cache.ProfileCache(cacheBytes);
     npcs = n;
     conditions = c;
     actions = a;
@@ -72,17 +75,8 @@ public final class EssentialApi implements LoveEssentialService {
 
   public CompletableFuture<Optional<String>> profile(UUID player, String key) {
     key(key);
-    var cacheKey = new ProfileKey(player, key);
-    return profiles.get(
-        cacheKey,
-        k -> {
-          var result = store.profile(player, key);
-          result.whenComplete(
-              (v, error) -> {
-                if (error != null) profiles.invalidate(cacheKey);
-              });
-          return result;
-        });
+    var cacheKey = new dev.lovelace.loveessential.cache.ProfileCache.Key(player, key);
+    return profiles.get(cacheKey, () -> store.profile(player, key));
   }
 
   public CompletableFuture<Void> profile(UUID player, String key, String value) {
@@ -90,6 +84,9 @@ public final class EssentialApi implements LoveEssentialService {
     if (value.length() > 65536) throw new IllegalArgumentException("profile-value-too-large");
     return store
         .profile(player, key, value)
-        .thenRun(() -> profiles.invalidate(new ProfileKey(player, key)));
+        .thenRun(
+            () ->
+                profiles.invalidate(
+                    new dev.lovelace.loveessential.cache.ProfileCache.Key(player, key)));
   }
 }

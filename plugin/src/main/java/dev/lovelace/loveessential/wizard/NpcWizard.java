@@ -62,6 +62,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
       return inventory;
     }
 
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
+
     int original(int slot) {
       Object route = routes.get(slot);
       if (route instanceof Runnable action) {
@@ -83,6 +87,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
     public Inventory getInventory() {
       return inventory;
     }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
   }
 
   private static final class ActionMenu extends RoutedMenu {
@@ -93,6 +101,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
     public Inventory getInventory() {
       return inventory;
+    }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
     }
   }
 
@@ -110,6 +122,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
     public Inventory getInventory() {
       return inventory;
+    }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
     }
   }
 
@@ -138,6 +154,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
     public Inventory getInventory() {
       return inventory;
+    }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
     }
   }
 
@@ -174,11 +194,16 @@ public final class NpcWizard implements Listener, AutoCloseable {
     NpcDraft draft;
     long revision;
     boolean busy, recording;
+    NpcDraft lastSaved;
+    CompletableFuture<Long> autosave = CompletableFuture.completedFuture(0L), rawSave = autosave;
     final Deque<Route> undo = new ArrayDeque<>(), redo = new ArrayDeque<>();
 
     Working(NpcDraft d, long r) {
       draft = d;
       revision = r;
+      lastSaved = r == 0 ? null : d;
+      autosave = CompletableFuture.completedFuture(r);
+      rawSave = autosave;
     }
   }
 
@@ -202,10 +227,14 @@ public final class NpcWizard implements Listener, AutoCloseable {
     public Inventory getInventory() {
       return inventory;
     }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
   }
 
   private static final String[][] FIELDS = {
-    {"id", "name", "type", "spawn"},
+    {"name", "type", "spawn"},
     {
       "skin",
       "helmet",
@@ -501,7 +530,13 @@ public final class NpcWizard implements Listener, AutoCloseable {
     String exampleKey = "input.examples." + key.replace('.', '-');
     ask(
         p,
-        lang.render("input.npc", Map.of("id", w.draft.npc().id())),
+        lang.render(
+            "input.npc",
+            Map.of(
+                "id",
+                npcs.number(w.draft.npc().id()) == 0
+                    ? lang.text("wizard.new-npc")
+                    : "" + npcs.number(w.draft.npc().id()))),
         lang.render(key),
         lang.contains(exampleKey) ? lang.text(exampleKey) : "",
         "",
@@ -758,8 +793,56 @@ public final class NpcWizard implements Listener, AutoCloseable {
             n.enabled());
   }
 
+  private boolean waitAutosave(Player p, Working w, Runnable next) {
+    if (w.autosave.isDone()) return false;
+    w.autosave.whenComplete(
+        (value, error) ->
+            main.execute(
+                () -> {
+                  if (sessions.get(p.getUniqueId()) != w || !p.isOnline()) return;
+                  if (error != null) lang.send(p, "errors.storage");
+                  else next.run();
+                }));
+    return true;
+  }
+
+  private void autosave(Player p, Working w) {
+    if (w.busy || !w.autosave.isDone() || Objects.equals(w.lastSaved, w.draft)) return;
+    var snapshot = w.draft;
+    var completion = new CompletableFuture<Long>();
+    w.autosave = completion;
+    w.rawSave =
+        store.save(
+            "draft", p.getUniqueId().toString(), w.revision, snapshot, p.getUniqueId().toString());
+    w.rawSave.whenComplete(
+        (revision, error) ->
+            main.execute(
+                () -> {
+                  if (error == null) {
+                    w.revision = revision;
+                    w.lastSaved = snapshot;
+                    completion.complete(revision);
+                  } else {
+                    completion.completeExceptionally(error);
+                    plugin.getLogger().warning(lang.text("logs.draft-save-failed"));
+                  }
+                  if (error == null && sessions.get(p.getUniqueId()) == w && p.isOnline())
+                    autosave(p, w);
+                }));
+  }
+
+  private CompletableFuture<?> saveOnExit(UUID id, Working w) {
+    if (w.busy) return CompletableFuture.completedFuture(null);
+    var snapshot = w.draft;
+    return w.rawSave
+        .handle((revision, error) -> error == null ? revision : w.revision)
+        .thenCompose(
+            revision -> store.save("draft", id.toString(), revision, snapshot, id.toString()));
+  }
+
   public void save(Player p) {
     var w = require(p);
+    if (waitAutosave(p, w, () -> save(p))) return;
     w.busy = true;
     var snapshot = w.draft;
     store
@@ -780,6 +863,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
   public void discard(Player p) {
     var w = require(p);
+    if (waitAutosave(p, w, () -> discard(p))) return;
     w.busy = true;
     CompletableFuture<?> result =
         w.revision == 0
@@ -805,6 +889,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
   public void publish(Player p) {
     var w = require(p);
+    if (waitAutosave(p, w, () -> publish(p))) return;
     if (!p.hasPermission("loveessential.npc.publish"))
       throw new IllegalArgumentException("errors.permission");
     var errors =
@@ -855,7 +940,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                       }
                       w.draft = w.draft.npc(saved);
                       npcs.removePreview(p);
-                      lang.send(p, "wizard.published", Map.of("id", saved.id()));
+                      lang.send(p, "wizard.published", Map.of("id", "" + npcs.number(saved.id())));
                       save(p);
                     }));
   }
@@ -1283,7 +1368,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   show(p);
                   return;
                 }
-                action.accept(event.getClick());
+                MenuStyle.action(p, () -> action.accept(event.getClick()));
               } catch (RuntimeException error) {
                 lang.send(
                     p, lang.contains(error.getMessage()) ? error.getMessage() : "errors.input");
@@ -1448,6 +1533,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
   private void show(Player p) {
     var w = sessions.get(p.getUniqueId());
     if (w == null || !p.isOnline()) return;
+    if (!w.busy) autosave(p, w);
     int step = w.draft.step();
     var holder = new Menu(step);
     var inv =
@@ -1461,13 +1547,9 @@ public final class NpcWizard implements Listener, AutoCloseable {
                     "step", Integer.toString(step + 1), "total", Integer.toString(LAST_STEP + 1))));
     holder.inventory = inv;
     MenuStyle.frame(inv);
-    inv.setItem(2, button(Material.WRITABLE_BOOK, "common.save-draft"));
     inv.setItem(3, button(Material.BARRIER, "common.discard"));
-    inv.setItem(5, button(Material.ENDER_EYE, "common.preview"));
     inv.setItem(6, button(Material.BOOK, "wizard.sections-title"));
     inv.setItem(0, button(Material.PLAYER_HEAD, "wizard.sections." + step));
-    if (step > 0) inv.setItem(36, button(Material.ARROW, "gui.previous"));
-    if (step < LAST_STEP) inv.setItem(44, button(Material.ARROW, "common.next"));
     inv.setItem(50, button(Material.LIME_CONCRETE, "common.publish"));
     inv.setItem(51, button(Material.ARROW, "common.back"));
     inv.setItem(52, button(Material.BARRIER, "gui.close"));
@@ -1937,23 +2019,21 @@ public final class NpcWizard implements Listener, AutoCloseable {
     createIds.remove(id);
     loading.remove(id);
     var w = sessions.remove(id);
-    if (w != null && !w.busy)
-      store
-          .save("draft", id.toString(), w.revision, w.draft, id.toString())
-          .exceptionally(
-              error -> {
-                plugin.getLogger().warning(lang.text("logs.draft-save-failed"));
-                return null;
-              });
+    if (w != null) saveOnExit(id, w);
   }
 
   public void close() {
     HandlerList.unregisterAll(this);
     prompts.clear();
-    sessions.forEach(
-        (id, w) -> {
-          if (!w.busy) store.save("draft", id.toString(), w.revision, w.draft, id.toString());
-        });
+    var saves =
+        sessions.entrySet().stream()
+            .map(entry -> saveOnExit(entry.getKey(), entry.getValue()))
+            .toArray(CompletableFuture[]::new);
+    try {
+      CompletableFuture.allOf(saves).get(5, TimeUnit.SECONDS);
+    } catch (Exception error) {
+      plugin.getLogger().warning(lang.text("logs.draft-save-failed"));
+    }
     sessions.clear();
     createIds.clear();
     loading.clear();

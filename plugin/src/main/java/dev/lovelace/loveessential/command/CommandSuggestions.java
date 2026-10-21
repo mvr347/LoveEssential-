@@ -1,7 +1,6 @@
 package dev.lovelace.loveessential.command;
 
 import dev.lovelace.loveessential.LoveEssentialPlugin;
-import dev.lovelace.loveessential.api.NpcDefinition;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.module.Gameplay;
 import dev.lovelace.loveessential.npc.*;
@@ -304,7 +303,7 @@ public final class CommandSuggestions {
   }
 
   private List<String> ids() {
-    return npcs.all().stream().map(NpcDefinition::id).toList();
+    return npcs.all().stream().map(n -> "" + npcs.number(n.id())).toList();
   }
 
   private List<String> players(CommandSender sender) {

@@ -1,4 +1,4 @@
-# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+# Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
 enabled: true
 allowed-types:
 - MANNEQUIN
@@ -18,6 +18,8 @@ tracking:
   update-ticks: 2
   max-turn-degrees: 30
 pathfinding:
+  max-pending: 8
+  capture-budget-ms: 2.0
   threads: 2
   radius: 16
   max-nodes: 4096

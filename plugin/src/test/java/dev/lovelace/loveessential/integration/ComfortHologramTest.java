@@ -71,6 +71,19 @@ class ComfortHologramTest {
     assertTrue(server.dispatchCommand(p, command));
   }
 
+  int named(PlayerMock player, String text) {
+    var inventory = player.getOpenInventory().getTopInventory();
+    for (int slot = 0; slot < inventory.getSize(); slot++) {
+      var item = inventory.getItem(slot);
+      if (item != null
+          && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+              .serialize(item.getItemMeta().displayName())
+              .contains(text)) return slot;
+    }
+    fail("Missing button " + text);
+    return -1;
+  }
+
   void click(PlayerMock p, int slot, ClickType type) {
     var event =
         new InventoryClickEvent(
@@ -289,12 +302,12 @@ class ComfortHologramTest {
     waitFor(() -> holograms.get(id).orElseThrow().revision() > old.revision());
     command(p, "hologram edit " + id);
     var before = holograms.get(id).orElseThrow();
-    click(p, 20, ClickType.SHIFT_LEFT);
+    click(p, named(p, "Строка 2"), ClickType.SHIFT_LEFT);
     waitFor(() -> holograms.get(id).orElseThrow().revision() > before.revision());
     var edited = holograms.get(id).orElseThrow();
     assertEquals(line, edited.value().pages().getFirst().lines().get(1));
     command(p, "hologram edit " + id);
-    click(p, 47, ClickType.LEFT);
+    click(p, named(p, "Добавить страницу"), ClickType.LEFT);
     waitFor(() -> holograms.get(id).orElseThrow().value().pages().size() == 2);
     command(p, "hologram edit " + id);
     var withPage = holograms.get(id).orElseThrow();

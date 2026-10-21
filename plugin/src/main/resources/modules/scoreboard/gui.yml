@@ -2,72 +2,48 @@ free-texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3
 occupied-texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=
 menus:
   sidebar-admin-menu:
-    title-key: sidebar.admin-menu
     size: 54
+    title: <gold>Управление боковой панелью
   sidebar-menu:
-    title-key: sidebar.menu
     size: 54
+    title: <gold>Настройки личного табло
   sidebar-picker-title:
-    title-key: sidebar.picker-title
     size: 54
+    title: <gold>Выбор строки <dark_gray>| <white><position>
   sidebar-presets:
-    title-key: sidebar.presets
     size: 54
+    title: <gold>Пресеты
   sidebar-slots-title:
-    title-key: sidebar.slots-title
     size: 36
     buttons:
-      '10':
-        enabled: true
-        slot: 10
-        title-key: ''
-        lore-key: ''
-        texture: ''
       '11':
-        enabled: true
         slot: 11
-        title-key: ''
-        lore-key: ''
-        texture: ''
+        enabled: true
       '12':
-        enabled: true
         slot: 12
-        title-key: ''
-        lore-key: ''
-        texture: ''
-      '13':
         enabled: true
-        slot: 13
-        title-key: ''
-        lore-key: ''
-        texture: ''
       '14':
-        enabled: true
         slot: 14
-        title-key: ''
-        lore-key: ''
-        texture: ''
+        enabled: true
       '15':
-        enabled: true
         slot: 15
-        title-key: ''
-        lore-key: ''
-        texture: ''
-      '16':
         enabled: true
-        slot: 16
-        title-key: ''
-        lore-key: ''
-        texture: ''
-      '17':
+      '20':
+        slot: 20
         enabled: true
-        slot: 17
-        title-key: ''
-        lore-key: ''
-        texture: ''
+      '21':
+        slot: 21
+        enabled: true
+      '23':
+        slot: 23
+        enabled: true
+      '24':
+        slot: 24
+        enabled: true
+    title: <gold>Моё табло
   sidebar-world-menu:
-    title-key: sidebar.world-menu
     size: 54
+    title: <gold>Миры и видимость табло
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -75,24 +51,21 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   sidebar:
-    slots-title: <gold>Моё табло
     slot-position: '<gray>Позиция: <white><position><gray> · лимит: <white><limit>'
     slot-selected: <gold>Строка <position> <dark_gray>| <name>
     slot-empty: <gray>Свободный слот <white><position>
     slot-locked: <gray>Слот <white><position> <dark_gray>| <red>Недоступно
     slot-controls:
-    - <green>ЛКМ <dark_gray>— <gray>убрать строку
-    - <gold>ПКМ <dark_gray>— <gray>выбрать замену
+    - <green>ЛКМ <dark_gray>— <gray>выбрать замену
+    - <gold>ПКМ <dark_gray>— <gray>убрать строку
     - <yellow>Shift+ЛКМ <dark_gray>— <gray>переместить выше
     - <yellow>Shift+ПКМ <dark_gray>— <gray>переместить ниже
     slot-empty-help:
     - <green>ЛКМ <dark_gray>— <gray>выбрать плейсхолдер
     slot-locked-help:
     - '<red>Причина: <gray>достигнут серверный лимит строк.'
-    presets: <gold>Готовые наборы
-    picker-title: <gold>Выбор строки <dark_gray>| <white><position>
     filter-category: <gold>Категория
     filter-available: <gold>Фильтр <dark_gray>| <green>Доступные
     filter-all: <gold>Фильтр <dark_gray>| <white>Все
@@ -106,8 +79,6 @@ texts:
     module-enabled: <green>Модуль scoreboard включён
     module-disabled: <gray>Модуль scoreboard выключен
     module-toggle-help: <gray>ЛКМ — включить или выключить показ. Редактор доступен в обоих состояниях.
-    admin-menu: <gold>Управление боковой панелью
-    world-menu: <gold>Миры и видимость табло
     world-help: <gray>Запретите показ в отдельных мирах. ЛКМ — открыть список.
     module-settings: <gold>Правила показа и обновления
     module-settings-help: <gray>Интервал, доступ, режимы игры и временные табло Love.
@@ -122,7 +93,7 @@ texts:
     profile: <gold>Ваш профиль
     profile-help: <gray>ЛКМ — открыть профиль игрока.
     edit: <gold>Редактор табло сервера
-    edit-help: <gray>Измените оформление или откройте строку. Тексты сохраняются в lang.yml, определения — в SQLite.
+    edit-help: <gray>Измените оформление и каталог строк. Изменения сохраняются в конфиге и SQLite.
     view-all: <gold>Все строки / выбранная категория
     add-line: <green>Добавить строку
     separator: <gold>Разделитель
@@ -131,132 +102,32 @@ texts:
     disabled-worlds: <gold>Скрывать в мирах (имена через запятую)
     delete-line: <yellow>Удалить строку из каталога?
     line-editor: <gold>Редактор строки табло
-    line-editor-help: <gray>Шаблоны MiniMessage и PAPI. Варианты разделяйте символом |. Необязательное требование — PAPI-выражение и ожидаемое
-      значение.
+    line-editor-help: <gray>Каждый формат редактируется отдельно. Поддерживаются MiniMessage и PlaceholderAPI.
     line-id: <gold>ID строки
     category-id: <gold>ID категории
     variants: <gold>Первый вариант строки
     requirement: <gold>Требование PAPI (пусто — без требования)
     expected: <gold>Ожидаемое значение (пусто — непустой ответ)
     reason: <gold>Объяснение недоступности
-    menu: <gold>Настройки личного табло
     general: <gold>Общее
     'on': <green>Табло включено • нажмите выключить
     'off': <gray>Табло выключено • нажмите включить
     category: <gold>Следующая категория
-    preset-help: <gray>ЛКМ — применить набор строк.
+    preset-help: <gray>ЛКМ — заменить текущий выбор строками пресета.
     line-help: <gray>ЛКМ — включить/убрать; ПКМ — ниже; Shift+ПКМ — выше; Shift+ЛКМ — следующий формат.
     selected: <green>Включено, позиция <position>
     not-selected: <gray>Не выбрано
     unavailable: <yellow>Требование не выполнено или плейсхолдер недоступен.
     limit: <yellow>Недоступная строка или достигнут лимит строк.
-    legacy-conflict: <yellow>Не удалось передать scoreboard LoveTweaks. Личное табло приостановлено, чтобы избежать конфликта.
+    legacy-conflict: <yellow>Не удалось передать scoreboard LoveTweaks. Личное табло приостановлено, чтобы избежать
+      конфликта.
     formats: <gold>Варианты строки
-    formats-help: <gray>Каждый вариант — отдельный полный шаблон. Цвета, символ | и %PAPI% сохраняются как введены. До восьми вариантов.
+    formats-help: <gray>Каждый вариант — отдельный полный шаблон. Цвета, символ | и %PAPI% сохраняются как введены.
+      До восьми вариантов.
     format-index: <gold>Вариант <white><index>
     add-format: <gold>Добавить вариант
     format-title: <gold>Оформление строки
     template: <gold>Полный шаблон строки
-buttons:
-  sidebar-slots-title:
-    title-key: sidebar.slots-title
-    texture: ''
-  sidebar-slot-selected:
-    title-key: sidebar.slot-selected
-    texture: ''
-  sidebar-presets:
-    title-key: sidebar.presets
-    texture: ''
-  sidebar-picker-title:
-    title-key: sidebar.picker-title
-    texture: ''
-  sidebar-filter-category:
-    title-key: sidebar.filter-category
-    texture: ''
-  sidebar-filter-available:
-    title-key: sidebar.filter-available
-    texture: ''
-  sidebar-filter-all:
-    title-key: sidebar.filter-all
-    texture: ''
-  sidebar-sort-name:
-    title-key: sidebar.sort-name
-    texture: ''
-  sidebar-sort-category:
-    title-key: sidebar.sort-category
-    texture: ''
-  sidebar-sort-available:
-    title-key: sidebar.sort-available
-    texture: ''
-  sidebar-sort-selected:
-    title-key: sidebar.sort-selected
-    texture: ''
-  sidebar-picker-variant:
-    title-key: sidebar.picker-variant
-    texture: ''
-  sidebar-admin-menu:
-    title-key: sidebar.admin-menu
-    texture: ''
-  sidebar-world-menu:
-    title-key: sidebar.world-menu
-    texture: ''
-  sidebar-module-settings:
-    title-key: sidebar.module-settings
-    texture: ''
-  sidebar-rules:
-    title-key: sidebar.rules
-    texture: ''
-  sidebar-world-title:
-    title-key: sidebar.world-title
-    texture: ''
-  sidebar-profile:
-    title-key: sidebar.profile
-    texture: ''
-  sidebar-edit:
-    title-key: sidebar.edit
-    texture: ''
-  sidebar-view-all:
-    title-key: sidebar.view-all
-    texture: ''
-  sidebar-separator:
-    title-key: sidebar.separator
-    texture: ''
-  sidebar-bottom:
-    title-key: sidebar.bottom
-    texture: ''
-  sidebar-max:
-    title-key: sidebar.max
-    texture: ''
-  sidebar-disabled-worlds:
-    title-key: sidebar.disabled-worlds
-    texture: ''
-  sidebar-line-editor:
-    title-key: sidebar.line-editor
-    texture: ''
-  sidebar-line-id:
-    title-key: sidebar.line-id
-    texture: ''
-  sidebar-category-id:
-    title-key: sidebar.category-id
-    texture: ''
-  sidebar-variants:
-    title-key: sidebar.variants
-    texture: ''
-  sidebar-requirement:
-    title-key: sidebar.requirement
-    texture: ''
-  sidebar-expected:
-    title-key: sidebar.expected
-    texture: ''
-  sidebar-reason:
-    title-key: sidebar.reason
-    texture: ''
-  sidebar-menu:
-    title-key: sidebar.menu
-    texture: ''
-  sidebar-general:
-    title-key: sidebar.general
-    texture: ''
-  sidebar-category:
-    title-key: sidebar.category
-    texture: ''
+    presets: <gold>Пресеты
+    filter: <gold>Фильтр
+    filter-help: <gray>ЛКМ — показать строки выбранной категории.

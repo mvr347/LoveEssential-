@@ -6,7 +6,7 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   inventory:
     title: <gold>Инвентарь <dark_gray>| <yellow><player>
     owner: <gold><player>
@@ -24,13 +24,3 @@ texts:
     readonly: <gray>Только просмотр
     toggle: <gray>ЛКМ — сменить режим. Для редактирования нужно отдельное право.
     changed: <yellow>Игрок изменил этот слот. Экран обновлён — повторите действие.
-buttons:
-  inventory-title:
-    title-key: inventory.title
-    texture: ''
-  inventory-owner:
-    title-key: inventory.owner
-    texture: ''
-  inventory-instructions:
-    title-key: inventory.instructions
-    texture: ''

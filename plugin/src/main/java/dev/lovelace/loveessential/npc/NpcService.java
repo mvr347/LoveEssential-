@@ -32,6 +32,20 @@ public final class NpcService implements Listener, AutoCloseable {
   private final ActionEngine actions;
   private final LoveBridge love;
   private final ConcurrentHashMap<String, NpcDefinition> definitions = new ConcurrentHashMap<>();
+  private final Map<String, Integer> numbers = new ConcurrentHashMap<>();
+
+  public int number(String id) {
+    return numbers.getOrDefault(id, 0);
+  }
+
+  public String resolve(String id) {
+    return numbers.entrySet().stream()
+        .filter(e -> e.getValue().toString().equals(id))
+        .map(Map.Entry::getKey)
+        .findFirst()
+        .orElse(id);
+  }
+
   private final Map<String, Live> live = new HashMap<>();
   private final Map<UUID, Long> clicked = new HashMap<>();
   private final Map<String, Long> spawnFailures = new HashMap<>();
@@ -51,6 +65,50 @@ public final class NpcService implements Listener, AutoCloseable {
   private long tick;
   private boolean closed;
   private int plansThisTick;
+  private final Semaphore pathSlots;
+  private final ArrayDeque<Capture> captures = new ArrayDeque<>();
+
+  private static final class Capture {
+    final Live live;
+    final NpcDefinition definition;
+    final World world;
+    final PathSearch.Cell start, target;
+    PathSearch.Cell goal;
+    double goalDistance;
+    final int x, y, z, width, height;
+    final BitSet cells = new BitSet();
+    int cursor;
+
+    Capture(Live live, NpcDefinition definition, Location destination, int radius) {
+      this.live = live;
+      this.definition = definition;
+      var at = live.entity.getLocation();
+      world = at.getWorld();
+      start = new PathSearch.Cell(at.getBlockX(), at.getBlockY(), at.getBlockZ());
+      target =
+          new PathSearch.Cell(
+              destination.getBlockX(), destination.getBlockY(), destination.getBlockZ());
+      goal = start;
+      goalDistance =
+          Math.pow(start.x() - target.x(), 2)
+              + Math.pow(start.y() - target.y(), 2)
+              + Math.pow(start.z() - target.z(), 2);
+      x = start.x() - radius;
+      z = start.z() - radius;
+      y = Math.max(world.getMinHeight() + 1, start.y() - 4);
+      height = Math.min(world.getMaxHeight() - 3, start.y() + 4) - y + 1;
+      width = radius * 2 + 1;
+    }
+  }
+
+  private void cancelCaptures() {
+    for (var capture : captures) {
+      capture.live.planning = false;
+      pathSlots.release();
+    }
+    captures.clear();
+  }
+
   private DialogService dialogs;
   private List<? extends Player> eligiblePlayers = List.of();
   private final Map<String, Long> trackingFailures = new HashMap<>();
@@ -103,6 +161,9 @@ public final class NpcService implements Listener, AutoCloseable {
     this.actions = actions;
     this.love = love;
     entityKey = new NamespacedKey(plugin, "npc");
+    pathSlots =
+        new Semaphore(
+            Math.clamp(plugin.getConfig().getInt("npc.pathfinding.max-pending", 8), 1, 32));
     int threads = Math.max(1, Math.min(4, plugin.getConfig().getInt("npc.pathfinding.threads", 2)));
     paths =
         new ThreadPoolExecutor(
@@ -122,6 +183,16 @@ public final class NpcService implements Listener, AutoCloseable {
   public CompletableFuture<Void> load() {
     return store
         .list("npc", NpcDefinition.class)
+        .thenCompose(
+            list ->
+                store
+                    .npcNumbers(list.stream().map(SqliteStore.Document::id).toList())
+                    .thenApply(
+                        allocated -> {
+                          numbers.clear();
+                          numbers.putAll(allocated);
+                          return list;
+                        }))
         .thenCompose(
             list ->
                 main.call(
@@ -156,10 +227,13 @@ public final class NpcService implements Listener, AutoCloseable {
     clicked.clear();
     eligiblePlayers = List.of();
     trackingFailures.clear();
+    spawnFailures.clear();
+    cancelCaptures();
   }
 
   public Optional<NpcDefinition> get(String id) {
-    return Optional.ofNullable(definitions.get(id));
+    var exact = definitions.get(id);
+    return Optional.ofNullable(exact != null ? exact : definitions.get(resolve(id)));
   }
 
   public Collection<NpcDefinition> all() {
@@ -179,6 +253,15 @@ public final class NpcService implements Listener, AutoCloseable {
     validate(npc);
     return store
         .save("npc", npc.id(), expected, npc.revision(expected + 1), actor)
+        .thenCompose(
+            revision ->
+                store
+                    .npcNumbers(List.of(npc.id()))
+                    .thenApply(
+                        allocated -> {
+                          numbers.putAll(allocated);
+                          return revision;
+                        }))
         .thenCompose(
             rev ->
                 main.call(
@@ -223,6 +306,11 @@ public final class NpcService implements Listener, AutoCloseable {
                 main.call(
                     () -> {
                       var previous = definitions.remove(id);
+                      numbers.remove(id);
+                      spawnFailures.remove(id);
+                      trackingFailures
+                          .keySet()
+                          .removeIf(key -> key.equals(id) || key.startsWith(id + ":"));
                       remove(id);
                       Bukkit.getPluginManager().callEvent(new NpcChangedEvent(previous, null));
                       return null;
@@ -415,6 +503,7 @@ public final class NpcService implements Listener, AutoCloseable {
     if (closed) return;
     tick++;
     plansThisTick = 0;
+    capturePaths();
     eligiblePlayers =
         Bukkit.getOnlinePlayers().stream()
             .filter(love::authenticated)
@@ -652,51 +741,92 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   private void plan(Live l, NpcDefinition n, Location destination) {
-    int radius = Math.max(4, Math.min(24, plugin.getConfig().getInt("npc.pathfinding.radius", 16)));
-    var origin = l.entity.getLocation();
-    var start = new PathSearch.Cell(origin.getBlockX(), origin.getBlockY(), origin.getBlockZ());
-    var cells = new HashSet<PathSearch.Cell>();
-    World w = origin.getWorld();
-    for (int x = start.x() - radius; x <= start.x() + radius; x++)
-      for (int z = start.z() - radius; z <= start.z() + radius; z++) {
-        if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
-        for (int y = Math.max(w.getMinHeight() + 1, start.y() - 4);
-            y <= Math.min(w.getMaxHeight() - 3, start.y() + 4);
-            y++) {
-          Location at = new Location(w, x + .5, y, z + .5);
-          if (safe(n, at)
-              && territory(n, at)
-              && (w.getBlockAt(x, y - 1, z).getType().isSolid()
-                  || !n.flag("avoid-water", true)
-                      && w.getBlockAt(x, y, z).getType() == Material.WATER))
-            cells.add(new PathSearch.Cell(x, y, z));
-        }
-      }
-    cells.add(start);
-    var exact =
-        new PathSearch.Cell(
-            destination.getBlockX(), destination.getBlockY(), destination.getBlockZ());
-    var goal = cells.stream().min(Comparator.comparingDouble(c -> c.distance(exact))).orElse(start);
-    var snapshot = new PathSearch.Snapshot(cells);
-    l.planning = true;
-    int maxNodes = plugin.getConfig().getInt("npc.pathfinding.max-nodes", 4096);
+    if (!pathSlots.tryAcquire()) return;
     try {
-      paths.execute(
-          () -> {
-            var result = PathSearch.find(snapshot, start, goal, maxNodes);
-            main.execute(
-                () -> {
-                  l.planning = false;
-                  if (live.get(l.key) != l || !l.entity.isValid()) return;
-                  l.path = result;
-                  l.pathIndex = Math.min(1, result.size());
-                  if (result.size() < 2) {
-                    if (++l.failures >= 3) stuck(l, n);
-                  } else l.failures = 0;
-                });
-          });
-    } catch (RejectedExecutionException e) {
-      l.planning = false;
+      int radius = Math.clamp(plugin.getConfig().getInt("npc.pathfinding.radius", 16), 4, 24);
+      captures.add(new Capture(l, n, destination, radius));
+      l.planning = true;
+    } catch (RuntimeException error) {
+      pathSlots.release();
+      throw error;
+    }
+  }
+
+  private void capturePaths() {
+    long budget =
+        (long)
+            (Math.clamp(
+                    plugin.getConfig().getDouble("npc.pathfinding.capture-budget-ms", 2), 0.25, 10)
+                * 1_000_000);
+    long deadline = System.nanoTime() + budget;
+    while (!captures.isEmpty() && System.nanoTime() < deadline) {
+      var c = captures.peek();
+      if (live.get(c.live.key) != c.live || !c.live.entity.isValid()) {
+        captures.remove();
+        c.live.planning = false;
+        pathSlots.release();
+        continue;
+      }
+      try {
+        int total = c.width * c.width * c.height;
+        while (c.cursor < total && System.nanoTime() < deadline) {
+          int i = c.cursor++,
+              x = c.x + i / (c.width * c.height),
+              z = c.z + (i / c.height) % c.width,
+              y = c.y + i % c.height;
+          if (!c.world.isChunkLoaded(x >> 4, z >> 4)) continue;
+          var at = new Location(c.world, x + .5, y, z + .5);
+          if (safe(c.definition, at)
+              && territory(c.definition, at)
+              && (c.world.getBlockAt(x, y - 1, z).getType().isSolid()
+                  || !c.definition.flag("avoid-water", true)
+                      && c.world.getBlockAt(x, y, z).getType() == Material.WATER)) {
+            c.cells.set(i);
+            double dx = x - c.target.x(),
+                dy = y - c.target.y(),
+                dz = z - c.target.z(),
+                distance = dx * dx + dy * dy + dz * dz;
+            if (distance < c.goalDistance) {
+              c.goal = new PathSearch.Cell(x, y, z);
+              c.goalDistance = distance;
+            }
+          }
+        }
+        if (c.cursor < total) return;
+        captures.remove();
+        c.cells.set(
+            ((c.start.x() - c.x) * c.width + c.start.z() - c.z) * c.height + c.start.y() - c.y);
+        var snapshot = new PathSearch.Snapshot(c.x, c.y, c.z, c.width, c.height, c.width, c.cells);
+        int limit =
+            Math.clamp(plugin.getConfig().getInt("npc.pathfinding.max-nodes", 4096), 64, 16384);
+        try {
+          paths.execute(
+              () -> {
+                try {
+                  var result = PathSearch.find(snapshot, c.start, c.goal, limit);
+                  main.execute(
+                      () -> {
+                        c.live.planning = false;
+                        if (live.get(c.live.key) != c.live || !c.live.entity.isValid()) return;
+                        c.live.path = result;
+                        c.live.pathIndex = Math.min(1, result.size());
+                        if (result.size() < 2) {
+                          if (++c.live.failures >= 3) stuck(c.live, c.definition);
+                        } else c.live.failures = 0;
+                      });
+                } finally {
+                  pathSlots.release();
+                }
+              });
+        } catch (RejectedExecutionException error) {
+          c.live.planning = false;
+          pathSlots.release();
+        }
+      } catch (RuntimeException error) {
+        if (captures.peek() == c) captures.remove();
+        c.live.planning = false;
+        pathSlots.release();
+      }
     }
   }
 
@@ -926,6 +1056,8 @@ public final class NpcService implements Listener, AutoCloseable {
     clicked.clear();
     eligiblePlayers = List.of();
     trackingFailures.clear();
+    spawnFailures.clear();
+    cancelCaptures();
     hooks.clear();
     paths.shutdownNow();
   }

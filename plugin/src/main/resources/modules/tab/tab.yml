@@ -1,4 +1,4 @@
-# Собственный TAB. Каждая строка и цвет задаются прямо здесь. <placeholder:id> — локальный шаблон, %id% — PAPI.
+# Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
 enabled: true
 refresh-ticks: 10
 respect-other-scoreboards: true
@@ -39,10 +39,10 @@ nametag:
 header-footer:
   enabled: true
   profiles: {}
-  header: &id001
+  header:
   - <gold><animation:kingdom>
   - '<gray>Игроков: <white><visible_online>'
-  footer: &id002
+  footer:
   - '<gray>Клан: <clan> · Репутация: <reputation>'
   - '<gray>Территория: <territory> · Ping: <ping>'
 playerlist-objective:
@@ -76,10 +76,17 @@ access:
   allowed-states: []
   denied-states: []
   required-states: []
-texts:
+placeholders:
+  online: <visible_online>
+  clan: <clan>
+messages:
   tab:
-    header: *id001
-    footer: *id002
+    header:
+    - <gold><animation:kingdom>
+    - '<gray>Игроков: <white><visible_online>'
+    footer:
+    - '<gray>Клан: <clan> · Репутация: <reputation>'
+    - '<gray>Территория: <territory> · Ping: <ping>'
     name: <player>
     prefix: ''
     suffix: ' <suffix><afk>'
@@ -110,6 +117,3 @@ texts:
     layout:
       title: <gold>Королевство Love
       remaining: <gray>Ещё %s игроков
-placeholders:
-  online: <visible_online>
-  clan: <clan>

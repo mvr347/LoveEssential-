@@ -6,7 +6,7 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   scenarios:
     entry: <gold><id>
     rate-limit: <yellow>Лимит запусков сценариев за минуту достигнут. Возможна циклическая цепочка событий.
@@ -17,8 +17,8 @@ texts:
     create: <gold>Новый сценарий
     id: <gold>ID сценария
     edit: <gold>Редактор сценария
-    edit-help: <gray>Первый вход фиксируется до авторизации. Действия выполняются после LoveAuth. Пустой мир или право снимают соответствующее
-      ограничение.
+    edit-help: <gray>Первый вход фиксируется до авторизации. Действия выполняются после LoveAuth. Пустой мир или
+      право снимают соответствующее ограничение.
     enabled: <gold>Включён
     trigger: <gold>Событие запуска
     once: <gold>Один раз для каждого игрока
@@ -29,8 +29,9 @@ texts:
     remove-step: <red>Удалить шаг
     move-up: <gold>Переместить выше
     step: <gold>Шаг сценария
-    step-help: <gray>Для сообщения введите MiniMessage; для диалога или мира — ID; для звука — Bukkit Sound; для монет — количество; для команды
-      — строку без /. Команда исполняется с правами игрока и должна быть разрешена в списке actions.
+    step-help: <gray>Для сообщения введите MiniMessage; для диалога или мира — ID; для звука — Bukkit Sound; для
+      монет — количество; для команды — строку без /. Команда исполняется с правами игрока и должна быть разрешена
+      в списке actions.
     action: <gold>Действие
     argument: <gold>Текст, ID или параметр действия
     delay: <gold>Задержка в тиках (20 = 1 секунда)
@@ -39,49 +40,3 @@ texts:
     disabled: <red>Сценарий выключен.
     limit: <red>Достигнут лимит сценариев или шагов.
     usage: <yellow>/le scenario [list|create|edit|run|reset|delete] [ID]
-buttons:
-  scenarios-entry:
-    title-key: scenarios.entry
-    texture: ''
-  scenarios-title:
-    title-key: scenarios.title
-    texture: ''
-  scenarios-create:
-    title-key: scenarios.create
-    texture: ''
-  scenarios-id:
-    title-key: scenarios.id
-    texture: ''
-  scenarios-edit:
-    title-key: scenarios.edit
-    texture: ''
-  scenarios-enabled:
-    title-key: scenarios.enabled
-    texture: ''
-  scenarios-trigger:
-    title-key: scenarios.trigger
-    texture: ''
-  scenarios-once:
-    title-key: scenarios.once
-    texture: ''
-  scenarios-steps:
-    title-key: scenarios.steps
-    texture: ''
-  scenarios-step-entry:
-    title-key: scenarios.step-entry
-    texture: ''
-  scenarios-move-up:
-    title-key: scenarios.move-up
-    texture: ''
-  scenarios-step:
-    title-key: scenarios.step
-    texture: ''
-  scenarios-action:
-    title-key: scenarios.action
-    texture: ''
-  scenarios-argument:
-    title-key: scenarios.argument
-    texture: ''
-  scenarios-delay:
-    title-key: scenarios.delay
-    texture: ''

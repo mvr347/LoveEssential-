@@ -60,6 +60,10 @@ public final class ContentMenus implements Listener, AutoCloseable {
     public Inventory getInventory() {
       return inventory;
     }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
   }
 
   private static final class CraftDraft {
@@ -740,7 +744,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
               try {
                 if (!love.authenticated(p) || !v.allowed.test(p))
                   throw new IllegalArgumentException("errors.access");
-                click.accept(e);
+                MenuStyle.action(p, () -> click.accept(e));
               } catch (RuntimeException ex) {
                 error(p, ex);
               }

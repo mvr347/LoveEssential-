@@ -33,6 +33,10 @@ public final class PlayerReports implements Listener, AutoCloseable {
       return inventory;
     }
 
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
+
     public String guiId() {
       return "profile-reports.title";
     }

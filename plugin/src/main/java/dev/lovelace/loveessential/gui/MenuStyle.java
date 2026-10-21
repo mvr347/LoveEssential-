@@ -12,10 +12,46 @@ public final class MenuStyle {
     19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43
   };
 
+  private static final com.github.benmanes.caffeine.cache.Cache<String, ItemStack> HEADS =
+      com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+          .maximumSize(256)
+          .expireAfterAccess(java.time.Duration.ofMinutes(10))
+          .build();
   private static GuiSettings settings;
+  private static MenuNavigation navigation;
+
+  public static void navigation(MenuNavigation value) {
+    navigation = value;
+  }
+
+  public static void command(org.bukkit.entity.Player player) {
+    if (navigation != null) navigation.command(player);
+  }
+
+  public static void action(org.bukkit.entity.Player player, Runnable callback) {
+    if (navigation == null) callback.run();
+    else navigation.action(player, callback);
+  }
+
+  public static void suspend(org.bukkit.entity.Player player) {
+    if (navigation != null) navigation.suspend(player);
+  }
+
+  public static void special(org.bukkit.entity.Player player, Inventory inventory) {
+    if (navigation != null) navigation.special(player, inventory);
+  }
+
+  public static boolean hasParent(org.bukkit.entity.Player player) {
+    return navigation != null && navigation.hasParent(player);
+  }
+
+  public static void back(org.bukkit.entity.Player player) {
+    if (navigation != null) navigation.back(player);
+  }
 
   public static void configure(GuiSettings value) {
     settings = value;
+    HEADS.invalidateAll();
   }
 
   public static net.kyori.adventure.text.Component title(
@@ -25,9 +61,20 @@ public final class MenuStyle {
 
   public static org.bukkit.inventory.InventoryView open(
       org.bukkit.entity.Player player, Inventory inventory) {
-    if (settings != null && inventory.getHolder() instanceof GuiLayout layout)
+    if (settings != null && inventory.getHolder() instanceof GuiLayout layout) {
+      inventory = settings.compact(inventory, layout);
+      if (navigation != null) navigation.attach(player, inventory);
       settings.apply(player, inventory, layout);
+    }
     return player.openInventory(inventory);
+  }
+
+  public static Inventory prepare(org.bukkit.entity.Player player, Inventory inventory) {
+    if (settings != null && inventory.getHolder() instanceof GuiLayout layout) {
+      inventory = settings.compact(inventory, layout);
+      settings.apply(player, inventory, layout);
+    }
+    return inventory;
   }
 
   public static void apply(org.bukkit.entity.Player player, Inventory inventory) {
@@ -88,7 +135,24 @@ public final class MenuStyle {
   }
 
   public static ItemStack button(Lang lang, Material icon, String title, String... lore) {
-    var item = item(icon, lang.render(title), Arrays.stream(lore).map(lang::render).toList());
+    var descriptions = new ArrayList<Component>();
+    if (lore.length == 0) {
+      if (lang.contains(title + "-help"))
+        descriptions.addAll(
+            lang.lines(title + "-help").stream()
+                .map(text -> lang.renderText(text, Map.of()))
+                .toList());
+      descriptions.add(lang.render("gui.separator"));
+      descriptions.add(
+          lang.render(
+              title.equals("sidebar.on") || title.equals("sidebar.off")
+                  ? "gui.click.switch"
+                  : "gui.click.open"));
+    } else
+      for (String key : lore)
+        descriptions.addAll(
+            lang.lines(key).stream().map(text -> lang.renderText(text, Map.of())).toList());
+    var item = item(icon, lang.render(title), descriptions);
     if (title.equals("gui.close")
         || title.equals("common.back")
         || title.equals("gui.confirm")
@@ -112,6 +176,10 @@ public final class MenuStyle {
   }
 
   public static ItemStack head(String texture, Component title, List<Component> lore) {
+    var cached = HEADS.getIfPresent(texture);
+    if (cached != null) return styledHead(cached, title, lore);
+    String cacheKey = texture;
+
     if (texture.startsWith("basehead-")) texture = texture.substring(9);
     String textureValue = texture;
     if (!texture.matches("[a-fA-F0-9]{32,64}")) {
@@ -160,7 +228,24 @@ public final class MenuStyle {
         new com.destroystokyo.paper.profile.ProfileProperty("textures", textureValue));
     meta.setPlayerProfile(profile);
     item.setItemMeta(meta);
+    var template = item(Material.PLAYER_HEAD, Component.empty(), List.of());
+    var templateMeta = (org.bukkit.inventory.meta.SkullMeta) template.getItemMeta();
+    templateMeta.setPlayerProfile(profile);
+    template.setItemMeta(templateMeta);
+    HEADS.put(cacheKey, template);
     return item;
+  }
+
+  private static ItemStack styledHead(ItemStack template, Component title, List<Component> lore) {
+    var result = template.clone();
+    var meta = (org.bukkit.inventory.meta.SkullMeta) result.getItemMeta();
+    // Explicitly copy the profile; implementations may clone SkullMeta without properties.
+    meta.setPlayerProfile(
+        ((org.bukkit.inventory.meta.SkullMeta) template.getItemMeta()).getPlayerProfile());
+    meta.displayName(title.decoration(TextDecoration.ITALIC, false));
+    meta.lore(lore.stream().map(line -> line.decoration(TextDecoration.ITALIC, false)).toList());
+    result.setItemMeta(meta);
+    return result;
   }
 
   public static int slot(int index, int count) {

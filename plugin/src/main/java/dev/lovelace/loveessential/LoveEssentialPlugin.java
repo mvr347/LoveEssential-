@@ -86,6 +86,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     else if (!module(module)) throw new IllegalArgumentException("errors.module-disabled");
   }
 
+  private EssentialApi essentialApi;
+  private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
   private TabModule tab;
   private LoveExpansion expansion;
@@ -264,7 +266,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
         });
     npcs.vanish(gameplay::vanished);
     tab = new TabModule(this, lang, placeholders, conditions);
-    var api = new EssentialApi(npcs, conditions, actions, store);
+    navigation = new dev.lovelace.loveessential.gui.MenuNavigation(this);
+    dev.lovelace.loveessential.gui.MenuStyle.navigation(navigation);
+    var api =
+        new EssentialApi(
+            npcs,
+            conditions,
+            actions,
+            store,
+            Math.clamp(getConfig().getLong("storage.profile-cache-mib", 16), 1, 256) * 1024 * 1024);
+    essentialApi = api;
     conditions.register(
         "flag",
         (p, a) -> {
@@ -293,7 +304,11 @@ public class LoveEssentialPlugin extends JavaPlugin {
     extensions =
         new Extensions(
             this, main, store, lang, love, conditions, actions, content, tab, placeholders);
-    extensions.ui.beforeShow(menus::clearInput);
+    extensions.ui.beforeShow(
+        p -> {
+          menus.clearInput(p);
+          dev.lovelace.loveessential.gui.MenuStyle.suspend(p);
+        });
     menus.nativeDialogs(extensions.ui);
     profiles.nativeDialogs(extensions.ui);
     extensions.sidebar.moduleSettings(p -> menus.settings(p, "scoreboard", "", 0));
@@ -622,6 +637,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   @Override
   public void onDisable() {
     ready = false;
+    MainThread.stop(this);
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
     if (extensions != null) extensions.close();
@@ -638,7 +654,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (messages != null) messages.close();
     if (nicknames != null) nicknames.close();
     if (gameplay != null) gameplay.close();
+    if (navigation != null) navigation.close();
+    dev.lovelace.loveessential.gui.MenuStyle.navigation(null);
+    dev.lovelace.loveessential.gui.MenuStyle.configure(null);
+    if (essentialApi != null) essentialApi.close();
     if (store != null) store.close();
     io.shutdown();
+    MainThread.detach(this);
   }
 }

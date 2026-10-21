@@ -577,11 +577,11 @@ class ExtensionsIntegrationTest {
         ext.sidebar.saveCatalog(catalog, current.revision(), p.getUniqueId().toString(), Map.of()));
     var file = plugin.getDataFolder().toPath().resolve("modules/scoreboard/scoreboard.yml");
     var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
-    assertEquals("<gold>Королевство", saved.getString("catalog.title"));
+    assertEquals("<gold>Королевство", saved.getString("header"));
     assertEquals(
         "<gray>Мир | <world>",
-        saved.getMapList("catalog.placeholders.custom.variants").getFirst().get("template"));
-    saved.set("catalog.title", "<gold>Новый заголовок");
+        saved.getMapList("placeholders.custom.variants").getFirst().get("template"));
+    saved.set("header", "<gold>Новый заголовок");
     saved.save(file.toFile());
     await(plugin.reloadSettings());
     assertEquals("<gold>Новый заголовок", lang.text(ext.sidebar.catalog().titleKey()));
@@ -713,7 +713,9 @@ class ExtensionsIntegrationTest {
     var inventory = p.getOpenInventory().getTopInventory();
     assertEquals(36, inventory.getSize());
     for (int index = 0; index < 8; index++) {
-      var meta = (org.bukkit.inventory.meta.SkullMeta) inventory.getItem(10 + index).getItemMeta();
+      var meta =
+          (org.bukkit.inventory.meta.SkullMeta)
+              inventory.getItem(new int[] {11, 12, 14, 15, 20, 21, 23, 24}[index]).getItemMeta();
       String expected =
           plugin
               .getConfig()
@@ -727,16 +729,16 @@ class ExtensionsIntegrationTest {
                       property.getName().equals("textures")
                           && property.getValue().equals(expected)));
     }
-    clickSidebar(p, 10, ClickType.LEFT);
+    clickSidebar(p, 11, ClickType.RIGHT);
     waitFor(
         () -> ext.sidebar.state(p.getUniqueId()).value().entries().size() == initial.size() - 1);
     var compact = List.copyOf(initial.subList(1, initial.size()));
     assertEquals(compact, ext.sidebar.state(p.getUniqueId()).value().entries());
-    clickSidebar(p, 10, ClickType.SHIFT_RIGHT);
+    clickSidebar(p, 11, ClickType.SHIFT_RIGHT);
     var moved = new ArrayList<>(compact);
     Collections.swap(moved, 0, 1);
     waitFor(() -> ext.sidebar.state(p.getUniqueId()).value().entries().equals(moved));
-    clickSidebar(p, 11, ClickType.SHIFT_LEFT);
+    clickSidebar(p, 12, ClickType.SHIFT_LEFT);
     waitFor(() -> ext.sidebar.state(p.getUniqueId()).value().entries().equals(compact));
     assertEquals(
         compact,
@@ -744,16 +746,26 @@ class ExtensionsIntegrationTest {
             .orElseThrow()
             .value()
             .entries());
-    clickSidebar(p, 10, ClickType.RIGHT);
-    assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
+    clickSidebar(p, 11, ClickType.LEFT);
+    assertEquals(27, p.getOpenInventory().getTopInventory().getSize());
     assertTrue(
-        plain(p.getOpenInventory().getTopInventory().getItem(2).getItemMeta().displayName())
-            .contains("Категория"));
+        plain(p.getOpenInventory().getTopInventory().getItem(3).getItemMeta().displayName())
+            .contains("Фильтр"));
     assertTrue(
-        plain(p.getOpenInventory().getTopInventory().getItem(4).getItemMeta().displayName())
+        plain(p.getOpenInventory().getTopInventory().getItem(5).getItemMeta().displayName())
             .contains("Сортировка"));
-    clickSidebar(p, 51, ClickType.LEFT);
+    clickSidebar(p, p.getOpenInventory().getTopInventory().getSize() - 2, ClickType.LEFT);
     assertEquals(36, p.getOpenInventory().getTopInventory().getSize());
+  }
+
+  int named(PlayerMock player, String text) {
+    var inventory = player.getOpenInventory().getTopInventory();
+    for (int slot = 0; slot < inventory.getSize(); slot++) {
+      var item = inventory.getItem(slot);
+      if (item != null && plain(item.getItemMeta().displayName()).contains(text)) return slot;
+    }
+    fail("Missing button " + text);
+    return -1;
   }
 
   void clickSidebar(PlayerMock p, int slot, ClickType type) {
@@ -784,7 +796,7 @@ class ExtensionsIntegrationTest {
         new InventoryClickEvent(
             p.getOpenInventory(),
             InventoryType.SlotType.CONTAINER,
-            4,
+            33,
             ClickType.LEFT,
             InventoryAction.PICKUP_ALL);
     server.getPluginManager().callEvent(event);
@@ -858,12 +870,13 @@ class ExtensionsIntegrationTest {
     server.dispatchCommand(p, "le scoreboard edit");
     assertNotNull(p.getOpenInventory().getTopInventory());
     assertEquals(
-        Material.PLAYER_HEAD, p.getOpenInventory().getTopInventory().getItem(20).getType());
+        Material.PLAYER_HEAD,
+        p.getOpenInventory().getTopInventory().getItem(named(p, "Редактор табло")).getType());
     var event =
         new InventoryClickEvent(
             p.getOpenInventory(),
             InventoryType.SlotType.CONTAINER,
-            20,
+            named(p, "Редактор табло"),
             ClickType.LEFT,
             InventoryAction.PICKUP_ALL);
     server.getPluginManager().callEvent(event);
@@ -885,7 +898,7 @@ class ExtensionsIntegrationTest {
         new InventoryClickEvent(
             p.getOpenInventory(),
             InventoryType.SlotType.CONTAINER,
-            19,
+            named(p, "world"),
             ClickType.LEFT,
             InventoryAction.PICKUP_ALL);
     server.getPluginManager().callEvent(edit);
@@ -928,15 +941,16 @@ class ExtensionsIntegrationTest {
   @Test
   void scoreboardHasSeparateAdminMenuAndSqlWorldToggle() throws Exception {
     var p = admin();
-    server.dispatchCommand(p, "le scoreboard settings");
+    server.dispatchCommand(p, "le scoreboard edit");
     assertEquals(
-        Material.PLAYER_HEAD, p.getOpenInventory().getTopInventory().getItem(22).getType());
+        Material.PLAYER_HEAD,
+        p.getOpenInventory().getTopInventory().getItem(named(p, "Миры")).getType());
     ext.sidebar.worlds(p, 0);
     var event =
         new InventoryClickEvent(
             p.getOpenInventory(),
             InventoryType.SlotType.CONTAINER,
-            19,
+            named(p, "world"),
             ClickType.LEFT,
             InventoryAction.PICKUP_ALL);
     server.getPluginManager().callEvent(event);
@@ -1219,6 +1233,20 @@ class ExtensionsIntegrationTest {
     await(store.delete("migration", "scoreboard-players", marker.revision(), "test"));
     plugin.getConfig().set("scoreboard.catalog", null);
     plugin.saveConfig();
+    var moduleFile = plugin.getDataFolder().toPath().resolve("modules/scoreboard/scoreboard.yml");
+    var empty =
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(moduleFile.toFile());
+    for (String key :
+        List.of(
+            "header",
+            "footer",
+            "separator",
+            "placeholders",
+            "presets",
+            "presets-version",
+            "categories",
+            "default-preset")) empty.set(key, null);
+    empty.save(moduleFile.toFile());
     var side =
         new Sidebar(
             plugin,

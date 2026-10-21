@@ -6,7 +6,7 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   content:
     starter-title: <gold>Первое путешествие • стартовый набор
     starter-editor: <gold>Настройка стартового набора
@@ -16,10 +16,3 @@ texts:
     starter-given: <green>Предметы для первого путешествия выданы. Добро пожаловать!
     starter-full: <yellow>Освободите место для всего набора и нажмите «Забрать» в /le starter.
     starter-too-large: <red>Набор занимает больше 36 ячеек. Администратору нужно уменьшить его.
-buttons:
-  content-starter-title:
-    title-key: content.starter-title
-    texture: ''
-  content-starter-editor:
-    title-key: content.starter-editor
-    texture: ''

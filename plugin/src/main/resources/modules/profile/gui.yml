@@ -6,50 +6,52 @@ menus:
       '11':
         enabled: true
         slot: 11
-        title-key: profile-menu.account
         texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
+        title: <gold>Безопасность
       '12':
         enabled: true
         slot: 12
-        title-key: profile-menu.settings
         texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
+        title: <gold>Настройки
       '13':
         enabled: true
         slot: 13
-        title-key: profile-menu.behavior
-        texture: ''
+        title: <gold>Поведение
       '14':
         enabled: true
         slot: 14
-        title-key: profile-menu.statistics
         texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
+        title: <gold>Статистика
       '15':
         enabled: true
         slot: 15
-        title-key: profile-menu.adaptations
         texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
+        title: <gold>Адаптации
+    title: <gold>Профиль <dark_gray>| <white><player>
   public-profile-title:
     size: 27
+    title: <gold>Профиль <dark_gray>| <white><player>
   profile-menu-statistics:
     size: 27
+    title: <gold>Статистика
   players-list-title:
-    title-key: players.list-title
     size: 54
+    title: <gold>Выберите игрока
   profile-menu-activity-title:
-    title-key: profile-menu.activity-title
     size: 54
+    title: <gold>Активность <dark_gray>| <white><player>
   profile-menu-customization:
-    title-key: profile-menu.customization
     size: 54
+    title: <gold>Персонализация
   profile-menu-notifications:
-    title-key: profile-menu.notifications
     size: 54
+    title: <gold>Уведомления
   profile-menu-settings:
-    title-key: profile-menu.settings
     size: 54
+    title: <gold>Настройки
   profile-stats-details-title:
-    title-key: profile-stats.details-title
     size: 54
+    title: <gold>Статистика <dark_gray>| <white><category>
 textures:
   profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
   profile-menu.settings: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
@@ -76,40 +78,62 @@ cards:
   identity:
     enabled: true
     material: PLAYER_HEAD
-    title-key: players.cards.identity.title
-    lore-keys:
-    - players.cards.identity.lore
+    title: <gold>Личность и облик
+    lore: []
   survival:
     enabled: true
     material: GOLDEN_APPLE
-    title-key: players.cards.survival.title
-    lore-keys:
-    - players.cards.survival.lore
+    title: <gold>Состояние
+    lore:
+    - - '<gray>Здоровье: <white><health>/<max_health>'
+      - '<gray>Сытость: <white><food>/20'
+      - '<gray>Насыщение: <white><saturation>'
+      - '<gray>Режим: <white><gamemode_name>'
+      - '<gray>Задержка: <white><ping> мс'
+      - '<gray>AFK: <white><afk_state>'
+      - '<gray>В бою: <white><combat_state>'
   progress:
     enabled: true
     material: EXPERIENCE_BOTTLE
-    title-key: players.cards.progress.title
-    lore-keys:
-    - players.cards.progress.lore
+    title: <gold>Путь в королевстве
+    lore:
+    - - '<gray>Уровень: <white><level>'
+      - '<gray>До следующего уровня: <white><exp>% прогресса'
+      - '<gray>Всего опыта: <white><total_exp>'
+      - '<gray>Время в игре: <white><playtime_hours> ч <playtime_minutes> мин'
+      - '<gray>Сохранённых домов: <white><homes>'
   statistics:
     enabled: false
     material: IRON_SWORD
-    title-key: players.cards.statistics.title
-    lore-keys:
-    - players.cards.statistics.lore
+    title: <gold>Подвиги и испытания
+    lore:
+    - - '<gray>Побед над игроками: <white><kills>'
+      - '<gray>Побед над мобами: <white><mob_kills>'
+      - '<gray>Смертей: <white><deaths>'
+      - '<gray>Прыжков: <white><jumps>'
+      - '<gray>Нанесено урона: <white><damage_dealt>'
+      - '<gray>Получено урона: <white><damage_taken>'
+      - '<gray>Пройдено пешком: <white><walk_km> км'
   social:
     enabled: true
     material: BELL
-    title-key: players.cards.social.title
-    lore-keys:
-    - players.cards.social.lore
+    title: <gold>Связи в королевстве
+    lore:
+    - - '<gray>Клан: <white><clan>'
+      - '<gray>Репутация: <white><reputation>'
+      - '<gray>Монеты в инвентаре: <white><balance> <currency>'
   location:
     enabled: true
     material: COMPASS
     permission: loveessential.profile.location
-    title-key: players.cards.location.title
-    lore-keys:
-    - players.cards.location.lore
+    title: <gold>Местоположение и возможности
+    lore:
+    - - '<gray>Мир: <white><world>'
+      - '<gray>Координаты: <white><x> <y> <z>'
+      - '<gray>Территория: <white><territory>'
+      - '<gray>Полёт разрешён: <white><flight_allowed_state>'
+      - '<gray>Летает: <white><flying_state>'
+      - '<gray>Невидимость: <white><vanished_state>'
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -117,7 +141,7 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   profile:
     info:
     - <gold><player>
@@ -127,7 +151,6 @@ texts:
   players:
     menu: <gold>Мой профиль
     title: <gold>Досье <dark_gray>| <yellow><player>
-    list-title: <gold>Выберите игрока
     entry: <gold><player>
     unavailable: <red>Игрок недоступен или не в сети.
     message: <gold>Написать сообщение
@@ -150,7 +173,6 @@ texts:
         lore:
         - '<gray>Имя: <white><player>'
         - '<gray>Отображаемое имя: <white><display_name>'
-        - '<gray>UUID: <white><uuid>'
         - '<gray>Первый вход (UTC): <white><first_join>'
         - '<gray>Модель скина: <white><skin_model>'
         - <gray>Голова использует текущий скин игрока.
@@ -162,7 +184,7 @@ texts:
         - '<gray>Насыщение: <white><saturation>'
         - '<gray>Режим: <white><gamemode_name>'
         - '<gray>Задержка: <white><ping> мс'
-        - '<gray>AFK: <white><afk_state>'
+        - '<gray>Бездействие: <white><afk_state>'
         - '<gray>В бою: <white><combat_state>'
       progress:
         title: <gold>Путь в королевстве
@@ -197,8 +219,9 @@ texts:
         - '<gray>Полёт разрешён: <white><flight_allowed_state>'
         - '<gray>Летает: <white><flying_state>'
         - '<gray>Невидимость: <white><vanished_state>'
-    'yes': Да
-    'no': Нет
+    'yes': Включено
+    'no': Выключено
+    list-title: <gold>Список игроков
   profile-menu:
     behavior: <gold>Поведение
     open-behavior: <gold>Открыть LoveBehavior
@@ -228,7 +251,6 @@ texts:
     - <gray>Верхний ряд — приватность, ЛС и интерфейс.
     - <gray>Ниже — чат, приглашения и обмен.
     - <gray>Кнопки показывают текущее состояние.
-    statistics: <gold>Статистика
     statistics-lore:
     - <gray>Реальные счётчики Minecraft и сохранённые данные.
     - <gray>Время, бои, путешествия, добыча и торговля.
@@ -258,7 +280,6 @@ texts:
       global: Глобальный
       local: Локальный
       admin: Административный
-    title: <gold>Профиль <dark_gray>| <white><player>
     heading: <gold>Профиль <dark_gray>| <nickname>
     heading-lore:
     - <gray>Личная карточка игрока
@@ -274,12 +295,10 @@ texts:
     public-account-lore:
     - '<gray>Авторизация: <white><authenticated_state>'
     - <gray>Личные настройки безопасности доступны только владельцу.
-    settings: <gold>Настройки
     settings-lore:
     - <gray>Параметры персонажа
     - <gray>Активность и приватность, чат, уведомления, личные сообщения.
     - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки
-    customization: <gold>Персонализация
     customization-lore:
     - '<gray>Внешний вид: <nickname> <suffix>'
     - <gray>Цвета, градиенты, сброс ника и пометки.
@@ -311,7 +330,6 @@ texts:
     - '<gray>Репутация: <white><reputation>'
     - <green>ЛКМ <dark_gray>— <gray>открыть /rep для этого игрока
     activity: <gold>Активность и приватность
-    activity-title: <gold>Активность <dark_gray>| <white><player>
     activity-settings-lore:
     - '<gray>Видимость профиля: <white><profile_visibility_label>'
     - '<gray>Видимость активности: <white><activity_visibility_label>'
@@ -339,21 +357,21 @@ texts:
     hidden: <yellow>Профиль недоступен или скрыт владельцем.
     loading: <yellow>Настройки приватности ещё загружаются. Повторите действие через секунду.
     load-failed: Не удалось загрузить настройки приватности профиля.
-    usage: <gray>/profile [игрок] · view <игрок> · list · settings · hide/show/toggle · activity [show|hide|toggle] · privacy <public|private>
+    usage: <gray>/profile [игрок] · view <игрок> · list · settings · hide/show/toggle · activity [show|hide|toggle]
+      · privacy <public|private>
     integration-unavailable: <gray>Этот модуль или его команда сейчас недоступны либо не хватает прав.
     messages-lore:
     - <gray>Включение личных сообщений и игнор-лист.
     - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки ЛС
-    notifications: <gold>Уведомления
     notifications-lore:
-    - '<gray>Каналы LoveCore: чат, Actionbar, Title.'
+    - '<gray>Каналы LoveCore: чат, над панелью, заголовок.'
     - <green>ЛКМ <dark_gray>— <gray>открыть переключатели
     notification-lore:
     - <gray>ЛКМ — переключить этот канал уведомлений.
     - <gray>Важные сообщения и кнопки остаются доступны в чате.
     notify-chat: '<gold>Канал: чат'
-    notify-actionbar: '<gold>Канал: Actionbar'
-    notify-title: '<gold>Канал: Title'
+    notify-actionbar: '<gold>Канал: Над панелью'
+    notify-title: '<gold>Канал: Заголовок'
     enabled: <green>Включено
     disabled: <gray>Выключено
     last-channel: '<yellow>Сначала включите другой канал: последний канал отключить нельзя.'
@@ -477,12 +495,10 @@ texts:
       - '<gray>Домов LoveEssential: <homes>'
       - <gray>Адаптации доступны отдельной кнопкой в профиле.
   public-profile:
-    title: <gold>Профиль <dark_gray>| <white><player>
     report: <gold>Пожаловаться
     report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
     offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
   profile-stats:
-    details-title: <gold>Статистика <dark_gray>| <white><category>
     behavior-lore:
     - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
     - '<gray>Стиль: <white><external_lovebehavior_playstyle_name>'
@@ -698,6 +714,9 @@ texts:
         - <dark_gray>Подробности категории
         - ''
         - '<gray>Баланс: <balance> <currency>'
+    subcategory: <gray><name> <dark_gray>· <white><page>/<total>
+    next: <green>ЛКМ <dark_gray>— <gray>следующая подкатегория
+    previous: <gold>ПКМ <dark_gray>— <gray>предыдущая подкатегория
   profile-reports:
     title: <gold>Жалобы игроков
     create: <gold>Отправить жалобу
@@ -717,274 +736,3 @@ texts:
     target-label: <gold>Игрок
     resolve: <gold>Отметить рассмотренной
     usage: <gray>/жалоба <ник>
-buttons:
-  players-menu:
-    title-key: players.menu
-    texture: ''
-  players-title:
-    title-key: players.title
-    texture: ''
-  players-list-title:
-    title-key: players.list-title
-    texture: ''
-  players-entry:
-    title-key: players.entry
-    texture: ''
-  players-message:
-    title-key: players.message
-    texture: ''
-  players-ignore:
-    title-key: players.ignore
-    texture: ''
-  players-inventory:
-    title-key: players.inventory
-    texture: ''
-  players-refresh:
-    title-key: players.refresh
-    texture: ''
-  players-cards-identity-title:
-    title-key: players.cards.identity.title
-    texture: ''
-  players-cards-survival-title:
-    title-key: players.cards.survival.title
-    texture: ''
-  players-cards-progress-title:
-    title-key: players.cards.progress.title
-    texture: ''
-  players-cards-statistics-title:
-    title-key: players.cards.statistics.title
-    texture: ''
-  players-cards-social-title:
-    title-key: players.cards.social.title
-    texture: ''
-  players-cards-location-title:
-    title-key: players.cards.location.title
-    texture: ''
-  profile-menu-behavior:
-    title-key: profile-menu.behavior
-    texture: ''
-  profile-menu-open-behavior:
-    title-key: profile-menu.open-behavior
-    texture: ''
-  profile-menu-settings-overview:
-    title-key: profile-menu.settings-overview
-    texture: ''
-  profile-menu-statistics:
-    title-key: profile-menu.statistics
-    texture: ''
-  profile-menu-saved-heading:
-    title-key: profile-menu.saved-heading
-    texture: ''
-  profile-menu-saved-information:
-    title-key: profile-menu.saved-information
-    texture: ''
-  profile-menu-title:
-    title-key: profile-menu.title
-    texture: ''
-  profile-menu-heading:
-    title-key: profile-menu.heading
-    texture: ''
-  profile-menu-account:
-    title-key: profile-menu.account
-    texture: ''
-  profile-menu-settings:
-    title-key: profile-menu.settings
-    texture: ''
-  profile-menu-customization:
-    title-key: profile-menu.customization
-    texture: ''
-  profile-menu-adaptations:
-    title-key: profile-menu.adaptations
-    texture: ''
-  profile-menu-open-adaptations:
-    title-key: profile-menu.open-adaptations
-    texture: ''
-  profile-menu-reputation:
-    title-key: profile-menu.reputation
-    texture: ''
-  profile-menu-activity:
-    title-key: profile-menu.activity
-    texture: ''
-  profile-menu-activity-title:
-    title-key: profile-menu.activity-title
-    texture: ''
-  profile-menu-notifications:
-    title-key: profile-menu.notifications
-    texture: ''
-  profile-menu-notify-chat:
-    title-key: profile-menu.notify-chat
-    texture: ''
-  profile-menu-notify-actionbar:
-    title-key: profile-menu.notify-actionbar
-    texture: ''
-  profile-menu-notify-title:
-    title-key: profile-menu.notify-title
-    texture: ''
-  profile-menu-scoreboard:
-    title-key: profile-menu.scoreboard
-    texture: ''
-  profile-menu-nickname:
-    title-key: profile-menu.nickname
-    texture: ''
-  profile-menu-suffixes:
-    title-key: profile-menu.suffixes
-    texture: ''
-  profile-menu-grammar:
-    title-key: profile-menu.grammar
-    texture: ''
-  profile-menu-silent:
-    title-key: profile-menu.silent
-    texture: ''
-  profile-menu-mentions:
-    title-key: profile-menu.mentions
-    texture: ''
-  profile-menu-channel:
-    title-key: profile-menu.channel
-    texture: ''
-  profile-menu-clan-invites:
-    title-key: profile-menu.clan-invites
-    texture: ''
-  profile-menu-player-trades:
-    title-key: profile-menu.player-trades
-    texture: ''
-  profile-menu-adaptation-water:
-    title-key: profile-menu.adaptation-water
-    texture: ''
-  profile-menu-adaptation-nether:
-    title-key: profile-menu.adaptation-nether
-    texture: ''
-  profile-menu-adaptation-cave:
-    title-key: profile-menu.adaptation-cave
-    texture: ''
-  profile-menu-adaptation-height:
-    title-key: profile-menu.adaptation-height
-    texture: ''
-  profile-menu-adaptation-abyss:
-    title-key: profile-menu.adaptation-abyss
-    texture: ''
-  profile-menu-adaptation-combat:
-    title-key: profile-menu.adaptation-combat
-    texture: ''
-  profile-menu-adaptation-travel:
-    title-key: profile-menu.adaptation-travel
-    texture: ''
-  profile-statistics-time-title:
-    title-key: profile-statistics.time.title
-    texture: ''
-  profile-statistics-combat-title:
-    title-key: profile-statistics.combat.title
-    texture: ''
-  profile-statistics-travel-title:
-    title-key: profile-statistics.travel.title
-    texture: ''
-  profile-statistics-building-title:
-    title-key: profile-statistics.building.title
-    texture: ''
-  profile-statistics-economy-title:
-    title-key: profile-statistics.economy.title
-    texture: ''
-  profile-statistics-progress-title:
-    title-key: profile-statistics.progress.title
-    texture: ''
-  public-profile-title:
-    title-key: public-profile.title
-    texture: ''
-  public-profile-report:
-    title-key: public-profile.report
-    texture: ''
-  profile-stats-details-title:
-    title-key: profile-stats.details-title
-    texture: ''
-  profile-stats-world-title:
-    title-key: profile-stats.world.title
-    texture: ''
-  profile-stats-world-visits-title:
-    title-key: profile-stats.world.visits.title
-    texture: ''
-  profile-stats-world-movement-title:
-    title-key: profile-stats.world.movement.title
-    texture: ''
-  profile-stats-world-mining-title:
-    title-key: profile-stats.world.mining.title
-    texture: ''
-  profile-stats-world-survival-title:
-    title-key: profile-stats.world.survival.title
-    texture: ''
-  profile-stats-duels-title:
-    title-key: profile-stats.duels.title
-    texture: ''
-  profile-stats-duels-results-title:
-    title-key: profile-stats.duels.results.title
-    texture: ''
-  profile-stats-duels-streaks-title:
-    title-key: profile-stats.duels.streaks.title
-    texture: ''
-  profile-stats-duels-rewards-title:
-    title-key: profile-stats.duels.rewards.title
-    texture: ''
-  profile-stats-hunt-title:
-    title-key: profile-stats.hunt.title
-    texture: ''
-  profile-stats-hunt-orders-title:
-    title-key: profile-stats.hunt.orders.title
-    texture: ''
-  profile-stats-hunt-rating-title:
-    title-key: profile-stats.hunt.rating.title
-    texture: ''
-  profile-stats-contracts-title:
-    title-key: profile-stats.contracts.title
-    texture: ''
-  profile-stats-contracts-completed-title:
-    title-key: profile-stats.contracts.completed.title
-    texture: ''
-  profile-stats-contracts-streaks-title:
-    title-key: profile-stats.contracts.streaks.title
-    texture: ''
-  profile-stats-activities-title:
-    title-key: profile-stats.activities.title
-    texture: ''
-  profile-stats-activities-results-title:
-    title-key: profile-stats.activities.results.title
-    texture: ''
-  profile-stats-activities-money-title:
-    title-key: profile-stats.activities.money.title
-    texture: ''
-  profile-stats-economy-title:
-    title-key: profile-stats.economy.title
-    texture: ''
-  profile-stats-economy-fishing-title:
-    title-key: profile-stats.economy.fishing.title
-    texture: ''
-  profile-stats-economy-villagers-title:
-    title-key: profile-stats.economy.villagers.title
-    texture: ''
-  profile-stats-economy-wallet-title:
-    title-key: profile-stats.economy.wallet.title
-    texture: ''
-  profile-reports-title:
-    title-key: profile-reports.title
-    texture: ''
-  profile-reports-create:
-    title-key: profile-reports.create
-    texture: ''
-  profile-reports-reason:
-    title-key: profile-reports.reason
-    texture: ''
-  profile-reports-send:
-    title-key: profile-reports.send
-    texture: ''
-  profile-reports-entry:
-    title-key: profile-reports.entry
-    texture: ''
-  profile-reports-detail:
-    title-key: profile-reports.detail
-    texture: ''
-  profile-reports-author-label:
-    title-key: profile-reports.author-label
-    texture: ''
-  profile-reports-target-label:
-    title-key: profile-reports.target-label
-    texture: ''
-  profile-reports-resolve:
-    title-key: profile-reports.resolve
-    texture: ''

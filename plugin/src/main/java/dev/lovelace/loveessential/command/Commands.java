@@ -76,18 +76,22 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       String cmd = command.getName();
+      if (sender instanceof Player actor) dev.lovelace.loveessential.gui.MenuStyle.command(actor);
       boolean inputCommand =
           cmd.equals("loveessential")
               && args.length > 0
               && Set.of("cancel").contains(args[0].toLowerCase(Locale.ROOT));
       if (!inputCommand && sender instanceof Player p) {
+        profiles.cancelPending(p);
         extensions.ui.cancel(p);
         menus.cancelInput(p);
         wizard.cancelInput(p);
       }
       if (cmd.equals("loveessential")) {
         if (args.length == 0) {
-          if (sender instanceof Player p) menus.direct(p, () -> menus.home(p));
+          if (sender instanceof Player p && p.hasPermission("loveessential.admin"))
+            menus.direct(p, () -> menus.home(p));
+          else if (sender instanceof Player p) lang.send(p, "help.player");
           else lang.send(sender, "help.overview");
           return true;
         }
@@ -97,8 +101,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
             menus.direct(p, () -> menus.home(p));
           }
           case "help", "помощь" -> {
-            if (sender instanceof Player p) menus.direct(p, () -> menus.commands(p, 0));
-            else lang.send(sender, "help.overview");
+            lang.send(
+                sender, sender.hasPermission("loveessential.admin") ? "help.admin" : "help.player");
           }
           case "answer" -> {
             var p = player(sender);
@@ -286,6 +290,19 @@ public final class Commands implements CommandExecutor, TabCompleter {
       return;
     }
     String op = args[0].toLowerCase(Locale.ROOT);
+    if (args.length > 1
+        && Set.of(
+                "edit",
+                "изменить",
+                "delete",
+                "удалить",
+                "info",
+                "инфо",
+                "export",
+                "экспорт",
+                "clone",
+                "копировать")
+            .contains(op)) args[1] = npcs.resolve(args[1]);
     switch (op) {
       case "menu", "меню" -> menus.direct(p, () -> menus.npcList(p, 0));
       case "help", "помощь" -> lang.send(p, "help.npc-commands");
@@ -412,7 +429,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         var n =
             npcs.get(args[1]).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
         if (args.length < 3 || !args[2].equals("confirm")) {
-          lang.send(p, "npc.confirm-delete", Map.of("id", n.id()));
+          lang.send(p, "npc.confirm-delete", Map.of("id", "" + npcs.number(n.id())));
           break;
         }
         complete(p, npcs.delete(n.id(), n.revision(), p.getUniqueId().toString()), "common.done");

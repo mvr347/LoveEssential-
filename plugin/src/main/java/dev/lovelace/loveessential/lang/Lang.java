@@ -16,7 +16,10 @@ public final class Lang {
   private final Path file;
   private final Map<String, Object> defaults;
   private volatile Map<String, Object> values = Map.of();
-  private volatile Map<String, Path> owners = Map.of();
+
+  private record Source(Path file, String path) {}
+
+  private volatile Map<String, Source> owners = Map.of();
   private final MiniMessage mm = MiniMessage.miniMessage();
 
   public Lang(JavaPlugin plugin) throws Exception {
@@ -42,7 +45,7 @@ public final class Lang {
       }
     if (changed || !Files.exists(file)) atomic(y);
     var combined = new HashMap<>(flatten(y));
-    var sources = new HashMap<String, Path>();
+    var sources = new HashMap<String, Source>();
     for (String module :
         dev.lovelace.loveessential.LoveEssentialPlugin.MODULES.stream().sorted().toList()) {
       for (String name : List.of(module + ".yml", "gui.yml")) {
@@ -50,7 +53,15 @@ public final class Lang {
         if (!Files.exists(local)) continue;
         var document = new YamlConfiguration();
         document.load(local.toFile());
-        var texts = document.getConfigurationSection("texts");
+        var texts = document.getConfigurationSection("messages");
+        if (texts == null) texts = document.getConfigurationSection("texts");
+        for (var binding : dev.lovelace.loveessential.config.Presentation.bindings())
+          if (binding.module().equals(module)
+              && binding.file().equals(name)
+              && document.contains(binding.path())) {
+            combined.put(binding.key(), document.get(binding.path()));
+            sources.put(binding.key(), new Source(local, binding.path()));
+          }
         if (texts == null) continue;
         for (String key : texts.getKeys(true))
           if (!texts.isConfigurationSection(key)) {
@@ -60,7 +71,7 @@ public final class Lang {
                 || value instanceof Boolean
                 || value instanceof List<?>) {
               combined.put(key, value);
-              sources.put(key, local);
+              sources.put(key, new Source(local, "messages." + key));
             }
           }
       }
@@ -76,7 +87,8 @@ public final class Lang {
       for (var entry : texts.entrySet()) {
         if (!entry.getKey().matches("[a-zA-Z0-9_.-]+") || entry.getValue().length() > 8192)
           throw new IllegalArgumentException("invalid-text");
-        Path target = owners.get(entry.getKey());
+        Source source = owners.get(entry.getKey());
+        Path target = source == null ? null : source.file();
         if (target == null) {
           String module = dev.lovelace.loveessential.gui.GuiSettings.module(entry.getKey());
           target = file.getParent().resolve("modules/" + module + "/" + module + ".yml");
@@ -87,7 +99,8 @@ public final class Lang {
           if (Files.exists(target)) document.load(target.toFile());
           documents.put(target, document);
         }
-        document.set((target.equals(file) ? "" : "texts.") + entry.getKey(), entry.getValue());
+        document.set(
+            source == null ? "messages." + entry.getKey() : source.path(), entry.getValue());
       }
       for (var entry : documents.entrySet()) {
         Path target = entry.getKey();
@@ -133,7 +146,7 @@ public final class Lang {
   }
 
   public boolean contains(String key) {
-    return key != null && values.containsKey(key);
+    return key != null && (key.startsWith("@inline:") || values.containsKey(key));
   }
 
   public String text(String key) {
@@ -147,6 +160,8 @@ public final class Lang {
   }
 
   public List<String> lines(String key) {
+    if (key != null && key.startsWith("@inline:"))
+      return Arrays.asList(key.substring(8).split("\n", -1));
     Object v = values.get(key);
     return v instanceof List<?> l ? l.stream().map(Object::toString).toList() : List.of(text(key));
   }

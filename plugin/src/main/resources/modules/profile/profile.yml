@@ -1,4 +1,4 @@
-# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+# Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
 enabled: true
 refresh-ticks: 40
 persist-seconds: 300
@@ -66,33 +66,46 @@ setting-controls:
   grammar:
     material: WRITABLE_BOOK
     link: grammar
-    title-key: profile-menu.grammar
-    lore-key: profile-menu.grammar-lore
+    title: <gold>Грамматика
+    lore:
+    - <gray>Автоисправление LoveChat
+    - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+    - <gray>ЛКМ — переключить.
   silent:
     material: FEATHER
     link: silent
-    title-key: profile-menu.silent
-    lore-key: profile-menu.silent-lore
+    title: <gold>Тихий режим
+    lore:
+    - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
+    - <gray>ЛКМ — переключить.
   mentions:
     material: NOTE_BLOCK
     link: mentions
-    title-key: profile-menu.mentions
-    lore-key: profile-menu.mentions-lore
+    title: <gold>Упоминания
+    lore:
+    - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
+    - <gray>ЛКМ — переключить.
   channel:
     material: PAPER
     link: channel
-    title-key: profile-menu.channel
-    lore-key: profile-menu.channel-lore
+    title: <gold>Канал чата
+    lore:
+    - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
+    - <gray>ЛКМ — переключить локальный/глобальный канал.
   clan-invites:
     material: WHITE_BANNER
     link: clan-invites
-    title-key: profile-menu.clan-invites
-    lore-key: profile-menu.clan-invites-lore
+    title: <gold>Приглашения в клан
+    lore:
+    - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
+    - <gray>ЛКМ — переключить.
   player-trades:
     material: EMERALD
     link: player-trades
-    title-key: profile-menu.player-trades
-    lore-key: profile-menu.player-trades-lore
+    title: <gold>Обмен с игроками
+    lore:
+    - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
+    - <gray>ЛКМ — переключить.
 reports:
   cooldown-seconds: 300
 statistics:
@@ -126,99 +139,238 @@ statistics:
     world:
       enabled: true
       plugin: ''
-      title-key: profile-stats.world.title
-      summary-key: profile-stats.world.summary
-      public-key: profile-stats.world.public
       activity-sensitive: true
       details:
         visits:
-          title-key: profile-stats.world.visits.title
-          lore-key: profile-stats.world.visits.lore
+          title: <gold>Время и визиты
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+          - '<gray>Первый вход: <first_join_local>'
+          - '<gray>Последние данные: <last_seen_local>'
+          - '<gray>Часовой пояс: Europe/Kiev'
         movement:
-          title-key: profile-stats.world.movement.title
-          lore-key: profile-stats.world.movement.lore
+          title: <gold>Передвижение
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Пешком: <walk_km> км'
+          - '<gray>Бегом: <sprint_km> км'
+          - '<gray>Вплавь: <swim_km> км'
+          - '<gray>На элитрах: <fly_km> км'
+          - '<gray>Прыжков: <jumps>'
         mining:
-          title-key: profile-stats.world.mining.title
-          lore-key: profile-stats.world.mining.lore
+          title: <gold>Добыча и использование
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Добыто блоков: <blocks_mined>'
+          - '<gray>Использовано предметов-блоков: <blocks_used>'
+          - <gray>Использование включает установки и другие действия.
         survival:
-          title-key: profile-stats.world.survival.title
-          lore-key: profile-stats.world.survival.lore
+          title: <gold>Выживание и бои
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Убийств игроков: <kills>'
+          - '<gray>Побеждено мобов: <mob_kills>'
+          - '<gray>Смертей: <deaths>'
+          - '<gray>K/D: <kd_ratio>'
+          - '<gray>Нанесено урона: <damage_dealt>'
+          - '<gray>Получено урона: <damage_taken>'
+          - '<gray>После смерти: <time_since_death_hours> ч'
+      title: <gold>Мир и выживание
+      summary:
+      - <dark_gray>Личная статистика
+      - ''
+      - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+      - '<gray>Смертей: <deaths>'
+      - <dark_gray><st>─────────────────────
+      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+      public:
+      - <dark_gray>Общая статистика
+      - ''
+      - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+      - '<gray>Первый вход: <first_join_local>'
     duels:
       enabled: true
       plugin: LoveDuels
-      title-key: profile-stats.duels.title
-      summary-key: profile-stats.duels.summary
-      public-key: profile-stats.duels.public
       activity-sensitive: false
       details:
         results:
-          title-key: profile-stats.duels.results.title
-          lore-key: profile-stats.duels.results.lore
+          title: <gold>Результаты
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Побед: <duels_wins>'
+          - '<gray>Поражений: <duels_losses>'
+          - '<gray>Побед: <duels_winrate>'
         streaks:
-          title-key: profile-stats.duels.streaks.title
-          lore-key: profile-stats.duels.streaks.lore
+          title: <gold>Серии
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Текущая серия: <duels_streak>'
+          - '<gray>Лучшая серия: <duels_best_streak>'
         rewards:
-          title-key: profile-stats.duels.rewards.title
-          lore-key: profile-stats.duels.rewards.lore
+          title: <gold>Честь и награды
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Честь: <duels_honor>'
+          - '<gray>Выиграно: <duels_money_won>'
+      title: <gold>Дуэли
+      summary:
+      - <dark_gray>Личная статистика
+      - ''
+      - '<gray>Побед: <duels_wins>'
+      - '<gray>Честь: <duels_honor>'
+      - <dark_gray><st>─────────────────────
+      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+      public:
+      - <dark_gray>Общая статистика
+      - ''
+      - '<gray>Побед: <duels_wins>'
+      - '<gray>Честь: <duels_honor>'
     hunt:
       enabled: true
       plugin: LoveHunt
-      title-key: profile-stats.hunt.title
-      summary-key: profile-stats.hunt.summary
-      public-key: profile-stats.hunt.public
       activity-sensitive: false
       details:
         orders:
-          title-key: profile-stats.hunt.orders.title
-          lore-key: profile-stats.hunt.orders.lore
+          title: <gold>Заказы
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Выполнено: <hunt_completed>'
+          - '<gray>Провалено: <hunt_failed>'
         rating:
-          title-key: profile-stats.hunt.rating.title
-          lore-key: profile-stats.hunt.rating.lore
+          title: <gold>Рейтинг
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Рейтинг: <hunt_rating>'
+          - '<gray>Ранг: <hunt_rank>'
+          - '<gray>Модификатор награды: <hunt_reward_modifier>%'
+      title: <gold>Охота
+      summary:
+      - <dark_gray>Личная статистика
+      - ''
+      - '<gray>Ранг: <hunt_rank>'
+      - '<gray>Выполнено: <hunt_completed>'
+      - <dark_gray><st>─────────────────────
+      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+      public:
+      - <dark_gray>Общая статистика
+      - ''
+      - '<gray>Ранг: <hunt_rank>'
+      - '<gray>Выполнено: <hunt_completed>'
     contracts:
       enabled: true
       plugin: LoveContracts
-      title-key: profile-stats.contracts.title
-      summary-key: profile-stats.contracts.summary
-      public-key: profile-stats.contracts.public
       activity-sensitive: false
       details:
         completed:
-          title-key: profile-stats.contracts.completed.title
-          lore-key: profile-stats.contracts.completed.lore
+          title: <gold>Выполнение
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Выполнено всего: <contracts_completed>'
+          - '<gray>Сегодня: <contracts_daily_completed>'
+          - '<gray>Принято: <contracts_accepted>'
+          - '<gray>Провалено: <contracts_failed>'
+          - '<gray>Успешность: <contracts_success_rate>'
         streaks:
-          title-key: profile-stats.contracts.streaks.title
-          lore-key: profile-stats.contracts.streaks.lore
+          title: <gold>Серии контрактов
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Текущая: <contracts_streak>'
+          - '<gray>Лучшая: <contracts_best_streak>'
+      title: <gold>Контракты
+      summary:
+      - <dark_gray>Личная статистика
+      - ''
+      - '<gray>Выполнено: <contracts_completed>'
+      - '<gray>Успешность: <contracts_success_rate>'
+      - <dark_gray><st>─────────────────────
+      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+      public:
+      - <dark_gray>Общая статистика
+      - ''
+      - '<gray>Выполнено: <contracts_completed>'
+      - '<gray>Успешность: <contracts_success_rate>'
     activities:
       enabled: true
       plugin: LoveActivities
-      title-key: profile-stats.activities.title
-      summary-key: profile-stats.activities.summary
-      public-key: profile-stats.activities.public
       activity-sensitive: false
       details:
         results:
-          title-key: profile-stats.activities.results.title
-          lore-key: profile-stats.activities.results.lore
+          title: <gold>Общие результаты
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Побед: <activities_wins>'
+          - '<gray>Поражений: <activities_losses>'
+          - '<gray>Побед: <activities_winrate>'
         money:
-          title-key: profile-stats.activities.money.title
-          lore-key: profile-stats.activities.money.lore
+          title: <gold>Итоги наград
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Выиграно: <activities_money_won>'
+          - '<gray>Проиграно: <activities_money_lost>'
+      title: <gold>Активности
+      summary:
+      - <dark_gray>Личная статистика
+      - ''
+      - '<gray>Побед: <activities_wins>'
+      - '<gray>Побед: <activities_winrate>'
+      - <dark_gray><st>─────────────────────
+      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+      public:
+      - <dark_gray>Общая статистика
+      - ''
+      - '<gray>Побед: <activities_wins>'
+      - '<gray>Побед: <activities_winrate>'
     economy:
       enabled: true
       plugin: ''
-      title-key: profile-stats.economy.title
-      summary-key: profile-stats.economy.summary
-      public-key: profile-stats.economy.public
       activity-sensitive: false
       details:
         fishing:
-          title-key: profile-stats.economy.fishing.title
-          lore-key: profile-stats.economy.fishing.lore
+          title: <gold>Рыбалка и животные
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Поймано рыбы: <fish_caught>'
+          - '<gray>Разведено животных: <animals_bred>'
         villagers:
-          title-key: profile-stats.economy.villagers.title
-          lore-key: profile-stats.economy.villagers.lore
+          title: <gold>Торговля с жителями
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Совершено сделок: <villager_trades>'
         wallet:
-          title-key: profile-stats.economy.wallet.title
-          lore-key: profile-stats.economy.wallet.lore
+          title: <gold>Кошелёк
+          lore:
+          - <dark_gray>Подробности категории
+          - ''
+          - '<gray>Баланс: <balance> <currency>'
+      title: <gold>Хозяйство
+      summary:
+      - <dark_gray>Личная статистика
+      - ''
+      - '<gray>Поймано рыбы: <fish_caught>'
+      - '<gray>Сделок с жителями: <villager_trades>'
+      - <dark_gray><st>─────────────────────
+      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+      public:
+      - <dark_gray>Общая статистика
+      - ''
+      - '<gray>Поймано рыбы: <fish_caught>'
+      - '<gray>Сделок с жителями: <villager_trades>'
 access:
   allowed-worlds: []
   denied-worlds: []
