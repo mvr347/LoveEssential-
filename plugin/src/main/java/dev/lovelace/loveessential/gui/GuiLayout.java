@@ -7,6 +7,11 @@ import org.bukkit.inventory.InventoryHolder;
 public interface GuiLayout extends InventoryHolder {
   String guiId();
 
+  /** One screen context; changing a page replaces it, opening a nested setting does not. */
+  default Object guiRoute() {
+    return java.util.List.of(guiId(), guiVariables());
+  }
+
   default boolean guiAllowed(org.bukkit.entity.Player player) {
     return true;
   }

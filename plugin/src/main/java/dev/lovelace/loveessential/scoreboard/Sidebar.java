@@ -94,6 +94,11 @@ public final class Sidebar implements Listener, AutoCloseable {
   private static final class Menu implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
     String menuId = "sidebar.menu";
+    Map<String, String> variables = Map.of();
+
+    public Map<String, String> guiVariables() {
+      return variables;
+    }
 
     public String guiId() {
       return menuId;
@@ -108,6 +113,11 @@ public final class Sidebar implements Listener, AutoCloseable {
     }
 
     boolean adminOnly;
+
+    public boolean guiAllowed(Player player) {
+      return !adminOnly || player.hasPermission("loveessential.admin");
+    }
+
     Runnable repaint;
     final Map<Integer, java.util.function.Consumer<ClickType>> clicks = new HashMap<>();
 
@@ -901,6 +911,26 @@ public final class Sidebar implements Listener, AutoCloseable {
     return state.entries().stream().filter(e -> line(e.id()) != null).limit(8).toList();
   }
 
+  public static int[] rowSlots(org.bukkit.configuration.ConfigurationSection config) {
+    var values =
+        config.getList(
+            "scoreboard.gui.menus.sidebar-slots-title.rows.slots",
+            List.of(11, 12, 14, 15, 20, 21, 23, 24));
+    if (values.size() != 8) throw new IllegalArgumentException("gui-layout.invalid");
+    var slots = new int[8];
+    var used = new HashSet<Integer>();
+    for (int i = 0; i < slots.length; i++) {
+      if (!(values.get(i) instanceof Integer slot)
+          || slot < 10
+          || slot > 25
+          || slot % 9 == 0
+          || slot % 9 == 8
+          || !used.add(slot)) throw new IllegalArgumentException("gui-layout.invalid");
+      slots[i] = slot;
+    }
+    return slots;
+  }
+
   private void drawSlots(Player p, Menu menu, SqliteStore.Document<State> doc) {
     MenuStyle.frame(menu.inventory);
     menu.clicks.clear();
@@ -921,20 +951,32 @@ public final class Sidebar implements Listener, AutoCloseable {
         var line = line(entry.id());
         if (line != null) lore.add(lang.render(line.nameKey()));
       }
+      long available =
+          preset.entries().stream()
+              .filter(e -> line(e.id()) != null && available(p, line(e.id())))
+              .limit(maxSelected())
+              .count();
+      lore.add(
+          lang.render(
+              "sidebar.preset-count",
+              Map.of("count", "" + available, "total", "" + preset.entries().size())));
       lore.add(lang.render("gui.separator"));
+      lore.add(
+          lang.render(available == 0 ? "sidebar.preset-unavailable" : "sidebar.preset-warning"));
       lore.add(lang.render("sidebar.preset-help"));
       menu.inventory.setItem(
           slot, MenuStyle.head(freePresetTexture(), lang.render(preset.nameKey()), lore));
       menu.clicks.put(
           slot,
           click -> {
+            if (click != ClickType.LEFT) return;
             var entries =
                 preset.entries().stream()
                     .filter(e -> line(e.id()) != null && available(p, line(e.id())))
                     .limit(maxSelected())
                     .toList();
             if (entries.isEmpty()) {
-              lang.send(p, "sidebar.limit");
+              lang.send(p, "sidebar.preset-unavailable");
               return;
             }
             save(
@@ -965,8 +1007,9 @@ public final class Sidebar implements Listener, AutoCloseable {
             .getString(
                 "scoreboard.gui.occupied-texture",
                 "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=");
+    var slots = rowSlots(plugin.getConfig());
     for (int i = 0; i < 8; i++) {
-      int index = i, slot = new int[] {11, 12, 14, 15, 20, 21, 23, 24}[i];
+      int index = i, slot = slots[i];
       boolean filled = i < selected.size(), locked = i >= maxSelected() && !filled;
       var lore = new ArrayList<Component>();
       lore.add(
@@ -1072,7 +1115,11 @@ public final class Sidebar implements Listener, AutoCloseable {
   }
 
   private String freePresetTexture() {
-    return "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb";
+    return plugin
+        .getConfig()
+        .getString(
+            "scoreboard.gui.menus.sidebar-slots-title.presets.texture",
+            "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb");
   }
 
   private void presetMenu(Player p) {
@@ -1150,6 +1197,7 @@ public final class Sidebar implements Listener, AutoCloseable {
     int actual = Math.clamp(page, 0, Math.max(0, (filtered.size() - 1) / 21));
     var menu = new Menu();
     menu.menuId = "sidebar.picker-title";
+    menu.variables = Map.of("position", "" + (Math.min(target, selected.size()) + 1));
     menu.inventory =
         Bukkit.createInventory(
             menu,

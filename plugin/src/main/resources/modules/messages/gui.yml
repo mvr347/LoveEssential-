@@ -2,6 +2,31 @@ menus:
   messages-settings:
     size: 54
     title: <gold>Настройки личных сообщений
+    labels:
+      messages:
+        menu: <gold>Личные сообщения
+        enabled: <green>Личные сообщения включены
+        muted: <red>Личные сообщения отключены
+        saved: <green>Настройки личных сообщений сохранены.
+        loading: <yellow>Настройки загружаются или сохраняются. Повторите через секунду.
+        disabled: <red>Модуль личных сообщений отключён.
+        usage: <yellow>/le msg <игрок> <сообщение> <gray>— отправить личное сообщение.
+        reply-usage: <yellow>/le reply <сообщение> <gray>— ответить собеседнику.
+        ignore-usage: <yellow>/le ignore [игрок] <gray>— переключить игнор или открыть настройки.
+        no-reply: <red>Нет доступного собеседника для ответа.
+        self: <red>Выберите другого игрока.
+        ignore-limit: <red>Достигнут лимит игнор-листа.
+        cooldown: <yellow>Подождите немного перед следующим сообщением.
+        cancelled: <red>Сообщение отклонено фильтром чата.
+        own-disabled: <yellow>Сначала включите личные сообщения через /le msgtoggle.
+        unavailable: <red>Личные сообщения этому игроку недоступны.
+        invalid: <red>Сообщение пустое, слишком длинное или содержит управляющие символы.
+        outgoing: <dark_gray>[<gold>Вы <gray>→ <gold><recipient><dark_gray>] <white><message>
+        incoming: <dark_gray>[<gold><sender> <gray>→ <gold>Вы<dark_gray>] <white><message>
+        reply-hint: <gray>Нажмите, чтобы ответить этому игроку.
+        afk: <yellow><player> сейчас AFK и может ответить позже.
+        compose: <gold>Нажмите здесь, чтобы написать игроку <player>.
+        unignore: <green>ЛКМ <dark_gray>— <gray>убрать из игнор-листа
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -9,28 +34,3 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-messages:
-  messages:
-    menu: <gold>Личные сообщения
-    enabled: <green>Личные сообщения включены
-    muted: <red>Личные сообщения отключены
-    saved: <green>Настройки личных сообщений сохранены.
-    loading: <yellow>Настройки загружаются или сохраняются. Повторите через секунду.
-    disabled: <red>Модуль личных сообщений отключён.
-    usage: <yellow>/le msg <игрок> <сообщение> <gray>— отправить личное сообщение.
-    reply-usage: <yellow>/le reply <сообщение> <gray>— ответить собеседнику.
-    ignore-usage: <yellow>/le ignore [игрок] <gray>— переключить игнор или открыть настройки.
-    no-reply: <red>Нет доступного собеседника для ответа.
-    self: <red>Выберите другого игрока.
-    ignore-limit: <red>Достигнут лимит игнор-листа.
-    cooldown: <yellow>Подождите немного перед следующим сообщением.
-    cancelled: <red>Сообщение отклонено фильтром чата.
-    own-disabled: <yellow>Сначала включите личные сообщения через /le msgtoggle.
-    unavailable: <red>Личные сообщения этому игроку недоступны.
-    invalid: <red>Сообщение пустое, слишком длинное или содержит управляющие символы.
-    outgoing: <dark_gray>[<gold>Вы <gray>→ <gold><recipient><dark_gray>] <white><message>
-    incoming: <dark_gray>[<gold><sender> <gray>→ <gold>Вы<dark_gray>] <white><message>
-    reply-hint: <gray>Нажмите, чтобы ответить этому игроку.
-    afk: <yellow><player> сейчас AFK и может ответить позже.
-    compose: <gold>Нажмите здесь, чтобы написать игроку <player>.
-    unignore: <green>ЛКМ <dark_gray>— <gray>убрать из игнор-листа

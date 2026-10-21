@@ -86,6 +86,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     final Player viewer;
     final BooleanSupplier allowed;
     UUID subject;
+
+    public Object guiRoute() {
+      return List.of(menuId, subject == null ? viewer.getUniqueId() : subject);
+    }
+
     Map<String, String> variables = Map.of();
 
     public Map<String, String> guiVariables() {

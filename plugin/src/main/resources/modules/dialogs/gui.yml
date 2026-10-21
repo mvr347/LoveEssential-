@@ -1,4 +1,3 @@
-menus: {}
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -17,16 +16,16 @@ messages:
     default-title: <gold>Окно королевства
     default-body: <gray>Текст диалогового окна.
     edit: <gold>Редактор диалогового окна
-    edit-help: <gray>Заголовок и текст поддерживают MiniMessage и плейсхолдеры LoveEssential. Все тексты сохраняются
-      в конфиге модуля.
+    edit-help: <gray>Заголовок и текст поддерживают MiniMessage и плейсхолдеры LoveEssential. Все тексты сохраняются в конфиге
+      модуля.
     heading: <gold>Заголовок
     body: <gold>Текст
     answers: <gold>Кнопки ответов
     answers-help: <gray>Откройте кнопку для изменения подписи, права и действия.
     add-answer: <green>Добавить ответ
     answer: <gold>Настройка ответа
-    answer-help: <gray>Выберите действие. Для сообщения — MiniMessage; для диалога/мира — ID. В параметрах можно
-      использовать ${имя_поля}. Команды выполняются с обычными правами игрока.
+    answer-help: <gray>Выберите действие. Для сообщения — MiniMessage; для диалога/мира — ID. В параметрах можно использовать
+      ${имя_поля}. Команды выполняются с обычными правами игрока.
     label: <gold>Подпись
     preview: <gold>Предпросмотр
     delete-confirm: <yellow>Удалить это диалоговое окно?
@@ -40,8 +39,8 @@ messages:
     remove-input: <red>Удалить поле по ID
     usage: <yellow>/le dialog [list|create|edit|open|delete] [ID]
     motd-title: <gold>Редактор MOTD сервера
-    motd-help: <gray>Две строки описания в списке серверов. Поддерживается MiniMessage. Предпросмотр не публикует
-      изменения; «Сохранить» применяет их.
+    motd-help: <gray>Две строки описания в списке серверов. Поддерживается MiniMessage. Предпросмотр не публикует изменения;
+      «Сохранить» применяет их.
     motd-first: <gold>Первая строка
     motd-second: <gold>Вторая строка
     input-limit: <gold>Максимум символов (1–2048)

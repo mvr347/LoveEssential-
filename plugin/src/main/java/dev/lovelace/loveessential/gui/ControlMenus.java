@@ -84,6 +84,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
     final Predicate<Player> allowed;
     boolean root;
     Map<String, String> variables = Map.of();
+    Object route;
+
+    public Object guiRoute() {
+      return route == null ? dev.lovelace.loveessential.gui.GuiLayout.super.guiRoute() : route;
+    }
 
     public Map<String, String> guiVariables() {
       return variables;
@@ -176,10 +181,15 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   private void navigation(Menu m, Player p, int page, int total, IntConsumer pages, Runnable back) {
+    navigation(m, p, page, total, MenuStyle.CONTENT.length, pages, back);
+  }
+
+  private void navigation(
+      Menu m, Player p, int page, int total, int capacity, IntConsumer pages, Runnable back) {
     if (!m.root) put(m, 51, Material.ARROW, "common.back", "gui.click.open", c -> back.run());
     if (page > 0)
       put(m, 36, Material.ARROW, "gui.previous", "gui.click.open", c -> pages.accept(page - 1));
-    if ((page + 1) * MenuStyle.CONTENT.length < total)
+    if ((page + 1) * capacity < total)
       put(m, 44, Material.ARROW, "common.next", "gui.click.open", c -> pages.accept(page + 1));
     var badge = m.inventory.getItem(0);
     var badgeMeta = badge.getItemMeta();
@@ -187,7 +197,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
         List.of(
             lang.render(
                     "gui.page",
-                    Map.of("page", "" + (page + 1), "pages", "" + Math.max(1, (total + 20) / 21)))
+                    Map.of(
+                        "page",
+                        "" + (page + 1),
+                        "pages",
+                        "" + Math.max(1, (total + capacity - 1) / capacity)))
                 .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)));
     badge.setItemMeta(badgeMeta);
     put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());
@@ -316,6 +330,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             "gui.settings-title",
             Map.of("module", lang.text("gui.module-labels." + id), "path", settingName(path)),
             this::admin);
+    m.route = List.of("settings", id, path);
     if (id.equals("scoreboard"))
       entry(
           m,
@@ -665,14 +680,14 @@ public final class ControlMenus implements Listener, AutoCloseable {
   public void npcList(Player p, int page) {
     var m = menu(p, "gui.npcs", Map.of(), this::npcView);
     var list =
-        npcs.all().stream()
-            .sorted(Comparator.comparing(dev.lovelace.loveessential.api.NpcDefinition::id))
-            .toList();
-    for (int i = page * 21; i < Math.min(list.size(), (page + 1) * 21); i++) {
+        npcs.all().stream().sorted(Comparator.comparingInt(npc -> npcs.number(npc.id()))).toList();
+    int actual = Math.clamp(page, 0, Math.max(0, (list.size() - 1) / 20));
+    int count = Math.min(20, list.size() - actual * 20);
+    for (int i = actual * 20; i < actual * 20 + count; i++) {
       var n = list.get(i);
       entry(
           m,
-          MenuStyle.slot(i % 21, Math.min(21, list.size() - page * 21)),
+          MenuStyle.slot(i % 20, count + 1),
           Material.PLAYER_HEAD,
           lang.render(n.nameKey())
               .append(
@@ -681,66 +696,34 @@ public final class ControlMenus implements Listener, AutoCloseable {
                       net.kyori.adventure.text.format.NamedTextColor.GRAY)),
           List.of(
               lang.render("gui.npc-id", Map.of("id", "" + npcs.number(n.id()))),
-                  lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"),
-              lang.render("gui.separator"), lang.render("gui.click.open")),
-          c -> npc(p, n.id()));
+              lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"),
+              lang.render("gui.separator"),
+              lang.render("gui.npc-list-edit"),
+              lang.render("gui.npc-list-delete")),
+          click -> {
+            if (click == ClickType.LEFT) wizard.edit(p, n.id());
+            else if (click == ClickType.RIGHT)
+              confirm(
+                  p,
+                  "gui.delete-npc",
+                  () ->
+                      complete(
+                          p,
+                          npcs.delete(n.id(), n.revision(), p.getUniqueId().toString()),
+                          () -> npcList(p, actual),
+                          false),
+                  () -> npcList(p, actual),
+                  who -> plugin.module("npc") && who.hasPermission("loveessential.npc.delete"),
+                  "№" + npcs.number(n.id()));
+          });
     }
-    navigation(m, p, page, list.size(), n -> npcList(p, n), () -> home(p));
+    navigation(m, p, actual, list.size(), 20, n -> npcList(p, n), () -> home(p));
     put(m, 4, Material.WRITABLE_BOOK, "gui.resume", "gui.click.open", c -> wizard.open(p));
-    put(m, 50, Material.LIME_DYE, "gui.create-npc", "gui.click.open", c -> wizard.open(p));
+    int create = MenuStyle.slot(count, count + 1);
+    put(m, create, Material.LIME_DYE, "gui.create-npc", "gui.create-npc-help", c -> wizard.open(p));
     if (!p.hasPermission("loveessential.npc.create") || !p.hasPermission("loveessential.npc.edit"))
-      locked(m, 50);
+      locked(m, create);
     if (!p.hasPermission("loveessential.npc.edit")) locked(m, 4);
-    MenuStyle.open(p, m.inventory);
-  }
-
-  private void npc(Player p, String id) {
-    var n = npcs.get(id).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
-    var m = menu(p, "gui.npc-title", Map.of("id", "" + npcs.number(id)), this::npcView);
-    put(m, 19, Material.WRITABLE_BOOK, "gui.edit-npc", "gui.click.open", c -> wizard.edit(p, id));
-    put(m, 21, Material.RAIL, "gui.path-npc", "gui.click.open", c -> wizard.edit(p, id, 4));
-    put(m, 23, Material.BOOK, "gui.dialog-npc", "gui.click.open", c -> wizard.edit(p, id, 5));
-    put(m, 25, Material.CLOCK, "gui.schedule-npc", "gui.click.open", c -> wizard.edit(p, id, 6));
-    put(
-        m,
-        29,
-        Material.LEVER,
-        n.enabled() ? "gui.enabled" : "gui.disabled",
-        "gui.click.switch",
-        c -> command(p, "npc " + (n.enabled() ? "disable " : "enable ") + id));
-    put(
-        m,
-        31,
-        Material.COMPASS,
-        "gui.debug-npc",
-        "gui.click.run",
-        c -> command(p, "npc debug " + id));
-    put(
-        m,
-        33,
-        Material.BARRIER,
-        "gui.delete-npc",
-        "gui.click.delete",
-        c -> {
-          confirm(
-              p,
-              "gui.delete-npc",
-              () ->
-                  complete(
-                      p,
-                      npcs.delete(id, n.revision(), p.getUniqueId().toString()),
-                      () -> npcList(p, 0),
-                      false),
-              () -> npc(p, id),
-              who -> plugin.module("npc") && who.hasPermission("loveessential.npc.delete"),
-              "№" + npcs.number(id));
-        });
-    if (!p.hasPermission("loveessential.npc.edit"))
-      for (int slot : new int[] {19, 21, 23, 25}) locked(m, slot);
-    if (!p.hasPermission("loveessential.npc.publish")) locked(m, 29);
-    if (!p.hasPermission("loveessential.npc.debug")) locked(m, 31);
-    if (!p.hasPermission("loveessential.npc.delete")) locked(m, 33);
-    navigation(m, p, 0, 0, k -> {}, () -> npcList(p, 0));
     MenuStyle.open(p, m.inventory);
   }
 

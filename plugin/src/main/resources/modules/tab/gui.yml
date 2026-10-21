@@ -2,6 +2,48 @@ menus:
   tab-editor-title:
     size: 54
     title: <gold>Редактор TAB
+    labels:
+      tab-editor:
+        header: <gold>Строки шапки
+        footer: <gold>Строки подвала
+        groups: <gold>Группы игроков
+        placeholders: <gold>Плейсхолдеры
+        sorting: <gold>Порядок игроков
+        nametag: <gold>Имена над игроками
+        sidebar: <gold>Строки боковой панели TAB
+        advanced: <gold>Все параметры модуля
+        lines-title: <gold>Строки TAB
+        lines-help: <gray>Каждая строка редактируется отдельно. Доступны MiniMessage, %PAPI% и <placeholder:id>. Пустая строка
+          создаёт отступ.
+        line: <gold>Строка <white><index>
+        add-line: <gold>Добавить строку
+        line-title: <gold>Редактирование строки
+        text: <gold>Текст с цветами и плейсхолдерами
+        up: <gold>Поднять
+        down: <gold>Опустить
+        add-group: <gold>Создать группу
+        add-placeholder: <gold>Добавить плейсхолдер
+        groups-help: <gray>Группа с меньшим приоритетом побеждает. Пустые списки игроков и миров не ограничивают группу.
+        group-title: <gold>Настройка группы
+        id: <gold>Идентификатор
+        permission: <gold>Дополнительное право (пусто — всем)
+        priority: <gold>Приоритет (меньше — выше)
+        name: <gold>Формат имени
+        prefix: <gold>Префикс
+        suffix: <gold>Суффикс
+        players: <gold>Имена или UUID игроков через запятую
+        worlds: <gold>Миры через запятую
+        placeholder-title: <gold>Настройка плейсхолдера
+        placeholder-help: <gray>Используйте в строках как <placeholder:id>. Значение может содержать цвет, встроенные теги
+          и %PAPI%.
+        enabled: <gold>Включено
+        visible: <gold>Видно имя
+        collision: <gold>Столкновения
+        nametag-help: <gray>Показ имён и столкновения игроков. Группы задают префикс, имя и суффикс; эти переключатели управляют
+          самим отображением.
+        sorting-help: '<gray>Критерии проверяются по порядку: group, name, number:%плейсхолдер% или number-desc:%плейсхолдер%.
+          Цвета здесь не используются.'
+        sort-rule: <gold>Критерий сортировки
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -9,45 +51,3 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-messages:
-  tab-editor:
-    header: <gold>Строки шапки
-    footer: <gold>Строки подвала
-    groups: <gold>Группы игроков
-    placeholders: <gold>Плейсхолдеры
-    sorting: <gold>Порядок игроков
-    nametag: <gold>Имена над игроками
-    sidebar: <gold>Строки боковой панели TAB
-    advanced: <gold>Все параметры модуля
-    lines-title: <gold>Строки TAB
-    lines-help: <gray>Каждая строка редактируется отдельно. Доступны MiniMessage, %PAPI% и <placeholder:id>. Пустая
-      строка создаёт отступ.
-    line: <gold>Строка <white><index>
-    add-line: <gold>Добавить строку
-    line-title: <gold>Редактирование строки
-    text: <gold>Текст с цветами и плейсхолдерами
-    up: <gold>Поднять
-    down: <gold>Опустить
-    add-group: <gold>Создать группу
-    add-placeholder: <gold>Добавить плейсхолдер
-    groups-help: <gray>Группа с меньшим приоритетом побеждает. Пустые списки игроков и миров не ограничивают группу.
-    group-title: <gold>Настройка группы
-    id: <gold>Идентификатор
-    permission: <gold>Дополнительное право (пусто — всем)
-    priority: <gold>Приоритет (меньше — выше)
-    name: <gold>Формат имени
-    prefix: <gold>Префикс
-    suffix: <gold>Суффикс
-    players: <gold>Имена или UUID игроков через запятую
-    worlds: <gold>Миры через запятую
-    placeholder-title: <gold>Настройка плейсхолдера
-    placeholder-help: <gray>Используйте в строках как <placeholder:id>. Значение может содержать цвет, встроенные
-      теги и %PAPI%.
-    enabled: <gold>Включено
-    visible: <gold>Видно имя
-    collision: <gold>Столкновения
-    nametag-help: <gray>Показ имён и столкновения игроков. Группы задают префикс, имя и суффикс; эти переключатели
-      управляют самим отображением.
-    sorting-help: '<gray>Критерии проверяются по порядку: group, name, number:%плейсхолдер% или number-desc:%плейсхолдер%.
-      Цвета здесь не используются.'
-    sort-rule: <gold>Критерий сортировки

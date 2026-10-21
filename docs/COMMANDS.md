@@ -63,7 +63,7 @@
 
 [Профиль](PLAYER_PROFILE.md) · [Scoreboard и жесты](SCOREBOARD.md) · [Порталы](PORTALS.md) · [Крафты](CUSTOM_CONTENT.md) · [Миры и сценарии](WORLDS_AND_AUTOMATION.md).
 
-Алиас `/le scoreboard settings` удалён: используйте `/le scoreboard edit`.
+`/le scoreboard edit` — единственная команда административного редактора табло.
 
 ## NPC: создание и управление
 
