@@ -50,7 +50,13 @@ public final class NativeDialogs implements Listener, AutoCloseable {
   private final MainThread main;
   private final Lang lang;
   private final LoveBridge love;
-  private final Map<UUID, Session> sessions = new HashMap<>();
+  private final Map<UUID, Session> sessions =
+      com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+          .maximumSize(1024)
+          .expireAfterWrite(Duration.ofMinutes(3))
+          .scheduler(com.github.benmanes.caffeine.cache.Scheduler.systemScheduler())
+          .<UUID, Session>build()
+          .asMap();
   private BiConsumer<Player, Form> presenter = this::paper;
   private Consumer<Player> beforeShow = p -> {};
 
@@ -138,7 +144,8 @@ public final class NativeDialogs implements Listener, AutoCloseable {
     }
     sessions.remove(p.getUniqueId());
     try {
-      b.action().accept(Map.copyOf(clean));
+      dev.lovelace.loveessential.gui.MenuStyle.action(
+          p, () -> b.action().accept(Map.copyOf(clean)));
     } catch (RuntimeException e) {
       error(p, e);
       if (plugin.ready()
@@ -168,6 +175,7 @@ public final class NativeDialogs implements Listener, AutoCloseable {
   }
 
   private void paper(Player p, Form form) {
+    UUID owner = p.getUniqueId();
     var inputs = new ArrayList<DialogInput>();
     for (var f : form.fields()) {
       if (f.choices().isEmpty())
@@ -201,7 +209,7 @@ public final class NativeDialogs implements Listener, AutoCloseable {
                         DialogAction.customClick(
                             (response, audience) -> {
                               if (!(audience instanceof Player actor)
-                                  || !actor.getUniqueId().equals(p.getUniqueId())) return;
+                                  || !actor.getUniqueId().equals(owner)) return;
                               var values = new HashMap<String, String>();
                               for (var f : form.fields())
                                 values.put(

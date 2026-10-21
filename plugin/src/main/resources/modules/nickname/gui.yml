@@ -1,13 +1,13 @@
 menus:
   nick-color:
-    title-key: nick.color
     size: 54
+    title: <gold>Один цвет
   nick-gradient:
-    title-key: nick.gradient
     size: 54
+    title: <gold>Градиент
   nick-title:
-    title-key: nick.title
     size: 54
+    title: <gold>Никнейм и оформление
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -15,13 +15,10 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   nick:
     profile-name: '<gray>Никнейм: <nickname>'
-    title: <gold>Никнейм и оформление
     set: <gold>Изменить никнейм
-    color: <gold>Один цвет
-    gradient: <gold>Градиент
     clear-style: <gold>Сбросить цвет и градиент
     reset: <gold>Вернуть имя аккаунта и стандартное оформление
     custom-color: <gold>Свой HEX-цвет
@@ -66,40 +63,3 @@ texts:
       light_purple: Светло-фиолетовый
       yellow: Жёлтый
       white: Белый
-buttons:
-  nick-title:
-    title-key: nick.title
-    texture: ''
-  nick-set:
-    title-key: nick.set
-    texture: ''
-  nick-color:
-    title-key: nick.color
-    texture: ''
-  nick-gradient:
-    title-key: nick.gradient
-    texture: ''
-  nick-clear-style:
-    title-key: nick.clear-style
-    texture: ''
-  nick-reset:
-    title-key: nick.reset
-    texture: ''
-  nick-custom-color:
-    title-key: nick.custom-color
-    texture: ''
-  nick-custom-gradient:
-    title-key: nick.custom-gradient
-    texture: ''
-  nick-gradients-kingdom:
-    title-key: nick.gradients.kingdom
-    texture: ''
-  nick-gradients-sunset:
-    title-key: nick.gradients.sunset
-    texture: ''
-  nick-gradients-ocean:
-    title-key: nick.gradients.ocean
-    texture: ''
-  nick-gradients-forest:
-    title-key: nick.gradients.forest
-    texture: ''

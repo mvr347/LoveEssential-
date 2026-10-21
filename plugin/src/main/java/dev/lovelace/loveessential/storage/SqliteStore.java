@@ -25,6 +25,7 @@ public final class SqliteStore implements AutoCloseable {
   private final ThreadPoolExecutor writer;
   private final ExecutorService readers = Executors.newVirtualThreadPerTaskExecutor();
   private final Semaphore readLimit = new Semaphore(64);
+  private final Set<CompletableFuture<?>> pending = ConcurrentHashMap.newKeySet();
   private final AtomicBoolean closed = new AtomicBoolean();
 
   public SqliteStore(Path file, int queueCapacity) throws Exception {
@@ -53,7 +54,7 @@ public final class SqliteStore implements AutoCloseable {
         var s = c.createStatement()) {
       s.execute("CREATE TABLE IF NOT EXISTS schema_version(version INTEGER PRIMARY KEY)");
       try (var rs = s.executeQuery("SELECT COALESCE(MAX(version),0) FROM schema_version")) {
-        if (rs.next() && rs.getInt(1) > 2) throw new SQLException("newer-schema");
+        if (rs.next() && rs.getInt(1) > 3) throw new SQLException("newer-schema");
       }
       c.setAutoCommit(false);
       try {
@@ -76,7 +77,10 @@ public final class SqliteStore implements AutoCloseable {
         s.execute("INSERT OR IGNORE INTO document_versions SELECT kind,id,revision FROM documents");
         s.execute("CREATE INDEX IF NOT EXISTS audit_document ON audit(kind,id,sequence)");
         s.execute("CREATE INDEX IF NOT EXISTS profile_key ON profile(key)");
-        s.execute("INSERT OR IGNORE INTO schema_version VALUES(2)");
+        s.execute(
+            "CREATE TABLE IF NOT EXISTS npc_numbers(id TEXT PRIMARY KEY,number INTEGER NOT NULL"
+                + " UNIQUE CHECK(number BETWEEN 1 AND 999))");
+        s.execute("INSERT OR IGNORE INTO schema_version VALUES(3)");
         c.commit();
       } catch (Exception e) {
         c.rollback();
@@ -201,6 +205,7 @@ public final class SqliteStore implements AutoCloseable {
               seq.setLong(3, next);
               seq.executeUpdate();
             }
+            if (kind.equals("npc")) allocateNumber(c, id);
             audit(c, kind, id, next, actor, "save");
             c.commit();
             return next;
@@ -225,6 +230,11 @@ public final class SqliteStore implements AutoCloseable {
               s.setLong(3, expected);
               if (s.executeUpdate() != 1) throw new Conflict();
             }
+            if (kind.equals("npc"))
+              try (var statement = c.prepareStatement("DELETE FROM npc_numbers WHERE id=?")) {
+                statement.setString(1, id);
+                statement.executeUpdate();
+              }
             audit(c, kind, id, expected, actor, "delete");
             c.commit();
             return null;
@@ -233,6 +243,47 @@ public final class SqliteStore implements AutoCloseable {
             throw e;
           } finally {
             c.setAutoCommit(true);
+          }
+        });
+  }
+
+  private int allocateNumber(Connection connection, String id) throws SQLException {
+    try (var query = connection.prepareStatement("SELECT number FROM npc_numbers WHERE id=?")) {
+      query.setString(1, id);
+      try (var result = query.executeQuery()) {
+        if (result.next()) return result.getInt(1);
+      }
+    }
+    var occupied = new BitSet(1000);
+    try (var query = connection.createStatement();
+        var result = query.executeQuery("SELECT number FROM npc_numbers")) {
+      while (result.next()) occupied.set(result.getInt(1));
+    }
+    int number = occupied.nextClearBit(1);
+    if (number > 999) throw new SQLException("validation.limit");
+    try (var insert = connection.prepareStatement("INSERT INTO npc_numbers VALUES(?,?)")) {
+      insert.setString(1, id);
+      insert.setInt(2, number);
+      insert.executeUpdate();
+    }
+    return number;
+  }
+
+  public CompletableFuture<Map<String, Integer>> npcNumbers(Collection<String> ids) {
+    var ordered = ids.stream().sorted().toList();
+    return write(
+        connection -> {
+          connection.setAutoCommit(false);
+          try {
+            var result = new LinkedHashMap<String, Integer>();
+            for (String id : ordered) result.put(id, allocateNumber(connection, id));
+            connection.commit();
+            return Map.copyOf(result);
+          } catch (Exception error) {
+            connection.rollback();
+            throw error;
+          } finally {
+            connection.setAutoCommit(true);
           }
         });
   }
@@ -376,6 +427,8 @@ public final class SqliteStore implements AutoCloseable {
       future.completeExceptionally(new RejectedExecutionException("storage-busy"));
       return future;
     }
+    pending.add(future);
+    future.whenComplete((value, error) -> pending.remove(future));
     try {
       executor.execute(
           () -> {
@@ -400,15 +453,24 @@ public final class SqliteStore implements AutoCloseable {
 
   @Override
   public void close() {
+    close(20, TimeUnit.SECONDS);
+  }
+
+  void close(long timeout, TimeUnit unit) {
     if (!closed.compareAndSet(false, true)) return;
     writer.shutdown();
     readers.shutdown();
     try {
-      if (!writer.awaitTermination(20, TimeUnit.SECONDS)) writer.shutdownNow();
-      if (!readers.awaitTermination(10, TimeUnit.SECONDS)) readers.shutdownNow();
+      if (!writer.awaitTermination(timeout, unit)) writer.shutdownNow();
+      if (!readers.awaitTermination(timeout, unit)) readers.shutdownNow();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } finally {
+      writer.shutdownNow();
+      readers.shutdownNow();
+      for (var future : pending)
+        future.completeExceptionally(new CancellationException("storage-closed"));
+      pending.clear();
       pool.close();
     }
   }

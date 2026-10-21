@@ -1,0 +1,739 @@
+bindings:
+- module: hologram
+  file: gui.yml
+  key: holo.line-title
+  path: menus.holo-line-title.title
+- module: hologram
+  file: gui.yml
+  key: holo.title
+  path: menus.holo-title.title
+- module: messages
+  file: gui.yml
+  key: messages.settings
+  path: menus.messages-settings.title
+- module: nickname
+  file: gui.yml
+  key: nick.color
+  path: menus.nick-color.title
+- module: nickname
+  file: gui.yml
+  key: nick.gradient
+  path: menus.nick-gradient.title
+- module: nickname
+  file: gui.yml
+  key: nick.title
+  path: menus.nick-title.title
+- module: npc
+  file: gui.yml
+  key: access-editor.choice-title
+  path: menus.access-editor-choice-title.title
+- module: npc
+  file: gui.yml
+  key: gui.commands
+  path: menus.gui-commands.title
+- module: npc
+  file: gui.yml
+  key: gui.list-title
+  path: menus.gui-list-title.title
+- module: npc
+  file: gui.yml
+  key: gui.npc-title
+  path: menus.gui-npc-title.title
+- module: npc
+  file: gui.yml
+  key: gui.npcs
+  path: menus.gui-npcs.title
+- module: npc
+  file: gui.yml
+  key: gui.place-title
+  path: menus.gui-place-title.title
+- module: npc
+  file: gui.yml
+  key: gui.places-title
+  path: menus.gui-places-title.title
+- module: npc
+  file: gui.yml
+  key: gui.settings-title
+  path: menus.gui-settings-title.title
+- module: npc
+  file: gui.yml
+  key: gui.skin-title
+  path: menus.gui-skin-title.title
+- module: npc
+  file: gui.yml
+  key: gui.wizard-title
+  path: menus.gui-wizard-title.title
+- module: npc
+  file: gui.yml
+  key: module-menu.title
+  path: menus.module-menu-title.title
+- module: npc
+  file: gui.yml
+  key: settings-help.choice-title
+  path: menus.settings-help-choice-title.title
+- module: npc
+  file: gui.yml
+  key: settings-help.number-title
+  path: menus.settings-help-number-title.title
+- module: portal
+  file: gui.yml
+  key: portal-ui.actions
+  path: menus.portal-ui-actions.title
+- module: portal
+  file: gui.yml
+  key: portal-ui.list
+  path: menus.portal-ui-list.title
+- module: portal
+  file: gui.yml
+  key: portal-ui.wizard
+  path: menus.portal-ui-wizard.title
+- module: profile
+  file: gui.yml
+  key: players.list-title
+  path: menus.players-list-title.title
+- module: profile
+  file: gui.yml
+  key: profile-menu.activity-title
+  path: menus.profile-menu-activity-title.title
+- module: profile
+  file: gui.yml
+  key: profile-menu.customization
+  path: menus.profile-menu-customization.title
+- module: profile
+  file: gui.yml
+  key: profile-menu.notifications
+  path: menus.profile-menu-notifications.title
+- module: profile
+  file: gui.yml
+  key: profile-menu.settings
+  path: menus.profile-menu-settings.title
+- module: profile
+  file: gui.yml
+  key: profile-stats.details-title
+  path: menus.profile-stats-details-title.title
+- module: scoreboard
+  file: gui.yml
+  key: sidebar.admin-menu
+  path: menus.sidebar-admin-menu.title
+- module: scoreboard
+  file: gui.yml
+  key: sidebar.menu
+  path: menus.sidebar-menu.title
+- module: scoreboard
+  file: gui.yml
+  key: sidebar.picker-title
+  path: menus.sidebar-picker-title.title
+- module: scoreboard
+  file: gui.yml
+  key: sidebar.presets
+  path: menus.sidebar-presets.title
+- module: scoreboard
+  file: gui.yml
+  key: sidebar.slots-title
+  path: menus.sidebar-slots-title.title
+- module: scoreboard
+  file: gui.yml
+  key: sidebar.world-menu
+  path: menus.sidebar-world-menu.title
+- module: tab
+  file: gui.yml
+  key: tab-editor.title
+  path: menus.tab-editor-title.title
+- module: profile
+  file: gui.yml
+  key: profile-menu.title
+  path: menus.profile-menu-title.title
+- module: profile
+  file: gui.yml
+  key: public-profile.title
+  path: menus.public-profile-title.title
+- module: profile
+  file: gui.yml
+  key: profile-menu.statistics
+  path: menus.profile-menu-statistics.title
+aliases:
+- module: profile
+  file: profile.yml
+  path: setting-controls.grammar.title-key
+  literal: setting-controls.grammar.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.grammar.lore-key
+  literal: setting-controls.grammar.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.silent.title-key
+  literal: setting-controls.silent.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.silent.lore-key
+  literal: setting-controls.silent.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.mentions.title-key
+  literal: setting-controls.mentions.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.mentions.lore-key
+  literal: setting-controls.mentions.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.channel.title-key
+  literal: setting-controls.channel.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.channel.lore-key
+  literal: setting-controls.channel.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.clan-invites.title-key
+  literal: setting-controls.clan-invites.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.clan-invites.lore-key
+  literal: setting-controls.clan-invites.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.player-trades.title-key
+  literal: setting-controls.player-trades.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: setting-controls.player-trades.lore-key
+  literal: setting-controls.player-trades.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.title-key
+  literal: statistics.categories.world.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.summary-key
+  literal: statistics.categories.world.summary
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.public-key
+  literal: statistics.categories.world.public
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.visits.title-key
+  literal: statistics.categories.world.details.visits.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.visits.lore-key
+  literal: statistics.categories.world.details.visits.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.movement.title-key
+  literal: statistics.categories.world.details.movement.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.movement.lore-key
+  literal: statistics.categories.world.details.movement.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.mining.title-key
+  literal: statistics.categories.world.details.mining.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.mining.lore-key
+  literal: statistics.categories.world.details.mining.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.survival.title-key
+  literal: statistics.categories.world.details.survival.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.world.details.survival.lore-key
+  literal: statistics.categories.world.details.survival.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.title-key
+  literal: statistics.categories.duels.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.summary-key
+  literal: statistics.categories.duels.summary
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.public-key
+  literal: statistics.categories.duels.public
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.details.results.title-key
+  literal: statistics.categories.duels.details.results.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.details.results.lore-key
+  literal: statistics.categories.duels.details.results.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.details.streaks.title-key
+  literal: statistics.categories.duels.details.streaks.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.details.streaks.lore-key
+  literal: statistics.categories.duels.details.streaks.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.details.rewards.title-key
+  literal: statistics.categories.duels.details.rewards.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.duels.details.rewards.lore-key
+  literal: statistics.categories.duels.details.rewards.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.hunt.title-key
+  literal: statistics.categories.hunt.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.hunt.summary-key
+  literal: statistics.categories.hunt.summary
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.hunt.public-key
+  literal: statistics.categories.hunt.public
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.hunt.details.orders.title-key
+  literal: statistics.categories.hunt.details.orders.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.hunt.details.orders.lore-key
+  literal: statistics.categories.hunt.details.orders.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.hunt.details.rating.title-key
+  literal: statistics.categories.hunt.details.rating.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.hunt.details.rating.lore-key
+  literal: statistics.categories.hunt.details.rating.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.contracts.title-key
+  literal: statistics.categories.contracts.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.contracts.summary-key
+  literal: statistics.categories.contracts.summary
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.contracts.public-key
+  literal: statistics.categories.contracts.public
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.contracts.details.completed.title-key
+  literal: statistics.categories.contracts.details.completed.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.contracts.details.completed.lore-key
+  literal: statistics.categories.contracts.details.completed.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.contracts.details.streaks.title-key
+  literal: statistics.categories.contracts.details.streaks.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.contracts.details.streaks.lore-key
+  literal: statistics.categories.contracts.details.streaks.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.activities.title-key
+  literal: statistics.categories.activities.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.activities.summary-key
+  literal: statistics.categories.activities.summary
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.activities.public-key
+  literal: statistics.categories.activities.public
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.activities.details.results.title-key
+  literal: statistics.categories.activities.details.results.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.activities.details.results.lore-key
+  literal: statistics.categories.activities.details.results.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.activities.details.money.title-key
+  literal: statistics.categories.activities.details.money.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.activities.details.money.lore-key
+  literal: statistics.categories.activities.details.money.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.title-key
+  literal: statistics.categories.economy.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.summary-key
+  literal: statistics.categories.economy.summary
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.public-key
+  literal: statistics.categories.economy.public
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.details.fishing.title-key
+  literal: statistics.categories.economy.details.fishing.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.details.fishing.lore-key
+  literal: statistics.categories.economy.details.fishing.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.details.villagers.title-key
+  literal: statistics.categories.economy.details.villagers.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.details.villagers.lore-key
+  literal: statistics.categories.economy.details.villagers.lore
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.details.wallet.title-key
+  literal: statistics.categories.economy.details.wallet.title
+  list: false
+- module: profile
+  file: profile.yml
+  path: statistics.categories.economy.details.wallet.lore-key
+  literal: statistics.categories.economy.details.wallet.lore
+  list: false
+- module: profile
+  file: gui.yml
+  path: cards.identity.title-key
+  literal: cards.identity.title
+  list: false
+- module: profile
+  file: gui.yml
+  path: cards.identity.lore-keys
+  literal: cards.identity.lore
+  list: true
+- module: profile
+  file: gui.yml
+  path: cards.survival.title-key
+  literal: cards.survival.title
+  list: false
+- module: profile
+  file: gui.yml
+  path: cards.survival.lore-keys
+  literal: cards.survival.lore
+  list: true
+- module: profile
+  file: gui.yml
+  path: cards.progress.title-key
+  literal: cards.progress.title
+  list: false
+- module: profile
+  file: gui.yml
+  path: cards.progress.lore-keys
+  literal: cards.progress.lore
+  list: true
+- module: profile
+  file: gui.yml
+  path: cards.statistics.title-key
+  literal: cards.statistics.title
+  list: false
+- module: profile
+  file: gui.yml
+  path: cards.statistics.lore-keys
+  literal: cards.statistics.lore
+  list: true
+- module: profile
+  file: gui.yml
+  path: cards.social.title-key
+  literal: cards.social.title
+  list: false
+- module: profile
+  file: gui.yml
+  path: cards.social.lore-keys
+  literal: cards.social.lore
+  list: true
+- module: profile
+  file: gui.yml
+  path: cards.location.title-key
+  literal: cards.location.title
+  list: false
+- module: profile
+  file: gui.yml
+  path: cards.location.lore-keys
+  literal: cards.location.lore
+  list: true
+updates:
+- module: portal
+  file: gui.yml
+  path: messages.portal-ui.name-help
+  previous: <gray>Название MiniMessage сохраняется в lang.yml. ID назначается автоматически.
+  value: <gray>Название MiniMessage сохраняется в конфиге модуля. ID назначается автоматически.
+- module: scoreboard
+  file: gui.yml
+  path: messages.sidebar.slot-controls
+  previous:
+  - <green>ЛКМ <dark_gray>— <gray>убрать строку
+  - <gold>ПКМ <dark_gray>— <gray>выбрать замену
+  - <yellow>Shift+ЛКМ <dark_gray>— <gray>переместить выше
+  - <yellow>Shift+ПКМ <dark_gray>— <gray>переместить ниже
+  value:
+  - <green>ЛКМ <dark_gray>— <gray>выбрать замену
+  - <gold>ПКМ <dark_gray>— <gray>убрать строку
+  - <yellow>Shift+ЛКМ <dark_gray>— <gray>переместить выше
+  - <yellow>Shift+ПКМ <dark_gray>— <gray>переместить ниже
+- module: scoreboard
+  file: gui.yml
+  path: menus.sidebar-presets.title
+  previous: <gold>Готовые наборы
+  value: <gold>Пресеты
+- module: scoreboard
+  file: gui.yml
+  path: messages.sidebar.edit-help
+  previous: <gray>Измените оформление или откройте строку. Тексты сохраняются в lang.yml,
+    определения — в SQLite.
+  value: <gray>Измените оформление и каталог строк. Изменения сохраняются в конфиге
+    и SQLite.
+- module: scoreboard
+  file: gui.yml
+  path: messages.sidebar.line-editor-help
+  previous: <gray>Шаблоны MiniMessage и PAPI. Варианты разделяйте символом |. Необязательное
+    требование — PAPI-выражение и ожидаемое значение.
+  value: <gray>Каждый формат редактируется отдельно. Поддерживаются MiniMessage и
+    PlaceholderAPI.
+- module: scoreboard
+  file: gui.yml
+  path: messages.sidebar.preset-help
+  previous: <gray>ЛКМ — применить набор строк.
+  value: <gray>ЛКМ — заменить текущий выбор строками пресета.
+- module: profile
+  file: gui.yml
+  path: messages.players.cards.identity.lore
+  previous:
+  - '<gray>Имя: <white><player>'
+  - '<gray>Отображаемое имя: <white><display_name>'
+  - '<gray>UUID: <white><uuid>'
+  - '<gray>Первый вход (UTC): <white><first_join>'
+  - '<gray>Модель скина: <white><skin_model>'
+  - <gray>Голова использует текущий скин игрока.
+  value:
+  - '<gray>Имя: <white><player>'
+  - '<gray>Отображаемое имя: <white><display_name>'
+  - '<gray>Первый вход (UTC): <white><first_join>'
+  - '<gray>Модель скина: <white><skin_model>'
+  - <gray>Голова использует текущий скин игрока.
+- module: profile
+  file: gui.yml
+  path: messages.players.cards.survival.lore
+  previous:
+  - '<gray>Здоровье: <white><health>/<max_health>'
+  - '<gray>Сытость: <white><food>/20'
+  - '<gray>Насыщение: <white><saturation>'
+  - '<gray>Режим: <white><gamemode_name>'
+  - '<gray>Задержка: <white><ping> мс'
+  - '<gray>AFK: <white><afk_state>'
+  - '<gray>В бою: <white><combat_state>'
+  value:
+  - '<gray>Здоровье: <white><health>/<max_health>'
+  - '<gray>Сытость: <white><food>/20'
+  - '<gray>Насыщение: <white><saturation>'
+  - '<gray>Режим: <white><gamemode_name>'
+  - '<gray>Задержка: <white><ping> мс'
+  - '<gray>Бездействие: <white><afk_state>'
+  - '<gray>В бою: <white><combat_state>'
+- module: profile
+  file: gui.yml
+  path: messages.players.yes
+  previous: Да
+  value: Включено
+- module: profile
+  file: gui.yml
+  path: messages.players.no
+  previous: Нет
+  value: Выключено
+- module: profile
+  file: gui.yml
+  path: messages.profile-menu.notifications-lore
+  previous:
+  - '<gray>Каналы LoveCore: чат, Actionbar, Title.'
+  - <green>ЛКМ <dark_gray>— <gray>открыть переключатели
+  value:
+  - '<gray>Каналы LoveCore: чат, над панелью, заголовок.'
+  - <green>ЛКМ <dark_gray>— <gray>открыть переключатели
+- module: profile
+  file: gui.yml
+  path: messages.profile-menu.notify-actionbar
+  previous: '<gold>Канал: Actionbar'
+  value: '<gold>Канал: Над панелью'
+- module: profile
+  file: gui.yml
+  path: messages.profile-menu.notify-title
+  previous: '<gold>Канал: Title'
+  value: '<gold>Канал: Заголовок'
+- module: dialogs
+  file: gui.yml
+  path: messages.windows.edit-help
+  previous: <gray>Заголовок и текст поддерживают MiniMessage и плейсхолдеры LoveEssential.
+    Все тексты сохраняются в lang.yml.
+  value: <gray>Заголовок и текст поддерживают MiniMessage и плейсхолдеры LoveEssential.
+    Все тексты сохраняются в конфиге модуля.
+- module: npc
+  file: gui.yml
+  path: messages.common.discard
+  previous: <red>Отменить черновик
+  value: <red>Удалить черновик
+- module: npc
+  file: gui.yml
+  path: messages.common.publish
+  previous: <green>Опубликовать
+  value: <gold>Сохранить NPC
+- module: npc
+  file: gui.yml
+  path: messages.validation.lang
+  previous: <red>Отсутствует ключ в lang.yml.
+  value: <red>Отсутствует ключ в конфиге модуля.
+- module: npc
+  file: gui.yml
+  path: messages.help.overview
+  previous:
+  - <gold>LoveEssential <dark_gray>| <yellow>Команды
+  - <gray>/le — панель управления; /le help — все команды
+  - <gray>/le npc create <id>; /le npc edit <id>; /le npc delete <id> confirm
+  - <gray>/le home [имя]; /le sethome [имя]; /le delhome [имя]; /le homes
+  - <gray>/le skin <имя>; /le spawn [имя]; /le setspawn [имя]
+  - <gray>/le tpa <игрок>; /le tpahere <игрок>; /le tpaccept; /le tpdeny; /le back
+  - <gray>/le afk; /le vanish; /le sit; /le ride; /le profile
+  - <gray>/le portal; /le hologram — управление объектами
+  - <gray>/le module [имя] [enable|disable|settings|info|reload]
+  - <gray>/le tab — настройки; /le tab export — применить в TAB
+  - <gray>/le integrations; /le reload; /le backup
+  - <gray>Короткие команды и русские псевдонимы также доступны.
+  value: <gold>LoveEssential <dark_gray>· <gray>/le help — доступные команды
+- module: npc
+  file: gui.yml
+  path: messages.wizard.prompt-value
+  previous: <yellow>Введите значение в чат или /le input <значение>.
+  value: <yellow>Введите значение в чат.
+- module: npc
+  file: gui.yml
+  path: messages.wizard.prompt-text
+  previous: <yellow>Введите текст сообщения. Он будет сохранён в lang.yml.
+  value: <yellow>Введите текст сообщения. Он будет сохранён в конфиге модуля.
+- module: npc
+  file: gui.yml
+  path: messages.gui.path
+  previous: '<gray>Параметр: <white><path>'
+  value: '<gray>Раздел настройки: <white><path>'
+- module: npc
+  file: gui.yml
+  path: messages.gui.prompt-text
+  previous: <yellow>Введите текст. Он будет сохранён в lang.yml. Разметка MiniMessage
+    поддерживается.
+  value: <yellow>Введите текст. Он будет сохранён в конфиге модуля. Разметка MiniMessage
+    поддерживается.
+- module: npc
+  file: gui.yml
+  path: messages.gui.prompt-value
+  previous: <yellow>Введите значение в чат или /le input значение. Символ - очищает
+    текстовое значение.
+  value: <yellow>Введите значение в чат. Символ - очищает текстовое значение.
+- module: npc
+  file: gui.yml
+  path: messages.gui.prompt-cancel
+  previous: '<gray>Для возврата в меню: <white>cancel <gray>или <white>/le input cancel<gray>.
+    Время ввода — 3 минуты.'
+  value: <gray>Для возврата используйте кнопку [Отмена] в чате. Время ввода — 3 минуты.
+- module: npc
+  file: gui.yml
+  path: messages.gui.npc-id
+  previous: '<gray>ID: <white><id>'
+  value: '<gray>Номер NPC: <white><id>'
+- module: npc
+  file: gui.yml
+  path: messages.gui.click.text
+  previous: <gold>ПКМ <dark_gray>— <gray>изменить текст в lang.yml
+  value: <gold>ПКМ <dark_gray>— <gray>изменить текст в конфиге модуля
+- module: npc
+  file: gui.yml
+  path: messages.input.delivery
+  previous: <gray>Напишите ответ в чат или /le input значение. Ожидание — 3 минуты.
+  value: <gray>Напишите ответ в чат. Ожидание — 3 минуты.
+- module: npc
+  file: gui.yml
+  path: messages.npc-help.fields.name
+  previous: <gray>Имя над NPC с поддержкой цветовой разметки MiniMessage. Текст сохраняется
+    в lang.yml.
+  value: <gray>Имя над NPC с поддержкой цветовой разметки MiniMessage. Текст сохраняется
+    в конфиге модуля.
+- module: npc
+  file: gui.yml
+  path: messages.module-help.profile.adaptation-cards._description
+  previous: <gray>Карточки только для просмотра. Тексты по ключам lang.yml получают
+    плейсхолдеры выбранного игрока.
+  value: <gray>Карточки только для просмотра. Тексты из конфига модуля получают плейсхолдеры
+    выбранного игрока.
+- module: hologram
+  file: gui.yml
+  path: messages.holo.text-help
+  previous: <gray>Текст сохраняется в lang.yml; виден текущий текст и работают плейсхолдеры.
+  value: <gray>Текст сохраняется в конфиге модуля; виден текущий текст и работают
+    плейсхолдеры.

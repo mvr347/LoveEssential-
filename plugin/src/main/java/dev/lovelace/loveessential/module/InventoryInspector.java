@@ -107,8 +107,12 @@ public final class InventoryInspector implements Listener, AutoCloseable {
                             .deserialize(line))
                 .toList()));
     s.inventory.setItem(
-        52, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
+        53, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
     refresh(s);
+    MenuStyle.special(viewer, s.inventory);
+    if (MenuStyle.hasParent(viewer))
+      s.inventory.setItem(
+          52, MenuStyle.button(lang, Material.ARROW, "common.back", "gui.click.open"));
     if (viewer.openInventory(s.inventory) != null) sessions.put(viewer.getUniqueId(), s);
   }
 
@@ -125,7 +129,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
             "inventory.controls-right",
             "inventory.controls-restricted"));
     s.inventory.setItem(
-        50,
+        51,
         MenuStyle.button(
             lang,
             s.editing ? Material.LIME_DYE : Material.GRAY_DYE,
@@ -197,13 +201,14 @@ public final class InventoryInspector implements Listener, AutoCloseable {
           .contains(e.getAction())) e.setCancelled(false);
       return;
     }
-    if (raw == 52 || raw == 50) {
+    if (raw == 53 || raw == 51 || raw == 52) {
       Bukkit.getScheduler()
           .runTask(
               plugin,
               () -> {
                 if (sessions.get(s.viewer.getUniqueId()) != s || !allowed(s)) return;
-                if (raw == 52) s.viewer.closeInventory();
+                if (raw == 53) s.viewer.closeInventory();
+                else if (raw == 52) MenuStyle.back(s.viewer);
                 else if (s.viewer.hasPermission("loveessential.invsee.edit")) {
                   s.editing = !s.editing;
                   refresh(s);

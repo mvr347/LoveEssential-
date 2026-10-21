@@ -114,6 +114,10 @@ public final class Sidebar implements Listener, AutoCloseable {
     public Inventory getInventory() {
       return inventory;
     }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
+    }
   }
 
   private record Migration(Catalog catalog, Map<String, String> texts) {}
@@ -221,13 +225,59 @@ public final class Sidebar implements Listener, AutoCloseable {
                     () -> {
                       var section =
                           plugin.getConfig().getConfigurationSection("scoreboard.catalog");
-                      if (section != null && !section.getKeys(false).isEmpty())
+                      if (section != null && section.getInt("presets-version", 0) >= 1)
                         return CompletableFuture.<Void>completedFuture(null);
+                      var source =
+                          section == null || section.getKeys(false).isEmpty()
+                              ? catalog
+                              : SidebarConfig.read(section);
+                      var presets = new ArrayList<>(source.presets());
+                      String[] ids = {"standard", "minimal", "pvp", "adventure"};
+                      String[] names = {"Стандартный", "Минимализм", "ПвП", "Приключения"};
+                      for (int i = 0; i < ids.length; i++) {
+                        final int index = i;
+                        if (presets.stream().anyMatch(preset -> preset.id().equals(ids[index])))
+                          continue;
+                        var candidates =
+                            source.lines().stream()
+                                .filter(
+                                    line ->
+                                        index == 0
+                                            || index == 1
+                                            || (index == 2
+                                                ? line.category()
+                                                    .matches("(?i).*(pvp|duel|combat|arena).*")
+                                                : line.category()
+                                                    .matches(
+                                                        "(?i).*(world|survival|general|adventure).*")))
+                                .toList();
+                        if (candidates.isEmpty()) candidates = source.lines();
+                        var entries =
+                            candidates.stream()
+                                .limit(index == 1 ? 2 : 8)
+                                .map(line -> new Selection(line.id(), 0))
+                                .toList();
+                        presets.add(new Preset(ids[i], "@inline:<gold>" + names[i], entries));
+                      }
+                      var initialized =
+                          new Catalog(
+                              source.titleKey(),
+                              source.separatorKey(),
+                              source.bottomKey(),
+                              source.max(),
+                              source.interval(),
+                              source.disabledWorlds(),
+                              source.categories(),
+                              source.lines(),
+                              presets,
+                              source.defaultPreset());
+                      var exported = SidebarConfig.write(initialized, lang, Map.of());
+                      exported.put("presets-version", 1);
                       return plugin.exportSection(
                           "scoreboard",
                           "catalog",
                           dev.lovelace.loveessential.config.ModuleConfigs.snapshot(section),
-                          SidebarConfig.write(catalog, lang, Map.of()));
+                          exported);
                     }))
         .thenCompose(future -> future)
         .thenCompose(v -> main.call(this::reloadCatalog))
@@ -698,8 +748,13 @@ public final class Sidebar implements Listener, AutoCloseable {
       out.add(active.get(i));
       if (i % 2 == 1 || i == active.size() - 1) out.add(value(p, catalog.separatorKey()));
     }
-    out.add(value(p, catalog.bottomKey()));
-    return out.stream().limit(15).toList();
+    var bottom = value(p, catalog.bottomKey());
+    int width =
+        Math.max(SidebarWidth.width(value(p, catalog.titleKey())), SidebarWidth.width(bottom));
+    for (var text : out) width = Math.max(width, SidebarWidth.width(text));
+    out.add(SidebarWidth.center(bottom, width + 24));
+    if (out.size() > 15) throw new IllegalArgumentException("errors.config");
+    return List.copyOf(out);
   }
 
   public void render(Player p, Scoreboard board) {
@@ -731,7 +786,9 @@ public final class Sidebar implements Listener, AutoCloseable {
       obj.setDisplaySlot(DisplaySlot.SIDEBAR);
       obj.numberFormat(NumberFormat.blank());
     }
-    obj.displayName(title);
+    int width = SidebarWidth.width(title);
+    for (var text : lines) width = Math.max(width, SidebarWidth.width(text));
+    obj.displayName(forced.isPresent() ? title : SidebarWidth.center(title, width));
     var previous = playerBoards.put(p.getUniqueId(), board);
     if (previous != null && previous != board) {
       var oldSidebar = previous.getObjective("le_sidebar");
@@ -848,14 +905,47 @@ public final class Sidebar implements Listener, AutoCloseable {
     MenuStyle.frame(menu.inventory);
     menu.clicks.clear();
     var selected = compact(doc.value());
-    menu.inventory.setItem(
-        0,
-        dev.lovelace.loveessential.module.PlayerProfiles.head(
-            p, lang.render("sidebar.profile"), List.of(lang.render("sidebar.profile-help"))));
-    menu.clicks.put(0, c -> p.performCommand("loveessential:profile"));
+    int[] presetSlots = {2, 3, 5, 6};
+    var headerPresets = new ArrayList<Preset>();
+    for (String id : List.of("standard", "minimal", "pvp", "adventure"))
+      catalog.presets().stream()
+          .filter(preset -> preset.id().equals(id))
+          .findFirst()
+          .ifPresent(headerPresets::add);
+    if (headerPresets.isEmpty()) headerPresets.addAll(catalog.presets());
+    for (int i = 0; i < Math.min(4, headerPresets.size()); i++) {
+      var preset = headerPresets.get(i);
+      int slot = presetSlots[i];
+      var lore = new ArrayList<Component>();
+      for (var entry : preset.entries()) {
+        var line = line(entry.id());
+        if (line != null) lore.add(lang.render(line.nameKey()));
+      }
+      lore.add(lang.render("gui.separator"));
+      lore.add(lang.render("sidebar.preset-help"));
+      menu.inventory.setItem(
+          slot, MenuStyle.head(freePresetTexture(), lang.render(preset.nameKey()), lore));
+      menu.clicks.put(
+          slot,
+          click -> {
+            var entries =
+                preset.entries().stream()
+                    .filter(e -> line(e.id()) != null && available(p, line(e.id())))
+                    .limit(maxSelected())
+                    .toList();
+            if (entries.isEmpty()) {
+              lang.send(p, "sidebar.limit");
+              return;
+            }
+            save(
+                p,
+                new State(doc.value().enabled(), doc.value().viewAll(), entries),
+                () -> open(p, "", 0));
+          });
+    }
     put(
         menu,
-        4,
+        33,
         Material.LEVER,
         doc.value().enabled() ? "sidebar.on" : "sidebar.off",
         c ->
@@ -876,7 +966,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                 "scoreboard.gui.occupied-texture",
                 "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=");
     for (int i = 0; i < 8; i++) {
-      int index = i, slot = 10 + i;
+      int index = i, slot = new int[] {11, 12, 14, 15, 20, 21, 23, 24}[i];
       boolean filled = i < selected.size(), locked = i >= maxSelected() && !filled;
       var lore = new ArrayList<Component>();
       lore.add(
@@ -926,12 +1016,12 @@ public final class Sidebar implements Listener, AutoCloseable {
               return;
             }
             var entries = new ArrayList<>(selected);
-            if (click == ClickType.RIGHT || !filled && click == ClickType.LEFT) {
+            if (click == ClickType.LEFT) {
               picker(p, index, "", "name", false, 0, Map.of());
               return;
             }
             if (!filled) return;
-            if (click == ClickType.LEFT) entries.remove(index);
+            if (click == ClickType.RIGHT) entries.remove(index);
             else if (click == ClickType.SHIFT_LEFT && index > 0)
               Collections.swap(entries, index, index - 1);
             else if (click == ClickType.SHIFT_RIGHT && index + 1 < entries.size())
@@ -943,11 +1033,46 @@ public final class Sidebar implements Listener, AutoCloseable {
                 () -> open(p, "", 0));
           });
     }
-    put(menu, 33, Material.ARROW, "common.back", c -> p.performCommand("loveessential:profile"));
-    put(menu, 34, Material.BARRIER, "gui.close", c -> p.closeInventory());
-    put(menu, 32, Material.BOOK, "sidebar.presets", c -> presetMenu(p));
+    put(menu, 35, Material.BARRIER, "gui.close", c -> p.closeInventory());
     if (p.getOpenInventory().getTopInventory() == menu.inventory)
       MenuStyle.apply(p, menu.inventory);
+  }
+
+  private void filterMenu(
+      Player p,
+      int target,
+      String category,
+      String order,
+      boolean hidden,
+      Map<String, Integer> variants) {
+    var menu = new Menu();
+    menu.menuId = "sidebar.filter";
+    menu.inventory = Bukkit.createInventory(menu, 54, lang.render("sidebar.filter"));
+    MenuStyle.frame(menu.inventory);
+    var categories = new ArrayList<>(catalog.categories().keySet().stream().sorted().toList());
+    categories.addFirst("");
+    for (int i = 0; i < categories.size(); i++) {
+      var id = categories.get(i);
+      String key = id.isEmpty() ? "sidebar.filter-all" : catalog.categories().get(id);
+      int slot = MenuStyle.slot(i, categories.size());
+      menu.inventory.setItem(
+          slot,
+          MenuStyle.head(
+              freePresetTexture(), lang.render(key), List.of(lang.render("sidebar.filter-help"))));
+      menu.clicks.put(slot, c -> picker(p, target, id, order, hidden, 0, variants));
+    }
+    put(
+        menu,
+        4,
+        Material.SPYGLASS,
+        hidden ? "sidebar.filter-available" : "sidebar.filter-all",
+        c -> filterMenu(p, target, category, order, !hidden, variants));
+    put(menu, 52, Material.BARRIER, "gui.close", c -> p.closeInventory());
+    MenuStyle.open(p, menu.inventory);
+  }
+
+  private String freePresetTexture() {
+    return "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb";
   }
 
   private void presetMenu(Player p) {
@@ -1035,26 +1160,13 @@ public final class Sidebar implements Listener, AutoCloseable {
     MenuStyle.frame(menu.inventory);
     put(
         menu,
-        2,
+        3,
         Material.COMPASS,
-        "sidebar.filter-category",
-        c -> {
-          var categories =
-              new ArrayList<>(catalog.categories().keySet().stream().sorted().toList());
-          categories.addFirst("");
-          int current = categories.indexOf(category);
-          picker(
-              p,
-              target,
-              categories.get((current + 1) % categories.size()),
-              order,
-              hideUnavailable,
-              0,
-              variants);
-        });
+        "sidebar.filter",
+        c -> filterMenu(p, target, category, order, hideUnavailable, variants));
     put(
         menu,
-        4,
+        5,
         Material.COMPARATOR,
         "sidebar.sort-" + order,
         c -> {
@@ -1068,12 +1180,6 @@ public final class Sidebar implements Listener, AutoCloseable {
               0,
               variants);
         });
-    put(
-        menu,
-        6,
-        Material.SPYGLASS,
-        hideUnavailable ? "sidebar.filter-available" : "sidebar.filter-all",
-        c -> picker(p, target, category, order, !hideUnavailable, 0, variants));
     for (int i = actual * 21; i < Math.min(filtered.size(), (actual + 1) * 21); i++) {
       var item = filtered.get(i);
       int slot = MenuStyle.slot(i % 21, Math.min(21, filtered.size() - actual * 21));
@@ -1716,7 +1822,7 @@ public final class Sidebar implements Listener, AutoCloseable {
                     && p.getOpenInventory().getTopInventory() != null
                     && p.getOpenInventory().getTopInventory().getHolder() == m)
                   try {
-                    click.accept(e.getClick());
+                    MenuStyle.action(p, () -> click.accept(e.getClick()));
                   } catch (RuntimeException error) {
                     lang.error(p, error);
                   }

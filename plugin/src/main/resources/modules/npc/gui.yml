@@ -1,43 +1,43 @@
 menus:
   access-editor-choice-title:
-    title-key: access-editor.choice-title
     size: 54
+    title: <gold>Выбор условия
   gui-commands:
-    title-key: gui.commands
     size: 54
+    title: <gold>Все команды
   gui-list-title:
-    title-key: gui.list-title
     size: 54
+    title: <gold>Список <dark_gray>| <yellow><path>
   gui-npc-title:
-    title-key: gui.npc-title
     size: 54
+    title: <gold>NPC <dark_gray>| <yellow><id>
   gui-npcs:
-    title-key: gui.npcs
     size: 54
+    title: <gold>Персонажи
   gui-place-title:
-    title-key: gui.place-title
     size: 54
+    title: <gold>Объект <dark_gray>| <yellow><id>
   gui-places-title:
-    title-key: gui.places-title
     size: 54
+    title: <gold>Объекты <dark_gray>| <yellow><kind>
   gui-settings-title:
-    title-key: gui.settings-title
     size: 54
+    title: <gold>Настройки <dark_gray>| <yellow><module>
   gui-skin-title:
-    title-key: gui.skin-title
     size: 54
+    title: <gold>Облик игрока
   gui-wizard-title:
-    title-key: gui.wizard-title
     size: 54
+    title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
   module-menu-title:
-    title-key: module-menu.title
     size: 54
+    title: <gold>Настройки модулей LoveEssential
   settings-help-choice-title:
-    title-key: settings-help.choice-title
     size: 54
+    title: <gold>Выберите значение
   settings-help-number-title:
-    title-key: settings-help.number-title
     size: 54
+    title: <gold>Числовой параметр
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -45,15 +45,15 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   lang-version: 2
   common:
     back: <gray>Назад
     next: <green>Далее
     save-draft: <yellow>Сохранить черновик
-    discard: <red>Отменить черновик
+    discard: <red>Удалить черновик
     preview: <aqua>Предпросмотр
-    publish: <green>Опубликовать
+    publish: <gold>Сохранить NPC
     done: <green>Готово.
     saved: <green>Изменения сохранены.
     reloaded: <green>Настройки перезагружены.
@@ -81,7 +81,7 @@ texts:
   validation:
     npc: <red>Некорректное определение NPC.
     id: '<red>ID: 1–48 символов a-z, 0-9, _ или -. Сначала задайте ID.'
-    lang: <red>Отсутствует ключ в lang.yml.
+    lang: <red>Отсутствует ключ в конфиге модуля.
     option: <red>Неизвестная настройка или значение вне допустимых границ.
     points: <red>Достигнут лимит точек маршрута.
     world-transition: <red>Обычный маршрут не может соединять разные миры.
@@ -103,20 +103,9 @@ texts:
     npc-failed: Не удалось создать NPC; повтор через 10 секунд.
     npc-sound-failed: Некорректный звук взаимодействия NPC.
   help:
-    main: &id001
-    - <gold>LoveEssential <dark_gray>| <yellow>Команды
-    - <gray>/le — панель управления; /le help — все команды
-    - <gray>/le npc create <id>; /le npc edit <id>; /le npc delete <id> confirm
-    - <gray>/le home [имя]; /le sethome [имя]; /le delhome [имя]; /le homes
-    - <gray>/le skin <имя>; /le spawn [имя]; /le setspawn [имя]
-    - <gray>/le tpa <игрок>; /le tpahere <игрок>; /le tpaccept; /le tpdeny; /le back
-    - <gray>/le afk; /le vanish; /le sit; /le ride; /le profile
-    - <gray>/le portal; /le hologram — управление объектами
-    - <gray>/le module [имя] [enable|disable|settings|info|reload]
-    - <gray>/le tab — настройки; /le tab export — применить в TAB
-    - <gray>/le integrations; /le reload; /le backup
-    - <gray>Короткие команды и русские псевдонимы также доступны.
-    npc: &id002
+    tab: <gray>/le tab — редактор строк, групп, плейсхолдеров и оформления собственного TAB.
+    overview: <gold>LoveEssential <dark_gray>· <gray>/le help — доступные команды
+    npc-commands:
     - <gold>Редактор NPC
     - <gray>/le npc create <id>; /le npc delete <id> confirm
     - <gray>/npc wizard; /npc edit <id>
@@ -126,10 +115,10 @@ texts:
     - <gray>/npc save; /npc publish; /npc preview
     - <gray>/npc delete <id> confirm
     - <gray>/le npc — список, создание и удаление через меню
-    tab: <gray>/le tab — редактор строк, групп, плейсхолдеров и оформления собственного TAB.
-    overview: *id001
-    npc-commands: *id002
     tab-settings: '<gray>Настройки собственного TAB: modules/tab/tab.yml; /le tab — меню настройки.'
+    player: <gold>LoveEssential <dark_gray>· <gray>/профиль · /спавн · /дом · /msg <имя> <текст>
+    admin: <gold>LoveEssential <dark_gray>· <gray>/le — модули · /le npc · /le portals · /le tab · /le scoreboard
+      edit
   modules:
     list: '<gray>Модули: <modules>'
     state: '<gray><module>: <state>'
@@ -143,6 +132,7 @@ texts:
     confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
     names: {}
   wizard:
+    new-npc: Новый NPC
     title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
     value: '<gray>Значение: <white><value>'
     changed: '<green>Изменено: <field>'
@@ -158,7 +148,7 @@ texts:
     no-prompt: <gray>Нет активного запроса ввода.
     route-tool: <gold>Редактор маршрута — ПКМ добавляет вашу позицию
     confirm-discard: <yellow>Введите DELETE для отмены черновика.
-    prompt-value: <yellow>Введите значение в чат или /le input <значение>.
+    prompt-value: <yellow>Введите значение в чат.
     prompt-mode: '<yellow>Режим: ONCE, LOOP, PING_PONG, RANDOM.'
     prompt-point: '<yellow>Введите: номер поле значение. Поля: wait, speed, radius, position, condition, actions.'
     prompt-node: '<yellow>Введите: id_узла текст реплики.'
@@ -235,7 +225,7 @@ texts:
     action-title: <gold>Добавить действие
     clear-conditions: <red>Удалить все условия
     clear-actions: <red>Удалить все действия
-    prompt-text: <yellow>Введите текст сообщения. Он будет сохранён в lang.yml.
+    prompt-text: <yellow>Введите текст сообщения. Он будет сохранён в конфиге модуля.
     conditions:
       authenticated: <gold>Авторизация
       permission: <gold>Право доступа
@@ -315,13 +305,11 @@ texts:
     title: <gold>LoveEssential <dark_gray>| <yellow>Управление
     separator: <dark_gray><st>─────────────────────</st>
     modules: <gold>Модули
-    npcs: <gold>Персонажи
     tab: <gold>Список игроков
     homes: <gold>Дома
     spawns: <gold>Точки спавна
     portals: <gold>Порталы
     holograms: <gold>Голограммы
-    commands: <gold>Все команды
     integrations: <gold>Интеграции Love
     backup: <gold>Резервная копия
     reload: <gold>Перезагрузить настройки
@@ -333,17 +321,15 @@ texts:
     locked: <red>Действие недоступно
     permission: '<red>Причина: <gray>Недостаточно прав или модуль отключён.'
     file: '<gray>Файл: <white><path>'
-    path: '<gray>Параметр: <white><path>'
+    path: '<gray>Раздел настройки: <white><path>'
     value: '<gray>Значение: <white><value>'
     label: <gold><name>
-    settings-title: <gold>Настройки <dark_gray>| <yellow><module>
-    list-title: <gold>Список <dark_gray>| <yellow><path>
     list-count: 'Элементов:'
     tab-export: <gold>Применить настройки в TAB
-    prompt-text: <yellow>Введите текст. Он будет сохранён в lang.yml. Разметка MiniMessage поддерживается.
-    prompt-value: <yellow>Введите значение в чат или /le input значение. Символ - очищает текстовое значение.
+    prompt-text: <yellow>Введите текст. Он будет сохранён в конфиге модуля. Разметка MiniMessage поддерживается.
+    prompt-value: <yellow>Введите значение в чат. Символ - очищает текстовое значение.
     prompt-id: '<yellow>Введите ID: 1–48 символов a-z, 0-9, _ или -.'
-    prompt-cancel: '<gray>Для возврата в меню: <white>cancel <gray>или <white>/le input cancel<gray>. Время ввода — 3 минуты.'
+    prompt-cancel: <gray>Для возврата используйте кнопку [Отмена] в чате. Время ввода — 3 минуты.
     add: <green>Добавить
     remove: <red>Удалить
     resume: <gold>Продолжить черновик
@@ -354,10 +340,7 @@ texts:
     dialog-npc: <gold>Диалог NPC
     schedule-npc: <gold>Расписание NPC
     debug-npc: <gold>Диагностика NPC
-    npc-id: '<gray>ID: <white><id>'
-    npc-title: <gold>NPC <dark_gray>| <yellow><id>
-    places-title: <gold>Объекты <dark_gray>| <yellow><kind>
-    place-title: <gold>Объект <dark_gray>| <yellow><id>
+    npc-id: '<gray>Номер NPC: <white><id>'
     pos1: <gold>Первая точка портала
     destination: <gold>Назначение — текущая позиция
     move: <gold>Переместить сюда
@@ -380,7 +363,7 @@ texts:
       settings: <green>ЛКМ <dark_gray>— <gray>настройки модуля
       toggle: <gold>ПКМ <dark_gray>— <gray>включить или отключить
       switch: <green>ЛКМ <dark_gray>— <gray>переключить
-      text: <gold>ПКМ <dark_gray>— <gray>изменить текст в lang.yml
+      text: <gold>ПКМ <dark_gray>— <gray>изменить текст в конфиге модуля
       remove: <gold>ПКМ <dark_gray>— <gray>удалить с подтверждением
       select: <green>ЛКМ <dark_gray>— <gray>выбрать
       blocked: <dark_gray>ЛКМ — действие заблокировано
@@ -692,10 +675,10 @@ texts:
               _label: <gold>Иконка
             permission:
               _label: <gold>Право просмотра
-            title-key:
-              _label: <gold>Ключ заголовка в lang.yml
-            lore-keys:
-              _label: <gold>Ключи строк в lang.yml
+            title:
+              _label: <gold>Заголовок
+            lore:
+              _label: <gold>Строки описания
           survival:
             _label: <gold>Состояние
             enabled:
@@ -704,10 +687,10 @@ texts:
               _label: <gold>Иконка
             permission:
               _label: <gold>Право просмотра
-            title-key:
-              _label: <gold>Ключ заголовка в lang.yml
-            lore-keys:
-              _label: <gold>Ключи строк в lang.yml
+            title:
+              _label: <gold>Заголовок
+            lore:
+              _label: <gold>Строки описания
           progress:
             _label: <gold>Прогресс
             enabled:
@@ -716,10 +699,10 @@ texts:
               _label: <gold>Иконка
             permission:
               _label: <gold>Право просмотра
-            title-key:
-              _label: <gold>Ключ заголовка в lang.yml
-            lore-keys:
-              _label: <gold>Ключи строк в lang.yml
+            title:
+              _label: <gold>Заголовок
+            lore:
+              _label: <gold>Строки описания
           statistics:
             _label: <gold>Статистика
             enabled:
@@ -728,10 +711,10 @@ texts:
               _label: <gold>Иконка
             permission:
               _label: <gold>Право просмотра
-            title-key:
-              _label: <gold>Ключ заголовка в lang.yml
-            lore-keys:
-              _label: <gold>Ключи строк в lang.yml
+            title:
+              _label: <gold>Заголовок
+            lore:
+              _label: <gold>Строки описания
           social:
             _label: <gold>Связи
             enabled:
@@ -740,10 +723,10 @@ texts:
               _label: <gold>Иконка
             permission:
               _label: <gold>Право просмотра
-            title-key:
-              _label: <gold>Ключ заголовка в lang.yml
-            lore-keys:
-              _label: <gold>Ключи строк в lang.yml
+            title:
+              _label: <gold>Заголовок
+            lore:
+              _label: <gold>Строки описания
           location:
             _label: <gold>Местоположение
             enabled:
@@ -752,10 +735,10 @@ texts:
               _label: <gold>Иконка
             permission:
               _label: <gold>Право просмотра
-            title-key:
-              _label: <gold>Ключ заголовка в lang.yml
-            lore-keys:
-              _label: <gold>Ключи строк в lang.yml
+            title:
+              _label: <gold>Заголовок
+            lore:
+              _label: <gold>Строки описания
       nightskip:
         max-multiplier:
           _label: <gold>Максимальное ускорение ночи
@@ -851,11 +834,11 @@ texts:
               _label: <gold>Право группы
             priority:
               _label: <gold>Приоритет
-            name-key:
+            name:
               _label: <gold>Ключ имени
-            prefix-key:
+            prefix:
               _label: <gold>Ключ префикса
-            suffix-key:
+            suffix:
               _label: <gold>Ключ суффикса
           knight:
             _label: <gold>knight
@@ -863,11 +846,11 @@ texts:
               _label: <gold>Право группы
             priority:
               _label: <gold>Приоритет
-            name-key:
+            name:
               _label: <gold>Ключ имени
-            prefix-key:
+            prefix:
               _label: <gold>Ключ префикса
-            suffix-key:
+            suffix:
               _label: <gold>Ключ суффикса
         nametag:
           _label: <gold>Надпись над игроком
@@ -881,19 +864,19 @@ texts:
           _label: <gold>Заголовок и подвал
           enabled:
             _label: <gold>Включено
-          header-key:
-            _label: <gold>Ключ заголовка
-          footer-key:
-            _label: <gold>Ключ подвала
           profiles:
             _label: <gold>Профили
+          header:
+            _label: <gold>Ключ заголовка
+          footer:
+            _label: <gold>Ключ подвала
         playerlist-objective:
           _label: <gold>Показатель в списке
           enabled:
             _label: <gold>Включено
           value:
             _label: <gold>Значение
-          title-key:
+          title:
             _label: <gold>Ключ заголовка
         below-name:
           _label: <gold>Показатель под именем
@@ -901,15 +884,15 @@ texts:
             _label: <gold>Включено
           value:
             _label: <gold>Значение
-          title-key:
+          title:
             _label: <gold>Ключ заголовка
         sidebar:
           _label: <gold>Боковая панель
           enabled:
             _label: <gold>Включено
-          title-key:
+          title:
             _label: <gold>Ключ заголовка
-          line-keys:
+          line:
             _label: <gold>Ключи строк
         bossbars:
           _label: <gold>Полосы босса
@@ -917,14 +900,14 @@ texts:
             _label: <gold>kingdom
             enabled:
               _label: <gold>Включено
-            text-key:
-              _label: <gold>Ключ текста
             progress:
               _label: <gold>Заполнение
             color:
               _label: <gold>Цвет
             overlay:
               _label: <gold>Деления
+            text:
+              _label: <gold>Ключ текста
         external:
           _label: <gold>Настройки внешнего TAB
           config:
@@ -1111,14 +1094,12 @@ texts:
                 _label: <gold>tagprefix
           animations:
             _label: <gold>Анимации
-    wizard-title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
     locked-suffix: ' <dark_gray>| <red>Недоступно'
-    skin-title: <gold>Облик игрока
     skin-name: <gold>Установить скин по имени
     skin-reset: <gold>Вернуть собственный скин
     prompt-skin: '<yellow>Введите имя владельца скина: латинские буквы, цифры и _, до 16 символов.'
+    menu: <gold>Меню
   module-menu:
-    title: <gold>Настройки модулей LoveEssential
     descriptions:
       worlds:
       - <gray>Создание, импорт, загрузка и настройки отдельных миров. /le worlds.
@@ -1182,7 +1163,7 @@ texts:
     example: '<gray>Пример ввода: <yellow><value>'
     cancel-button: <red><bold>[ОТМЕНИТЬ ВВОД]</bold> <gray>— нажмите, чтобы вернуться
     cancel-hover: <yellow>Отменить этот запрос и вернуться в меню.
-    delivery: <gray>Напишите ответ в чат или /le input значение. Ожидание — 3 минуты.
+    delivery: <gray>Напишите ответ в чат. Ожидание — 3 минуты.
     cancelled: <gray>Ввод отменён. Изменения не применены.
     expired: <yellow>Запрос ввода истёк. Откройте нужный параметр снова.
     stale-cancel: <gray>Эта кнопка относится к завершённому запросу. Новый запрос остаётся активным.
@@ -1241,11 +1222,9 @@ texts:
     number: <gray>Изменяйте число кнопками или введите точное значение.
     list: <gray>Откройте список, чтобы добавить, изменить или удалить элемент.
     text: <gray>Текстовое значение. При вводе «-» строка очищается.
-    choice-title: <gold>Выберите значение
     choices:
       native: <gold>Средствами Paper
       tab: <gold>Через установленный TAB от NEZNAMY
-    number-title: <gold>Числовой параметр
     change: <gold>Изменить на <amount>
     npc-number-shortcuts: '<gray>ПКМ: увеличить; Shift+ПКМ: уменьшить. ЛКМ: точный ввод.'
   npc-editor:
@@ -1279,7 +1258,7 @@ texts:
   npc-help:
     fields:
       id: '<gray>Уникальный ID NPC: 1–48 строчных латинских букв, цифр, _ или -. После публикации не меняется.'
-      name: <gray>Имя над NPC с поддержкой цветовой разметки MiniMessage. Текст сохраняется в lang.yml.
+      name: <gray>Имя над NPC с поддержкой цветовой разметки MiniMessage. Текст сохраняется в конфиге модуля.
       type: <gray>Модель сущности Minecraft. MANNEQUIN поддерживает скин игрока; возможности других моделей отличаются.
       spawn: <gray>Нажмите, чтобы NPC появлялся в вашей текущей позиции. Проверяется безопасность и территория.
       skin: <gray>Имя или UUID владельца скина для MANNEQUIN. «-» убирает выбранный скин.
@@ -1345,7 +1324,7 @@ texts:
       name: <gold>Хранитель
       skin: Notch
       follow-player: Steve
-      description-key: npc.description.guard
+      description: npc.description.guard
   module-help:
     hologram:
       max-holograms:
@@ -1358,9 +1337,11 @@ texts:
         _description: <gray>Суммарный бюджет TextDisplay, ItemDisplay и Interaction для всех игроков.
     sitride:
       click-to-sit:
-        _description: <gray>ПКМ пустой основной рукой по ступеням, плитам или ковру садит игрока. Shift пропускает действие.
+        _description: <gray>ПКМ пустой основной рукой по ступеням, плитам или ковру садит игрока. Shift пропускает
+          действие.
       ride-range:
-        _description: <gray>Максимальное расстояние до цели /ride. Проверяются прямая видимость, территория, бой и согласие игрока.
+        _description: <gray>Максимальное расстояние до цели /ride. Проверяются прямая видимость, территория, бой
+          и согласие игрока.
     traces:
       default-enabled:
         _description: <gray>Начальное состояние следов. Личный выбор /traces хранится в SQLite и имеет приоритет.
@@ -1399,11 +1380,14 @@ texts:
         _description: <gray>Интервал обновления живого инвентаря. 20 тиков = 1 секунда.
     profile:
       privacy:
-        _description: <gray>Начальные значения для игроков без сохранённого выбора; личные переключатели хранятся в SQLite.
+        _description: <gray>Начальные значения для игроков без сохранённого выбора; личные переключатели хранятся
+          в SQLite.
       links:
-        _description: <gray>Команды исполняются от имени игрока, без OP и консоли. Проверяются плагин-владелец, права и доступ к профилю.
+        _description: <gray>Команды исполняются от имени игрока, без OP и консоли. Проверяются плагин-владелец,
+          права и доступ к профилю.
       adaptation-cards:
-        _description: <gray>Карточки только для просмотра. Тексты по ключам lang.yml получают плейсхолдеры выбранного игрока.
+        _description: <gray>Карточки только для просмотра. Тексты из конфига модуля получают плейсхолдеры выбранного
+          игрока.
       setting-controls:
         _description: <gray>Кнопки личных настроек профиля со ссылкой на команду модуля и локализованные подписи.
       refresh-ticks:
@@ -1585,7 +1569,6 @@ texts:
       adventure: Приключение
       spectator: Наблюдатель
   access-editor:
-    choice-title: <gold>Выбор условия
     access:
       title: <gold>Ограничения использования
       help: <gray>Правила для действий игрока и показа модуля. Административный редактор доступен по своему праву.
@@ -1610,1549 +1593,224 @@ texts:
     required-states:
       title: <gold>Обязательные состояния
       help: <gray>Нужны сразу все выбранные состояния, например авторизован и на земле.
-buttons:
-  npc-default-name:
-    title-key: npc.default-name
-    texture: ''
-  npc-entry:
-    title-key: npc.entry
-    texture: ''
-  wizard-title:
-    title-key: wizard.title
-    texture: ''
-  wizard-route-tool:
-    title-key: wizard.route-tool
-    texture: ''
-  wizard-fields-template:
-    title-key: wizard.fields.template
-    texture: ''
-  wizard-fields-id:
-    title-key: wizard.fields.id
-    texture: ''
-  wizard-fields-name:
-    title-key: wizard.fields.name
-    texture: ''
-  wizard-fields-type:
-    title-key: wizard.fields.type
-    texture: ''
-  wizard-fields-spawn:
-    title-key: wizard.fields.spawn
-    texture: ''
-  wizard-fields-skin:
-    title-key: wizard.fields.skin
-    texture: ''
-  wizard-fields-helmet:
-    title-key: wizard.fields.helmet
-    texture: ''
-  wizard-fields-chestplate:
-    title-key: wizard.fields.chestplate
-    texture: ''
-  wizard-fields-leggings:
-    title-key: wizard.fields.leggings
-    texture: ''
-  wizard-fields-boots:
-    title-key: wizard.fields.boots
-    texture: ''
-  wizard-fields-main-hand:
-    title-key: wizard.fields.main-hand
-    texture: ''
-  wizard-fields-off-hand:
-    title-key: wizard.fields.off-hand
-    texture: ''
-  wizard-fields-pose:
-    title-key: wizard.fields.pose
-    texture: ''
-  wizard-fields-scale:
-    title-key: wizard.fields.scale
-    texture: ''
-  wizard-fields-baby:
-    title-key: wizard.fields.baby
-    texture: ''
-  wizard-fields-glowing:
-    title-key: wizard.fields.glowing
-    texture: ''
-  wizard-fields-name-visible:
-    title-key: wizard.fields.name-visible
-    texture: ''
-  wizard-fields-silent:
-    title-key: wizard.fields.silent
-    texture: ''
-  wizard-fields-personal:
-    title-key: wizard.fields.personal
-    texture: ''
-  wizard-fields-visibility:
-    title-key: wizard.fields.visibility
-    texture: ''
-  wizard-fields-access:
-    title-key: wizard.fields.access
-    texture: ''
-  wizard-fields-require-auth:
-    title-key: wizard.fields.require-auth
-    texture: ''
-  wizard-fields-interaction-range:
-    title-key: wizard.fields.interaction-range
-    texture: ''
-  wizard-fields-cooldown-ms:
-    title-key: wizard.fields.cooldown-ms
-    texture: ''
-  wizard-fields-interaction-mode:
-    title-key: wizard.fields.interaction-mode
-    texture: ''
-  wizard-fields-line-of-sight:
-    title-key: wizard.fields.line-of-sight
-    texture: ''
-  wizard-fields-interaction-sound:
-    title-key: wizard.fields.interaction-sound
-    texture: ''
-  wizard-fields-interaction-volume:
-    title-key: wizard.fields.interaction-volume
-    texture: ''
-  wizard-fields-interaction-pitch:
-    title-key: wizard.fields.interaction-pitch
-    texture: ''
-  wizard-fields-movement:
-    title-key: wizard.fields.movement
-    texture: ''
-  wizard-fields-speed:
-    title-key: wizard.fields.speed
-    texture: ''
-  wizard-fields-look-at:
-    title-key: wizard.fields.look-at
-    texture: ''
-  wizard-fields-look-range:
-    title-key: wizard.fields.look-range
-    texture: ''
-  wizard-fields-pause-on-interact:
-    title-key: wizard.fields.pause-on-interact
-    texture: ''
-  wizard-fields-stuck-policy:
-    title-key: wizard.fields.stuck-policy
-    texture: ''
-  wizard-fields-activation-range:
-    title-key: wizard.fields.activation-range
-    texture: ''
-  wizard-fields-point-add:
-    title-key: wizard.fields.point-add
-    texture: ''
-  wizard-fields-point-mode:
-    title-key: wizard.fields.point-mode
-    texture: ''
-  wizard-fields-point-record:
-    title-key: wizard.fields.point-record
-    texture: ''
-  wizard-fields-point-tool:
-    title-key: wizard.fields.point-tool
-    texture: ''
-  wizard-fields-point-show:
-    title-key: wizard.fields.point-show
-    texture: ''
-  wizard-fields-point-edit:
-    title-key: wizard.fields.point-edit
-    texture: ''
-  wizard-fields-point-undo:
-    title-key: wizard.fields.point-undo
-    texture: ''
-  wizard-fields-point-redo:
-    title-key: wizard.fields.point-redo
-    texture: ''
-  wizard-fields-dialog-node:
-    title-key: wizard.fields.dialog-node
-    texture: ''
-  wizard-fields-dialog-answer:
-    title-key: wizard.fields.dialog-answer
-    texture: ''
-  wizard-fields-dialog-start:
-    title-key: wizard.fields.dialog-start
-    texture: ''
-  wizard-fields-dialog-condition:
-    title-key: wizard.fields.dialog-condition
-    texture: ''
-  wizard-fields-dialog-actions:
-    title-key: wizard.fields.dialog-actions
-    texture: ''
-  wizard-fields-actions:
-    title-key: wizard.fields.actions
-    texture: ''
-  wizard-fields-enabled-hours:
-    title-key: wizard.fields.enabled-hours
-    texture: ''
-  wizard-fields-hour-from:
-    title-key: wizard.fields.hour-from
-    texture: ''
-  wizard-fields-hour-to:
-    title-key: wizard.fields.hour-to
-    texture: ''
-  wizard-fields-enabled:
-    title-key: wizard.fields.enabled
-    texture: ''
-  wizard-fields-collidable:
-    title-key: wizard.fields.collidable
-    texture: ''
-  wizard-fields-gravity:
-    title-key: wizard.fields.gravity
-    texture: ''
-  wizard-fields-invulnerable:
-    title-key: wizard.fields.invulnerable
-    texture: ''
-  wizard-fields-avoid-water:
-    title-key: wizard.fields.avoid-water
-    texture: ''
-  wizard-fields-can-open-doors:
-    title-key: wizard.fields.can-open-doors
-    texture: ''
-  wizard-fields-teleport-on-stuck:
-    title-key: wizard.fields.teleport-on-stuck
-    texture: ''
-  wizard-fields-follow-player:
-    title-key: wizard.fields.follow-player
-    texture: ''
-  wizard-fields-follow-distance:
-    title-key: wizard.fields.follow-distance
-    texture: ''
-  wizard-fields-stuck-ticks:
-    title-key: wizard.fields.stuck-ticks
-    texture: ''
-  wizard-condition-title:
-    title-key: wizard.condition-title
-    texture: ''
-  wizard-action-title:
-    title-key: wizard.action-title
-    texture: ''
-  wizard-conditions-authenticated:
-    title-key: wizard.conditions.authenticated
-    texture: ''
-  wizard-conditions-permission:
-    title-key: wizard.conditions.permission
-    texture: ''
-  wizard-conditions-world:
-    title-key: wizard.conditions.world
-    texture: ''
-  wizard-conditions-reputation:
-    title-key: wizard.conditions.reputation
-    texture: ''
-  wizard-conditions-clan:
-    title-key: wizard.conditions.clan
-    texture: ''
-  wizard-conditions-territory:
-    title-key: wizard.conditions.territory
-    texture: ''
-  wizard-conditions-not-in-combat:
-    title-key: wizard.conditions.not-in-combat
-    texture: ''
-  wizard-conditions-item:
-    title-key: wizard.conditions.item
-    texture: ''
-  wizard-conditions-time:
-    title-key: wizard.conditions.time
-    texture: ''
-  wizard-conditions-weather:
-    title-key: wizard.conditions.weather
-    texture: ''
-  wizard-conditions-balance:
-    title-key: wizard.conditions.balance
-    texture: ''
-  wizard-action-types-message:
-    title-key: wizard.action-types.message
-    texture: ''
-  wizard-action-types-actionbar:
-    title-key: wizard.action-types.actionbar
-    texture: ''
-  wizard-action-types-sound:
-    title-key: wizard.action-types.sound
-    texture: ''
-  wizard-action-types-reputation:
-    title-key: wizard.action-types.reputation
-    texture: ''
-  wizard-action-types-stat:
-    title-key: wizard.action-types.stat
-    texture: ''
-  wizard-action-types-command:
-    title-key: wizard.action-types.command
-    texture: ''
-  wizard-action-types-lovecontracts_board:
-    title-key: wizard.action-types.lovecontracts_board
-    texture: ''
-  wizard-action-types-lovecontracts_player-board:
-    title-key: wizard.action-types.lovecontracts_player-board
-    texture: ''
-  wizard-action-types-lovecontracts_my:
-    title-key: wizard.action-types.lovecontracts_my
-    texture: ''
-  wizard-action-types-loveshops_banker:
-    title-key: wizard.action-types.loveshops_banker
-    texture: ''
-  wizard-action-types-charge:
-    title-key: wizard.action-types.charge
-    texture: ''
-  wizard-action-types-give:
-    title-key: wizard.action-types.give
-    texture: ''
-  wizard-sections-title:
-    title-key: wizard.sections-title
-    texture: ''
-  wizard-sections-0:
-    title-key: wizard.sections.0
-    texture: ''
-  wizard-sections-1:
-    title-key: wizard.sections.1
-    texture: ''
-  wizard-sections-2:
-    title-key: wizard.sections.2
-    texture: ''
-  wizard-sections-3:
-    title-key: wizard.sections.3
-    texture: ''
-  wizard-sections-4:
-    title-key: wizard.sections.4
-    texture: ''
-  wizard-sections-5:
-    title-key: wizard.sections.5
-    texture: ''
-  wizard-sections-6:
-    title-key: wizard.sections.6
-    texture: ''
-  wizard-choices-RIGHT_CLICK:
-    title-key: wizard.choices.RIGHT_CLICK
-    texture: ''
-  wizard-choices-LEFT_CLICK:
-    title-key: wizard.choices.LEFT_CLICK
-    texture: ''
-  wizard-choices-BOTH:
-    title-key: wizard.choices.BOTH
-    texture: ''
-  wizard-choices-route:
-    title-key: wizard.choices.route
-    texture: ''
-  wizard-choices-follow:
-    title-key: wizard.choices.follow
-    texture: ''
-  wizard-choices-stationary:
-    title-key: wizard.choices.stationary
-    texture: ''
-  wizard-choices-PAUSE:
-    title-key: wizard.choices.PAUSE
-    texture: ''
-  wizard-choices-SKIP:
-    title-key: wizard.choices.SKIP
-    texture: ''
-  wizard-choices-RETURN_HOME:
-    title-key: wizard.choices.RETURN_HOME
-    texture: ''
-  wizard-choices-guard:
-    title-key: wizard.choices.guard
-    texture: ''
-  wizard-choices-guide:
-    title-key: wizard.choices.guide
-    texture: ''
-  wizard-choices-merchant:
-    title-key: wizard.choices.merchant
-    texture: ''
-  wizard-choices-quest:
-    title-key: wizard.choices.quest
-    texture: ''
-  wizard-choices-decoration:
-    title-key: wizard.choices.decoration
-    texture: ''
-  wizard-choices-MANNEQUIN:
-    title-key: wizard.choices.MANNEQUIN
-    texture: ''
-  wizard-choices-VILLAGER:
-    title-key: wizard.choices.VILLAGER
-    texture: ''
-  wizard-choices-WANDERING_TRADER:
-    title-key: wizard.choices.WANDERING_TRADER
-    texture: ''
-  wizard-choices-ARMOR_STAND:
-    title-key: wizard.choices.ARMOR_STAND
-    texture: ''
-  wizard-choices-ZOMBIE:
-    title-key: wizard.choices.ZOMBIE
-    texture: ''
-  wizard-choices-SKELETON:
-    title-key: wizard.choices.SKELETON
-    texture: ''
-  wizard-choices-CAT:
-    title-key: wizard.choices.CAT
-    texture: ''
-  wizard-choices-WOLF:
-    title-key: wizard.choices.WOLF
-    texture: ''
-  wizard-choices-IRON_GOLEM:
-    title-key: wizard.choices.IRON_GOLEM
-    texture: ''
-  wizard-choices-ALLAY:
-    title-key: wizard.choices.ALLAY
-    texture: ''
-  gui-title:
-    title-key: gui.title
-    texture: ''
-  gui-modules:
-    title-key: gui.modules
-    texture: ''
-  gui-npcs:
-    title-key: gui.npcs
-    texture: ''
-  gui-tab:
-    title-key: gui.tab
-    texture: ''
-  gui-homes:
-    title-key: gui.homes
-    texture: ''
-  gui-spawns:
-    title-key: gui.spawns
-    texture: ''
-  gui-portals:
-    title-key: gui.portals
-    texture: ''
-  gui-holograms:
-    title-key: gui.holograms
-    texture: ''
-  gui-commands:
-    title-key: gui.commands
-    texture: ''
-  gui-integrations:
-    title-key: gui.integrations
-    texture: ''
-  gui-backup:
-    title-key: gui.backup
-    texture: ''
-  gui-reload:
-    title-key: gui.reload
-    texture: ''
-  gui-previous:
-    title-key: gui.previous
-    texture: ''
-  gui-page:
-    title-key: gui.page
-    texture: ''
-  gui-label:
-    title-key: gui.label
-    texture: ''
-  gui-settings-title:
-    title-key: gui.settings-title
-    texture: ''
-  gui-list-title:
-    title-key: gui.list-title
-    texture: ''
-  gui-tab-export:
-    title-key: gui.tab-export
-    texture: ''
-  gui-resume:
-    title-key: gui.resume
-    texture: ''
-  gui-edit-npc:
-    title-key: gui.edit-npc
-    texture: ''
-  gui-path-npc:
-    title-key: gui.path-npc
-    texture: ''
-  gui-dialog-npc:
-    title-key: gui.dialog-npc
-    texture: ''
-  gui-schedule-npc:
-    title-key: gui.schedule-npc
-    texture: ''
-  gui-debug-npc:
-    title-key: gui.debug-npc
-    texture: ''
-  gui-npc-title:
-    title-key: gui.npc-title
-    texture: ''
-  gui-places-title:
-    title-key: gui.places-title
-    texture: ''
-  gui-place-title:
-    title-key: gui.place-title
-    texture: ''
-  gui-pos1:
-    title-key: gui.pos1
-    texture: ''
-  gui-destination:
-    title-key: gui.destination
-    texture: ''
-  gui-move:
-    title-key: gui.move
-    texture: ''
-  gui-add-line:
-    title-key: gui.add-line
-    texture: ''
-  gui-command-name:
-    title-key: gui.command-name
-    texture: ''
-  gui-manual-input:
-    title-key: gui.manual-input
-    texture: ''
-  gui-click-toggle:
-    title-key: gui.click.toggle
-    texture: ''
-  gui-click-text:
-    title-key: gui.click.text
-    texture: ''
-  gui-click-remove:
-    title-key: gui.click.remove
-    texture: ''
-  gui-module-names-worlds:
-    title-key: gui.module-names.worlds
-    texture: ''
-  gui-module-names-scenarios:
-    title-key: gui.module-names.scenarios
-    texture: ''
-  gui-module-names-dialogs:
-    title-key: gui.module-names.dialogs
-    texture: ''
-  gui-module-names-scoreboard:
-    title-key: gui.module-names.scoreboard
-    texture: ''
-  gui-module-names-crafting:
-    title-key: gui.module-names.crafting
-    texture: ''
-  gui-module-names-starter:
-    title-key: gui.module-names.starter
-    texture: ''
-  gui-module-names-nickname:
-    title-key: gui.module-names.nickname
-    texture: ''
-  gui-module-names-messages:
-    title-key: gui.module-names.messages
-    texture: ''
-  gui-module-names-inventory:
-    title-key: gui.module-names.inventory
-    texture: ''
-  gui-module-names-profile:
-    title-key: gui.module-names.profile
-    texture: ''
-  gui-module-names-npc:
-    title-key: gui.module-names.npc
-    texture: ''
-  gui-module-names-tab:
-    title-key: gui.module-names.tab
-    texture: ''
-  gui-module-names-home:
-    title-key: gui.module-names.home
-    texture: ''
-  gui-module-names-spawn:
-    title-key: gui.module-names.spawn
-    texture: ''
-  gui-module-names-teleport:
-    title-key: gui.module-names.teleport
-    texture: ''
-  gui-module-names-vanish:
-    title-key: gui.module-names.vanish
-    texture: ''
-  gui-module-names-afk:
-    title-key: gui.module-names.afk
-    texture: ''
-  gui-module-names-skin:
-    title-key: gui.module-names.skin
-    texture: ''
-  gui-module-names-utilities:
-    title-key: gui.module-names.utilities
-    texture: ''
-  gui-module-names-sitride:
-    title-key: gui.module-names.sitride
-    texture: ''
-  gui-module-names-nightskip:
-    title-key: gui.module-names.nightskip
-    texture: ''
-  gui-module-names-portal:
-    title-key: gui.module-names.portal
-    texture: ''
-  gui-module-names-hologram:
-    title-key: gui.module-names.hologram
-    texture: ''
-  gui-module-names-traces:
-    title-key: gui.module-names.traces
-    texture: ''
-  gui-module-names-joinquit:
-    title-key: gui.module-names.joinquit
-    texture: ''
-  gui-module-names-motd:
-    title-key: gui.module-names.motd
-    texture: ''
-  gui-settings-worlds-max-worlds-_label:
-    title-key: gui.settings.worlds.max-worlds._label
-    texture: ''
-  gui-settings-scenarios-max-rules-_label:
-    title-key: gui.settings.scenarios.max-rules._label
-    texture: ''
-  gui-settings-scenarios-max-steps-_label:
-    title-key: gui.settings.scenarios.max-steps._label
-    texture: ''
-  gui-settings-scenarios-max-starts-per-minute-_label:
-    title-key: gui.settings.scenarios.max-starts-per-minute._label
-    texture: ''
-  gui-settings-dialogs-max-definitions-_label:
-    title-key: gui.settings.dialogs.max-definitions._label
-    texture: ''
-  gui-settings-scoreboard-refresh-ticks-_label:
-    title-key: gui.settings.scoreboard.refresh-ticks._label
-    texture: ''
-  gui-settings-crafting-max-recipes-_label:
-    title-key: gui.settings.crafting.max-recipes._label
-    texture: ''
-  gui-settings-nickname-min-length-_label:
-    title-key: gui.settings.nickname.min-length._label
-    texture: ''
-  gui-settings-nickname-max-length-_label:
-    title-key: gui.settings.nickname.max-length._label
-    texture: ''
-  gui-settings-nickname-prevent-impersonation-_label:
-    title-key: gui.settings.nickname.prevent-impersonation._label
-    texture: ''
-  gui-settings-nickname-default-color-_label:
-    title-key: gui.settings.nickname.default-color._label
-    texture: ''
-  gui-settings-nickname-apply-display-name-_label:
-    title-key: gui.settings.nickname.apply-display-name._label
-    texture: ''
-  gui-settings-nickname-apply-to-tab-_label:
-    title-key: gui.settings.nickname.apply-to-tab._label
-    texture: ''
-  gui-settings-nickname-apply-to-messages-_label:
-    title-key: gui.settings.nickname.apply-to-messages._label
-    texture: ''
-  gui-settings-nickname-gradients-_label:
-    title-key: gui.settings.nickname.gradients._label
-    texture: ''
-  gui-settings-messages-max-length-_label:
-    title-key: gui.settings.messages.max-length._label
-    texture: ''
-  gui-settings-messages-cooldown-ms-_label:
-    title-key: gui.settings.messages.cooldown-ms._label
-    texture: ''
-  gui-settings-messages-max-ignored-_label:
-    title-key: gui.settings.messages.max-ignored._label
-    texture: ''
-  gui-settings-inventory-refresh-ticks-_label:
-    title-key: gui.settings.inventory.refresh-ticks._label
-    texture: ''
-  gui-settings-profile-privacy-_label:
-    title-key: gui.settings.profile.privacy._label
-    texture: ''
-  gui-settings-profile-privacy-default-visible-_label:
-    title-key: gui.settings.profile.privacy.default-visible._label
-    texture: ''
-  gui-settings-profile-privacy-default-activity-visible-_label:
-    title-key: gui.settings.profile.privacy.default-activity-visible._label
-    texture: ''
-  gui-settings-profile-adaptation-cards-_label:
-    title-key: gui.settings.profile.adaptation-cards._label
-    texture: ''
-  gui-settings-profile-setting-controls-_label:
-    title-key: gui.settings.profile.setting-controls._label
-    texture: ''
-  gui-settings-profile-links-_label:
-    title-key: gui.settings.profile.links._label
-    texture: ''
-  gui-settings-profile-links-account-_label:
-    title-key: gui.settings.profile.links.account._label
-    texture: ''
-  gui-settings-profile-links-account-plugin-_label:
-    title-key: gui.settings.profile.links.account.plugin._label
-    texture: ''
-  gui-settings-profile-links-account-command-_label:
-    title-key: gui.settings.profile.links.account.command._label
-    texture: ''
-  gui-settings-profile-links-account-permission-_label:
-    title-key: gui.settings.profile.links.account.permission._label
-    texture: ''
-  gui-settings-profile-links-behavior-_label:
-    title-key: gui.settings.profile.links.behavior._label
-    texture: ''
-  gui-settings-profile-links-behavior-plugin-_label:
-    title-key: gui.settings.profile.links.behavior.plugin._label
-    texture: ''
-  gui-settings-profile-links-behavior-command-_label:
-    title-key: gui.settings.profile.links.behavior.command._label
-    texture: ''
-  gui-settings-profile-links-behavior-permission-_label:
-    title-key: gui.settings.profile.links.behavior.permission._label
-    texture: ''
-  gui-settings-profile-links-reputation-_label:
-    title-key: gui.settings.profile.links.reputation._label
-    texture: ''
-  gui-settings-profile-links-reputation-plugin-_label:
-    title-key: gui.settings.profile.links.reputation.plugin._label
-    texture: ''
-  gui-settings-profile-links-reputation-command-_label:
-    title-key: gui.settings.profile.links.reputation.command._label
-    texture: ''
-  gui-settings-profile-links-reputation-permission-_label:
-    title-key: gui.settings.profile.links.reputation.permission._label
-    texture: ''
-  gui-settings-profile-links-adaptations-_label:
-    title-key: gui.settings.profile.links.adaptations._label
-    texture: ''
-  gui-settings-profile-links-adaptations-plugin-_label:
-    title-key: gui.settings.profile.links.adaptations.plugin._label
-    texture: ''
-  gui-settings-profile-links-adaptations-command-_label:
-    title-key: gui.settings.profile.links.adaptations.command._label
-    texture: ''
-  gui-settings-profile-links-adaptations-permission-_label:
-    title-key: gui.settings.profile.links.adaptations.permission._label
-    texture: ''
-  gui-settings-profile-links-suffixes-_label:
-    title-key: gui.settings.profile.links.suffixes._label
-    texture: ''
-  gui-settings-profile-links-suffixes-plugin-_label:
-    title-key: gui.settings.profile.links.suffixes.plugin._label
-    texture: ''
-  gui-settings-profile-links-suffixes-command-_label:
-    title-key: gui.settings.profile.links.suffixes.command._label
-    texture: ''
-  gui-settings-profile-links-suffixes-permission-_label:
-    title-key: gui.settings.profile.links.suffixes.permission._label
-    texture: ''
-  gui-settings-profile-links-nickname-_label:
-    title-key: gui.settings.profile.links.nickname._label
-    texture: ''
-  gui-settings-profile-links-nickname-plugin-_label:
-    title-key: gui.settings.profile.links.nickname.plugin._label
-    texture: ''
-  gui-settings-profile-links-nickname-command-_label:
-    title-key: gui.settings.profile.links.nickname.command._label
-    texture: ''
-  gui-settings-profile-links-nickname-permission-_label:
-    title-key: gui.settings.profile.links.nickname.permission._label
-    texture: ''
-  gui-settings-profile-links-scoreboard-_label:
-    title-key: gui.settings.profile.links.scoreboard._label
-    texture: ''
-  gui-settings-profile-links-scoreboard-plugin-_label:
-    title-key: gui.settings.profile.links.scoreboard.plugin._label
-    texture: ''
-  gui-settings-profile-links-scoreboard-command-_label:
-    title-key: gui.settings.profile.links.scoreboard.command._label
-    texture: ''
-  gui-settings-profile-links-scoreboard-permission-_label:
-    title-key: gui.settings.profile.links.scoreboard.permission._label
-    texture: ''
-  gui-settings-profile-links-grammar-_label:
-    title-key: gui.settings.profile.links.grammar._label
-    texture: ''
-  gui-settings-profile-links-grammar-plugin-_label:
-    title-key: gui.settings.profile.links.grammar.plugin._label
-    texture: ''
-  gui-settings-profile-links-grammar-command-_label:
-    title-key: gui.settings.profile.links.grammar.command._label
-    texture: ''
-  gui-settings-profile-links-grammar-permission-_label:
-    title-key: gui.settings.profile.links.grammar.permission._label
-    texture: ''
-  gui-settings-profile-links-silent-_label:
-    title-key: gui.settings.profile.links.silent._label
-    texture: ''
-  gui-settings-profile-links-silent-plugin-_label:
-    title-key: gui.settings.profile.links.silent.plugin._label
-    texture: ''
-  gui-settings-profile-links-silent-command-_label:
-    title-key: gui.settings.profile.links.silent.command._label
-    texture: ''
-  gui-settings-profile-links-silent-permission-_label:
-    title-key: gui.settings.profile.links.silent.permission._label
-    texture: ''
-  gui-settings-profile-links-mentions-_label:
-    title-key: gui.settings.profile.links.mentions._label
-    texture: ''
-  gui-settings-profile-links-mentions-plugin-_label:
-    title-key: gui.settings.profile.links.mentions.plugin._label
-    texture: ''
-  gui-settings-profile-links-mentions-command-_label:
-    title-key: gui.settings.profile.links.mentions.command._label
-    texture: ''
-  gui-settings-profile-links-mentions-permission-_label:
-    title-key: gui.settings.profile.links.mentions.permission._label
-    texture: ''
-  gui-settings-profile-links-channel-_label:
-    title-key: gui.settings.profile.links.channel._label
-    texture: ''
-  gui-settings-profile-links-channel-plugin-_label:
-    title-key: gui.settings.profile.links.channel.plugin._label
-    texture: ''
-  gui-settings-profile-links-channel-command-_label:
-    title-key: gui.settings.profile.links.channel.command._label
-    texture: ''
-  gui-settings-profile-links-channel-permission-_label:
-    title-key: gui.settings.profile.links.channel.permission._label
-    texture: ''
-  gui-settings-profile-links-channel-local-_label:
-    title-key: gui.settings.profile.links.channel-local._label
-    texture: ''
-  gui-settings-profile-links-channel-local-plugin-_label:
-    title-key: gui.settings.profile.links.channel-local.plugin._label
-    texture: ''
-  gui-settings-profile-links-channel-local-command-_label:
-    title-key: gui.settings.profile.links.channel-local.command._label
-    texture: ''
-  gui-settings-profile-links-channel-local-permission-_label:
-    title-key: gui.settings.profile.links.channel-local.permission._label
-    texture: ''
-  gui-settings-profile-links-clan-invites-_label:
-    title-key: gui.settings.profile.links.clan-invites._label
-    texture: ''
-  gui-settings-profile-links-clan-invites-plugin-_label:
-    title-key: gui.settings.profile.links.clan-invites.plugin._label
-    texture: ''
-  gui-settings-profile-links-clan-invites-command-_label:
-    title-key: gui.settings.profile.links.clan-invites.command._label
-    texture: ''
-  gui-settings-profile-links-clan-invites-permission-_label:
-    title-key: gui.settings.profile.links.clan-invites.permission._label
-    texture: ''
-  gui-settings-profile-links-player-trades-_label:
-    title-key: gui.settings.profile.links.player-trades._label
-    texture: ''
-  gui-settings-profile-links-player-trades-plugin-_label:
-    title-key: gui.settings.profile.links.player-trades.plugin._label
-    texture: ''
-  gui-settings-profile-links-player-trades-command-_label:
-    title-key: gui.settings.profile.links.player-trades.command._label
-    texture: ''
-  gui-settings-profile-links-player-trades-permission-_label:
-    title-key: gui.settings.profile.links.player-trades.permission._label
-    texture: ''
-  gui-settings-profile-refresh-ticks-_label:
-    title-key: gui.settings.profile.refresh-ticks._label
-    texture: ''
-  gui-settings-profile-persist-seconds-_label:
-    title-key: gui.settings.profile.persist-seconds._label
-    texture: ''
-  gui-settings-profile-cards-_label:
-    title-key: gui.settings.profile.cards._label
-    texture: ''
-  gui-settings-profile-cards-identity-_label:
-    title-key: gui.settings.profile.cards.identity._label
-    texture: ''
-  gui-settings-profile-cards-identity-enabled-_label:
-    title-key: gui.settings.profile.cards.identity.enabled._label
-    texture: ''
-  gui-settings-profile-cards-identity-material-_label:
-    title-key: gui.settings.profile.cards.identity.material._label
-    texture: ''
-  gui-settings-profile-cards-identity-permission-_label:
-    title-key: gui.settings.profile.cards.identity.permission._label
-    texture: ''
-  gui-settings-profile-cards-identity-title-key-_label:
-    title-key: gui.settings.profile.cards.identity.title-key._label
-    texture: ''
-  gui-settings-profile-cards-identity-lore-keys-_label:
-    title-key: gui.settings.profile.cards.identity.lore-keys._label
-    texture: ''
-  gui-settings-profile-cards-survival-_label:
-    title-key: gui.settings.profile.cards.survival._label
-    texture: ''
-  gui-settings-profile-cards-survival-enabled-_label:
-    title-key: gui.settings.profile.cards.survival.enabled._label
-    texture: ''
-  gui-settings-profile-cards-survival-material-_label:
-    title-key: gui.settings.profile.cards.survival.material._label
-    texture: ''
-  gui-settings-profile-cards-survival-permission-_label:
-    title-key: gui.settings.profile.cards.survival.permission._label
-    texture: ''
-  gui-settings-profile-cards-survival-title-key-_label:
-    title-key: gui.settings.profile.cards.survival.title-key._label
-    texture: ''
-  gui-settings-profile-cards-survival-lore-keys-_label:
-    title-key: gui.settings.profile.cards.survival.lore-keys._label
-    texture: ''
-  gui-settings-profile-cards-progress-_label:
-    title-key: gui.settings.profile.cards.progress._label
-    texture: ''
-  gui-settings-profile-cards-progress-enabled-_label:
-    title-key: gui.settings.profile.cards.progress.enabled._label
-    texture: ''
-  gui-settings-profile-cards-progress-material-_label:
-    title-key: gui.settings.profile.cards.progress.material._label
-    texture: ''
-  gui-settings-profile-cards-progress-permission-_label:
-    title-key: gui.settings.profile.cards.progress.permission._label
-    texture: ''
-  gui-settings-profile-cards-progress-title-key-_label:
-    title-key: gui.settings.profile.cards.progress.title-key._label
-    texture: ''
-  gui-settings-profile-cards-progress-lore-keys-_label:
-    title-key: gui.settings.profile.cards.progress.lore-keys._label
-    texture: ''
-  gui-settings-profile-cards-statistics-_label:
-    title-key: gui.settings.profile.cards.statistics._label
-    texture: ''
-  gui-settings-profile-cards-statistics-enabled-_label:
-    title-key: gui.settings.profile.cards.statistics.enabled._label
-    texture: ''
-  gui-settings-profile-cards-statistics-material-_label:
-    title-key: gui.settings.profile.cards.statistics.material._label
-    texture: ''
-  gui-settings-profile-cards-statistics-permission-_label:
-    title-key: gui.settings.profile.cards.statistics.permission._label
-    texture: ''
-  gui-settings-profile-cards-statistics-title-key-_label:
-    title-key: gui.settings.profile.cards.statistics.title-key._label
-    texture: ''
-  gui-settings-profile-cards-statistics-lore-keys-_label:
-    title-key: gui.settings.profile.cards.statistics.lore-keys._label
-    texture: ''
-  gui-settings-profile-cards-social-_label:
-    title-key: gui.settings.profile.cards.social._label
-    texture: ''
-  gui-settings-profile-cards-social-enabled-_label:
-    title-key: gui.settings.profile.cards.social.enabled._label
-    texture: ''
-  gui-settings-profile-cards-social-material-_label:
-    title-key: gui.settings.profile.cards.social.material._label
-    texture: ''
-  gui-settings-profile-cards-social-permission-_label:
-    title-key: gui.settings.profile.cards.social.permission._label
-    texture: ''
-  gui-settings-profile-cards-social-title-key-_label:
-    title-key: gui.settings.profile.cards.social.title-key._label
-    texture: ''
-  gui-settings-profile-cards-social-lore-keys-_label:
-    title-key: gui.settings.profile.cards.social.lore-keys._label
-    texture: ''
-  gui-settings-profile-cards-location-_label:
-    title-key: gui.settings.profile.cards.location._label
-    texture: ''
-  gui-settings-profile-cards-location-enabled-_label:
-    title-key: gui.settings.profile.cards.location.enabled._label
-    texture: ''
-  gui-settings-profile-cards-location-material-_label:
-    title-key: gui.settings.profile.cards.location.material._label
-    texture: ''
-  gui-settings-profile-cards-location-permission-_label:
-    title-key: gui.settings.profile.cards.location.permission._label
-    texture: ''
-  gui-settings-profile-cards-location-title-key-_label:
-    title-key: gui.settings.profile.cards.location.title-key._label
-    texture: ''
-  gui-settings-profile-cards-location-lore-keys-_label:
-    title-key: gui.settings.profile.cards.location.lore-keys._label
-    texture: ''
-  gui-settings-nightskip-max-multiplier-_label:
-    title-key: gui.settings.nightskip.max-multiplier._label
-    texture: ''
-  gui-settings-hologram-max-holograms-_label:
-    title-key: gui.settings.hologram.max-holograms._label
-    texture: ''
-  gui-settings-hologram-creation-height-_label:
-    title-key: gui.settings.hologram.creation-height._label
-    texture: ''
-  gui-settings-hologram-max-visible-per-player-_label:
-    title-key: gui.settings.hologram.max-visible-per-player._label
-    texture: ''
-  gui-settings-hologram-max-display-entities-_label:
-    title-key: gui.settings.hologram.max-display-entities._label
-    texture: ''
-  gui-settings-afk-timeout-seconds-_label:
-    title-key: gui.settings.afk.timeout-seconds._label
-    texture: ''
-  gui-settings-afk-kick-after-seconds-_label:
-    title-key: gui.settings.afk.kick-after-seconds._label
-    texture: ''
-  gui-settings-traces-default-enabled-_label:
-    title-key: gui.settings.traces.default-enabled._label
-    texture: ''
-  gui-settings-traces-stride-_label:
-    title-key: gui.settings.traces.stride._label
-    texture: ''
-  gui-settings-traces-interval-ms-_label:
-    title-key: gui.settings.traces.interval-ms._label
-    texture: ''
-  gui-settings-traces-view-distance-_label:
-    title-key: gui.settings.traces.view-distance._label
-    texture: ''
-  gui-settings-traces-color-_label:
-    title-key: gui.settings.traces.color._label
-    texture: ''
-  gui-settings-sitride-click-to-sit-_label:
-    title-key: gui.settings.sitride.click-to-sit._label
-    texture: ''
-  gui-settings-sitride-ride-range-_label:
-    title-key: gui.settings.sitride.ride-range._label
-    texture: ''
-  gui-settings-npc-allowed-types-_label:
-    title-key: gui.settings.npc.allowed-types._label
-    texture: ''
-  gui-settings-npc-max-definitions-_label:
-    title-key: gui.settings.npc.max-definitions._label
-    texture: ''
-  gui-settings-npc-max-active-_label:
-    title-key: gui.settings.npc.max-active._label
-    texture: ''
-  gui-settings-npc-max-route-points-_label:
-    title-key: gui.settings.npc.max-route-points._label
-    texture: ''
-  gui-settings-npc-tracking-_label:
-    title-key: gui.settings.npc.tracking._label
-    texture: ''
-  gui-settings-npc-tracking-update-ticks-_label:
-    title-key: gui.settings.npc.tracking.update-ticks._label
-    texture: ''
-  gui-settings-npc-tracking-max-turn-degrees-_label:
-    title-key: gui.settings.npc.tracking.max-turn-degrees._label
-    texture: ''
-  gui-settings-npc-pathfinding-_label:
-    title-key: gui.settings.npc.pathfinding._label
-    texture: ''
-  gui-settings-npc-pathfinding-threads-_label:
-    title-key: gui.settings.npc.pathfinding.threads._label
-    texture: ''
-  gui-settings-npc-pathfinding-radius-_label:
-    title-key: gui.settings.npc.pathfinding.radius._label
-    texture: ''
-  gui-settings-npc-pathfinding-max-nodes-_label:
-    title-key: gui.settings.npc.pathfinding.max-nodes._label
-    texture: ''
-  gui-settings-npc-pathfinding-plans-per-tick-_label:
-    title-key: gui.settings.npc.pathfinding.plans-per-tick._label
-    texture: ''
-  gui-settings-npc-actions-_label:
-    title-key: gui.settings.npc.actions._label
-    texture: ''
-  gui-settings-npc-actions-max-economy-amount-_label:
-    title-key: gui.settings.npc.actions.max-economy-amount._label
-    texture: ''
-  gui-settings-npc-actions-allowed-player-commands-_label:
-    title-key: gui.settings.npc.actions.allowed-player-commands._label
-    texture: ''
-  gui-settings-home-default-limit-_label:
-    title-key: gui.settings.home.default-limit._label
-    texture: ''
-  gui-settings-tab-engine-_label:
-    title-key: gui.settings.tab.engine._label
-    texture: ''
-  gui-settings-tab-refresh-ticks-_label:
-    title-key: gui.settings.tab.refresh-ticks._label
-    texture: ''
-  gui-settings-tab-respect-other-scoreboards-_label:
-    title-key: gui.settings.tab.respect-other-scoreboards._label
-    texture: ''
-  gui-settings-tab-sorting-enabled-_label:
-    title-key: gui.settings.tab.sorting-enabled._label
-    texture: ''
-  gui-settings-tab-sorting-_label:
-    title-key: gui.settings.tab.sorting._label
-    texture: ''
-  gui-settings-tab-name-enabled-_label:
-    title-key: gui.settings.tab.name-enabled._label
-    texture: ''
-  gui-settings-tab-groups-_label:
-    title-key: gui.settings.tab.groups._label
-    texture: ''
-  gui-settings-tab-groups-admin-_label:
-    title-key: gui.settings.tab.groups.admin._label
-    texture: ''
-  gui-settings-tab-groups-admin-permission-_label:
-    title-key: gui.settings.tab.groups.admin.permission._label
-    texture: ''
-  gui-settings-tab-groups-admin-priority-_label:
-    title-key: gui.settings.tab.groups.admin.priority._label
-    texture: ''
-  gui-settings-tab-groups-admin-name-key-_label:
-    title-key: gui.settings.tab.groups.admin.name-key._label
-    texture: ''
-  gui-settings-tab-groups-admin-prefix-key-_label:
-    title-key: gui.settings.tab.groups.admin.prefix-key._label
-    texture: ''
-  gui-settings-tab-groups-admin-suffix-key-_label:
-    title-key: gui.settings.tab.groups.admin.suffix-key._label
-    texture: ''
-  gui-settings-tab-groups-knight-_label:
-    title-key: gui.settings.tab.groups.knight._label
-    texture: ''
-  gui-settings-tab-groups-knight-permission-_label:
-    title-key: gui.settings.tab.groups.knight.permission._label
-    texture: ''
-  gui-settings-tab-groups-knight-priority-_label:
-    title-key: gui.settings.tab.groups.knight.priority._label
-    texture: ''
-  gui-settings-tab-groups-knight-name-key-_label:
-    title-key: gui.settings.tab.groups.knight.name-key._label
-    texture: ''
-  gui-settings-tab-groups-knight-prefix-key-_label:
-    title-key: gui.settings.tab.groups.knight.prefix-key._label
-    texture: ''
-  gui-settings-tab-groups-knight-suffix-key-_label:
-    title-key: gui.settings.tab.groups.knight.suffix-key._label
-    texture: ''
-  gui-settings-tab-nametag-_label:
-    title-key: gui.settings.tab.nametag._label
-    texture: ''
-  gui-settings-tab-nametag-enabled-_label:
-    title-key: gui.settings.tab.nametag.enabled._label
-    texture: ''
-  gui-settings-tab-nametag-collision-_label:
-    title-key: gui.settings.tab.nametag.collision._label
-    texture: ''
-  gui-settings-tab-nametag-visible-_label:
-    title-key: gui.settings.tab.nametag.visible._label
-    texture: ''
-  gui-settings-tab-header-footer-_label:
-    title-key: gui.settings.tab.header-footer._label
-    texture: ''
-  gui-settings-tab-header-footer-enabled-_label:
-    title-key: gui.settings.tab.header-footer.enabled._label
-    texture: ''
-  gui-settings-tab-header-footer-header-key-_label:
-    title-key: gui.settings.tab.header-footer.header-key._label
-    texture: ''
-  gui-settings-tab-header-footer-footer-key-_label:
-    title-key: gui.settings.tab.header-footer.footer-key._label
-    texture: ''
-  gui-settings-tab-header-footer-profiles-_label:
-    title-key: gui.settings.tab.header-footer.profiles._label
-    texture: ''
-  gui-settings-tab-playerlist-objective-_label:
-    title-key: gui.settings.tab.playerlist-objective._label
-    texture: ''
-  gui-settings-tab-playerlist-objective-enabled-_label:
-    title-key: gui.settings.tab.playerlist-objective.enabled._label
-    texture: ''
-  gui-settings-tab-playerlist-objective-value-_label:
-    title-key: gui.settings.tab.playerlist-objective.value._label
-    texture: ''
-  gui-settings-tab-playerlist-objective-title-key-_label:
-    title-key: gui.settings.tab.playerlist-objective.title-key._label
-    texture: ''
-  gui-settings-tab-below-name-_label:
-    title-key: gui.settings.tab.below-name._label
-    texture: ''
-  gui-settings-tab-below-name-enabled-_label:
-    title-key: gui.settings.tab.below-name.enabled._label
-    texture: ''
-  gui-settings-tab-below-name-value-_label:
-    title-key: gui.settings.tab.below-name.value._label
-    texture: ''
-  gui-settings-tab-below-name-title-key-_label:
-    title-key: gui.settings.tab.below-name.title-key._label
-    texture: ''
-  gui-settings-tab-sidebar-_label:
-    title-key: gui.settings.tab.sidebar._label
-    texture: ''
-  gui-settings-tab-sidebar-enabled-_label:
-    title-key: gui.settings.tab.sidebar.enabled._label
-    texture: ''
-  gui-settings-tab-sidebar-title-key-_label:
-    title-key: gui.settings.tab.sidebar.title-key._label
-    texture: ''
-  gui-settings-tab-sidebar-line-keys-_label:
-    title-key: gui.settings.tab.sidebar.line-keys._label
-    texture: ''
-  gui-settings-tab-bossbars-_label:
-    title-key: gui.settings.tab.bossbars._label
-    texture: ''
-  gui-settings-tab-bossbars-kingdom-_label:
-    title-key: gui.settings.tab.bossbars.kingdom._label
-    texture: ''
-  gui-settings-tab-bossbars-kingdom-enabled-_label:
-    title-key: gui.settings.tab.bossbars.kingdom.enabled._label
-    texture: ''
-  gui-settings-tab-bossbars-kingdom-text-key-_label:
-    title-key: gui.settings.tab.bossbars.kingdom.text-key._label
-    texture: ''
-  gui-settings-tab-bossbars-kingdom-progress-_label:
-    title-key: gui.settings.tab.bossbars.kingdom.progress._label
-    texture: ''
-  gui-settings-tab-bossbars-kingdom-color-_label:
-    title-key: gui.settings.tab.bossbars.kingdom.color._label
-    texture: ''
-  gui-settings-tab-bossbars-kingdom-overlay-_label:
-    title-key: gui.settings.tab.bossbars.kingdom.overlay._label
-    texture: ''
-  gui-settings-tab-external-_label:
-    title-key: gui.settings.tab.external._label
-    texture: ''
-  gui-settings-tab-external-config-_label:
-    title-key: gui.settings.tab.external.config._label
-    texture: ''
-  gui-settings-tab-external-config-header-footer-_label:
-    title-key: gui.settings.tab.external.config.header-footer._label
-    texture: ''
-  gui-settings-tab-external-config-header-footer-enabled-_label:
-    title-key: gui.settings.tab.external.config.header-footer.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-header-footer-designs-_label:
-    title-key: gui.settings.tab.external.config.header-footer.designs._label
-    texture: ''
-  gui-settings-tab-external-config-header-footer-designs-default-_label:
-    title-key: gui.settings.tab.external.config.header-footer.designs.default._label
-    texture: ''
-  gui-settings-tab-external-config-header-footer-designs-default-header-_label:
-    title-key: gui.settings.tab.external.config.header-footer.designs.default.header._label
-    texture: ''
-  gui-settings-tab-external-config-header-footer-designs-default-footer-_label:
-    title-key: gui.settings.tab.external.config.header-footer.designs.default.footer._label
-    texture: ''
-  gui-settings-tab-external-config-tablist-name-formatting-_label:
-    title-key: gui.settings.tab.external.config.tablist-name-formatting._label
-    texture: ''
-  gui-settings-tab-external-config-tablist-name-formatting-enabled-_label:
-    title-key: gui.settings.tab.external.config.tablist-name-formatting.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-tablist-name-formatting-disable-condition-_label:
-    title-key: gui.settings.tab.external.config.tablist-name-formatting.disable-condition._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-teams-_label:
-    title-key: gui.settings.tab.external.config.scoreboard-teams._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-teams-enabled-_label:
-    title-key: gui.settings.tab.external.config.scoreboard-teams.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-teams-enable-collision-_label:
-    title-key: gui.settings.tab.external.config.scoreboard-teams.enable-collision._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-teams-invisible-nametags-_label:
-    title-key: gui.settings.tab.external.config.scoreboard-teams.invisible-nametags._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-teams-sorting-types-_label:
-    title-key: gui.settings.tab.external.config.scoreboard-teams.sorting-types._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-teams-case-sensitive-sorting-_label:
-    title-key: gui.settings.tab.external.config.scoreboard-teams.case-sensitive-sorting._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-teams-can-see-friendly-invisibles-_label:
-    title-key: gui.settings.tab.external.config.scoreboard-teams.can-see-friendly-invisibles._label
-    texture: ''
-  gui-settings-tab-external-config-playerlist-objective-_label:
-    title-key: gui.settings.tab.external.config.playerlist-objective._label
-    texture: ''
-  gui-settings-tab-external-config-playerlist-objective-enabled-_label:
-    title-key: gui.settings.tab.external.config.playerlist-objective.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-playerlist-objective-value-_label:
-    title-key: gui.settings.tab.external.config.playerlist-objective.value._label
-    texture: ''
-  gui-settings-tab-external-config-playerlist-objective-fancy-value-_label:
-    title-key: gui.settings.tab.external.config.playerlist-objective.fancy-value._label
-    texture: ''
-  gui-settings-tab-external-config-playerlist-objective-title-_label:
-    title-key: gui.settings.tab.external.config.playerlist-objective.title._label
-    texture: ''
-  gui-settings-tab-external-config-playerlist-objective-render-type-_label:
-    title-key: gui.settings.tab.external.config.playerlist-objective.render-type._label
-    texture: ''
-  gui-settings-tab-external-config-belowname-objective-_label:
-    title-key: gui.settings.tab.external.config.belowname-objective._label
-    texture: ''
-  gui-settings-tab-external-config-belowname-objective-enabled-_label:
-    title-key: gui.settings.tab.external.config.belowname-objective.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-belowname-objective-value-_label:
-    title-key: gui.settings.tab.external.config.belowname-objective.value._label
-    texture: ''
-  gui-settings-tab-external-config-belowname-objective-fancy-value-_label:
-    title-key: gui.settings.tab.external.config.belowname-objective.fancy-value._label
-    texture: ''
-  gui-settings-tab-external-config-belowname-objective-fancy-value-default-_label:
-    title-key: gui.settings.tab.external.config.belowname-objective.fancy-value-default._label
-    texture: ''
-  gui-settings-tab-external-config-belowname-objective-title-_label:
-    title-key: gui.settings.tab.external.config.belowname-objective.title._label
-    texture: ''
-  gui-settings-tab-external-config-belowname-objective-view-distance-_label:
-    title-key: gui.settings.tab.external.config.belowname-objective.view-distance._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-_label:
-    title-key: gui.settings.tab.external.config.bossbar._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-enabled-_label:
-    title-key: gui.settings.tab.external.config.bossbar.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-remember-toggle-choice-_label:
-    title-key: gui.settings.tab.external.config.bossbar.remember-toggle-choice._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-bars-_label:
-    title-key: gui.settings.tab.external.config.bossbar.bars._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-bars-kingdom-_label:
-    title-key: gui.settings.tab.external.config.bossbar.bars.kingdom._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-bars-kingdom-style-_label:
-    title-key: gui.settings.tab.external.config.bossbar.bars.kingdom.style._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-bars-kingdom-color-_label:
-    title-key: gui.settings.tab.external.config.bossbar.bars.kingdom.color._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-bars-kingdom-progress-_label:
-    title-key: gui.settings.tab.external.config.bossbar.bars.kingdom.progress._label
-    texture: ''
-  gui-settings-tab-external-config-bossbar-bars-kingdom-text-_label:
-    title-key: gui.settings.tab.external.config.bossbar.bars.kingdom.text._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-_label:
-    title-key: gui.settings.tab.external.config.scoreboard._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-enabled-_label:
-    title-key: gui.settings.tab.external.config.scoreboard.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-remember-toggle-choice-_label:
-    title-key: gui.settings.tab.external.config.scoreboard.remember-toggle-choice._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-scoreboards-_label:
-    title-key: gui.settings.tab.external.config.scoreboard.scoreboards._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-scoreboards-kingdom-_label:
-    title-key: gui.settings.tab.external.config.scoreboard.scoreboards.kingdom._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-scoreboards-kingdom-title-_label:
-    title-key: gui.settings.tab.external.config.scoreboard.scoreboards.kingdom.title._label
-    texture: ''
-  gui-settings-tab-external-config-scoreboard-scoreboards-kingdom-lines-_label:
-    title-key: gui.settings.tab.external.config.scoreboard.scoreboards.kingdom.lines._label
-    texture: ''
-  gui-settings-tab-external-config-layout-_label:
-    title-key: gui.settings.tab.external.config.layout._label
-    texture: ''
-  gui-settings-tab-external-config-layout-enabled-_label:
-    title-key: gui.settings.tab.external.config.layout.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-layout-direction-_label:
-    title-key: gui.settings.tab.external.config.layout.direction._label
-    texture: ''
-  gui-settings-tab-external-config-layout-enable-remaining-players-text-_label:
-    title-key: gui.settings.tab.external.config.layout.enable-remaining-players-text._label
-    texture: ''
-  gui-settings-tab-external-config-layout-remaining-players-text-_label:
-    title-key: gui.settings.tab.external.config.layout.remaining-players-text._label
-    texture: ''
-  gui-settings-tab-external-config-layout-empty-slot-ping-value-_label:
-    title-key: gui.settings.tab.external.config.layout.empty-slot-ping-value._label
-    texture: ''
-  gui-settings-tab-external-config-layout-layouts-_label:
-    title-key: gui.settings.tab.external.config.layout.layouts._label
-    texture: ''
-  gui-settings-tab-external-config-layout-layouts-default-_label:
-    title-key: gui.settings.tab.external.config.layout.layouts.default._label
-    texture: ''
-  gui-settings-tab-external-config-layout-layouts-default-slot-count-_label:
-    title-key: gui.settings.tab.external.config.layout.layouts.default.slot-count._label
-    texture: ''
-  gui-settings-tab-external-config-layout-layouts-default-fixed-slots-_label:
-    title-key: gui.settings.tab.external.config.layout.layouts.default.fixed-slots._label
-    texture: ''
-  gui-settings-tab-external-config-layout-layouts-default-groups-_label:
-    title-key: gui.settings.tab.external.config.layout.layouts.default.groups._label
-    texture: ''
-  gui-settings-tab-external-config-layout-layouts-default-groups-players-_label:
-    title-key: gui.settings.tab.external.config.layout.layouts.default.groups.players._label
-    texture: ''
-  gui-settings-tab-external-config-layout-layouts-default-groups-players-slots-_label:
-    title-key: gui.settings.tab.external.config.layout.layouts.default.groups.players.slots._label
-    texture: ''
-  gui-settings-tab-external-config-ping-spoof-_label:
-    title-key: gui.settings.tab.external.config.ping-spoof._label
-    texture: ''
-  gui-settings-tab-external-config-ping-spoof-enabled-_label:
-    title-key: gui.settings.tab.external.config.ping-spoof.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-ping-spoof-value-_label:
-    title-key: gui.settings.tab.external.config.ping-spoof.value._label
-    texture: ''
-  gui-settings-tab-external-config-global-playerlist-_label:
-    title-key: gui.settings.tab.external.config.global-playerlist._label
-    texture: ''
-  gui-settings-tab-external-config-global-playerlist-enabled-_label:
-    title-key: gui.settings.tab.external.config.global-playerlist.enabled._label
-    texture: ''
-  gui-settings-tab-external-config-global-playerlist-display-others-as-spectators-_label:
-    title-key: gui.settings.tab.external.config.global-playerlist.display-others-as-spectators._label
-    texture: ''
-  gui-settings-tab-external-config-global-playerlist-display-vanished-players-as-spectators-_label:
-    title-key: gui.settings.tab.external.config.global-playerlist.display-vanished-players-as-spectators._label
-    texture: ''
-  gui-settings-tab-external-config-global-playerlist-isolate-unlisted-servers-_label:
-    title-key: gui.settings.tab.external.config.global-playerlist.isolate-unlisted-servers._label
-    texture: ''
-  gui-settings-tab-external-config-global-playerlist-update-latency-_label:
-    title-key: gui.settings.tab.external.config.global-playerlist.update-latency._label
-    texture: ''
-  gui-settings-tab-external-config-global-playerlist-server-groups-_label:
-    title-key: gui.settings.tab.external.config.global-playerlist.server-groups._label
-    texture: ''
-  gui-settings-tab-external-config-placeholder-refresh-intervals-_label:
-    title-key: gui.settings.tab.external.config.placeholder-refresh-intervals._label
-    texture: ''
-  gui-settings-tab-external-config-placeholder-refresh-intervals-default-refresh-interval-_label:
-    title-key: gui.settings.tab.external.config.placeholder-refresh-intervals.default-refresh-interval._label
-    texture: ''
-  gui-settings-tab-external-config-placeholder-refresh-intervals-%loveessential_authenticated%-_label:
-    title-key: gui.settings.tab.external.config.placeholder-refresh-intervals.%loveessential_authenticated%._label
-    texture: ''
-  gui-settings-tab-external-config-placeholder-refresh-intervals-%loveessential_vanished%-_label:
-    title-key: gui.settings.tab.external.config.placeholder-refresh-intervals.%loveessential_vanished%._label
-    texture: ''
-  gui-settings-tab-external-config-assign-groups-by-permissions-_label:
-    title-key: gui.settings.tab.external.config.assign-groups-by-permissions._label
-    texture: ''
-  gui-settings-tab-external-config-primary-group-finding-list-_label:
-    title-key: gui.settings.tab.external.config.primary-group-finding-list._label
-    texture: ''
-  gui-settings-tab-external-config-permission-refresh-interval-_label:
-    title-key: gui.settings.tab.external.config.permission-refresh-interval._label
-    texture: ''
-  gui-settings-tab-external-config-mysql-_label:
-    title-key: gui.settings.tab.external.config.mysql._label
-    texture: ''
-  gui-settings-tab-external-config-mysql-enabled-_label:
-    title-key: gui.settings.tab.external.config.mysql.enabled._label
-    texture: ''
-  gui-settings-tab-external-groups-_label:
-    title-key: gui.settings.tab.external.groups._label
-    texture: ''
-  gui-settings-tab-external-groups-_DEFAULT_-_label:
-    title-key: gui.settings.tab.external.groups._DEFAULT_._label
-    texture: ''
-  gui-settings-tab-external-groups-_DEFAULT_-tabprefix-_label:
-    title-key: gui.settings.tab.external.groups._DEFAULT_.tabprefix._label
-    texture: ''
-  gui-settings-tab-external-groups-_DEFAULT_-tagprefix-_label:
-    title-key: gui.settings.tab.external.groups._DEFAULT_.tagprefix._label
-    texture: ''
-  gui-settings-tab-external-groups-_DEFAULT_-customtabname-_label:
-    title-key: gui.settings.tab.external.groups._DEFAULT_.customtabname._label
-    texture: ''
-  gui-settings-tab-external-groups-_DEFAULT_-tabsuffix-_label:
-    title-key: gui.settings.tab.external.groups._DEFAULT_.tabsuffix._label
-    texture: ''
-  gui-settings-tab-external-groups-_DEFAULT_-tagsuffix-_label:
-    title-key: gui.settings.tab.external.groups._DEFAULT_.tagsuffix._label
-    texture: ''
-  gui-settings-tab-external-groups-admin-_label:
-    title-key: gui.settings.tab.external.groups.admin._label
-    texture: ''
-  gui-settings-tab-external-groups-admin-tabprefix-_label:
-    title-key: gui.settings.tab.external.groups.admin.tabprefix._label
-    texture: ''
-  gui-settings-tab-external-groups-admin-tagprefix-_label:
-    title-key: gui.settings.tab.external.groups.admin.tagprefix._label
-    texture: ''
-  gui-settings-tab-external-groups-knight-_label:
-    title-key: gui.settings.tab.external.groups.knight._label
-    texture: ''
-  gui-settings-tab-external-groups-knight-tabprefix-_label:
-    title-key: gui.settings.tab.external.groups.knight.tabprefix._label
-    texture: ''
-  gui-settings-tab-external-groups-knight-tagprefix-_label:
-    title-key: gui.settings.tab.external.groups.knight.tagprefix._label
-    texture: ''
-  gui-settings-tab-external-animations-_label:
-    title-key: gui.settings.tab.external.animations._label
-    texture: ''
-  gui-wizard-title:
-    title-key: gui.wizard-title
-    texture: ''
-  gui-skin-title:
-    title-key: gui.skin-title
-    texture: ''
-  gui-skin-name:
-    title-key: gui.skin-name
-    texture: ''
-  gui-skin-reset:
-    title-key: gui.skin-reset
-    texture: ''
-  module-menu-title:
-    title-key: module-menu.title
-    texture: ''
-  input-context:
-    title-key: input.context
-    texture: ''
-  input-npc:
-    title-key: input.npc
-    texture: ''
-  input-npc-field:
-    title-key: input.npc-field
-    texture: ''
-  settings-help-choice-title:
-    title-key: settings-help.choice-title
-    texture: ''
-  settings-help-choices-native:
-    title-key: settings-help.choices.native
-    texture: ''
-  settings-help-choices-tab:
-    title-key: settings-help.choices.tab
-    texture: ''
-  settings-help-number-title:
-    title-key: settings-help.number-title
-    texture: ''
-  settings-help-change:
-    title-key: settings-help.change
-    texture: ''
-  npc-editor-route-title:
-    title-key: npc-editor.route-title
-    texture: ''
-  npc-editor-point:
-    title-key: npc-editor.point
-    texture: ''
-  npc-editor-point-title:
-    title-key: npc-editor.point-title
-    texture: ''
-  npc-editor-move-point:
-    title-key: npc-editor.move-point
-    texture: ''
-  npc-editor-move-up:
-    title-key: npc-editor.move-up
-    texture: ''
-  npc-editor-move-down:
-    title-key: npc-editor.move-down
-    texture: ''
-  npc-editor-delete-point:
-    title-key: npc-editor.delete-point
-    texture: ''
-  npc-editor-point-fields-wait:
-    title-key: npc-editor.point-fields.wait
-    texture: ''
-  npc-editor-point-fields-speed:
-    title-key: npc-editor.point-fields.speed
-    texture: ''
-  npc-editor-point-fields-radius:
-    title-key: npc-editor.point-fields.radius
-    texture: ''
-  npc-editor-actions-title:
-    title-key: npc-editor.actions-title
-    texture: ''
-  npc-help-examples-name:
-    title-key: npc-help.examples.name
-    texture: ''
-  ui-confirm:
-    title-key: ui.confirm
-    texture: ''
-  chat-teleport-request:
-    title-key: chat.teleport-request
-    texture: ''
-  chat-teleport-here:
-    title-key: chat.teleport-here
-    texture: ''
-  input-extra-comfort-context:
-    title-key: input-extra.comfort-context
-    texture: ''
-  input-extra-hologram-context:
-    title-key: input-extra.hologram-context
-    texture: ''
-  access-editor-choice-title:
-    title-key: access-editor.choice-title
-    texture: ''
-  access-editor-access-title:
-    title-key: access-editor.access.title
-    texture: ''
-  access-editor-allowed-worlds-title:
-    title-key: access-editor.allowed-worlds.title
-    texture: ''
-  access-editor-denied-worlds-title:
-    title-key: access-editor.denied-worlds.title
-    texture: ''
-  access-editor-allowed-gamemodes-title:
-    title-key: access-editor.allowed-gamemodes.title
-    texture: ''
-  access-editor-denied-gamemodes-title:
-    title-key: access-editor.denied-gamemodes.title
-    texture: ''
-  access-editor-allowed-states-title:
-    title-key: access-editor.allowed-states.title
-    texture: ''
-  access-editor-denied-states-title:
-    title-key: access-editor.denied-states.title
-    texture: ''
-  access-editor-required-states-title:
-    title-key: access-editor.required-states.title
-    texture: ''
+  settings-labels:
+    words:
+      enabled: включение
+      disabled: отключение
+      allowed: разрешённые
+      denied: запрещённые
+      worlds: миры
+      world: мир
+      gamemodes: режимы игры
+      states: состояния
+      required: обязательные
+      access: доступ
+      permission: право доступа
+      permissions: права доступа
+      refresh: обновление
+      interval: интервал
+      ticks: тики
+      tick: тик
+      seconds: секунды
+      minutes: минуты
+      minute: минута
+      max: максимум
+      min: минимум
+      default: по умолчанию
+      display: отображение
+      visible: видимость
+      hide: скрытие
+      while: во время
+      in: в
+      afk: бездействие
+      combat: бой
+      name: имя
+      nickname: никнейм
+      prefix: префикс
+      suffix: суффикс
+      suffixes: суффиксы
+      groups: группы
+      players: игроки
+      player: игрок
+      playerlist: список игроков
+      sorting: сортировка
+      header: шапка
+      footer: нижняя строка
+      sidebar: боковая панель
+      bossbar: полоса состояния
+      bossbars: полосы состояния
+      nametag: имя над игроком
+      objective: показатель
+      below: под
+      health: здоровье
+      ping: задержка
+      online: онлайн
+      animations: анимации
+      animation: анимация
+      apply: применение
+      to: для
+      collision: столкновения
+      value: значение
+      text: текст
+      title: заголовок
+      lore: описание
+      color: цвет
+      gradients: градиенты
+      layout: расположение
+      controls: управление
+      messages: сообщения
+      channel: канал
+      mentions: упоминания
+      ignored: игнорируемые
+      impersonation: подмена имени
+      prevent: защита
+      amount: количество
+      limit: лимит
+      length: длина
+      distance: расстояние
+      range: дальность
+      radius: радиус
+      height: высота
+      creation: создание
+      cooldown: задержка
+      timeout: время ожидания
+      persist: сохранение
+      active: активные
+      definitions: определения
+      entities: сущности
+      pathfinding: поиск пути
+      threads: потоки
+      plans: расчёты
+      nodes: узлы
+      points: точки
+      route: маршрут
+      tracking: наблюдение
+      turn: поворот
+      degrees: градусы
+      particles: частицы
+      steps: шаги
+      budget: бюджет
+      capture: сбор снимка
+      ms: мс
+      pending: ожидающие
+      per: на
+      scoreboard: табло
+      scoreboards: табло
+      tab: список игроков
+      selected: выбранные
+      lines: строки
+      overrides: временная замена
+      forced: принудительные
+      allow: разрешение
+      other: другие
+      recipes: крафты
+      reports: жалобы
+      statistics: статистика
+      categories: категории
+      details: подробности
+      summary: сводка
+      public: для других
+      privacy: приватность
+      profiles: профили
+      profile: профиль
+      activity: активность
+      sensitive: приватные
+      unavailable: недоступные
+      placeholders: плейсхолдеры
+      plugin: плагин
+      actions: действия
+      command: команда
+      commands: команды
+      console: консоль
+      silent: без сообщений
+      sit: сидение
+      ride: пассажиры
+      riding: верхом
+      click: нажатие
+      kick: высадка
+      economy: экономика
+      money: монеты
+      wallet: кошелёк
+      currency: валюта
+      reward: награда
+      rewards: награды
+      modifier: множитель
+      multiplier: множитель
+      remaining: остаток
+      clan: клан
+      kingdom: королевство
+      kingdoms: королевства
+      duels: дуэли
+      hunt: охота
+      contracts: контракты
+      activities: активности
+      survival: выживание
+      visits: посещения
+      movement: передвижение
+      mining: добыча
+      fishing: рыбалка
+      trades: торговля
+      villagers: жители
+      progress: прогресс
+      behavior: поведение
+      adaptations: адаптации
+      account: учётная запись
+      admin: администратор
+      reputation: репутация
+      honor: честь
+      rating: рейтинг
+      rank: ранг
+      orders: заказы
+      results: результаты
+      streak: серия
+      streaks: серии
+      best: лучшая
+      wins: победы
+      losses: поражения
+      winrate: доля побед
+      success: успех
+      rate: доля
+      completed: выполненные
+      failed: проваленные
+      accepted: принятые
+      daily: за день
+      won: выиграно
+      lost: потеряно
+      starts: начинается
+      after: после
+      update: обновление
+      status: состояние
+      setting: настройка
+      rules: правила
+      respect: учитывать
+      material: материал
+      local: местное время
+      grammar: формат
+      links: ссылки
+      link: ссылка
+      invites: приглашения
+      volume: громкость
+      stride: интервал следов
+      overlay: наложение
+      holograms: голограммы
+      portals: порталы
+      portal: портал
+      forest: лес
+      ocean: океан
+      sunset: закат
+      knight: рыцарь
+      exported: экспорт
+      gui: меню и оформление
+      menus: меню
+      buttons: кнопки
+      textures: текстуры
+      navigation: навигация
+      back: назад
+      close: закрытие
+      frame: рамка
+      components: общие элементы
+      size: размер
+      slot: позиция
+      presets: пресеты
+      catalog: каталог
+    unknown: Дополнительная настройка

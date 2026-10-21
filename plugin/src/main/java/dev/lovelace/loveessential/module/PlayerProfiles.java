@@ -65,6 +65,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
   private static final class Menu implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
+    int sourceSize;
     String menuId = "gui.menu";
 
     public String guiId() {
@@ -80,6 +81,8 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     }
 
     final Map<Integer, Runnable> actions = new HashMap<>();
+    final Map<Integer, java.util.function.Consumer<ClickType>> choices = new HashMap<>();
+    final Map<String, Integer> statisticPages = new HashMap<>();
     final Player viewer;
     final BooleanSupplier allowed;
     UUID subject;
@@ -90,6 +93,15 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     }
 
     Runnable repaint;
+    Runnable resume = () -> {};
+
+    public void guiResume() {
+      resume.run();
+    }
+
+    public boolean guiAllowed(Player player) {
+      return allowed.getAsBoolean();
+    }
 
     Menu(Player viewer, BooleanSupplier allowed) {
       this.viewer = viewer;
@@ -98,6 +110,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
     public Inventory getInventory() {
       return inventory;
+    }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
     }
   }
 
@@ -137,7 +153,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                       == 0) {
                     for (var m : List.copyOf(menus.values()))
                       if (!permitted(m)) m.viewer.closeInventory();
-                      else if (m.repaint != null) m.repaint.run();
+                      else if (m.repaint != null) repaint(m);
                     for (Player p : Bukkit.getOnlinePlayers())
                       if (!love.authenticated(p)) snapshots.remove(p.getUniqueId());
                   }
@@ -300,21 +316,44 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     return String.format(Locale.ROOT, "%.1f", value);
   }
 
+  private final Map<UUID, Map<String, String>> pendingSnapshots = new HashMap<>();
+  private boolean closing;
+
   private void persist(UUID uuid, Map<String, String> data) {
-    var pending =
-        store
-            .profile(uuid, "loveessential.player-info", gson.toJson(data))
-            .exceptionally(
-                error -> {
-                  plugin
-                      .getLogger()
-                      .log(
-                          java.util.logging.Level.WARNING, lang.text("players.save-failed"), error);
-                  return null;
-                });
-    snapshotWrites.put(uuid, pending);
-    pending.whenComplete(
-        (v, e) -> new MainThread(plugin).execute(() -> snapshotWrites.remove(uuid, pending)));
+    if (snapshotWrites.containsKey(uuid)) {
+      pendingSnapshots.put(uuid, data);
+      return;
+    }
+    var completed = new java.util.concurrent.CompletableFuture<Void>();
+    snapshotWrites.put(uuid, completed);
+    writeSnapshot(uuid, data, completed);
+  }
+
+  private void writeSnapshot(
+      UUID uuid, Map<String, String> data, java.util.concurrent.CompletableFuture<Void> completed) {
+    store
+        .profile(uuid, "loveessential.player-info", gson.toJson(data))
+        .whenComplete(
+            (value, error) ->
+                new MainThread(plugin)
+                    .execute(
+                        () -> {
+                          if (error != null)
+                            plugin
+                                .getLogger()
+                                .log(
+                                    java.util.logging.Level.WARNING,
+                                    lang.text("players.save-failed"),
+                                    error);
+                          var latest = pendingSnapshots.remove(uuid);
+                          if (latest != null && !closing) {
+                            writeSnapshot(uuid, latest, completed);
+                            return;
+                          }
+                          snapshotWrites.remove(uuid, completed);
+                          if (error == null) completed.complete(null);
+                          else completed.completeExceptionally(error);
+                        }));
   }
 
   private static String localDate(String value) {
@@ -330,6 +369,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   private record Saved(UUID id, Map<String, String> data, ProfilePrivacy.Preferences preferences) {}
 
   private final Map<UUID, UUID> requests = new HashMap<>();
+
+  public void cancelPending(Player viewer) {
+    requests.remove(viewer.getUniqueId());
+  }
 
   public void openProfile(Player viewer, String name) {
     MainThread.require();
@@ -604,7 +647,56 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                   path + (own ? ".summary-key" : ".public-key"),
                   "profile-stats." + id + (own ? ".summary" : ".public"));
       m.inventory.setItem(slot, statisticIcon(path, title, lore, values));
-      if (own) m.actions.put(slot, () -> statisticsCategory(m.viewer, id, 0));
+      if (own) {
+        var details = plugin.getConfig().getConfigurationSection(path + ".details");
+        var pages = details == null ? List.<String>of() : List.copyOf(details.getKeys(false));
+        if (pages.isEmpty()) continue;
+        int page = Math.floorMod(m.statisticPages.getOrDefault(id, 0), pages.size());
+        String detail = pages.get(page), prefix = path + ".details." + detail;
+        var item =
+            statisticIcon(
+                path,
+                title,
+                plugin
+                    .getConfig()
+                    .getString(
+                        prefix + ".lore-key", "profile-stats." + id + "." + detail + ".lore"),
+                values);
+        var meta = item.getItemMeta();
+        var lines = new ArrayList<Component>();
+        lines.add(
+            lang.rich(
+                "profile-stats.subcategory",
+                Map.of(
+                    "name",
+                    lang.render(
+                        plugin
+                            .getConfig()
+                            .getString(
+                                prefix + ".title-key",
+                                "profile-stats." + id + "." + detail + ".title")),
+                    "page",
+                    Component.text(page + 1),
+                    "total",
+                    Component.text(pages.size()))));
+        lines.addAll(Objects.requireNonNullElse(meta.lore(), List.of()));
+        if (pages.size() > 1) {
+          lines.add(lang.render("gui.separator"));
+          lines.add(lang.render("profile-stats.next"));
+          lines.add(lang.render("profile-stats.previous"));
+        }
+        meta.lore(lines);
+        item.setItemMeta(meta);
+        m.inventory.setItem(slot, item);
+        m.choices.put(
+            slot,
+            click -> {
+              if (click != ClickType.LEFT && click != ClickType.RIGHT || pages.size() < 2) return;
+              m.statisticPages.put(
+                  id, Math.floorMod(page + (click == ClickType.LEFT ? 1 : -1), pages.size()));
+              repaint(m);
+            });
+      }
     }
   }
 
@@ -621,6 +713,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
           capture(viewer);
           MenuStyle.frame(m.inventory);
           m.actions.clear();
+          m.choices.clear();
           m.inventory.setItem(
               0,
               head(
@@ -685,93 +778,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     return Map.copyOf(values);
   }
 
-  private void statisticsCategory(Player p, String id, int page) {
-    if (!access(p) || !statisticCategories().contains(id))
-      throw new IllegalArgumentException("profile-menu.hidden");
-    String path = statisticPath(id);
-    var section = plugin.getConfig().getConfigurationSection(path + ".details");
-    if (section == null) return;
-    var cards = List.copyOf(section.getKeys(false));
-    var m =
-        menu(
-            p,
-            "profile-stats.details-title",
-            Map.of(
-                "category",
-                lang.text(
-                    plugin
-                        .getConfig()
-                        .getString(path + ".title-key", "profile-stats." + id + ".title"))),
-            () -> access(p));
-    m.subject = p.getUniqueId();
-    int capacity = contentCapacity(m),
-        actual = Math.clamp(page, 0, Math.max(0, (cards.size() - 1) / capacity));
-    m.repaint =
-        () -> {
-          capture(p);
-          var values = displayValues(snapshots.get(p.getUniqueId()));
-          MenuStyle.frame(m.inventory);
-          m.actions.clear();
-          m.inventory.setItem(
-              0,
-              head(
-                  p,
-                  placeholders.render("profile-menu.heading", p, p),
-                  textLines("profile-menu.heading-lore", p, p)));
-          for (int i = actual * capacity;
-              i < Math.min(cards.size(), (actual + 1) * capacity);
-              i++) {
-            String card = cards.get(i), prefix = path + ".details." + card;
-            m.inventory.setItem(
-                contentSlot(m, i % capacity, Math.min(capacity, cards.size() - actual * capacity)),
-                statisticIcon(
-                    prefix,
-                    plugin
-                        .getConfig()
-                        .getString(
-                            prefix + ".title-key", "profile-stats." + id + "." + card + ".title"),
-                    plugin
-                        .getConfig()
-                        .getString(
-                            prefix + ".lore-key", "profile-stats." + id + "." + card + ".lore"),
-                    values));
-          }
-          if (m.inventory.getSize() == 54 && actual > 0)
-            button(
-                m,
-                36,
-                Material.ARROW,
-                "gui.previous",
-                "gui.click.open",
-                () -> statisticsCategory(p, id, actual - 1));
-          if (m.inventory.getSize() == 54 && (actual + 1) * capacity < cards.size())
-            button(
-                m,
-                44,
-                Material.ARROW,
-                "common.next",
-                "gui.click.open",
-                () -> statisticsCategory(p, id, actual + 1));
-          button(
-              m,
-              m.inventory.getSize() - 3,
-              Material.ARROW,
-              "common.back",
-              "gui.click.open",
-              () -> statistics(p, p));
-          button(
-              m,
-              m.inventory.getSize() - 2,
-              Material.BARRIER,
-              "gui.close",
-              "gui.click.close",
-              p::closeInventory);
-          if (menus.get(p.getUniqueId()) == m) MenuStyle.apply(p, m.inventory);
-        };
-    m.repaint.run();
-    show(m);
-  }
-
   public static ItemStack head(Player target, Component title, List<Component> lore) {
     var item = MenuStyle.item(Material.PLAYER_HEAD, title, lore);
     var meta = (SkullMeta) item.getItemMeta();
@@ -809,12 +815,42 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             : 54;
     if (!Set.of(27, 36, 45, 54).contains(size))
       throw new IllegalArgumentException("gui-layout.invalid");
+    m.resume =
+        () -> {
+          menus.put(viewer.getUniqueId(), m);
+          if (m.repaint != null) repaint(m);
+        };
     m.menuId = title;
+    m.sourceSize = size;
     m.inventory = Bukkit.createInventory(m, size, MenuStyle.title(lang, title, vars));
     MenuStyle.frame(m.inventory);
     m.inventory.setItem(0, head(viewer, lang.render(title, vars), List.of()));
     button(m, size - 2, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
     return m;
+  }
+
+  private void repaint(Menu m) {
+    if (m.repaint == null) return;
+    var original = m.inventory;
+    var staging =
+        Bukkit.createInventory(m, m.sourceSize, MenuStyle.title(lang, m.menuId, m.variables));
+    m.inventory = staging;
+    try {
+      m.repaint.run();
+      var prepared = MenuStyle.prepare(m.viewer, staging);
+      if (prepared.getSize() != original.getSize()) {
+        m.inventory = prepared;
+        MenuStyle.open(m.viewer, prepared);
+        menus.put(m.viewer.getUniqueId(), m);
+        return;
+      }
+      for (int slot = 0; slot < original.getSize(); slot++)
+        if (!Objects.equals(original.getItem(slot), prepared.getItem(slot)))
+          original.setItem(slot, prepared.getItem(slot));
+    } finally {
+      if (m.inventory == staging || m.inventory.getSize() == original.getSize())
+        m.inventory = original;
+    }
   }
 
   private void show(Menu m) {
@@ -1017,22 +1053,26 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     var result = placeholders.renderLines(key, viewer, target);
     if (Set.of("grammar", "silent", "mentions", "channel", "clan-invites", "player-trades").stream()
         .anyMatch(id -> key.equals("profile-menu." + id + "-lore"))) {
-      return result.stream()
-          .map(
-              c ->
-                  c.replaceText(
-                      net.kyori.adventure.text.TextReplacementConfig.builder()
-                          .match("(?i)\\b(yes|no|true|false|global|local|admin)\\b")
-                          .replacement(
-                              (match, builder) ->
-                                  builder.content(
-                                      lang.text(
-                                          "profile-menu.states."
-                                              + match.group().toLowerCase(Locale.ROOT))))
-                          .build()))
-          .toList();
+      return localizedStates(result);
     }
     return result;
+  }
+
+  private List<Component> localizedStates(List<Component> result) {
+    return result.stream()
+        .map(
+            c ->
+                c.replaceText(
+                    net.kyori.adventure.text.TextReplacementConfig.builder()
+                        .match("(?i)\\b(yes|no|true|false|global|local|admin)\\b")
+                        .replacement(
+                            (match, builder) ->
+                                builder.content(
+                                    lang.text(
+                                        "profile-menu.states."
+                                            + match.group().toLowerCase(Locale.ROOT))))
+                        .build()))
+        .toList();
   }
 
   private ItemStack icon(String key, Material fallback, Component title, List<Component> lore) {
@@ -1069,7 +1109,17 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       Material material,
       Player target,
       boolean close) {
-    var lines = new ArrayList<>(textLines(lore, m.viewer, target));
+    var baseLines = textLines(lore, m.viewer, target);
+    if (Set.of(
+            "grammar",
+            "silent",
+            "mentions",
+            "channel",
+            "channel-local",
+            "clan-invites",
+            "player-trades")
+        .contains(id)) baseLines = localizedStates(baseLines);
+    var lines = new ArrayList<>(baseLines);
     if (!linkAvailable(id, m.viewer))
       lines.add(lang.render("profile-menu.integration-unavailable"));
     String iconKey = title;
@@ -1617,10 +1667,14 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     boolean cancelled = e.isCancelled();
     e.setCancelled(true);
     if (cancelled
-        || e.getClick() != ClickType.LEFT
+        || (e.getClick() != ClickType.LEFT && e.getClick() != ClickType.RIGHT)
         || e.getRawSlot() < 0
         || e.getRawSlot() >= m.inventory.getSize()) return;
-    Runnable action = m.actions.get(e.getRawSlot());
+    var choice = m.choices.get(e.getRawSlot());
+    Runnable action =
+        choice != null
+            ? () -> choice.accept(e.getClick())
+            : e.getClick() == ClickType.LEFT ? m.actions.get(e.getRawSlot()) : null;
     if (action != null)
       Bukkit.getScheduler()
           .runTask(
@@ -1628,7 +1682,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
               () -> {
                 if (menus.get(m.viewer.getUniqueId()) != m || !permitted(m)) return;
                 try {
-                  action.run();
+                  MenuStyle.action(m.viewer, action);
                 } catch (IllegalArgumentException error) {
                   lang.error(m.viewer, error);
                 }
@@ -1642,7 +1696,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
   @EventHandler
   public void closed(InventoryCloseEvent e) {
-    if (e.getInventory().getHolder() instanceof Menu m) menus.remove(m.viewer.getUniqueId(), m);
+    if (e.getInventory().getHolder() instanceof Menu m) {
+      menus.remove(m.viewer.getUniqueId(), m);
+      requests.remove(m.viewer.getUniqueId());
+    }
   }
 
   @EventHandler
@@ -1660,7 +1717,28 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   public void close() {
     if (task != null) task.cancel();
     for (var m : List.copyOf(menus.values())) m.viewer.closeInventory();
-    snapshots.forEach(this::persist);
+    closing = true;
+    var finalSnapshots = new HashMap<>(pendingSnapshots);
+    finalSnapshots.putAll(snapshots);
+    finalSnapshots.forEach(
+        (id, data) ->
+            store
+                .profile(id, "loveessential.player-info", gson.toJson(data))
+                .exceptionally(
+                    error -> {
+                      plugin
+                          .getLogger()
+                          .log(
+                              java.util.logging.Level.WARNING,
+                              lang.text("players.save-failed"),
+                              error);
+                      return null;
+                    }));
+    pendingSnapshots.clear();
+    for (var future : List.copyOf(snapshotWrites.values()))
+      future.completeExceptionally(
+          new java.util.concurrent.CancellationException("plugin-disabled"));
+    snapshotWrites.clear();
     privacy.close();
     snapshots.clear();
     requests.clear();

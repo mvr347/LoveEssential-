@@ -85,7 +85,7 @@ public final class Extensions implements AutoCloseable {
         windows.motdEditor(p);
       }
       case "scoreboard" -> {
-        if (args.length == 1 && Set.of("edit", "settings").contains(args[0])) sidebar.settings(p);
+        if (args.length == 1 && args[0].equals("edit")) sidebar.settings(p);
         else if (args.length == 1 && args[0].equals("worlds")) sidebar.worlds(p, 0);
         else {
           if (args.length != 0) throw new IllegalArgumentException("errors.input");
@@ -103,7 +103,7 @@ public final class Extensions implements AutoCloseable {
       case "dialog" -> windows.suggestions(p, args);
       case "scoreboard" ->
           p.hasPermission("loveessential.admin") && args.length == 1
-              ? List.of("edit", "settings", "worlds")
+              ? List.of("edit", "worlds")
               : List.of();
       default -> List.of();
     };

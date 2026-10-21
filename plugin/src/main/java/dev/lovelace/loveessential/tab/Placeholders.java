@@ -86,38 +86,53 @@ public final class Placeholders {
     if (depth > 4) return Component.empty();
     template = template.replaceAll("%([a-zA-Z0-9_:.]+)%", "<papi:'$1'>");
     var b = TagResolver.builder();
-    Map<String, String> variables =
+    Map<String, java.util.function.Supplier<String>> variables =
         Map.ofEntries(
-            Map.entry("player", target.getName()),
-            Map.entry("viewer", viewer.getName()),
-            Map.entry("world", target.getWorld().getName()),
+            Map.entry("player", target::getName),
+            Map.entry("viewer", viewer::getName),
+            Map.entry("world", () -> target.getWorld().getName()),
             Map.entry(
                 "online",
-                Long.toString(Bukkit.getOnlinePlayers().stream().filter(viewer::canSee).count())),
+                () ->
+                    Long.toString(
+                        Bukkit.getOnlinePlayers().stream().filter(viewer::canSee).count())),
             Map.entry(
                 "visible_online",
-                Long.toString(Bukkit.getOnlinePlayers().stream().filter(viewer::canSee).count())),
-            Map.entry("max_players", Integer.toString(Bukkit.getMaxPlayers())),
-            Map.entry("ping", Integer.toString(target.getPing())),
-            Map.entry("clan", love.clan(target).orElse("")),
-            Map.entry("territory", love.territory(target)),
+                () ->
+                    Long.toString(
+                        Bukkit.getOnlinePlayers().stream().filter(viewer::canSee).count())),
+            Map.entry("max_players", () -> Integer.toString(Bukkit.getMaxPlayers())),
+            Map.entry("ping", () -> Integer.toString(target.getPing())),
+            Map.entry("clan", () -> love.clan(target).orElse("")),
+            Map.entry("territory", () -> love.territory(target)),
             Map.entry(
                 "reputation",
-                love.reputation(target).isPresent()
-                    ? Integer.toString(love.reputation(target).getAsInt())
-                    : ""));
+                () -> {
+                  var reputation = love.reputation(target);
+                  return reputation.isPresent() ? Integer.toString(reputation.getAsInt()) : "";
+                }));
     playerValues
         .apply(target.getUniqueId())
         .forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
-    variables.forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
-    b.resolver(Placeholder.component("nickname", nickname.apply(target)));
+    variables.forEach(
+        (key, supplier) ->
+            b.resolver(
+                TagResolver.resolver(
+                    key, (args, context) -> Tag.inserting(Component.text(supplier.get())))));
+    b.resolver(
+        TagResolver.resolver("nickname", (args, context) -> Tag.inserting(nickname.apply(target))));
     b.resolver(Placeholder.unparsed("real_name", target.getName()));
     b.resolver(
-        Placeholder.component(
-            "afk", afk.test(target) ? lang.render("tab.status.afk") : Component.empty()));
+        TagResolver.resolver(
+            "afk",
+            (args, context) ->
+                Tag.inserting(
+                    afk.test(target) ? lang.render("tab.status.afk") : Component.empty())));
     b.resolver(
-        Placeholder.component(
-            "suffix", legacyOrMini(papi(viewer, target, "%lovesubnames_current%"))));
+        TagResolver.resolver(
+            "suffix",
+            (args, context) ->
+                Tag.inserting(legacyOrMini(papi(viewer, target, "%lovesubnames_current%")))));
     b.resolver(
         TagResolver.resolver(
             "papi",

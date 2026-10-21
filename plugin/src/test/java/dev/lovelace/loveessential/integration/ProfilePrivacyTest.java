@@ -109,6 +109,14 @@ class ProfilePrivacyTest {
     server.getScheduler().performOneTick();
   }
 
+  int named(PlayerMock p, String text) {
+    var inventory = p.getOpenInventory().getTopInventory();
+    for (int slot = 0; slot < inventory.getSize(); slot++)
+      if (inventory.getItem(slot) != null && title(p, slot).contains(text)) return slot;
+    fail("Missing button: " + text);
+    return -1;
+  }
+
   String lore(PlayerMock p) {
     return Arrays.stream(p.getOpenInventory().getTopInventory().getContents())
         .filter(Objects::nonNull)
@@ -243,11 +251,11 @@ class ProfilePrivacyTest {
     var p = player("Owner");
     command(p, "profile settings");
     var inventory = p.getOpenInventory().getTopInventory();
-    assertEquals(Material.PLAYER_HEAD, inventory.getItem(21).getType());
-    assertEquals(Material.PLAYER_HEAD, inventory.getItem(22).getType());
-    assertEquals(Material.PLAYER_HEAD, inventory.getItem(23).getType());
+    assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, "Уведомления")).getType());
+    assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, "Персонализация")).getType());
+    assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, "Боковая панель")).getType());
     String text = lore(p);
-    assertTrue(text.contains("Да"));
+    assertTrue(text.contains("Да") || text.contains("Включено"), text);
     assertTrue(text.contains("Выключено"));
     assertTrue(text.contains("Глобальный"));
     assertFalse(text.contains("yes"));
@@ -294,14 +302,19 @@ class ProfilePrivacyTest {
             .toList());
     click(target, 14);
     assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
-    click(target, 12); // world category
-    assertEquals(54, target.getOpenInventory().getTopInventory().getSize());
-    assertTrue(lore(target).contains("Убийств игроков: 9"));
-    assertTrue(lore(target).contains("K/D: 3.0"));
-    assertTrue(lore(target).contains("В игре: 1 ч 0 мин"));
-    assertTrue(lore(target).contains("Добыто блоков: 17"));
-    click(target, 51);
-    click(target, 24);
+    click(target, named(target, "Мир и выживание"));
+    assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
+    var seen = new StringBuilder(lore(target));
+    int world = named(target, "Мир и выживание");
+    for (int i = 0; i < 4; i++) {
+      click(target, world);
+      seen.append(lore(target));
+    }
+    assertTrue(seen.toString().contains("Убийств игроков: 9"));
+    assertTrue(seen.toString().contains("K/D: 3.0"));
+    assertTrue(seen.toString().contains("В игре: 1 ч 0 мин"));
+    assertTrue(seen.toString().contains("Добыто блоков: 17"));
+    click(target, target.getOpenInventory().getTopInventory().getSize() - 2);
     assertEquals("Настройки", title(target, 12));
   }
 
@@ -330,8 +343,8 @@ class ProfilePrivacyTest {
     assertEquals(url, meta.getPlayerProfile().getTextures().getSkin().toExternalForm());
     assertFalse(lore(viewer).contains("K/D:"));
     assertEquals("Пожаловаться", title(viewer, 5));
-    click(viewer, 24);
-    assertEquals("Настройки", title(viewer, 12));
+    assertFalse(
+        title(viewer, 25).contains("Назад"), "direct offline profile has no invented parent");
   }
 
   @Test
@@ -444,7 +457,7 @@ class ProfilePrivacyTest {
     click(owner, 15);
     assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu", calls.getLast());
     command(owner, "profile settings");
-    click(owner, 19);
+    click(owner, named(owner, "Активность и приватность"));
     assertTrue(title(owner, 3).contains("доступен"));
     assertTrue(title(owner, 5).contains("скрыта"));
     click(owner, 5);
@@ -456,7 +469,7 @@ class ProfilePrivacyTest {
   void guiHasIndependentPersistentPrivacyTogglesAndNoReputationOnSelf() throws Exception {
     var owner = player("Owner");
     command(owner, "profile settings");
-    click(owner, 19);
+    click(owner, named(owner, "Активность и приватность"));
     click(owner, 3);
     waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
     assertTrue(profiles.privacy().preferences(owner).activityVisible());
@@ -583,12 +596,12 @@ class ProfilePrivacyTest {
             ServicePriority.Normal);
     var p = player("Owner");
     command(p, "profile settings");
-    click(p, 21);
-    click(p, 20);
+    click(p, named(p, "Уведомления"));
+    click(p, named(p, "Канал: чат"));
     assertEquals(1, channels.size());
-    click(p, 22);
+    click(p, named(p, "Над панелью"));
     assertTrue(channels.contains(dev.lovelace.lovecore.api.notify.LoveNotify.Channel.ACTION_BAR));
-    click(p, 20);
+    click(p, named(p, "Канал: чат"));
     assertFalse(channels.contains(dev.lovelace.lovecore.api.notify.LoveNotify.Channel.CHAT));
     assertEquals(1, channels.size());
   }

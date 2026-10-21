@@ -110,6 +110,7 @@ public final class SidebarConfig {
     java.util.function.Function<String, String> text =
         key -> pending.getOrDefault(key, lang.text(key));
     var result = new LinkedHashMap<String, Object>();
+    result.put("presets-version", 1);
     result.put("title", text.apply(c.titleKey()));
     result.put("separator", text.apply(c.separatorKey()));
     result.put("bottom", text.apply(c.bottomKey()));

@@ -6,7 +6,7 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   comfort:
     no-passenger: <gray>На вас никто не сидит.
     passenger-ejected: <gray>Пассажир снят.
@@ -29,4 +29,3 @@ texts:
     seat-occupied: <yellow>Это место уже занято.
     ride-target: '<yellow>Посмотрите на свободную живую цель поблизости или укажите игрока: /ride <ник>.'
     ride-consent: <yellow>Игрок должен разрешить посадку правом loveessential.ride.accept и находиться вне боя.
-buttons: {}

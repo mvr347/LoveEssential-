@@ -112,7 +112,7 @@ class ContentIntegrationTest {
     click(p, 19, false);
     p.getInventory().setItemInMainHand(new ItemStack(Material.EMERALD, 3));
     click(p, 24, false);
-    click(p, 50, false);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3, false);
     waitFor(() -> library.craft("sigil").isPresent());
     var key = library.key("sigil");
     var recipe = assertInstanceOf(ShapedRecipe.class, Bukkit.getRecipe(key));
@@ -145,7 +145,7 @@ class ContentIntegrationTest {
     assertFalse(LoveEssentialPlugin.MODULES.contains("customgui"));
     assertNull(plugin.getCommand("customgui"));
     command(p, "le crafts");
-    click(p, 50, false);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3, false);
     var editorInventory = p.getOpenInventory().getTopInventory();
     assertNotNull(editorInventory);
     var ingredient = new ItemStack(Material.DIAMOND, 8);
@@ -160,7 +160,7 @@ class ContentIntegrationTest {
         });
     p.getInventory().setItemInMainHand(output);
     click(p, 24, false);
-    click(p, 50, false);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3, false);
     waitFor(() -> !library.ids().isEmpty());
     String generated = library.ids().getFirst();
     assertTrue(generated.startsWith("craft_"));
@@ -193,7 +193,7 @@ class ContentIntegrationTest {
     click(p, 19, true);
     p.getInventory().setItemInMainHand(new ItemStack(Material.STONE));
     click(p, 19, false);
-    click(p, 50, false);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3, false);
     waitFor(() -> library.craft(generated).orElseThrow().revision() > 1);
     var nativeRecipe =
         assertInstanceOf(ShapelessRecipe.class, Bukkit.getRecipe(library.key(generated)));
@@ -224,7 +224,7 @@ class ContentIntegrationTest {
     assertTrue(library.craft("denied").isEmpty());
     p.setOp(true);
     command(p, "recipes create incomplete");
-    click(p, 50, false);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3, false);
     assertTrue(library.craft("incomplete").isEmpty());
     assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
     var drag =

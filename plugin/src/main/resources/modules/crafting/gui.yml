@@ -6,7 +6,7 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   content:
     recipes-title: <gold>Рецепты королевства
     craft-editor: <gold>Рецепт <white><id>
@@ -58,49 +58,3 @@ texts:
     recipe-usage: <yellow>/le recipes [create|edit|open|delete] ID; /le starter [preview|claim|edit]
     delete-recipe: <red>Удалить рецепт
     delete-recipe-help: <gray>Удалить рецепт с подтверждением; крафт сразу станет недоступен.
-buttons:
-  content-recipes-title:
-    title-key: content.recipes-title
-    texture: ''
-  content-craft-editor:
-    title-key: content.craft-editor
-    texture: ''
-  content-recipe-preview:
-    title-key: content.recipe-preview
-    texture: ''
-  content-confirm-delete:
-    title-key: content.confirm-delete
-    texture: ''
-  content-entry:
-    title-key: content.entry
-    texture: ''
-  content-edit:
-    title-key: content.edit
-    texture: ''
-  content-permission:
-    title-key: content.permission
-    texture: ''
-  content-shaped:
-    title-key: content.shaped
-    texture: ''
-  content-shapeless:
-    title-key: content.shapeless
-    texture: ''
-  content-exact:
-    title-key: content.exact
-    texture: ''
-  content-material:
-    title-key: content.material
-    texture: ''
-  content-result:
-    title-key: content.result
-    texture: ''
-  content-add-scroll:
-    title-key: content.add-scroll
-    texture: ''
-  content-copy-inventory:
-    title-key: content.copy-inventory
-    texture: ''
-  content-recipe-input-context:
-    title-key: content.recipe-input-context
-    texture: ''

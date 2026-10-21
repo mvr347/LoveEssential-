@@ -62,7 +62,7 @@ public final class GuiSettings {
   }
 
   public ItemStack styleButton(String key, ItemStack item) {
-    String root = module(key) + ".gui.buttons." + key.replace('.', '-');
+    String root = module(key) + ".gui.components." + key.replace('.', '-');
     String texture = plugin.getConfig().getString(root + ".texture", "");
     var meta = item.getItemMeta();
     String title = plugin.getConfig().getString(root + ".title", "");
@@ -90,7 +90,7 @@ public final class GuiSettings {
   public void apply(Player p, Inventory inventory, GuiLayout layout) {
     standard(p, inventory, layout);
     for (var nav :
-        Map.of("back", inventory.getSize() - 3, "close", inventory.getSize() - 2).entrySet()) {
+        Map.of("back", inventory.getSize() - 2, "close", inventory.getSize() - 1).entrySet()) {
       var current = inventory.getItem(nav.getValue());
       String texture =
           plugin
@@ -136,7 +136,7 @@ public final class GuiSettings {
           || current.getType().name().endsWith("STAINED_GLASS_PANE") && !actions.containsKey(from))
         continue;
       if (!section.getBoolean(source + ".enabled", true)) {
-        if (from == 0 || from == inventory.getSize() - 2 || from == inventory.getSize() - 3)
+        if (from == 0 || from == inventory.getSize() - 1 || from == inventory.getSize() - 2)
           continue;
         items.put(to, null);
         callbacks.put(to, null);
@@ -243,28 +243,115 @@ public final class GuiSettings {
       inventory.setItem(positions[i], buttons.get(i));
       if (handlers.get(i) != null) callbacks.put(positions[i], handlers.get(i));
     }
-    if (inventory.getItem(0) == null
-        || inventory.getItem(0).getType().name().endsWith("STAINED_GLASS_PANE"))
-      inventory.setItem(
-          0,
-          dev.lovelace.loveessential.module.PlayerProfiles.head(
-              p, title(layout.guiId(), Map.of("player", p.getName())), List.of()));
-    int back = inventory.getSize() - 3;
-    if (!Set.of("module-menu.title", "profile-menu.title", "public-profile.title")
-            .contains(layout.guiId())
-        && !callbacks.containsKey(back)) {
+    int size = inventory.getSize();
+    int close = size - 1, back = size - 2;
+    if (!closeItem(inventory.getItem(close))) {
+      var extra = inventory.getItem(size - 4);
+      Object extraAction = callbacks.get(size - 4);
+      for (int slot = size - 4; slot < size; slot++) {
+        inventory.setItem(slot, glass(layout.guiId()));
+        callbacks.remove(slot);
+      }
+      if (extra != null && !extra.getType().name().endsWith("STAINED_GLASS_PANE")) {
+        inventory.setItem(size - 3, extra);
+        if (extraAction != null) callbacks.put(size - 3, extraAction);
+      }
+    }
+    inventory.setItem(
+        close,
+        MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.separator", "gui.click.close"));
+    layout.guiPut(close, p::closeInventory);
+    inventory.setItem(back, glass(layout.guiId()));
+    callbacks.remove(back);
+    if (MenuStyle.hasParent(p)) {
       inventory.setItem(
           back,
           MenuStyle.button(lang, Material.ARROW, "common.back", "gui.separator", "gui.click.open"));
-      layout.guiPut(
-          back,
-          () -> {
-            p.closeInventory();
-            if (p.hasPermission("loveessential.admin"))
-              plugin.getCommand("loveessential").execute(p, "loveessential", new String[0]);
-            else plugin.getCommand("profile").execute(p, "profile", new String[0]);
-          });
+      layout.guiPut(back, () -> MenuStyle.back(p));
     }
+    if (layout.guiId().equals("sidebar.slots-title")) {
+      inventory.setItem(0, glass(layout.guiId()));
+      callbacks.remove(0);
+    }
+  }
+
+  private ItemStack glass(String id) {
+    return MenuStyle.item(frameMaterial(id), net.kyori.adventure.text.Component.empty(), List.of());
+  }
+
+  private boolean closeItem(ItemStack item) {
+    return item != null
+        && item.hasItemMeta()
+        && item.getItemMeta().hasDisplayName()
+        && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(item.getItemMeta().displayName())
+            .contains("Закрыть");
+  }
+
+  public Inventory compact(Inventory inventory, GuiLayout layout) {
+    if (inventory.getSize() != 54
+        || module(layout.guiId()).equals("crafting")
+        || module(layout.guiId()).equals("starter")) return inventory;
+    @SuppressWarnings("unchecked")
+    var actions = (Map<Integer, Object>) (Map<?, ?>) layout.guiActions();
+    // Previous/next pages require the full list layout.
+    for (int slot : new int[] {36, 44}) {
+      var item = inventory.getItem(slot);
+      if (item != null
+          && !item.getType().isAir()
+          && !item.getType().name().endsWith("STAINED_GLASS_PANE")) return inventory;
+    }
+    var content = new ArrayList<Integer>();
+    for (int slot = 1; slot < 9; slot++) {
+      var item = inventory.getItem(slot);
+      if (item != null && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
+        String name =
+            net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                .serialize(item.getItemMeta().displayName());
+        if (name.contains("Создать") || name.contains("Добавить")) {
+          for (int target : MenuStyle.CONTENT)
+            if (inventory.getItem(target) == null || inventory.getItem(target).getType().isAir()) {
+              inventory.setItem(target, item);
+              inventory.setItem(slot, glass(layout.guiId()));
+              if (actions.containsKey(slot)) actions.put(target, actions.remove(slot));
+              break;
+            }
+        }
+      }
+    }
+    for (int slot = 18; slot < 45; slot++) {
+      var item = inventory.getItem(slot);
+      if (item != null
+          && !item.getType().isAir()
+          && !item.getType().name().endsWith("STAINED_GLASS_PANE")) content.add(slot);
+    }
+    if (content.size() > 14) return inventory;
+    int size = content.size() <= 7 ? 27 : 36;
+    var title = title(layout.guiId(), layout.guiVariables());
+    var next = Bukkit.createInventory(layout, size, title);
+    var replacement = new HashMap<Integer, Object>();
+    for (int slot = 0; slot < 9; slot++) {
+      next.setItem(slot, inventory.getItem(slot));
+      if (actions.containsKey(slot)) replacement.put(slot, actions.get(slot));
+    }
+    for (int i = 0; i < content.size(); i++) {
+      int from = content.get(i), to = MenuStyle.slot(i, content.size()) - 9;
+      next.setItem(to, inventory.getItem(from));
+      if (actions.containsKey(from)) replacement.put(to, actions.get(from));
+    }
+    for (int i = 0; i < 9; i++) {
+      int from = 45 + i, to = size - 9 + i;
+      next.setItem(to, inventory.getItem(from));
+      if (actions.containsKey(from)) replacement.put(to, actions.get(from));
+    }
+    for (int slot = 0; slot < 9; slot++)
+      if (next.getItem(slot) == null) next.setItem(slot, glass(layout.guiId()));
+    for (int slot = size - 9; slot < size; slot++)
+      if (next.getItem(slot) == null) next.setItem(slot, glass(layout.guiId()));
+    actions.clear();
+    actions.putAll(replacement);
+    layout.guiInventory(next);
+    return next;
   }
 
   private static boolean frameSlot(int slot, int size) {
@@ -273,7 +360,7 @@ public final class GuiSettings {
 
   private static boolean legal(int from, int to, int size, String id) {
     if (from == to) return true;
-    if (from == 0 || from == size - 2 || from == size - 3) return false;
+    if (from == 0 || from == size - 1 || from == size - 2) return false;
     if (from >= 2 && from <= 7) return false;
     if (frameSlot(from, size)) return false;
     return !frameSlot(to, size) && to % 9 != 0 && to % 9 != 8;

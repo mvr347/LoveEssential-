@@ -1,4 +1,4 @@
-# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+# Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
 enabled: true
 refresh-ticks: 20
 default-enabled: true
@@ -8,7 +8,7 @@ disabled-gamemodes: []
 display-permission: ''
 hide-while-afk: false
 hide-in-combat: false
-max-selected-lines: 8
+max: 8
 overrides:
   allow-forced: true
   max-seconds: 600

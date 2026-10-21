@@ -83,6 +83,15 @@ public final class ControlMenus implements Listener, AutoCloseable {
     final Map<Integer, Consumer<ClickType>> actions = new HashMap<>();
     final Predicate<Player> allowed;
     boolean root;
+    Map<String, String> variables = Map.of();
+
+    public Map<String, String> guiVariables() {
+      return variables;
+    }
+
+    public boolean guiAllowed(Player player) {
+      return allowed.test(player);
+    }
 
     Menu(Predicate<Player> allowed) {
       this.allowed = allowed;
@@ -90,6 +99,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
     public Inventory getInventory() {
       return inventory;
+    }
+
+    public void guiInventory(Inventory value) {
+      inventory = value;
     }
   }
 
@@ -133,6 +146,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (direct.remove(p.getUniqueId())) roots.put(p.getUniqueId(), route);
     m.root = route.equals(roots.get(p.getUniqueId()));
     m.menuId = title;
+    m.variables = vars;
     m.inventory = Bukkit.createInventory(m, 54, MenuStyle.title(lang, title, vars));
     MenuStyle.frame(m.inventory);
     m.inventory.setItem(
@@ -300,7 +314,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         menu(
             p,
             "gui.settings-title",
-            Map.of("module", lang.text("gui.module-labels." + id), "path", path),
+            Map.of("module", lang.text("gui.module-labels." + id), "path", settingName(path)),
             this::admin);
     if (id.equals("scoreboard"))
       entry(
@@ -320,7 +334,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
       var title =
           lang.contains(labelKey)
               ? lang.render(labelKey)
-              : lang.render("gui.label", Map.of("name", key));
+              : lang.renderText("<gold>" + settingName(key), Map.of());
       var lore = new ArrayList<Component>();
       String helpKey = "module-help." + id + "." + full + "._description";
       if (full.equals("access") || full.startsWith("access."))
@@ -338,7 +352,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                             : value instanceof List<?>
                                 ? "settings-help.list"
                                 : "settings-help.text"));
-      lore.add(lang.render("gui.path", Map.of("path", full)));
+
       if (!folder)
         lore.add(
             lang.render(
@@ -470,7 +484,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   private void settingPicker(
       Player p, String module, String path, Object expected, int page, Runnable back) {
-    var menu = menu(p, "settings-help.choice-title", Map.of("path", path), this::admin);
+    var menu =
+        menu(p, "settings-help.choice-title", Map.of("path", settingName(path)), this::admin);
     var choices = settingChoices(module, path);
     int count = Math.max(0, Math.min(21, choices.size() - page * 21));
     for (int i = 0; i < count; i++) {
@@ -498,6 +513,17 @@ public final class ControlMenus implements Listener, AutoCloseable {
         n -> settingPicker(p, module, path, expected, n, back),
         back);
     MenuStyle.open(p, menu.inventory);
+  }
+
+  private String settingName(String key) {
+    var words = new ArrayList<String>();
+    for (String word : key.split("[._-]+")) {
+      String lookup = "settings-labels.words." + word.toLowerCase(Locale.ROOT);
+      if (lang.contains(lookup)) words.add(lang.text(lookup));
+    }
+    if (words.isEmpty()) return lang.text("settings-labels.unknown");
+    String result = String.join(" · ", words);
+    return Character.toUpperCase(result.charAt(0)) + result.substring(1);
   }
 
   private static Object parse(Object previous, String input) {
@@ -558,7 +584,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   private void list(Player p, String module, String path, List<?> values, int page, Runnable back) {
-    var m = menu(p, "gui.list-title", Map.of("path", path), this::admin);
+    var m = menu(p, "gui.list-title", Map.of("path", settingName(path)), this::admin);
     for (int i = page * 21; i < Math.min(values.size(), (page + 1) * 21); i++) {
       int index = i;
       entry(
@@ -648,34 +674,20 @@ public final class ControlMenus implements Listener, AutoCloseable {
           m,
           MenuStyle.slot(i % 21, Math.min(21, list.size() - page * 21)),
           Material.PLAYER_HEAD,
-          lang.render(n.nameKey()),
+          lang.render(n.nameKey())
+              .append(
+                  Component.text(
+                      " · №" + npcs.number(n.id()),
+                      net.kyori.adventure.text.format.NamedTextColor.GRAY)),
           List.of(
-              lang.render("gui.npc-id", Map.of("id", n.id())),
+              lang.render("gui.npc-id", Map.of("id", "" + npcs.number(n.id()))),
                   lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"),
               lang.render("gui.separator"), lang.render("gui.click.open")),
           c -> npc(p, n.id()));
     }
     navigation(m, p, page, list.size(), n -> npcList(p, n), () -> home(p));
     put(m, 4, Material.WRITABLE_BOOK, "gui.resume", "gui.click.open", c -> wizard.open(p));
-    put(
-        m,
-        50,
-        Material.LIME_DYE,
-        "gui.create-npc",
-        "gui.click.edit",
-        c ->
-            ask(
-                p,
-                "gui.prompt-id",
-                who ->
-                    who.hasPermission("loveessential.npc.create")
-                        && who.hasPermission("loveessential.npc.edit")
-                        && plugin.module("npc"),
-                id -> wizard.create(p, id),
-                () -> npcList(p, page),
-                lang.render("gui.create-npc"),
-                "npc_01",
-                ""));
+    put(m, 50, Material.LIME_DYE, "gui.create-npc", "gui.click.open", c -> wizard.open(p));
     if (!p.hasPermission("loveessential.npc.create") || !p.hasPermission("loveessential.npc.edit"))
       locked(m, 50);
     if (!p.hasPermission("loveessential.npc.edit")) locked(m, 4);
@@ -684,7 +696,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   private void npc(Player p, String id) {
     var n = npcs.get(id).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
-    var m = menu(p, "gui.npc-title", Map.of("id", id), this::npcView);
+    var m = menu(p, "gui.npc-title", Map.of("id", "" + npcs.number(id)), this::npcView);
     put(m, 19, Material.WRITABLE_BOOK, "gui.edit-npc", "gui.click.open", c -> wizard.edit(p, id));
     put(m, 21, Material.RAIL, "gui.path-npc", "gui.click.open", c -> wizard.edit(p, id, 4));
     put(m, 23, Material.BOOK, "gui.dialog-npc", "gui.click.open", c -> wizard.edit(p, id, 5));
@@ -721,7 +733,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                       false),
               () -> npc(p, id),
               who -> plugin.module("npc") && who.hasPermission("loveessential.npc.delete"),
-              id);
+              "№" + npcs.number(id));
         });
     if (!p.hasPermission("loveessential.npc.edit"))
       for (int slot : new int[] {19, 21, 23, 25}) locked(m, slot);
@@ -1775,7 +1787,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   private void number(Player p, String module, String path, Object value, Runnable back) {
-    var m = menu(p, "settings-help.number-title", Map.of("path", path), this::admin);
+    var m = menu(p, "settings-help.number-title", Map.of("path", settingName(path)), this::admin);
     m.inventory.setItem(
         4,
         MenuStyle.item(
@@ -1889,7 +1901,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               try {
                 if (!plugin.ready() || !love.authenticated(p) || !m.allowed.test(p))
                   throw new IllegalArgumentException("errors.permission");
-                action.accept(click);
+                MenuStyle.action(p, () -> action.accept(click));
               } catch (RuntimeException ex) {
                 error(p, ex);
               }

@@ -6,7 +6,7 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-texts:
+messages:
   worlds:
     title: <gold>Миры сервера
     help: <gray>Выберите мир. Администратору доступны настройки, игроку — переход по разрешениям.
@@ -15,13 +15,15 @@ texts:
     unloaded: выгружен
     create: <green>Создать мир
     import: <gold>Импортировать папку мира
-    create-help: <gray>Имя — латиница, цифры, _ и -. Импорт требует папку с level.dat внутри папки миров сервера. Создание мира может занять время.
+    create-help: <gray>Имя — латиница, цифры, _ и -. Импорт требует папку с level.dat внутри папки миров сервера.
+      Создание мира может занять время.
     name: <gold>Имя мира
     environment: <gold>Измерение
     type: <gold>Тип генерации
     seed: <gold>Сид (целое число)
     edit: <gold>Настройки мира
-    edit-help: <gray>Изменения сохраняются в SQLite и применяются к загруженному миру. Пустое право разрешает вход всем.
+    edit-help: <gray>Изменения сохраняются в SQLite и применяются к загруженному миру. Пустое право разрешает вход
+      всем.
     permission: <gold>Право доступа (пусто — всем)
     autoload: <gold>Загружать при старте
     pvp: <gold>Разрешить PvP
@@ -55,82 +57,3 @@ texts:
     rule: <gold>Правило
     rule-value: <gold>Значение
     rules-help: <gray>Выберите правило и задайте true/false или целое число, в зависимости от его типа.
-buttons:
-  worlds-title:
-    title-key: worlds.title
-    texture: ''
-  worlds-entry:
-    title-key: worlds.entry
-    texture: ''
-  worlds-import:
-    title-key: worlds.import
-    texture: ''
-  worlds-name:
-    title-key: worlds.name
-    texture: ''
-  worlds-environment:
-    title-key: worlds.environment
-    texture: ''
-  worlds-type:
-    title-key: worlds.type
-    texture: ''
-  worlds-seed:
-    title-key: worlds.seed
-    texture: ''
-  worlds-edit:
-    title-key: worlds.edit
-    texture: ''
-  worlds-permission:
-    title-key: worlds.permission
-    texture: ''
-  worlds-autoload:
-    title-key: worlds.autoload
-    texture: ''
-  worlds-pvp:
-    title-key: worlds.pvp
-    texture: ''
-  worlds-difficulty:
-    title-key: worlds.difficulty
-    texture: ''
-  worlds-mode:
-    title-key: worlds.mode
-    texture: ''
-  worlds-enforce:
-    title-key: worlds.enforce
-    texture: ''
-  worlds-advanced:
-    title-key: worlds.advanced
-    texture: ''
-  worlds-time:
-    title-key: worlds.time
-    texture: ''
-  worlds-freeze:
-    title-key: worlds.freeze
-    texture: ''
-  worlds-weather:
-    title-key: worlds.weather
-    texture: ''
-  worlds-border:
-    title-key: worlds.border
-    texture: ''
-  worlds-border-x:
-    title-key: worlds.border-x
-    texture: ''
-  worlds-border-z:
-    title-key: worlds.border-z
-    texture: ''
-  worlds-respawn:
-    title-key: worlds.respawn
-    texture: ''
-  worlds-rules:
-    title-key: worlds.rules
-    texture: ''
-  worlds-setspawn:
-    title-key: worlds.setspawn
-    texture: ''
-  worlds-rule:
-    title-key: worlds.rule
-    texture: ''
-  worlds-rule-value:
-    title-key: worlds.rule-value
-    texture: ''

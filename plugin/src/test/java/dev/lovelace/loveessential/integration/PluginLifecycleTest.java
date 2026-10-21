@@ -81,17 +81,21 @@ class PluginLifecycleTest {
         legacy,
         java.nio.file.Files.readString(directory.resolve("modules/home.yml.pre-folders.bak")));
     assertFalse(java.nio.file.Files.exists(directory.resolve("modules/home.yml")));
-    assertEquals("common.back", plugin.getConfig().getString("home.gui.menus.example.title-key"));
+    assertEquals("<gray>Назад", plugin.getConfig().getString("home.gui.menus.example.title"));
     var gui =
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
             directory.resolve("modules/profile/gui.yml").toFile());
     assertTrue(gui.contains("menus.profile-menu-title.buttons.12"));
-    assertTrue(gui.getString("texts.profile-menu.settings").contains("Настройки"));
+    assertTrue(gui.getString("menus.profile-menu-title.buttons.12.title").contains("Настройки"));
     var p = admin();
-    String previous = plugin.getConfig().getString("profile.gui.texts.profile-menu.settings");
+    String previous =
+        plugin.getConfig().getString("profile.gui.menus.profile-menu-title.buttons.12.title");
     await(
         plugin.editSetting(
-            "profile", "gui.texts.profile-menu.settings", previous, "<gold>Мои параметры"));
+            "profile",
+            "gui.menus.profile-menu-title.buttons.12.title",
+            previous,
+            "<gold>Мои параметры"));
     server.dispatchCommand(p, "profile");
     assertEquals(12, itemNamed(p, "Мои параметры"));
     assertFalse(
@@ -106,7 +110,7 @@ class PluginLifecycleTest {
     server.dispatchCommand(p, "le module home");
     click(p, itemNamed(p, "Ограничения использования"));
     click(p, itemNamed(p, "Запрещённые состояния"));
-    click(p, 50);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3);
     click(p, itemNamed(p, "бой"));
     waitFor(() -> plugin.getConfig().getStringList("home.access.denied-states").contains("combat"));
     var folder = plugin.getDataFolder().toPath();
@@ -127,7 +131,7 @@ class PluginLifecycleTest {
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
     server.dispatchCommand(p, "npc set id guard");
     server.dispatchCommand(p, "npc set name Страж ворот");
     server.dispatchCommand(p, "npc set type VILLAGER");
@@ -249,47 +253,64 @@ class PluginLifecycleTest {
     var p = admin();
     server.dispatchCommand(p, "le npc");
     assertLayout(p);
-    click(p, 50); // create prompt
-    respond(p, "save", java.util.Map.of("value", "menu_guard"));
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3); // create prompt
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
+                && ((dev.lovelace.loveessential.gui.GuiLayout)
+                        p.getOpenInventory().getTopInventory().getHolder())
+                    .guiId()
+                    .equals("gui.wizard-title"));
+    server.dispatchCommand(p, "npc set id menu_guard");
     assertLayout(p);
-    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(2, 4)); // entity picker
+    click(p, itemNamed(p, "Тип сущности")); // entity picker
     assertLayout(p);
-    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(1, 11)); // VILLAGER
+    click(p, itemNamed(p, "Житель")); // VILLAGER
     server.dispatchCommand(p, "le npc publish");
     var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
     waitFor(() -> api.npc("menu_guard").isPresent());
     assertEquals("VILLAGER", api.npc("menu_guard").orElseThrow().entityType());
-    assertTrue(suggestions(p, "loveessential", "npc", "delete", "").contains("menu_guard"));
+    assertTrue(suggestions(p, "loveessential", "npc", "delete", "").contains("1"));
     server.dispatchCommand(p, "le npc");
-    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(0, 1));
-    click(p, 33); // delete -> confirmation
+    click(p, itemNamed(p, "№1"));
+    click(p, itemNamed(p, "Удалить NPC")); // delete -> confirmation
     assertTrue(api.npc("menu_guard").isPresent(), "opening confirmation must not delete anything");
     String target =
         net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
             .serialize(
-                p.getOpenInventory().getTopInventory().getItem(22).getItemMeta().displayName());
-    assertEquals("menu_guard", target);
-    click(p, 20);
+                p.getOpenInventory()
+                    .getTopInventory()
+                    .getItem(itemNamed(p, "№1"))
+                    .getItemMeta()
+                    .displayName());
+    assertEquals("№1", target);
+    click(p, itemNamed(p, "Подтвердить"));
     waitFor(() -> api.npc("menu_guard").isEmpty());
   }
 
   void assertLayout(PlayerMock p) {
     var inventory = p.getOpenInventory().getTopInventory();
-    assertEquals(54, inventory.getSize());
-    for (int slot = 0; slot < 18; slot++) assertNotNull(inventory.getItem(slot), "header " + slot);
-    for (int slot = 9; slot < 18; slot++)
-      assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, inventory.getItem(slot).getType());
-    for (int slot = 45; slot < 54; slot++) assertNotNull(inventory.getItem(slot), "footer " + slot);
-    for (int slot : new int[] {18, 26, 27, 35})
-      assertNull(inventory.getItem(slot), "content walls " + slot);
-    for (int slot = 18; slot < 45; slot++)
-      if (inventory.getItem(slot) != null)
-        assertNotEquals(
-            org.bukkit.Material.GRAY_STAINED_GLASS_PANE, inventory.getItem(slot).getType());
+    int size = inventory.getSize();
+    assertTrue(java.util.Set.of(27, 36, 54).contains(size));
+    int header = size >= 45 ? 18 : 9;
+    for (int slot = 0; slot < header; slot++)
+      assertNotNull(inventory.getItem(slot), "header " + slot);
+    for (int slot = size - 9; slot < size; slot++)
+      assertNotNull(inventory.getItem(slot), "footer " + slot);
+    for (int row = header; row < size - 9; row += 9) {
+      if (size != 54 || row != 36) {
+        assertNull(inventory.getItem(row), "left wall");
+        assertNull(inventory.getItem(row + 8), "right wall");
+      }
+      for (int slot = row + 1; slot < row + 8; slot++)
+        if (inventory.getItem(slot) != null)
+          assertNotEquals(
+              org.bukkit.Material.GRAY_STAINED_GLASS_PANE, inventory.getItem(slot).getType());
+    }
+    assertTrue(
+        net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(inventory.getItem(size - 1).getItemMeta().displayName())
+            .contains("Закрыть"));
   }
 
   @Test
@@ -407,7 +428,7 @@ class PluginLifecycleTest {
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
     await(plugin.reloadSettings());
     assertFalse(plugin.getConfig().getBoolean("tab.sorting-enabled"));
     var file = plugin.getDataFolder().toPath().resolve("modules/tab/tab.yml");
@@ -558,7 +579,7 @@ class PluginLifecycleTest {
     click(admin, 0);
     assertEquals(12, target.getInventory().getItem(9).getAmount());
     assertTrue(admin.getItemOnCursor().getType().isAir());
-    click(admin, 50);
+    click(admin, admin.getOpenInventory().getTopInventory().getSize() - 3);
     click(admin, 0);
     assertNull(target.getInventory().getItem(9));
     assertEquals(12, admin.getItemOnCursor().getAmount());
@@ -630,7 +651,7 @@ class PluginLifecycleTest {
             || p.getOpenInventory().getTopInventory().getSize() != 54);
     server.dispatchCommand(p, "le invsee Target");
     assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
-    click(p, 50); // no edit permission
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3); // no edit permission
     target
         .getInventory()
         .setItem(9, new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND));
@@ -677,7 +698,7 @@ class PluginLifecycleTest {
     var values = profiles.values(target.getUniqueId());
     assertEquals("42", values.get("level"));
     assertEquals("7", values.get("deaths"));
-    assertEquals("Нет", values.get("afk_state"));
+    assertEquals("Выключено", values.get("afk_state"));
     assertEquals(target.getUniqueId().toString(), values.get("uuid"));
     assertEquals(textures.getSkin().toExternalForm(), values.get("skin_url"));
     String lore =
@@ -866,25 +887,25 @@ class PluginLifecycleTest {
     var nick = nickReady(p);
     server.dispatchCommand(p, "le nick");
     assertLayout(p);
-    click(p, 19);
+    click(p, itemNamed(p, "Изменить никнейм"));
     respond(p, "save", java.util.Map.of("value", "Princess"));
     waitFor(() -> nick.settings(p).name().equals("Princess"));
     assertLayout(p);
-    click(p, 21);
+    click(p, itemNamed(p, "Один цвет"));
     assertLayout(p);
     click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(0, 16));
     waitFor(() -> nick.settings(p).colors().size() == 1);
-    click(p, 23);
+    click(p, itemNamed(p, "Градиент"));
     assertLayout(p);
-    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(0, 4));
+    click(p, itemNamed(p, "Лес"));
     waitFor(() -> nick.settings(p).colors().size() >= 2);
-    click(p, 25);
+    click(p, itemNamed(p, "Сбросить цвет"));
     waitFor(() -> nick.settings(p).colors().isEmpty());
     assertEquals("Princess", nick.settings(p).name());
-    click(p, 31);
+    click(p, itemNamed(p, "Вернуть имя аккаунта"));
     assertLayout(p);
     assertEquals("Princess", nick.settings(p).name());
-    click(p, 20);
+    click(p, itemNamed(p, "Подтвердить"));
     waitFor(() -> nick.settings(p).name().isEmpty());
   }
 
@@ -1036,7 +1057,7 @@ class PluginLifecycleTest {
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
     assertLayout(p);
     assertFalse(suggestions(p, "loveessential", "npc", "").contains("template"));
     var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
@@ -1069,7 +1090,7 @@ class PluginLifecycleTest {
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
     server.dispatchCommand(p, "le npc page 4");
     click(p, itemNamed(p, "Радиус взгляда"));
     String messages = drain(p);
@@ -1101,12 +1122,12 @@ class PluginLifecycleTest {
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
-    click(p, 50);
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3);
     assertNotNull(forms.get(p.getUniqueId()));
     respond(p, "back", java.util.Map.of());
     assertLayout(p);
-    click(p, 50);
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 3);
     respond(p, "save", java.util.Map.of("value", "8"));
     waitFor(() -> plugin.getConfig().getInt("home.default-limit") == 8);
   }
@@ -1118,7 +1139,7 @@ class PluginLifecycleTest {
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
-                && p.getOpenInventory().getTopInventory().getSize() == 54);
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
     server.dispatchCommand(p, "le npc path add");
     server.dispatchCommand(p, "le npc path add");
     server.dispatchCommand(p, "le npc page 5");
@@ -1133,9 +1154,9 @@ class PluginLifecycleTest {
     click(p, itemNamed(p, "Точка 2"));
     click(p, itemNamed(p, "Удалить эту точку"));
     assertLayout(p);
-    click(p, 24); // cancelling confirmation keeps the point
+    click(p, itemNamed(p, "Отмена")); // cancelling confirmation keeps the point
     click(p, itemNamed(p, "Удалить эту точку"));
-    click(p, 20);
+    click(p, itemNamed(p, "Подтвердить"));
     server.dispatchCommand(
         p,
         "le npc set actions"
@@ -1149,12 +1170,12 @@ class PluginLifecycleTest {
         new org.bukkit.event.inventory.InventoryClickEvent(
             p.getOpenInventory(),
             org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
-            dev.lovelace.loveessential.gui.MenuStyle.slot(0, 2),
+            itemNamed(p, "Звук"),
             org.bukkit.event.inventory.ClickType.RIGHT,
             org.bukkit.event.inventory.InventoryAction.PICKUP_HALF);
     server.getPluginManager().callEvent(deleteEvent);
     server.getScheduler().performOneTick();
-    click(p, 20);
+    click(p, itemNamed(p, "Подтвердить"));
     server.dispatchCommand(p, "le npc publish");
     var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
     waitFor(() -> api.npc("route_editor").isPresent());

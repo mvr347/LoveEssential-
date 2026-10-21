@@ -1,4 +1,4 @@
-# Настройки модуля. Цвета MiniMessage, PAPI и локальные тексты можно менять здесь.
+# Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
 enabled: true
 max-holograms: 256
 creation-height: 2.0

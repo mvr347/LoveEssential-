@@ -18,6 +18,7 @@ public final class ChatPrompt {
       Component instruction,
       String example,
       String current) {
+    MenuStyle.suspend(player);
     player.sendMessage(lang.rich("input.context", Map.of("context", context)));
     player.sendMessage(instruction);
     if (current != null && !current.isBlank())

@@ -7,6 +7,16 @@ import org.bukkit.inventory.InventoryHolder;
 public interface GuiLayout extends InventoryHolder {
   String guiId();
 
+  default boolean guiAllowed(org.bukkit.entity.Player player) {
+    return true;
+  }
+
+  default void guiResume() {}
+
+  default void guiInventory(org.bukkit.inventory.Inventory value) {
+    throw new UnsupportedOperationException();
+  }
+
   default Map<String, String> guiVariables() {
     return Map.of();
   }

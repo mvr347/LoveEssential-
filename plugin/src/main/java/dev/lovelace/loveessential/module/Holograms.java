@@ -360,7 +360,11 @@ public final class Holograms implements HologramService, Listener, AutoCloseable
       } else if (old != null) {
         int index = 0;
         for (var line : def.pages().get(old.page()).lines())
-          if (!line.textKey().isBlank()) old.texts().get(index++).text(text(line, p));
+          if (!line.textKey().isBlank()) {
+            var display = old.texts().get(index++);
+            var rendered = text(line, p);
+            if (!display.text().equals(rendered)) display.text(rendered);
+          }
       }
     }
   }

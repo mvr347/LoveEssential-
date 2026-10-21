@@ -117,6 +117,51 @@ class SqliteStoreTest {
   }
 
   @Test
+  void forcedShutdownSettlesDiscardedQueuedWrites() throws Exception {
+    var db = new SqliteStore(dir.resolve("blocked.db"), 2);
+    var field = SqliteStore.class.getDeclaredField("writer");
+    field.setAccessible(true);
+    var writer = (ThreadPoolExecutor) field.get(db);
+    var entered = new CountDownLatch(1);
+    var release = new CountDownLatch(1);
+    writer.execute(
+        () -> {
+          entered.countDown();
+          try {
+            release.await();
+          } catch (InterruptedException ignored) {
+          }
+        });
+    assertTrue(entered.await(2, TimeUnit.SECONDS));
+    var queued = db.profile(UUID.randomUUID(), "test.pending", "value");
+    var second = db.profile(UUID.randomUUID(), "test.pending", "second");
+    var overflow = db.profile(UUID.randomUUID(), "test.pending", "overflow");
+    assertTrue(overflow.isCompletedExceptionally());
+    db.close(0, TimeUnit.MILLISECONDS);
+    release.countDown();
+    assertTrue(second.isCompletedExceptionally());
+    assertTrue(queued.isDone());
+    assertTrue(queued.isCompletedExceptionally());
+  }
+
+  @Test
+  void npcNumbersAreStableUniqueAndAllocatedWithTheDocument() throws Exception {
+    Path file = dir.resolve("numbers.db");
+    try (var db = new SqliteStore(file, 16)) {
+      db.save("npc", "long-technical-id", 0, "first", "a").get();
+      db.save("npc", "other-id", 0, "second", "a").get();
+      assertEquals(1, db.npcNumbers(List.of("long-technical-id")).get().get("long-technical-id"));
+      assertEquals(2, db.npcNumbers(List.of("other-id")).get().get("other-id"));
+      assertThrows(
+          ExecutionException.class, () -> db.save("npc", "other-id", 0, "conflict", "a").get());
+    }
+    try (var db = new SqliteStore(file, 16)) {
+      assertEquals(1, db.npcNumbers(List.of("long-technical-id")).get().get("long-technical-id"));
+      assertEquals(2, db.npcNumbers(List.of("other-id")).get().get("other-id"));
+    }
+  }
+
+  @Test
   void refusesUnknownFutureSchema() throws Exception {
     Path file = dir.resolve("future.db");
     try (var c = DriverManager.getConnection("jdbc:sqlite:" + file);
