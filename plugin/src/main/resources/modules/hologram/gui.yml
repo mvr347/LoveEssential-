@@ -5,6 +5,9 @@ menus:
   holo-title:
     size: 54
     title: <gold><id> <dark_gray>· <gray>страница <page>/<pages>
+  holo-pages-title:
+    size: 54
+    title: <gold><id> <dark_gray>· <gray>страницы
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -47,7 +50,50 @@ messages:
     next-page: <gold>Следующая страница
     add-page: <green>Добавить страницу
     delete-page: <red>Удалить эту страницу
-    page-help: <gray>ПКМ по голограмме переключает страницы отдельно для каждого игрока.
+    pages: <gold>Страницы
+    pages-lore:
+    - <dark_gray>Страницы голограммы
+    - ''
+    - <dark_gray>▪ <gray>Сейчас:
+    - '  <gray>Страниц: <white><count>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>открыть список страниц
+    page-entry: '<gold>Страница <number>'
+    page-entry-selected: '<gold>Страница <number> <dark_gray>| <green>Выбрано'
+    page-lore:
+    - <dark_gray>Страница голограммы
+    - ''
+    - <dark_gray>▪ <gray>Содержимое:
+    - '  <gray>Строк: <white><count>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>выбрать страницу
+    page-lore-selected:
+    - <dark_gray>Страница голограммы
+    - ''
+    - <dark_gray>▪ <gray>Содержимое:
+    - '  <gray>Строк: <white><count>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>вернуться к редактору страницы
+    add-page-lore:
+    - <dark_gray>Новая страница
+    - ''
+    - <gray>ПКМ по голограмме переключает страницы
+    - <gray>отдельно для каждого игрока.
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>добавить страницу
+    add-text-lore:
+    - <dark_gray>Новая строка
+    - ''
+    - <gray>Текст хранится в конфиге модуля;
+    - <gray>работают MiniMessage и плейсхолдеры.
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>ввести текст
+    add-item-lore:
+    - <dark_gray>Новая строка
+    - ''
+    - <gray>Копия предмета из главной руки.
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>добавить предмет из руки
     action: <gold>Действие страницы по ПКМ
     action-value: '<gray>Сейчас: <white><value>'
     page-next: Следующая страница

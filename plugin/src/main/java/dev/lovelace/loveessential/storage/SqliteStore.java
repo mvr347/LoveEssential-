@@ -337,7 +337,18 @@ public final class SqliteStore implements AutoCloseable {
         });
   }
 
+  private volatile java.util.function.BiConsumer<UUID, String> profileWritten = (p, k) -> {};
+
+  /** Lets caches in front of the store drop an entry whenever any code path rewrites it. */
+  public void onProfileWritten(java.util.function.BiConsumer<UUID, String> listener) {
+    profileWritten = listener;
+  }
+
   public CompletableFuture<Void> profile(UUID player, String key, String value) {
+    return profileWrite(player, key, value).thenRun(() -> profileWritten.accept(player, key));
+  }
+
+  private CompletableFuture<Void> profileWrite(UUID player, String key, String value) {
     return write(
         c -> {
           try (var s =
@@ -406,6 +417,28 @@ public final class SqliteStore implements AutoCloseable {
           }
           return destination;
         });
+  }
+
+  /** Deletes the oldest {@code backup-*.db} files so that at most {@code keep} remain. */
+  public static int pruneBackups(Path directory, int keep) throws java.io.IOException {
+    if (!Files.isDirectory(directory)) return 0;
+    List<Path> files;
+    try (var stream = Files.list(directory)) {
+      files =
+          stream
+              .filter(f -> f.getFileName().toString().matches("backup-\\d+\\.db"))
+              .sorted(
+                  Comparator.comparingLong(
+                      (Path f) ->
+                          Long.parseLong(f.getFileName().toString().replaceAll("[^0-9]", ""))))
+              .toList();
+    }
+    int removed = 0;
+    for (var file : files.subList(0, Math.max(0, files.size() - Math.max(1, keep)))) {
+      Files.deleteIfExists(file);
+      removed++;
+    }
+    return removed;
   }
 
   @FunctionalInterface

@@ -166,13 +166,21 @@ public final class Commands implements CommandExecutor, TabCompleter {
           }
           case "backup" -> {
             admin(sender);
+            var folder = plugin.getDataFolder().toPath().resolve("backups");
             complete(
                 sender,
-                store.backup(
-                    plugin
-                        .getDataFolder()
-                        .toPath()
-                        .resolve("backups/backup-" + System.currentTimeMillis() + ".db")),
+                store
+                    .backup(folder.resolve("backup-" + System.currentTimeMillis() + ".db"))
+                    .thenApply(
+                        saved -> {
+                          try {
+                            SqliteStore.pruneBackups(
+                                folder, plugin.getConfig().getInt("storage.backup-keep", 10));
+                          } catch (java.io.IOException e) {
+                            plugin.getLogger().warning("Backup rotation failed: " + e);
+                          }
+                          return saved;
+                        }),
                 "chat.saved");
           }
           case "tab", "таб" -> {
@@ -301,6 +309,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                 "export",
                 "экспорт",
                 "clone",
+                "копия",
                 "копировать")
             .contains(op)) args[1] = npcs.resolve(args[1]);
     switch (op) {
@@ -336,7 +345,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
               joinTail(
                   args, 2, args[1].equals("answer") ? 3 : args[1].startsWith("answer-") ? 2 : 1));
       }
-      case "clone", "копия" -> {
+      case "clone", "копия", "копировать" -> {
         permission(p, "create");
         var original =
             npcs.get(args[1]).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));

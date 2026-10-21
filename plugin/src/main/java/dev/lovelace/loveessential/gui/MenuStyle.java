@@ -172,7 +172,26 @@ public final class MenuStyle {
           };
       item = head(texture, lang.render(title), Arrays.stream(lore).map(lang::render).toList());
     }
-    return settings == null ? item : settings.styleButton(title, item);
+    var styled = settings == null ? item : settings.styleButton(title, item);
+    if (title.equals("gui.close")) {
+      var meta = styled.getItemMeta();
+      meta.getPersistentDataContainer()
+          .set(CLOSE, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+      styled.setItemMeta(meta);
+    }
+    return styled;
+  }
+
+  // Close is recognised by this marker rather than by its translated name.
+  private static final org.bukkit.NamespacedKey CLOSE =
+      java.util.Objects.requireNonNull(org.bukkit.NamespacedKey.fromString("loveessential:close"));
+
+  public static boolean isClose(ItemStack item) {
+    return item != null
+        && item.hasItemMeta()
+        && item.getItemMeta()
+            .getPersistentDataContainer()
+            .has(CLOSE, org.bukkit.persistence.PersistentDataType.BYTE);
   }
 
   public static ItemStack head(String texture, Component title, List<Component> lore) {

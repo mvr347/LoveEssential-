@@ -175,6 +175,32 @@ public final class ControlMenus implements Listener, AutoCloseable {
     m.actions.put(slot, click);
   }
 
+  /** Tile whose lore comes from a language list: subtitle, sections, separator and click line. */
+  private void tile(
+      Menu m,
+      int slot,
+      Material icon,
+      String nameKey,
+      String loreKey,
+      Map<String, String> vars,
+      Consumer<ClickType> click) {
+    entry(
+        m,
+        slot,
+        icon,
+        lang.render(nameKey, vars),
+        lang.lines(loreKey).stream().map(text -> lang.renderText(text, vars)).toList(),
+        click);
+  }
+
+  /** Placeholders for {@code gui.toggle-lore}: the state now and the state after the click. */
+  private Map<String, String> toggleVars(boolean now, Map<String, String> extra) {
+    var vars = new HashMap<>(extra);
+    vars.put("now", lang.text(now ? "gui.state-on" : "gui.state-off"));
+    vars.put("next", lang.text(now ? "gui.state-off" : "gui.state-on"));
+    return vars;
+  }
+
   private void navigation(Menu m, Player p, int page, int total, IntConsumer pages, Runnable back) {
     if (!m.root) put(m, 51, Material.ARROW, "common.back", "gui.click.open", c -> back.run());
     if (page > 0)
@@ -450,12 +476,13 @@ public final class ControlMenus implements Listener, AutoCloseable {
           else
             settings(p, id, path.contains(".") ? path.substring(0, path.lastIndexOf('.')) : "", 0);
         });
-    put(
+    tile(
         m,
         4,
         plugin.module(id) ? Material.LIME_DYE : Material.GRAY_DYE,
-        plugin.module(id) ? "gui.enabled" : "gui.disabled",
-        "gui.click.switch",
+        plugin.module(id) ? "gui.module-toggle-on" : "gui.module-toggle-off",
+        "gui.toggle-lore",
+        toggleVars(plugin.module(id), Map.of("module", lang.text("gui.module-names." + id))),
         c ->
             complete(
                 p, plugin.module(id, !plugin.module(id)), () -> settings(p, id, path, page), true));
@@ -701,12 +728,13 @@ public final class ControlMenus implements Listener, AutoCloseable {
     put(m, 21, Material.RAIL, "gui.path-npc", "gui.click.open", c -> wizard.edit(p, id, 4));
     put(m, 23, Material.BOOK, "gui.dialog-npc", "gui.click.open", c -> wizard.edit(p, id, 5));
     put(m, 25, Material.CLOCK, "gui.schedule-npc", "gui.click.open", c -> wizard.edit(p, id, 6));
-    put(
+    tile(
         m,
         29,
         Material.LEVER,
-        n.enabled() ? "gui.enabled" : "gui.disabled",
-        "gui.click.switch",
+        n.enabled() ? "gui.npc-toggle-on" : "gui.npc-toggle-off",
+        "gui.toggle-lore",
+        toggleVars(n.enabled(), Map.of()),
         c -> command(p, "npc " + (n.enabled() ? "disable " : "enable ") + id));
     put(
         m,
@@ -878,8 +906,49 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 Integer.toString(v.pages().size())),
             allowed);
     Runnable reopen = () -> hologram(p, id, selected, scroll);
-    for (int i = scroll * 21; i < Math.min(current.lines().size(), (scroll + 1) * 21); i++) {
+    // Lines come first; the two "add" tiles follow them as content, never as footer controls.
+    boolean canAdd = current.lines().size() < 32;
+    int total = current.lines().size() + (canAdd ? 2 : 0);
+    for (int i = scroll * 21; i < Math.min(total, (scroll + 1) * 21); i++) {
       int index = i;
+      if (i >= current.lines().size()) {
+        if (i == current.lines().size())
+          tile(
+              m,
+              MenuStyle.CONTENT[i % 21],
+              Material.WRITABLE_BOOK,
+              "holo.add-text",
+              "holo.add-text-lore",
+              Map.of(),
+              c ->
+                  ask(
+                      p,
+                      "holo.prompt-text",
+                      allowed,
+                      text -> holoText(p, old, selected, -1, text, reopen),
+                      reopen));
+        else
+          tile(
+              m,
+              MenuStyle.CONTENT[i % 21],
+              Material.ITEM_FRAME,
+              "holo.add-item",
+              "holo.add-item-lore",
+              Map.of(),
+              c -> {
+                var lines = new ArrayList<>(current.lines());
+                lines.add(
+                    dev.lovelace.loveessential.module.Holograms.item(
+                        p.getInventory().getItemInMainHand()));
+                var pages = new ArrayList<>(v.pages());
+                pages.set(
+                    selected,
+                    new dev.lovelace.loveessential.api.HologramService.Page(
+                        lines, current.action()));
+                holoPages(p, old, pages, reopen);
+              });
+        continue;
+      }
       var line = current.lines().get(i);
       boolean item = !line.item().isBlank();
       var lore = new ArrayList<Component>();
@@ -912,7 +981,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         m,
         p,
         scroll,
-        current.lines().size(),
+        total,
         n -> hologram(p, id, selected, n),
         () -> places(p, "hologram", 0));
     entry(
@@ -1043,9 +1112,17 @@ public final class ControlMenus implements Listener, AutoCloseable {
               v.range(),
               reopen);
         });
-    put(
+    tile(
         m,
         8,
+        Material.BOOK,
+        "holo.pages",
+        "holo.pages-lore",
+        Map.of("count", Integer.toString(v.pages().size())),
+        c -> hologramPages(p, id, selected));
+    put(
+        m,
+        50,
         Material.BARRIER,
         "gui.remove",
         "gui.click.delete",
@@ -1057,56 +1134,33 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 reopen,
                 allowed,
                 id));
-    if (selected > 0)
-      put(
-          m,
-          45,
-          Material.ARROW,
-          "holo.previous-page",
-          "gui.click.open",
-          c -> hologram(p, id, selected - 1, 0));
-    if (selected + 1 < v.pages().size())
-      put(
-          m,
-          46,
-          Material.ARROW,
-          "holo.next-page",
-          "gui.click.open",
-          c -> hologram(p, id, selected + 1, 0));
-    if (v.pages().size() < 16)
-      put(
-          m,
-          47,
-          Material.BOOK,
-          "holo.add-page",
-          "holo.page-help",
-          c -> {
-            var pages = new ArrayList<>(v.pages());
-            pages.add(new dev.lovelace.loveessential.api.HologramService.Page(List.of(), null));
-            holoPages(p, old, pages, () -> hologram(p, id, pages.size() - 1, 0));
-          });
-    if (v.pages().size() > 1)
-      put(
-          m,
-          48,
-          Material.RED_DYE,
-          "holo.delete-page",
-          "gui.click.delete",
-          c ->
-              confirm(
-                  p,
-                  "holo.delete-page",
-                  () -> {
-                    var pages = new ArrayList<>(v.pages());
-                    pages.remove(selected);
-                    holoPages(p, old, pages, () -> hologram(p, id, Math.max(0, selected - 1), 0));
-                  },
-                  reopen,
-                  allowed,
-                  Integer.toString(selected + 1)));
+    MenuStyle.open(p, m.inventory);
+  }
+
+  /** Page manager: one tile per page, with the page action and deletion as header controls. */
+  public void hologramPages(Player p, String id, int selected) {
+    var old =
+        gameplay
+            .holograms()
+            .get(id)
+            .orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+    var v = old.value();
+    int page = Math.clamp(selected, 0, v.pages().size() - 1);
+    var current = v.pages().get(page);
+    Predicate<Player> allowed =
+        who ->
+            admin(who)
+                && plugin.module("hologram")
+                && gameplay
+                    .holograms()
+                    .get(id)
+                    .map(s -> s.revision() == old.revision())
+                    .orElse(false);
+    var m = menu(p, "holo.pages-title", Map.of("id", id), allowed);
+    Runnable reopen = () -> hologramPages(p, id, page);
     entry(
         m,
-        49,
+        3,
         Material.COMMAND_BLOCK,
         lang.render("holo.action"),
         List.of(
@@ -1133,44 +1187,63 @@ public final class ControlMenus implements Listener, AutoCloseable {
                           : new dev.lovelace.loveessential.api.Action(
                               "command", Map.of("value", text));
                   pages.set(
-                      selected,
+                      page,
                       new dev.lovelace.loveessential.api.HologramService.Page(
                           current.lines(), action));
                   holoPages(p, old, pages, reopen);
                 },
                 reopen));
-    if (current.lines().size() < 32) {
+    if (v.pages().size() > 1)
       put(
           m,
-          50,
-          Material.WRITABLE_BOOK,
-          "holo.add-text",
-          "holo.text-help",
+          5,
+          Material.RED_DYE,
+          "holo.delete-page",
+          "gui.click.delete",
           c ->
-              ask(
+              confirm(
                   p,
-                  "holo.prompt-text",
+                  "holo.delete-page",
+                  () -> {
+                    var pages = new ArrayList<>(v.pages());
+                    pages.remove(page);
+                    holoPages(
+                        p, old, pages, () -> hologramPages(p, id, Math.max(0, page - 1)));
+                  },
+                  reopen,
                   allowed,
-                  text -> holoText(p, old, selected, -1, text, reopen),
-                  reopen));
-      put(
+                  Integer.toString(page + 1)));
+    for (int i = 0; i < v.pages().size(); i++) {
+      int index = i;
+      boolean chosen = i == page;
+      tile(
           m,
-          53,
-          Material.ITEM_FRAME,
-          "holo.add-item",
-          "holo.item-help",
+          MenuStyle.CONTENT[i],
+          Material.PAPER,
+          chosen ? "holo.page-entry-selected" : "holo.page-entry",
+          chosen ? "holo.page-lore-selected" : "holo.page-lore",
+          Map.of(
+              "number", Integer.toString(i + 1),
+              "count", Integer.toString(v.pages().get(i).lines().size())),
           c -> {
-            var lines = new ArrayList<>(current.lines());
-            lines.add(
-                dev.lovelace.loveessential.module.Holograms.item(
-                    p.getInventory().getItemInMainHand()));
-            var pages = new ArrayList<>(v.pages());
-            pages.set(
-                selected,
-                new dev.lovelace.loveessential.api.HologramService.Page(lines, current.action()));
-            holoPages(p, old, pages, reopen);
+            if (!chosen) hologramPages(p, id, index);
+            else hologram(p, id, index, 0);
           });
     }
+    if (v.pages().size() < 16)
+      tile(
+          m,
+          MenuStyle.CONTENT[v.pages().size()],
+          Material.BOOK,
+          "holo.add-page",
+          "holo.add-page-lore",
+          Map.of(),
+          c -> {
+            var pages = new ArrayList<>(v.pages());
+            pages.add(new dev.lovelace.loveessential.api.HologramService.Page(List.of(), null));
+            holoPages(p, old, pages, () -> hologramPages(p, id, pages.size() - 1));
+          });
+    navigation(m, p, 0, v.pages().size() + 1, n -> {}, () -> hologram(p, id, page, 0));
     MenuStyle.open(p, m.inventory);
   }
 
@@ -1600,7 +1673,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                           plugin.module("utilities") && who.hasPermission("loveessential." + name),
                       value -> command(p, name + " " + value),
                       () -> commands(p, page));
-              case "tpa", "tpahere", "sethome", "setspawn", "reply" ->
+              case "sethome", "setspawn", "reply" ->
                   ask(
                       p,
                       "gui.prompt-value",

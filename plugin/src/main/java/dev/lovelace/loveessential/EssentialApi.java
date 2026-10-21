@@ -30,6 +30,10 @@ public final class EssentialApi implements LoveEssentialService {
     conditions = c;
     actions = a;
     store = s;
+    // Internal writers (vanish, skin, traces) bypass this class, so the cache listens to the store.
+    s.onProfileWritten(
+        (player, key) ->
+            profiles.invalidate(new dev.lovelace.loveessential.cache.ProfileCache.Key(player, key)));
   }
 
   public Optional<NpcDefinition> npc(String id) {

@@ -318,6 +318,19 @@ messages:
     page: <gold>Страница <white><page> <dark_gray>/ <white><pages>
     enabled: <green>Включено
     disabled: <gray>Отключено
+    state-on: <green>Вкл
+    state-off: <red>Выкл
+    module-toggle-on: '<gold><module> <dark_gray>| <green>Включён'
+    module-toggle-off: '<gold><module> <dark_gray>| <red>Выключен'
+    npc-toggle-on: '<gold>NPC <dark_gray>| <green>Включён'
+    npc-toggle-off: '<gold>NPC <dark_gray>| <red>Выключен'
+    toggle-lore:
+    - <dark_gray>Переключатель
+    - ''
+    - <dark_gray>▪ <gray>После клика:
+    - '  <gray>Состояние: <now> <dark_gray>→ <next>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>переключить
     locked: <red>Действие недоступно
     permission: '<red>Причина: <gray>Недостаточно прав или модуль отключён.'
     file: '<gray>Файл: <white><path>'

@@ -280,7 +280,8 @@ public final class GuiSettings {
   }
 
   private boolean closeItem(ItemStack item) {
-    return item != null
+    return MenuStyle.isClose(item)
+        || item != null
         && item.hasItemMeta()
         && item.getItemMeta().hasDisplayName()
         && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()

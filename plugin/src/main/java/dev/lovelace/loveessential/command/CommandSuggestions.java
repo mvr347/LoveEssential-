@@ -268,8 +268,6 @@ public final class CommandSuggestions {
       return List.of("survival", "creative", "adventure", "spectator");
     if (command.equals("speed") && args.length == 1 && sender.hasPermission("loveessential.speed"))
       return List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
-    if (Set.of("tpa", "tpahere").contains(command) && args.length == 1 && plugin.module("teleport"))
-      return players(sender);
     if (command.equals("skin") && args.length == 1 && plugin.module("skin")) {
       var skins = new ArrayList<>(players(sender));
       skins.add("reset");

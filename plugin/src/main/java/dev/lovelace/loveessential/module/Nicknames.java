@@ -43,6 +43,8 @@ public final class Nicknames implements Listener, AutoCloseable {
   private final Map<UUID, Display> displays = new ConcurrentHashMap<>();
   private final Map<UUID, Component> originals = new HashMap<>(), applied = new HashMap<>();
   private final Set<UUID> loading = new HashSet<>(), saving = new HashSet<>();
+  // Skeletons of every saved nickname, including players who are offline right now.
+  private final Map<UUID, String> taken = new ConcurrentHashMap<>();
 
   public Nicknames(
       LoveEssentialPlugin plugin, MainThread main, Lang lang, SqliteStore store, LoveBridge love) {
@@ -56,6 +58,40 @@ public final class Nicknames implements Listener, AutoCloseable {
   public void start() {
     Bukkit.getPluginManager().registerEvents(this, plugin);
     Bukkit.getOnlinePlayers().forEach(this::load);
+    store
+        .list("nickname", Settings.class)
+        .thenAccept(
+            list ->
+                list.forEach(
+                    d -> {
+                      if (!d.value().name().isEmpty())
+                        try {
+                          taken.put(UUID.fromString(d.id()), skeleton(d.value().name()));
+                        } catch (IllegalArgumentException ignored) {
+                          // Not a player document.
+                        }
+                    }));
+  }
+
+  private static final Map<Character, Character> CONFUSABLES = confusables();
+
+  private static Map<Character, Character> confusables() {
+    var map = new HashMap<Character, Character>();
+    // Cyrillic and Greek letters that render like a Latin letter in the default font.
+    String from = "аеорсхукмнтвіјѕԁӏαοτνρικβ";
+    String to = "aeopcxykmhtbijsdlaotvpikb";
+    for (int i = 0; i < from.length(); i++) map.put(from.charAt(i), to.charAt(i));
+    return Map.copyOf(map);
+  }
+
+  /** Case, width and look-alike-letter independent form used to compare nicknames. */
+  public static String skeleton(String name) {
+    var normalized =
+        java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFKC)
+            .toLowerCase(Locale.ROOT);
+    var out = new StringBuilder(normalized.length());
+    for (char c : normalized.toCharArray()) out.append(CONFUSABLES.getOrDefault(c, c));
+    return out.toString();
   }
 
   private void load(Player p) {
@@ -182,6 +218,8 @@ public final class Nicknames implements Listener, AutoCloseable {
                         return;
                       }
                       Player current = Bukkit.getPlayer(id);
+                      if (next.name().isEmpty()) taken.remove(id);
+                      else taken.put(id, skeleton(next.name()));
                       if (current != null && current.isOnline()) {
                         states.put(id, new State(revision, next));
                         apply(current);
@@ -198,19 +236,23 @@ public final class Nicknames implements Listener, AutoCloseable {
         || !name.matches("[\\p{L}\\p{N}_]+"))
       throw new IllegalArgumentException("nick.invalid-name");
     if (plugin.getConfig().getBoolean("nickname.prevent-impersonation", true)) {
+      String skeleton = skeleton(name);
       var known = Bukkit.getOfflinePlayerIfCached(name);
       if (known != null && !known.getUniqueId().equals(p.getUniqueId()))
         throw new IllegalArgumentException("nick.taken");
       for (Player other : Bukkit.getOnlinePlayers())
         if (!other.equals(p)
-            && (other.getName().equalsIgnoreCase(name)
-                || values(other.getUniqueId())
-                    .getOrDefault("nickname_plain", "")
-                    .equalsIgnoreCase(name))) throw new IllegalArgumentException("nick.taken");
+            && (skeleton(other.getName()).equals(skeleton)
+                || skeleton(values(other.getUniqueId()).getOrDefault("nickname_plain", ""))
+                    .equals(skeleton))) throw new IllegalArgumentException("nick.taken");
+      // Nicknames saved by players who are offline now are still theirs.
+      for (var entry : taken.entrySet())
+        if (!entry.getKey().equals(p.getUniqueId()) && entry.getValue().equals(skeleton))
+          throw new IllegalArgumentException("nick.taken");
       // Include pending reservations: two asynchronous saves cannot claim the same nickname.
       if (reserved.entrySet().stream()
           .anyMatch(
-              e -> !e.getKey().equals(p.getUniqueId()) && e.getValue().equalsIgnoreCase(name)))
+              e -> !e.getKey().equals(p.getUniqueId()) && skeleton(e.getValue()).equals(skeleton)))
         throw new IllegalArgumentException("nick.taken");
     }
   }

@@ -1,5 +1,6 @@
 package dev.lovelace.loveessential.module;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
 import dev.lovelace.loveessential.*;
 import dev.lovelace.loveessential.api.*;
 import dev.lovelace.loveessential.integration.LoveBridge;
@@ -7,6 +8,7 @@ import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.storage.SqliteStore;
 import dev.lovelace.loveessential.tab.Placeholders;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.bukkit.*;
 import org.bukkit.entity.*;
@@ -34,10 +36,13 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final Predicate<String> enabled;
   private final TeleportService teleport;
   private final Map<String, SqliteStore.Document<Place>> places = new HashMap<>();
-  private final Set<UUID> vanished = new HashSet<>(),
-      loading = new HashSet<>(),
-      manualAfk = new HashSet<>();
-  private final Map<UUID, Long> active = new HashMap<>();
+  // PlaceholderAPI expansions can be queried from async chat threads, so these are concurrent.
+  private final Set<UUID> vanished = ConcurrentHashMap.newKeySet(),
+      loading = ConcurrentHashMap.newKeySet(),
+      manualAfk = ConcurrentHashMap.newKeySet();
+  private final Map<UUID, Long> active = new ConcurrentHashMap<>();
+  private final Map<UUID, net.kyori.adventure.text.Component> vanillaJoin =
+      new ConcurrentHashMap<>();
   private final Comfort comfort;
   private final Holograms hologramService;
   private final dev.lovelace.loveessential.portal.Portals portals;
@@ -120,6 +125,13 @@ public final class Gameplay implements Listener, AutoCloseable {
     active.put(p.getUniqueId(), System.currentTimeMillis());
     loading.add(p.getUniqueId());
     applyVanish();
+    loadPlayer(p, announce, 0);
+    applySavedSkin(p);
+  }
+
+  private static final int LOAD_RETRIES = 3;
+
+  private void loadPlayer(Player p, boolean announce, int attempt) {
     store
         .profile(p.getUniqueId(), "loveessential.vanish")
         .whenComplete(
@@ -128,19 +140,28 @@ public final class Gameplay implements Listener, AutoCloseable {
                     () -> {
                       if (!p.isOnline()) return;
                       if (error != null) {
+                        // A failed read (for example storage-busy during a join wave) must never
+                        // leave the player hidden from everyone until the next relog.
+                        if (attempt + 1 < LOAD_RETRIES) {
+                          Bukkit.getScheduler()
+                              .runTaskLater(plugin, () -> loadPlayer(p, announce, attempt + 1), 40L);
+                          return;
+                        }
                         lang.send(p, "errors.storage");
-                        return;
                       }
                       loading.remove(p.getUniqueId());
-                      if (Boolean.parseBoolean(v.orElse("false"))) vanished.add(p.getUniqueId());
+                      if (error == null && Boolean.parseBoolean(v.orElse("false")))
+                        vanished.add(p.getUniqueId());
                       applyVanish();
-                      if (announce
-                          && ((LoveEssentialPlugin) plugin).allows("joinquit", p)
-                          && !vanished(p))
+                      var vanilla = vanillaJoin.remove(p.getUniqueId());
+                      if (!announce || vanished(p)) return;
+                      var message =
+                          ((LoveEssentialPlugin) plugin).allows("joinquit", p)
+                              ? lang.render("joinquit.join", Map.of("player", p.getName()))
+                              : vanilla;
+                      if (message != null)
                         for (var viewer : Bukkit.getOnlinePlayers())
-                          if (viewer.canSee(p))
-                            viewer.sendMessage(
-                                lang.render("joinquit.join", Map.of("player", p.getName())));
+                          if (viewer.canSee(p)) viewer.sendMessage(message);
                     }));
   }
 
@@ -242,7 +263,8 @@ public final class Gameplay implements Listener, AutoCloseable {
       case "skin" -> {
         check("skin");
         ((LoveEssentialPlugin) plugin).requireAccess("skin", p);
-        String skin = name.equals("default") ? p.getName() : name;
+        boolean reset = name.equals("default") || name.equalsIgnoreCase(p.getName());
+        String skin = reset ? p.getName() : name;
         if (!skin.matches("[a-zA-Z0-9_]{1,16}")) throw new IllegalArgumentException("errors.input");
         var profile = Bukkit.createProfile(skin);
         java.util.concurrent.CompletableFuture.supplyAsync(
@@ -252,12 +274,28 @@ public final class Gameplay implements Listener, AutoCloseable {
                 },
                 ((LoveEssentialPlugin) plugin).io())
             .thenAccept(
-                updated ->
+                fetched ->
                     main.execute(
                         () -> {
                           if (!p.isOnline()) return;
-                          store
-                              .profile(p.getUniqueId(), "loveessential.skin", skin)
+                          // Only the textures move to the player; the fetched profile also carries
+                          // another account's name and UUID, which must never replace our own.
+                          var textures =
+                              fetched.getProperties().stream()
+                                  .filter(property -> property.getName().equals("textures"))
+                                  .findFirst();
+                          if (textures.isEmpty() && !reset) {
+                            lang.send(p, "errors.not-found");
+                            return;
+                          }
+                          String value = textures.map(ProfileProperty::getValue).orElse("");
+                          String signature =
+                              textures.map(ProfileProperty::getSignature).orElse("");
+                          // Reset applies the account's own textures but forgets the saved choice.
+                          String savedName = reset ? "" : skin;
+                          String savedValue = reset ? "" : value;
+                          String savedSignature = reset || signature == null ? "" : signature;
+                          saveSkin(p, savedName, savedValue, savedSignature)
                               .whenComplete(
                                   (v, error) ->
                                       main.execute(
@@ -266,7 +304,8 @@ public final class Gameplay implements Listener, AutoCloseable {
                                               lang.send(p, "errors.storage");
                                               return;
                                             }
-                                            p.setPlayerProfile(updated);
+                                            if (!p.isOnline()) return;
+                                            applyTextures(p, value, signature);
                                             lang.send(p, "common.done");
                                           }));
                         }));
@@ -381,12 +420,55 @@ public final class Gameplay implements Listener, AutoCloseable {
   private void go(Player p, String id) {
     var place = places.get(id);
     if (place == null) throw new IllegalArgumentException("errors.not-found");
-    teleport.teleport(p, place.value().position());
+    var destination = place.value().position();
+    ((LoveEssentialPlugin) plugin)
+        .requireDestination(
+            id.startsWith("home:") ? "home" : "spawn", destination.location().getWorld().getName());
+    teleport.teleport(p, destination);
   }
 
   private String home(Player p, String name) {
     if (!name.matches("[a-zA-Z0-9_-]{1,32}")) throw new IllegalArgumentException("validation.id");
     return "home:" + p.getUniqueId() + ":" + name.toLowerCase(Locale.ROOT);
+  }
+
+  private java.util.concurrent.CompletableFuture<Void> saveSkin(
+      Player p, String name, String value, String signature) {
+    var id = p.getUniqueId();
+    return store
+        .profile(id, "loveessential.skin", name)
+        .thenCompose(v -> store.profile(id, "loveessential.skin.value", value))
+        .thenCompose(v -> store.profile(id, "loveessential.skin.signature", signature));
+  }
+
+  /** Swaps only the textures property; the account name and UUID of the profile stay untouched. */
+  private static void applyTextures(Player p, String value, String signature) {
+    var current = p.getPlayerProfile();
+    current.removeProperty("textures");
+    if (value != null && !value.isBlank())
+      current.setProperty(
+          new ProfileProperty(
+              "textures", value, signature == null || signature.isBlank() ? null : signature));
+    p.setPlayerProfile(current);
+  }
+
+  /** A chosen skin is persisted as signed textures, so it survives a relog without a Mojang call. */
+  private void applySavedSkin(Player p) {
+    if (!enabled.test("skin")) return;
+    store
+        .profile(p.getUniqueId(), "loveessential.skin.value")
+        .thenCompose(
+            value ->
+                store
+                    .profile(p.getUniqueId(), "loveessential.skin.signature")
+                    .thenApply(signature -> new String[] {value.orElse(""), signature.orElse("")}))
+        .thenAccept(
+            saved ->
+                main.execute(
+                    () -> {
+                      if (p.isOnline() && !saved[0].isBlank())
+                        applyTextures(p, saved[0], saved[1]);
+                    }));
   }
 
   private void check(String module) {
@@ -400,8 +482,12 @@ public final class Gameplay implements Listener, AutoCloseable {
 
   @EventHandler
   public void join(PlayerJoinEvent e) {
+    // The vanish state is read asynchronously, so the vanilla message is held back and re-sent
+    // by loadPlayer only to viewers who can see the player.
+    if (!enabled.test("joinquit") && enabled.test("vanish") && e.joinMessage() != null)
+      vanillaJoin.put(e.getPlayer().getUniqueId(), e.joinMessage());
+    if (enabled.test("joinquit") || enabled.test("vanish")) e.joinMessage(null);
     loadPlayer(e.getPlayer(), true);
-    if (enabled.test("joinquit")) e.joinMessage(null);
   }
 
   @EventHandler
@@ -412,6 +498,8 @@ public final class Gameplay implements Listener, AutoCloseable {
           vanished(p) || !((LoveEssentialPlugin) plugin).allows("joinquit", p)
               ? null
               : lang.render("joinquit.quit", Map.of("player", p.getName())));
+    else if (vanished(p)) e.quitMessage(null);
+    vanillaJoin.remove(p.getUniqueId());
     vanished.remove(p.getUniqueId());
     loading.remove(p.getUniqueId());
     active.remove(p.getUniqueId());

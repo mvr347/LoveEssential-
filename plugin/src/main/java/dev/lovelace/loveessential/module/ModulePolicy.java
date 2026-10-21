@@ -82,6 +82,16 @@ public final class ModulePolicy {
     return denial(module, p, true);
   }
 
+  /** World lists of a module apply to where a teleport lands, not only to where it starts. */
+  public void requireDestination(String module, String world) {
+    var c = plugin.getConfig();
+    String path = dev.lovelace.loveessential.config.ModuleConfigs.prefix(module) + ".access.";
+    var denied = c.getStringList(path + "denied-worlds");
+    var allowed = c.getStringList(path + "allowed-worlds");
+    if (matches(denied, world) || !allowed.isEmpty() && !matches(allowed, world))
+      throw new Denied("module-access.world", Map.of("world", world));
+  }
+
   private Denied denial(String module, Player p, boolean evaluateStates) {
     if (!plugin.module(module)) return new Denied("errors.module-disabled", Map.of());
     var c = plugin.getConfig();

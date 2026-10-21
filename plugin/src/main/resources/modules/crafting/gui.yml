@@ -8,6 +8,8 @@ navigation:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
 messages:
   content:
+    recipe-on: '<gold>Рецепт <dark_gray>| <green>Включён'
+    recipe-off: '<gold>Рецепт <dark_gray>| <red>Выключен'
     recipes-title: <gold>Рецепты королевства
     craft-editor: <gold>Рецепт <white><id>
     recipe-preview: <gold>Как создать <white><id>

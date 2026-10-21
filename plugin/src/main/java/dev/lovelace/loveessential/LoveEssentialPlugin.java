@@ -86,6 +86,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     else if (!module(module)) throw new IllegalArgumentException("errors.module-disabled");
   }
 
+  public void requireDestination(String module, String world) {
+    if (modulePolicy != null) modulePolicy.requireDestination(module, world);
+  }
+
   private EssentialApi essentialApi;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
@@ -506,6 +510,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (sidebarCatalog != null && !sidebarCatalog.getKeys(false).isEmpty())
       dev.lovelace.loveessential.scoreboard.SidebarConfig.read(sidebarCatalog);
     bounded(config, "storage.write-queue", 1, 65536);
+    bounded(config, "storage.backup-keep", 1, 1000);
     bounded(config, "crafting.max-recipes", 1, 10000);
     bounded(config, "worlds.max-worlds", 1, 256);
     bounded(config, "scenarios.max-rules", 1, 10000);

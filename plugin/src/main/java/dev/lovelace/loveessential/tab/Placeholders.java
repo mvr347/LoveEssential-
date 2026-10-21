@@ -53,6 +53,24 @@ public final class Placeholders {
   }
 
   private final MiniMessage mm = MiniMessage.miniMessage();
+  // Values that come back from PlaceholderAPI can be chosen by players (titles, subnames), so they
+  // may only style text: click, hover, insertion, font, keybind and similar tags stay plain text.
+  private static final MiniMessage STYLE_ONLY =
+      MiniMessage.builder()
+          .tags(
+              TagResolver.builder()
+                  .resolver(net.kyori.adventure.text.minimessage.tag.standard.StandardTags.color())
+                  .resolver(
+                      net.kyori.adventure.text.minimessage.tag.standard.StandardTags.decorations())
+                  .resolver(
+                      net.kyori.adventure.text.minimessage.tag.standard.StandardTags.gradient())
+                  .resolver(
+                      net.kyori.adventure.text.minimessage.tag.standard.StandardTags.rainbow())
+                  .resolver(
+                      net.kyori.adventure.text.minimessage.tag.standard.StandardTags.transition())
+                  .resolver(net.kyori.adventure.text.minimessage.tag.standard.StandardTags.reset())
+                  .build())
+          .build();
 
   public Placeholders(Lang lang, LoveBridge love, Predicate<Player> afk) {
     this.lang = lang;
@@ -166,7 +184,12 @@ public final class Placeholders {
         ? LegacyComponentSerializer.legacySection().deserialize(value)
         : value.contains("&")
             ? LegacyComponentSerializer.legacyAmpersand().deserialize(value)
-            : mm.deserialize(value);
+            : styleOnly(value);
+  }
+
+  /** MiniMessage limited to colors and decorations, for values players can influence. */
+  public static Component styleOnly(String value) {
+    return STYLE_ONLY.deserialize(value);
   }
 
   public void clear() {

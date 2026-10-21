@@ -298,8 +298,22 @@ public final class Worlds implements Listener, AutoCloseable {
     for (var p : w.getPlayers()) mode(p, d);
   }
 
+  /** Game mode a player had before an enforcing world took over, restored when they leave it. */
+  private final Map<UUID, GameMode> modeBefore = new HashMap<>();
+
   private void mode(Player p, Definition d) {
-    if (d.options().enforceMode()) p.setGameMode(GameMode.valueOf(d.options().gameMode()));
+    if (d != null && d.options().enforceMode()) {
+      modeBefore.putIfAbsent(p.getUniqueId(), p.getGameMode());
+      p.setGameMode(GameMode.valueOf(d.options().gameMode()));
+    } else {
+      var previous = modeBefore.remove(p.getUniqueId());
+      if (previous != null) p.setGameMode(previous);
+    }
+  }
+
+  @EventHandler
+  public void forgetMode(org.bukkit.event.player.PlayerQuitEvent e) {
+    modeBefore.remove(e.getPlayer().getUniqueId());
   }
 
   public CompletableFuture<Void> save(Definition d, long revision, String actor) {
@@ -716,8 +730,8 @@ public final class Worlds implements Listener, AutoCloseable {
   @EventHandler
   public void changed(PlayerChangedWorldEvent e) {
     var d = definitions.get(e.getPlayer().getWorld().getName());
-    if (plugin.module("worlds") && d != null && love.authenticated(e.getPlayer()))
-      mode(e.getPlayer(), d.value());
+    if (plugin.module("worlds") && love.authenticated(e.getPlayer()))
+      mode(e.getPlayer(), d == null ? null : d.value());
   }
 
   @EventHandler
