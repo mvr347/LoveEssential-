@@ -48,6 +48,7 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final Vanish vanishFx;
   private final Holograms hologramService;
   private final dev.lovelace.loveessential.portal.Portals portals;
+  private final RandomTeleport randomTeleport;
 
   private BukkitTask task;
   private Placeholders placeholders;
@@ -74,6 +75,12 @@ public final class Gameplay implements Listener, AutoCloseable {
     comfort = new Comfort((LoveEssentialPlugin) plugin, main, store, lang, love, this);
     vanishFx = new Vanish((LoveEssentialPlugin) plugin, this, lang);
     hologramService = new Holograms((LoveEssentialPlugin) plugin, main, store, lang, love);
+    randomTeleport =
+        new RandomTeleport((LoveEssentialPlugin) plugin, main, store, lang, love, teleport);
+  }
+
+  public RandomTeleport randomTeleport() {
+    return randomTeleport;
   }
 
   public dev.lovelace.loveessential.portal.Portals portals() {
@@ -115,6 +122,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     vanishFx.start();
     portals.start();
     hologramService.start();
+    randomTeleport.start();
   }
 
   public boolean afk(Player p) {
@@ -624,6 +632,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     vanishFx.close();
     hologramService.close();
     portals.close();
+    randomTeleport.close();
     for (var viewer : Bukkit.getOnlinePlayers())
       for (var target : Bukkit.getOnlinePlayers()) viewer.showPlayer(plugin, target);
   }

@@ -44,7 +44,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "scenarios",
           "dialogs",
           "scoreboard",
-          "revive");
+          "revive",
+          "rtp");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -481,6 +482,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       if (name.equals("nickname")) nicknames.refresh();
                       if (name.equals("crafting")) content.refresh();
                       if (name.equals("scoreboard")) extensions.refresh();
+                      if (name.equals("rtp") && !value) gameplay.randomTeleport().clearQueue();
                       return null;
                     }));
   }
@@ -532,6 +534,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       tab.stop();
                       if (module("tab")) tab.start();
                       gameplay.applyVanish();
+                      gameplay.randomTeleport().clearQueue();
                       nicknames.refresh();
                       content.refresh();
                       extensions.refresh();
@@ -620,6 +623,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
           throw new IllegalArgumentException("errors.config", e);
         }
     }
+    dev.lovelace.loveessential.module.RandomTeleport.validate(config);
     bounded(config, "portal.max-portals", 1, 1024);
     bounded(config, "portal.max-volume", 1, 262144);
     bounded(config, "portal.default-cooldown-seconds", 0, 86400);

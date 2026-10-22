@@ -354,6 +354,8 @@ menus:
           - <gray>Личные строки, форматы и наборы табло; перенос LoveTweaks. /le scoreboard.
           revive:
           - <gray>Смертельный удар роняет игрока: подъём, переноска, обыск. /revive.
+          rtp:
+          - <gray>Случайный перенос в безопасную точку своего мира. /rtp.
           crafting:
           - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
           starter:
@@ -580,6 +582,7 @@ messages:
       dialogs: Диалоговые окна
       scoreboard: Личное табло
       revive: Раненые игроки
+      rtp: Случайный телепорт
       crafting: Рецепты крафта
       starter: Стартовые предметы
       nickname: Никнеймы
@@ -607,6 +610,7 @@ messages:
       dialogs: <gold>Диалоговые окна
       scoreboard: <gold>Личное табло
       revive: <gold>Раненые игроки
+      rtp: <gold>Случайный телепорт
       crafting: <gold>Рецепты крафта
       starter: <gold>Стартовые предметы
       nickname: <gold>Никнеймы

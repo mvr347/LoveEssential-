@@ -60,6 +60,11 @@ public final class LoveBridge {
     return service(LoveEconomy.class);
   }
 
+  /** True when any player or clan owns the land at {@code at}; used where no player is involved. */
+  public boolean claimed(Location at) {
+    return service(TerritoryOracle.class).map(s -> s.ownerAt(at).isPresent()).orElse(false);
+  }
+
   public String territory(Player p) {
     return service(TerritoryOracle.class)
         .flatMap(s -> s.ownerAt(p.getLocation()))

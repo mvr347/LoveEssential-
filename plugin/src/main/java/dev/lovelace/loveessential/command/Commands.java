@@ -290,6 +290,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
         gameplay.portals().command(p, args);
         return true;
       }
+      if (cmd.equals("rtp")) {
+        gameplay.randomTeleport().command(p, args);
+        return true;
+      }
       if (cmd.equals("vanish")
           && args.length == 0
           && plugin.module("vanish")
