@@ -1,17 +1,23 @@
 # Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
+# Табло показывается первое из списка scoreboards, чьё display-condition выполнено (пустое — всегда).
+# Временные табло других плагинов (ScoreboardService) важнее всех именованных.
+# Правила «скрывать в мирах, режимах, при AFK и в бою» задаются условиями из modules/tab/tab.yml.
 enabled: true
+# 2026-10-22: 20 тиков (1 с) — табло не отстаёт от значений, но не перерисовывается каждый тик.
 refresh-ticks: 20
+# 2026-10-22: табло включено всем по умолчанию; игрок выключает его через /le scoreboard toggle.
 default-enabled: true
-disabled-worlds: []
-enabled-worlds: []
-disabled-gamemodes: []
-display-permission: ''
-hide-while-afk: false
-hide-in-combat: false
-max: 8
+# 2026-10-22: 1 с после входа — клиент успевает завершить вход; иначе табло может пропасть на первом кадре.
+delay-on-join-ms: 1000
+# 2026-10-22: /le scoreboard show показывает табло на минуту: этого хватает, чтобы прочитать его.
+show-seconds: 60
 overrides:
+  # 2026-10-22: временные табло других плагинов разрешено показывать даже при выключенном личном
+  # табло (как важные объявления). Выключите, если такие объявления нужно скрывать.
   allow-forced: true
+  # 2026-10-22: 600 с — больше десяти минут временное табло уже не временное.
   max-seconds: 600
+  # 2026-10-22: 8 временных табло на игрока — с запасом для нескольких плагинов.
   per-player-limit: 8
 access:
   allowed-worlds: []
@@ -21,3 +27,37 @@ access:
   allowed-states: []
   denied-states: []
   required-states: []
+scoreboards:
+  kingdom:
+    title: <gold>Королевство
+    display-condition: ''
+    # До 15 строк; длина строки не ограничена. Пустая строка даёт отступ.
+    lines:
+    - '<gray>Путник: <white><player>'
+    - '<gray>Клан: <white><clan>'
+    - '<gray>Репутация: <white><reputation>'
+    - '<gray>Игроков: <white><visible_online>'
+messages:
+  scoreboard:
+    enabled: '<green>Табло включено.'
+    disabled: '<gray>Табло выключено.'
+    shown: '<green>Табло показано.'
+  sidebar:
+    module-enabled: <green>Модуль scoreboard включён
+    module-disabled: <gray>Модуль scoreboard выключен
+    module-toggle-help: <gray>ЛКМ — включить или выключить модуль. Список табло доступен в обоих состояниях.
+    module-settings: <gold>Правила обновления и доступа
+    module-settings-help: <gray>Интервал, задержка после входа, временные табло и доступ.
+    admin-menu: <gold>Табло сервера
+    edit-help: <gray>Именованные табло, условия показа и строки. Личное включение — /le scoreboard toggle.
+    add-board: <green>Добавить табло
+    add-board-help: <gray>Новое табло с одной строкой. Условие показа и строки меняются в редакторе.
+    board-help: '<gray>Заголовок: <title> · Строк: <lines>'
+    board-new-title: <gold>Новое табло
+    board-title: <gold>Настройка табло
+    board-help-text: <gray>Первое табло из списка, чьё условие выполнено, показывается игроку. Временные табло других плагинов важнее.
+    id: <gold>Идентификатор
+    title: <gold>Заголовок
+    display-condition: <gold>Условие показа (имя из conditions, пусто — всегда)
+    lines: <gold>Строки (до 15)
+    legacy-conflict: <red>Другой плагин держит табло LoveTweaks; модуль scoreboard не может его перехватить.

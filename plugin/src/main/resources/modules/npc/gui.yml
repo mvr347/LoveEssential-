@@ -580,7 +580,7 @@ messages:
       worlds: Миры
       scenarios: Сценарии событий
       dialogs: Диалоговые окна
-      scoreboard: Личное табло
+      scoreboard: Табло
       revive: Раненые игроки
       rtp: Случайный телепорт
       crafting: Рецепты крафта
@@ -608,7 +608,7 @@ messages:
       worlds: <gold>Миры
       scenarios: <gold>Сценарии событий
       dialogs: <gold>Диалоговые окна
-      scoreboard: <gold>Личное табло
+      scoreboard: <gold>Табло
       revive: <gold>Раненые игроки
       rtp: <gold>Случайный телепорт
       crafting: <gold>Рецепты крафта
@@ -842,7 +842,7 @@ messages:
             permission:
               _label: <gold>Дополнительное право
           scoreboard:
-            _label: <gold>Личное табло
+            _label: <gold>Табло
             plugin:
               _label: <gold>Владелец команды
             command:
@@ -1513,45 +1513,31 @@ messages:
         allowed-player-commands:
           _description: <gray>Разрешённые корневые команды для действий NPC от имени игрока.
     tab:
-      engine:
-        _description: <gray>native — оформление средствами Paper; tab — установленный TAB от NEZNAMY.
       refresh-ticks:
-        _description: <gray>Интервал обновления оформления TAB в тиках.
+        _description: <gray>Базовый интервал обновления списка TAB в тиках. 10 тиков = 0,5 секунды.
       respect-other-scoreboards:
         _description: <gray>Не заменять scoreboard другого плагина без необходимости.
       sorting-enabled:
         _description: <gray>Включает управление порядком игроков в списке.
       sorting:
-        _description: <gray>Порядок критериев сортировки, например group, затем name.
-      name-enabled:
-        _description: <gray>Разрешает применять имя, префикс и суффикс игрока в TAB.
-      external:
-        _description: <gray>Параметры внешнего TAB. После изменения примените экспорт через /le tab export.
+        _description: '<gray>Порядок критериев: group, name, a-z, z-a, number:%p%, permissions:p1,p2, placeholder:%p%:v1,v2.'
+      bossbar-refresh-ticks:
+        _description: <gray>Интервал обновления полосок в тиках.
     scoreboard:
       refresh-ticks:
         _description: 'Интервал в тиках: 20 = секунда. От 2 до 1200.'
       default-enabled:
         _description: Применяется только при отсутствии сохранённых предпочтений игрока.
-      disabled-worlds:
-        _description: Имена миров без учёта регистра. Дополняет запреты миров из редактора SQLite.
-      enabled-worlds:
-        _description: Пустой список допускает все миры. При заполнении табло видно только в этих мирах.
-      disabled-gamemodes:
-        _description: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR. Пусто — любой режим.
-      display-permission:
-        _description: Дополнительное permission для показа. Пустая строка — без дополнительной проверки.
-      hide-while-afk:
-        _description: Скрывать табло, пока LoveEssential считает игрока AFK.
-      hide-in-combat:
-        _description: Учитывает состояние боя из LoveCore.
-      max-selected-lines:
-        _description: От 1 до 8. Лимит редактора может дополнительно уменьшать это значение.
+      delay-on-join-ms:
+        _description: Задержка первого показа после входа, от 0 до 60000 мс.
+      show-seconds:
+        _description: Сколько секунд длится /le scoreboard show. От 1 до 3600.
       overrides:
         _description: API для арен, заданий и событий. Личные настройки сохраняются.
         allow-forced:
-          _description: Разрешает временный показ даже при личном выключении табло. Запреты миров действуют всегда.
+          _description: Разрешает временный показ даже при личном выключении табло. Условия display-condition действуют всегда.
         max-seconds:
-          _description: От 1 до 86400 секунд. После истечения возвращается личное табло.
+          _description: От 1 до 86400 секунд. После истечения показывается обычное именованное табло.
         per-player-limit:
           _description: От 1 до 32 одновременных запросов. Выигрывает запрос с большим приоритетом.
   logs-ui:

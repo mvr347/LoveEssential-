@@ -417,13 +417,17 @@ class PluginLifecycleTest {
     var p = admin();
     server.dispatchCommand(p, "le module tab");
     var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    // The module menu pages 21 settings at a time; the next button is slot 44.
     int slot = -1;
-    var inventory = p.getOpenInventory().getTopInventory();
-    for (int i = 18; i < 45; i++) {
-      var item = inventory.getItem(i);
-      if (item != null
-          && plain.serialize(item.getItemMeta().displayName()).equals("Сортировка включена"))
-        slot = i;
+    for (int page = 0; page < 3 && slot < 0; page++) {
+      var inventory = p.getOpenInventory().getTopInventory();
+      for (int i = 18; i < 45; i++) {
+        var item = inventory.getItem(i);
+        if (item != null
+            && plain.serialize(item.getItemMeta().displayName()).equals("Сортировка включена"))
+          slot = i;
+      }
+      if (slot < 0) click(p, 44);
     }
     assertTrue(slot >= 0, "sorting editor must be visible");
     click(p, slot);

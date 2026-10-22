@@ -6,7 +6,7 @@
 
 Для внешних плагинов установите PlaceholderAPI и перезапустите сервер. Расширение `loveessential` входит в LoveEssential и регистрируется автоматически; отдельная загрузка через eCloud не нужна.
 
-- В чате, внешнем TAB и других PAPI-шаблонах: `%loveessential_nickname%`, `%loveessential_health%`.
+- В чате, в TAB и других PAPI-шаблонах: `%loveessential_nickname%`, `%loveessential_health%`.
 - В поддерживаемых шаблонах `lang.yml` LoveEssential: `<nickname>`, `<health>`, `<clan>`.
 - Сторонние PAPI-значения внутри этих шаблонов: `<papi:lovesubnames_current>`; знаки `%` внутри тега не ставятся.
 
@@ -100,7 +100,8 @@
 
 | PlaceholderAPI | Тег LoveEssential | Значение |
 | --- | --- | --- |
-| `%loveessential_afk%` | `<afk>` | PAPI: true/false; родной `<afk>`: декоративный статус TAB, см. ниже |
+| `%loveessential_afk%` | `<afk>` | PAPI и условия TAB: true/false; родной `<afk>`: декоративный статус TAB, см. ниже |
+| `%loveessential_combat%` | — | true/false: игрок в бою (LoveCore); удобно в `conditions` TAB |
 | `%loveessential_vanished%` | `<vanished>` | Сохранённое состояние vanish |
 | `%loveessential_authenticated%` | `<authenticated>` | Авторизован ли игрок через AuthOracle |
 | `%loveessential_combat%` | `<combat>` | Состояние боя через CombatState |
@@ -130,26 +131,30 @@
 | `<max_players>` | Лимит игроков сервера |
 | `<suffix>` | Оформленный `%lovesubnames_current%` через PlaceholderAPI |
 | `<afk>` | `tab.status.afk` для AFK-игрока, иначе пустой компонент |
-| `<animation:kingdom>` | Кадры `tab.animations.kingdom`, смена каждые 500 мс |
-| `<animation:имя>` | Кадры `tab.animations.<имя>` |
+| `<animation:имя>` | Кадры `animations.<имя>` из `modules/tab/tab.yml`; смена каждые `change-interval` мс (по умолчанию 500) |
+| `<condition:имя>` | Текст `yes` или `no` из именованного условия `conditions.<имя>` |
 | `<papi:идентификатор>` | Результат `%идентификатор%` стороннего расширения; учитывает контекст цели и зрителя |
+
+Значения PlaceholderAPI кэшируются: `tab.placeholder-refresh.default` миллисекунд, а для отдельных плейсхолдеров — свой интервал.
+Замены вывода задаются в `tab.placeholder-output-replacements` (точное значение, диапазон `0-10` или `else`).
 
 Для текстового «Да/Нет» в карточке AFK используйте `<afk_state>`. `<afk>` предназначен для декоративного суффикса и отличается от `%loveessential_afk%`.
 
-## Тексты из lang.yml для внешнего TAB
+## Тексты из lang.yml
 
 `%loveessential_text_<ключ>%` рендерит существующий ключ локальных `messages`. Примеры:
 
 | Плейсхолдер | Источник |
 | --- | --- |
-| `%loveessential_text_tab.header%` | `tab.header` |
-| `%loveessential_text_tab.footer%` | `tab.footer` |
-| `%loveessential_text_tab.name%` | `tab.name`, с подстановкой ника при `apply-to-tab: true` |
-| `%loveessential_text_tab.groups.admin.name%` | Имя группы администратора |
+| `%loveessential_text_tab.name%` | `messages.tab.name` (шаблон имени, по умолчанию `<player>`), с подстановкой ника при `nickname.apply-to-tab: true` |
 
-Результат содержит legacy RGB-форматирование `§x…`. При экспорте `/le tab export` ссылка `@lang(tab.header)` автоматически превращается в `%loveessential_text_tab.header%`.
+Результат содержит legacy RGB-форматирование `§x…`. Внешний TAB больше не нужен: список, шапку, подвал и имена
+ведёт встроенный модуль TAB, поэтому прежние ссылки `tab.header`, `tab.footer` и `tab.groups.*.name` удалены.
+Оформление групп задаётся свойствами `tabprefix`, `customtabname`, `tagprefix` и т. д. в `modules/tab/tab.yml`
+(см. [MODULAR_CONFIGURATION.md](MODULAR_CONFIGURATION.md)).
 
-В PAPI подстановка выполняется для самого игрока: `viewer` и целевой игрок совпадают. Шаблоны встроенного TAB могут использовать отдельного зрителя для реляционных значений.
+Для ника в чате используйте `%loveessential_nickname%`, если форматтер поддерживает legacy RGB, либо
+`%loveessential_nickname_mini%`, если он ожидает MiniMessage.
 
 ## Примеры
 
@@ -175,15 +180,6 @@ identity:
     - player-card.time
     - player-card.clan
 ```
-
-Для внешнего TAB в `modules/tab/tab.yml`, внутри `external.groups`:
-
-```yaml
-_DEFAULT_:
-  customtabname: '%loveessential_nickname%'
-```
-
-После изменения: `/le tab export`, затем `/le reload`. Нужны TAB и PlaceholderAPI. Для чата используйте `%loveessential_nickname%`, если форматтер поддерживает legacy RGB, либо `%loveessential_nickname_mini%`, если он ожидает MiniMessage. Форматирование `<nickname>` в LoveEssential уже является компонентом: дополнительно разбирать его как строку не нужно.
 
 Проверка через установленный PlaceholderAPI:
 

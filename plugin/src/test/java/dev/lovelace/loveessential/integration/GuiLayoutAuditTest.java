@@ -58,7 +58,7 @@ class GuiLayoutAuditTest {
         new ArrayList<>(
             List.of(
                 "le", "le module", "le help", "le npc", "le hologram", "le portal", "le nick",
-                "le recipes", "le starter edit", "le scoreboard", "le scoreboard edit",
+                "le recipes", "le starter edit", "le scoreboard", "le scoreboard edit", "le tab",
                 "le reports", "profile", "profile settings", "profile stats", "le msg",
                 "le ignore", "le traces", "vanish"));
     for (String module : MODULES) commands.add("le module " + module);

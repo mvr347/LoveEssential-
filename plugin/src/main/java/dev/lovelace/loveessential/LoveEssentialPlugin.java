@@ -99,6 +99,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private TabModule tab;
   private LoveExpansion expansion;
   private ConditionEngine conditions;
+  private dev.lovelace.loveessential.module.Visibility visibility;
   private ActionEngine actions;
   private LoveBridge love;
   private Placeholders placeholders;
@@ -256,8 +257,32 @@ public class LoveEssentialPlugin extends JavaPlugin {
     npcs.dialogs(dialogs);
     wizard = new NpcWizard(this, main, store, lang, npcs, love);
     gameplay = new Gameplay(this, main, store, lang, love, this::module, actions);
+    visibility =
+        new dev.lovelace.loveessential.module.Visibility(
+            new dev.lovelace.loveessential.module.Visibility.Effect() {
+              @Override
+              public void hide(java.util.UUID viewer, java.util.UUID target) {
+                var a = Bukkit.getPlayer(viewer);
+                var b = Bukkit.getPlayer(target);
+                if (a != null && b != null) a.hidePlayer(LoveEssentialPlugin.this, b);
+              }
+
+              @Override
+              public void show(java.util.UUID viewer, java.util.UUID target) {
+                var a = Bukkit.getPlayer(viewer);
+                var b = Bukkit.getPlayer(target);
+                if (a != null && b != null) a.showPlayer(LoveEssentialPlugin.this, b);
+              }
+            });
+    gameplay.visibility(visibility);
     modulePolicy = new dev.lovelace.loveessential.module.ModulePolicy(this, love, gameplay, lang);
-    placeholders = new Placeholders(lang, love, gameplay::afk);
+    placeholders =
+        new Placeholders(
+            lang,
+            love,
+            gameplay::afk,
+            conditions,
+            () -> getConfig().getConfigurationSection("tab"));
     gameplay.placeholders(placeholders);
     gameplay.holograms().setup(placeholders, actions);
     getServer()
@@ -281,7 +306,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
           return Map.copyOf(values);
         });
     npcs.vanish(gameplay::vanished);
-    tab = new TabModule(this, lang, placeholders, conditions);
+    tab = new TabModule(this, lang, placeholders, visibility, main, store);
     navigation = new dev.lovelace.loveessential.gui.MenuNavigation(this);
     dev.lovelace.loveessential.gui.MenuStyle.navigation(navigation);
     var api =
@@ -327,8 +352,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
         });
     menus.nativeDialogs(extensions.ui);
     profiles.nativeDialogs(extensions.ui);
-    extensions.sidebar.moduleSettings(p -> menus.settings(p, "scoreboard", "", 0));
-    menus.scoreboardEditor(extensions.sidebar::settings);
+    extensions.scoreboard.moduleSettings(p -> menus.settings(p, "scoreboard", "", 0));
+    menus.scoreboardEditor(extensions.scoreboard::settings);
     extensions.tabSettings.advanced = p -> menus.settings(p, "tab", "", 0);
     dialogs.nativeDialogs(extensions.ui);
     gameplay.portals().ui(extensions.ui, content, p -> menus.modules(p));
@@ -352,6 +377,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
             contentMenus,
             extensions);
     commands.revive(revive);
+    commands.tab(tab);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -419,6 +445,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
           new LoveExpansion(placeholders, lang, love, gameplay::afk, gameplay::vanished);
       expansion.register();
     }
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.loveessential.api.TabService.class, tab.service(), this, ServicePriority.Normal);
     if (module("tab")) tab.start();
     content.refresh();
     ready = true;
@@ -540,18 +570,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       extensions.refresh();
                       return null;
                     }))
-        .thenCompose(v -> main.call(() -> extensions.sidebar.reloadCatalog()))
-        .thenCompose(future -> future)
         .whenComplete((v, error) -> reloading.set(false));
   }
 
   public static void validateConfig(org.bukkit.configuration.ConfigurationSection config) {
-    dev.lovelace.loveessential.scoreboard.Sidebar.rowSlots(config);
+    dev.lovelace.loveessential.scoreboard.ScoreboardModule.validate(config);
+    dev.lovelace.loveessential.tab.TabModule.validate(config);
     for (String module : MODULES)
       dev.lovelace.loveessential.module.ModulePolicy.validate(config, module);
-    var sidebarCatalog = config.getConfigurationSection("scoreboard.catalog");
-    if (sidebarCatalog != null && !sidebarCatalog.getKeys(false).isEmpty())
-      dev.lovelace.loveessential.scoreboard.SidebarConfig.read(sidebarCatalog);
     bounded(config, "storage.write-queue", 1, 65536);
     bounded(config, "storage.backup-keep", 1, 1000);
     bounded(config, "crafting.max-recipes", 1, 10000);
@@ -561,16 +587,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "scenarios.max-starts-per-minute", 1, 10000);
     bounded(config, "dialogs.max-definitions", 1, 10000);
     bounded(config, "scoreboard.refresh-ticks", 2, 1200);
-    bounded(config, "scoreboard.max-selected-lines", 1, 8);
+    bounded(config, "scoreboard.delay-on-join-ms", 0, 60000);
+    bounded(config, "scoreboard.show-seconds", 1, 3600);
     bounded(config, "scoreboard.overrides.max-seconds", 1, 86400);
     bounded(config, "scoreboard.overrides.per-player-limit", 1, 32);
-    for (String mode : config.getStringList("scoreboard.disabled-gamemodes")) {
-      try {
-        org.bukkit.GameMode.valueOf(mode.toUpperCase(java.util.Locale.ROOT));
-      } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException("errors.config");
-      }
-    }
     bounded(config, "nickname.min-length", 1, 32);
     bounded(config, "nickname.max-length", 1, 32);
     if (config.getInt("nickname.min-length", 3) > config.getInt("nickname.max-length", 24))
@@ -596,6 +616,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "profile.refresh-ticks", 20, 1200);
     bounded(config, "profile.persist-seconds", 60, 86400);
     bounded(config, "tab.refresh-ticks", 2, 1200);
+    bounded(config, "tab.bossbar-refresh-ticks", 2, 1200);
+    bounded(config, "tab.header-footer.refresh-ticks", 2, 1200);
+    bounded(config, "tab.nametag.refresh-ticks", 2, 1200);
+    bounded(config, "tab.per-world-playerlist.refresh-ticks", 2, 1200);
     bounded(config, "npc.max-active", 0, 10000);
     bounded(config, "npc.tracking.update-ticks", 1, 20);
     bounded(config, "npc.tracking.max-turn-degrees", 1, 180);

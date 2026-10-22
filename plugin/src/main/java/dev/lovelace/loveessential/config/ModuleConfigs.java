@@ -100,16 +100,7 @@ public final class ModuleConfigs {
           fill(legacy, actions);
         }
         fill(module, legacy);
-        if (id.equals("scoreboard")) {
-          ScoreboardDocument.migrate(module);
-          if (module.contains("max-selected-lines"))
-            module.set(
-                "max", Math.min(module.getInt("max", 8), module.getInt("max-selected-lines", 8)));
-          module.set("max-selected-lines", null);
-          if (module.contains("interval") && !module.contains("refresh-ticks"))
-            module.set("refresh-ticks", module.get("interval"));
-          module.set("interval", null);
-        }
+        if (id.equals("scoreboard")) migrateScoreboard(module);
         var gui = read(guiFile(id));
         if (module.isConfigurationSection("gui")) fill(gui, module.getConfigurationSection("gui"));
         module.set("gui", null);
@@ -136,6 +127,7 @@ public final class ModuleConfigs {
           module.set("engine", null);
           module.set("external", null);
           inlineTab(module, oldLang);
+          migrateTab(module);
         }
         // The multi-home limit was never used: a home is a single point.
         if (id.equals("home")) module.set("default-limit", null);
@@ -147,7 +139,6 @@ public final class ModuleConfigs {
                 && oldLang.contains(key)
                 && !module.contains("texts." + key)) module.set("texts." + key, oldLang.get(key));
         fill(module, moduleDefaults);
-        if (id.equals("scoreboard")) ScoreboardDocument.order(module);
         if (!(module.get("enabled") instanceof Boolean))
           throw new IllegalArgumentException("errors.config");
         guis.put(id, gui);
@@ -159,8 +150,6 @@ public final class ModuleConfigs {
       core.set("actions", null);
       core.set("config-version", 6);
       var merged = merge(core, modules);
-      var catalog = ScoreboardDocument.read(modules.get("scoreboard"));
-      if (catalog != null) merged.createSection("scoreboard.catalog", catalog);
       Presentation.runtime(merged);
       LoveEssentialPlugin.validateConfig(merged);
       if (original.getInt("config-version", 0) < 6 && Files.exists(mainFile))
@@ -247,6 +236,91 @@ public final class ModuleConfigs {
     }
   }
 
+  /** Keys of the retired personal-sidebar document; a file holding any of them is replaced. */
+  private static final List<String> LEGACY_SCOREBOARD =
+      List.of("placeholders", "presets", "categories", "catalog", "header", "max-selected-lines");
+
+  /**
+   * The personal sidebar catalog is gone. A scoreboard.yml that still has its keys is backed up to
+   * {@code scoreboard.yml.pre-named.bak} and replaced by the named-board defaults.
+   */
+  private void migrateScoreboard(YamlConfiguration module) throws IOException {
+    if (module.contains("scoreboards")
+        || LEGACY_SCOREBOARD.stream().noneMatch(module::contains)) return;
+    if (Files.exists(configFile("scoreboard")))
+      backup(configFile("scoreboard"), ".pre-named.bak");
+    boolean enabled = module.getBoolean("enabled", true);
+    for (String key : List.copyOf(module.getKeys(false))) module.set(key, null);
+    module.set("enabled", enabled);
+  }
+
+  /**
+   * Moves TAB groups from the first version's keys (prefix, suffix, name, permission, priority,
+   * players, worlds) to the property keys. The old file is backed up to {@code tab.yml.pre-properties.bak}.
+   * Lists of players and worlds and the TAB-only sidebar have no equivalent and are dropped.
+   */
+  private void migrateTab(YamlConfiguration module) throws IOException {
+    var groups = module.getConfigurationSection("groups");
+    boolean legacy =
+        module.contains("sidebar")
+            || module.contains("header-footer.profiles")
+            || module.contains("name-enabled")
+            || module.contains("header-footer.header")
+            || module.contains("header-footer.footer")
+            || groups != null && groups.contains("default") && !groups.contains("_DEFAULT_");
+    if (groups != null)
+      for (String id : groups.getKeys(false)) {
+        var group = groups.getConfigurationSection(id);
+        if (group != null
+            && List.of("prefix", "suffix", "name", "priority", "players", "worlds")
+                .stream()
+                .anyMatch(group::contains)) legacy = true;
+      }
+    if (!legacy) return;
+    if (Files.exists(configFile("tab"))) backup(configFile("tab"), ".pre-properties.bak");
+    if (groups != null && groups.contains("default") && !groups.contains("_DEFAULT_")) {
+      Object renamed = snapshot(groups.getConfigurationSection("default"));
+      module.set("groups.default", null);
+      module.set("groups._DEFAULT_", renamed);
+    }
+    var migrated = module.getConfigurationSection("groups");
+    if (migrated != null)
+      for (String id : migrated.getKeys(false)) {
+        var group = migrated.getConfigurationSection(id);
+        if (group == null) continue;
+        moveKey(group, "prefix", "tabprefix");
+        moveKey(group, "suffix", "tabsuffix");
+        moveKey(group, "name", "customtabname");
+        if (group.contains("tabprefix") && !group.contains("tagprefix"))
+          group.set("tagprefix", group.get("tabprefix"));
+        if (group.contains("tabsuffix") && !group.contains("tagsuffix"))
+          group.set("tagsuffix", group.get("tabsuffix"));
+        for (String key : List.of("priority", "players", "worlds")) group.set(key, null);
+        if (group.contains("permission") && group.getString("permission", "").isBlank())
+          group.set("permission", null);
+      }
+    module.set("sidebar", null);
+    module.set("name-enabled", null);
+    module.set("header-footer.profiles", null);
+    // Header and footer were global; they now belong to the default group, unless it has its own.
+    var header = module.get("header-footer.header");
+    var footer = module.get("header-footer.footer");
+    if (migrated != null && migrated.isConfigurationSection("_DEFAULT_")) {
+      var defaults = migrated.getConfigurationSection("_DEFAULT_");
+      if (header != null && !defaults.contains("header")) defaults.set("header", header);
+      if (footer != null && !defaults.contains("footer")) defaults.set("footer", footer);
+    }
+    module.set("header-footer.header", null);
+    module.set("header-footer.footer", null);
+  }
+
+  private static void moveKey(ConfigurationSection section, String from, String to) {
+    if (section.contains(from)) {
+      if (!section.contains(to)) section.set(to, section.get(from));
+      section.set(from, null);
+    }
+  }
+
   private static void backup(Path file, String suffix) throws IOException {
     Path target = file.resolveSibling(file.getFileName() + suffix);
     if (!Files.exists(target)) Files.copy(file, target);
@@ -288,21 +362,12 @@ public final class ModuleConfigs {
       String local = gui ? path.substring(4) : path;
       if (local.isBlank()) throw new IllegalArgumentException("errors.config");
       var y = read(file);
-      Object actual =
-          module.equals("scoreboard") && local.equals("catalog")
-              ? ScoreboardDocument.read(y)
-              : y.get(local);
+      Object actual = y.get(local);
       if (!Objects.equals(snapshot(actual), snapshot(expected)))
         throw new IllegalArgumentException("errors.conflict");
       if (y.isConfigurationSection(local) && !(value instanceof Map<?, ?>))
         throw new IllegalArgumentException("errors.config");
-      if (module.equals("scoreboard")
-          && local.equals("catalog")
-          && value instanceof Map<?, ?> map) {
-        @SuppressWarnings("unchecked")
-        var catalog = (Map<String, Object>) map;
-        ScoreboardDocument.write(y, catalog);
-      } else y.set(local, value);
+      y.set(local, value);
       merged.set(runtimePath(module, path), value);
       var candidate = new YamlConfiguration();
       candidate.loadFromString(merged.saveToString());
@@ -348,7 +413,6 @@ public final class ModuleConfigs {
       copy(runtime.getConfigurationSection("actions"), y, "actions.");
     stripAliases(y);
     Presentation.stripRuntime(y, id);
-    if (id.equals("scoreboard")) y.set("catalog", null);
     return y;
   }
 
