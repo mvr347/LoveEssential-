@@ -2641,6 +2641,10 @@ bindings:
   path: menus.module-menu-title.labels.module-menu.descriptions.revive
 - module: npc
   file: gui.yml
+  key: module-menu.descriptions.rtp
+  path: menus.module-menu-title.labels.module-menu.descriptions.rtp
+- module: npc
+  file: gui.yml
   key: module-menu.descriptions.vanish
   path: menus.module-menu-title.labels.module-menu.descriptions.vanish
 - module: npc

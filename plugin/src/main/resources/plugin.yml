@@ -135,7 +135,13 @@ commands:
     aliases: [починить]
   revive:
     aliases: [rv, поднять]
+  rtp:
+    aliases: [ртп]
 permissions:
+  loveessential.rtp:
+    default: true
+  loveessential.rtp.bypass.cooldown:
+    default: op
   loveessential.worlds.admin:
     default: op
   loveessential.worlds.teleport:
@@ -208,6 +214,7 @@ permissions:
       loveessential.ride: true
       loveessential.npc.import: true
       loveessential.npc.export: true
+      loveessential.rtp.bypass.cooldown: true
   loveessential.npc.view:
     default: op
   loveessential.npc.create:

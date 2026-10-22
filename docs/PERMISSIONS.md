@@ -45,6 +45,9 @@
 | `loveessential.revive.speed.<ранг>` | — | Множитель скорости подъёма из `revive.ranks` |
 | `loveessential.revive.command.suicide` | Все | `/revive suicide` |
 | `loveessential.revive.command.revive`, `.down`, `.kill` | OP | Административные подкоманды `/revive` |
+| `loveessential.rtp` | Все | `/rtp` — случайный перенос |
+| `loveessential.rtp.cooldown.<группа>` | — | Кулдаун из `rtp.cooldown-groups`; берётся наименьший из доступных и не больше `rtp.cooldown-seconds` |
+| `loveessential.rtp.bypass.cooldown` | OP | Перенос без кулдауна |
 | `loveessential.afk.bypass` | OP | Исключение из автоматического AFK-кика |
 | `loveessential.npc.import` | OP | Импорт NPC; последующая работа черновика требует npc.edit |
 | `loveessential.npc.export` | OP | Экспорт NPC |
