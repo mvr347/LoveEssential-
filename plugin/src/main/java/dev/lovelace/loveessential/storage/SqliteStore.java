@@ -120,15 +120,31 @@ public final class SqliteStore implements AutoCloseable {
                   "SELECT id,revision,payload FROM documents WHERE kind=? ORDER BY id")) {
             s.setString(1, kind);
             try (var r = s.executeQuery()) {
-              while (r.next())
-                out.add(
-                    new Document<>(
-                        r.getString(1), r.getLong(2), gson.fromJson(r.getString(3), type)));
+              while (r.next()) readRow(out, kind, r, type);
             }
           }
           return List.copyOf(out);
         });
   }
+
+  /**
+   * One row that no longer satisfies its record (a validation that was tightened later, a hand
+   * edited payload) must not stop every loader, and with it the whole plugin, from starting.
+   */
+  private <T> void readRow(List<Document<T>> out, String kind, ResultSet r, Class<T> type)
+      throws SQLException {
+    String id = r.getString(1);
+    try {
+      var value = gson.fromJson(r.getString(3), type);
+      if (value == null) throw new IllegalStateException("empty payload");
+      out.add(new Document<>(id, r.getLong(2), value));
+    } catch (RuntimeException e) {
+      LOG.warning("Skipping unreadable " + kind + " document '" + id + "': " + e);
+    }
+  }
+
+  private static final java.util.logging.Logger LOG =
+      java.util.logging.Logger.getLogger("LoveEssential");
 
   public <T> CompletableFuture<List<Document<T>>> listPrefix(
       String kind, String prefix, Class<T> type) {
@@ -143,10 +159,7 @@ public final class SqliteStore implements AutoCloseable {
             s.setInt(2, prefix.length());
             s.setString(3, prefix);
             try (var r = s.executeQuery()) {
-              while (r.next())
-                out.add(
-                    new Document<>(
-                        r.getString(1), r.getLong(2), gson.fromJson(r.getString(3), type)));
+              while (r.next()) readRow(out, kind, r, type);
             }
           }
           return List.copyOf(out);
@@ -324,6 +337,30 @@ public final class SqliteStore implements AutoCloseable {
         });
   }
 
+  /** Real names of every player that has a saved profile snapshot, online or not. */
+  public CompletableFuture<Map<UUID, String>> playerNames() {
+    return read(
+        c -> {
+          var out = new HashMap<UUID, String>();
+          try (var s =
+                  c.prepareStatement(
+                      "SELECT player,json_extract(value,'$.player') FROM profile WHERE"
+                          + " key='loveessential.player-info'");
+              var r = s.executeQuery()) {
+            while (r.next()) {
+              String name = r.getString(2);
+              if (name == null || name.isBlank()) continue;
+              try {
+                out.put(UUID.fromString(r.getString(1)), name);
+              } catch (IllegalArgumentException ignored) {
+                // A profile row that does not belong to a player.
+              }
+            }
+          }
+          return Map.copyOf(out);
+        });
+  }
+
   public CompletableFuture<Optional<String>> profile(UUID player, String key) {
     return read(
         c -> {
@@ -426,7 +463,7 @@ public final class SqliteStore implements AutoCloseable {
     try (var stream = Files.list(directory)) {
       files =
           stream
-              .filter(f -> f.getFileName().toString().matches("backup-\\d+\\.db"))
+              .filter(f -> f.getFileName().toString().matches("backup-\\d{1,18}\\.db"))
               .sorted(
                   Comparator.comparingLong(
                       (Path f) ->

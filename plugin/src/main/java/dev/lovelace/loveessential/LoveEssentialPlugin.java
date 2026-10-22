@@ -23,7 +23,6 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "tab",
           "home",
           "spawn",
-          "teleport",
           "vanish",
           "afk",
           "skin",
@@ -229,7 +228,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       getServer().getPluginManager().disablePlugin(this);
                       return;
                     }
-                    setup();
+                    try {
+                      setup();
+                    } catch (RuntimeException e) {
+                      // Without this the plugin stays enabled but half-built, answering "starting".
+                      getLogger()
+                          .log(java.util.logging.Level.SEVERE, "[loveessential.setup]", e);
+                      getServer().getPluginManager().disablePlugin(this);
+                    }
                   });
             });
   }
@@ -381,32 +387,36 @@ public class LoveEssentialPlugin extends JavaPlugin {
                         getServer().getPluginManager().disablePlugin(this);
                         return;
                       }
-                      if (module("npc")) npcs.start();
-                      gameplay.start();
-                      nicknames.start();
-                      messages.start();
-                      inventories.start();
-                      profiles.start();
-                      if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-                        expansion =
-                            new LoveExpansion(
-                                placeholders, lang, love, gameplay::afk, gameplay::vanished);
-                        expansion.register();
-                      }
-                      if (module("tab")) tab.start();
                       try {
-                        content.refresh();
+                        startServices();
                       } catch (RuntimeException e) {
+                        ready = false;
                         getLogger()
                             .log(java.util.logging.Level.SEVERE, lang.text("logs.start-failed"), e);
                         getServer().getPluginManager().disablePlugin(this);
-                        return;
                       }
-                      ready = true;
-                      starter.start();
-                      extensions.start();
-                      getLogger().info(lang.text("logs.ready"));
                     }));
+  }
+
+  /** Starts every service once the stored data is loaded; any failure disables the plugin. */
+  private void startServices() {
+    if (module("npc")) npcs.start();
+    gameplay.start();
+    nicknames.start();
+    messages.start();
+    inventories.start();
+    profiles.start();
+    if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+      expansion =
+          new LoveExpansion(placeholders, lang, love, gameplay::afk, gameplay::vanished);
+      expansion.register();
+    }
+    if (module("tab")) tab.start();
+    content.refresh();
+    ready = true;
+    starter.start();
+    extensions.start();
+    getLogger().info(lang.text("logs.ready"));
   }
 
   public boolean ready() {
@@ -570,6 +580,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
     decimal(config, "traces.stride", .2, 3);
     decimal(config, "traces.view-distance", 4, 64);
     decimal(config, "sitride.ride-range", 1, 8);
+    if (config.contains("sitride.ride-denied-types")) {
+      if (!(config.get("sitride.ride-denied-types") instanceof java.util.List<?> denied))
+        throw new IllegalArgumentException("errors.config");
+      for (Object type : denied)
+        try {
+          org.bukkit.entity.EntityType.valueOf(type.toString().toUpperCase(java.util.Locale.ROOT));
+        } catch (RuntimeException e) {
+          throw new IllegalArgumentException("errors.config", e);
+        }
+    }
     bounded(config, "portal.max-portals", 1, 1024);
     bounded(config, "portal.max-volume", 1, 262144);
     bounded(config, "portal.default-cooldown-seconds", 0, 86400);
@@ -581,7 +601,6 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (config.contains("traces.color")
         && !config.getString("traces.color", "").matches("[0-9a-fA-F]{6}"))
       throw new IllegalArgumentException("errors.config");
-    bounded(config, "home.default-limit", 1, 1000);
     bounded(config, "afk.timeout-seconds", 1, 31536000);
     bounded(config, "afk.kick-after-seconds", 0, 31536000);
     bounded(config, "night-skip.max-multiplier", 1, 1000);

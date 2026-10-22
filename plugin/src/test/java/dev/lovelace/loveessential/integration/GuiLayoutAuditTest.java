@@ -17,7 +17,7 @@ import org.mockbukkit.mockbukkit.entity.PlayerMock;
 class GuiLayoutAuditTest {
   static final List<String> MODULES =
       List.of(
-          "npc", "tab", "home", "spawn", "teleport", "vanish", "afk", "skin", "sitride",
+          "npc", "tab", "home", "spawn", "vanish", "afk", "skin", "sitride",
           "utilities", "nightskip", "portal", "hologram", "traces", "joinquit", "motd",
           "messages", "inventory", "profile", "nickname", "crafting", "starter", "worlds",
           "scenarios", "dialogs", "scoreboard");
@@ -79,7 +79,8 @@ class GuiLayoutAuditTest {
       var top = player.getOpenInventory().getTopInventory();
       if (top == null || !(top.getHolder() instanceof GuiLayout)) continue;
       opened.add(command + "=" + top.getSize());
-      var violations = GuiRules.violations(top, false);
+      var violations = new ArrayList<>(GuiRules.violations(top, false));
+      violations.addAll(GuiRules.unresolvedText(top));
       if (!violations.isEmpty()) report.put(command + " (" + top.getSize() + ")", violations);
     }
     var text = new StringBuilder();
@@ -142,7 +143,8 @@ class GuiLayoutAuditTest {
       String id = layout.guiId() + "#" + top.getSize();
       if (child && seen.add(id)) {
         reached.add(id);
-        var violations = GuiRules.violations(top, null);
+        var violations = new ArrayList<>(GuiRules.violations(top, null));
+        violations.addAll(GuiRules.unresolvedText(top));
         if (!violations.isEmpty()) report.put(id + " via " + next, new TreeSet<>(violations));
       }
       if (next.getValue().size() >= Integer.getInteger("gui.audit.depth", 2)) continue;

@@ -84,9 +84,14 @@ public final class ControlMenus implements Listener, AutoCloseable {
     final Predicate<Player> allowed;
     boolean root;
     Map<String, String> variables = Map.of();
+    Runnable reopen;
 
     public Map<String, String> guiVariables() {
       return variables;
+    }
+
+    public Runnable guiReopen() {
+      return reopen;
     }
 
     public boolean guiAllowed(Player player) {
@@ -184,21 +189,33 @@ public final class ControlMenus implements Listener, AutoCloseable {
       String loreKey,
       Map<String, String> vars,
       Consumer<ClickType> click) {
+    tile(m, slot, icon, nameKey, loreKey, vars, Map.of(), click);
+  }
+
+  private void tile(
+      Menu m,
+      int slot,
+      Material icon,
+      String nameKey,
+      String loreKey,
+      Map<String, String> vars,
+      Map<String, Component> parts,
+      Consumer<ClickType> click) {
     entry(
         m,
         slot,
         icon,
-        lang.render(nameKey, vars),
-        lang.lines(loreKey).stream().map(text -> lang.renderText(text, vars)).toList(),
+        lang.renderText(lang.text(nameKey), vars, parts),
+        lang.lines(loreKey).stream().map(text -> lang.renderText(text, vars, parts)).toList(),
         click);
   }
 
-  /** Placeholders for {@code gui.toggle-lore}: the state now and the state after the click. */
-  private Map<String, String> toggleVars(boolean now, Map<String, String> extra) {
-    var vars = new HashMap<>(extra);
-    vars.put("now", lang.text(now ? "gui.state-on" : "gui.state-off"));
-    vars.put("next", lang.text(now ? "gui.state-off" : "gui.state-on"));
-    return vars;
+  /** Components for {@code gui.toggle-lore}: the state now and the state after the click. */
+  private Map<String, Component> toggleParts(boolean now, Map<String, Component> extra) {
+    var parts = new HashMap<>(extra);
+    parts.put("now", lang.render(now ? "gui.state-on" : "gui.state-off"));
+    parts.put("next", lang.render(now ? "gui.state-off" : "gui.state-on"));
+    return parts;
   }
 
   private void navigation(Menu m, Player p, int page, int total, IntConsumer pages, Runnable back) {
@@ -279,7 +296,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             case "tab", "nickname" -> Material.NAME_TAG;
             case "home" -> Material.RED_BED;
             case "spawn" -> Material.RESPAWN_ANCHOR;
-            case "teleport", "portal" -> Material.ENDER_PEARL;
+            case "portal" -> Material.ENDER_PEARL;
             case "messages" -> Material.WRITABLE_BOOK;
             case "inventory" -> Material.CHEST;
             case "afk" -> Material.CLOCK;
@@ -482,7 +499,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
         plugin.module(id) ? Material.LIME_DYE : Material.GRAY_DYE,
         plugin.module(id) ? "gui.module-toggle-on" : "gui.module-toggle-off",
         "gui.toggle-lore",
-        toggleVars(plugin.module(id), Map.of("module", lang.text("gui.module-names." + id))),
+        Map.of(),
+        toggleParts(plugin.module(id), Map.of("module", lang.render("gui.module-names." + id))),
         c ->
             complete(
                 p, plugin.module(id, !plugin.module(id)), () -> settings(p, id, path, page), true));
@@ -734,7 +752,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
         Material.LEVER,
         n.enabled() ? "gui.npc-toggle-on" : "gui.npc-toggle-off",
         "gui.toggle-lore",
-        toggleVars(n.enabled(), Map.of()),
+        Map.of(),
+        toggleParts(n.enabled(), Map.of()),
         c -> command(p, "npc " + (n.enabled() ? "disable " : "enable ") + id));
     put(
         m,
@@ -906,6 +925,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 Integer.toString(v.pages().size())),
             allowed);
     Runnable reopen = () -> hologram(p, id, selected, scroll);
+    m.reopen = reopen;
     // Lines come first; the two "add" tiles follow them as content, never as footer controls.
     boolean canAdd = current.lines().size() < 32;
     int total = current.lines().size() + (canAdd ? 2 : 0);
@@ -1158,6 +1178,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                     .orElse(false);
     var m = menu(p, "holo.pages-title", Map.of("id", id), allowed);
     Runnable reopen = () -> hologramPages(p, id, page);
+    m.reopen = reopen;
     entry(
         m,
         3,
@@ -1227,7 +1248,12 @@ public final class ControlMenus implements Listener, AutoCloseable {
               "count", Integer.toString(v.pages().get(i).lines().size())),
           c -> {
             if (!chosen) hologramPages(p, id, index);
-            else hologram(p, id, index, 0);
+            else {
+              // Return through Back so the manager is not stacked under the editor, then open the
+              // editor on the page that was chosen here.
+              MenuStyle.back(p);
+              hologram(p, id, page, 0);
+            }
           });
     }
     if (v.pages().size() < 16)

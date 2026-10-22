@@ -87,6 +87,7 @@ public final class Worlds implements Listener, AutoCloseable {
                 main.call(
                     () -> {
                       saved.forEach(d -> definitions.put(d.id(), d));
+                      Bukkit.getOnlinePlayers().forEach(this::restore);
                       if (plugin.module("worlds"))
                         for (var d : saved)
                           if (d.value().autoload())
@@ -298,22 +299,63 @@ public final class Worlds implements Listener, AutoCloseable {
     for (var p : w.getPlayers()) mode(p, d);
   }
 
+  private static final String MODE_KEY = "loveessential.worlds.mode-before";
+
   /** Game mode a player had before an enforcing world took over, restored when they leave it. */
-  private final Map<UUID, GameMode> modeBefore = new HashMap<>();
+  private final Map<UUID, GameMode> modeBefore = new ConcurrentHashMap<>();
 
   private void mode(Player p, Definition d) {
+    var id = p.getUniqueId();
     if (d != null && d.options().enforceMode()) {
-      modeBefore.putIfAbsent(p.getUniqueId(), p.getGameMode());
+      // Only the mode seen on the way in counts; it is also saved so that a relog or a restart
+      // inside the world does not turn the enforced mode into the player's "own" one.
+      if (modeBefore.putIfAbsent(id, p.getGameMode()) == null)
+        store.profile(id, MODE_KEY, p.getGameMode().name());
       p.setGameMode(GameMode.valueOf(d.options().gameMode()));
     } else {
-      var previous = modeBefore.remove(p.getUniqueId());
-      if (previous != null) p.setGameMode(previous);
+      var previous = modeBefore.remove(id);
+      if (previous != null) {
+        store.profile(id, MODE_KEY, "");
+        p.setGameMode(previous);
+      }
     }
+  }
+
+  /** Picks up a mode saved before a relog or restart; restores it at once if the world was left. */
+  public void restore(Player p) {
+    var id = p.getUniqueId();
+    store
+        .profile(id, MODE_KEY)
+        .thenAccept(
+            saved ->
+                main.execute(
+                    () -> {
+                      if (!p.isOnline() || saved.orElse("").isBlank()) return;
+                      GameMode previous;
+                      try {
+                        previous = GameMode.valueOf(saved.get());
+                      } catch (IllegalArgumentException e) {
+                        store.profile(id, MODE_KEY, "");
+                        return;
+                      }
+                      var d = definitions.get(p.getWorld().getName());
+                      if (plugin.module("worlds") && d != null && d.value().options().enforceMode())
+                        modeBefore.putIfAbsent(id, previous);
+                      else {
+                        store.profile(id, MODE_KEY, "");
+                        p.setGameMode(previous);
+                      }
+                    }));
   }
 
   @EventHandler
   public void forgetMode(org.bukkit.event.player.PlayerQuitEvent e) {
     modeBefore.remove(e.getPlayer().getUniqueId());
+  }
+
+  @EventHandler
+  public void rememberMode(org.bukkit.event.player.PlayerJoinEvent e) {
+    restore(e.getPlayer());
   }
 
   public CompletableFuture<Void> save(Definition d, long revision, String actor) {

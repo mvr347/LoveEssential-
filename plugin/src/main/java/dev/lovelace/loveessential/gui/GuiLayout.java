@@ -13,6 +13,14 @@ public interface GuiLayout extends InventoryHolder {
 
   default void guiResume() {}
 
+  /**
+   * Rebuilds this menu from fresh state. Used when Back leads to a parent that went stale (for
+   * example its revision changed while a child menu edited the same object).
+   */
+  default Runnable guiReopen() {
+    return null;
+  }
+
   default void guiInventory(org.bukkit.inventory.Inventory value) {
     throw new UnsupportedOperationException();
   }

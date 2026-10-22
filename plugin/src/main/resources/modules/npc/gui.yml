@@ -73,7 +73,6 @@ messages:
     dialog-expired: <red>Диалог устарел. Обратитесь к NPC снова.
     teleport-blocked: '<red>Телепорт недоступен: авторизация, бой, территория или выгруженный мир.'
     unsafe: <red>В точке назначения нет безопасного места.
-    home-limit: <red>Достигнут лимит домов.
     inventory: <red>Освободите место в инвентаре.
     config: <red>Некорректная конфигурация.
     tab-engine: <red>Для этого режима установите TAB и PlaceholderAPI.
@@ -396,7 +395,6 @@ messages:
       tab: Список игроков
       home: Дома
       spawn: Спавн
-      teleport: Телепортация
       vanish: Невидимость
       afk: AFK
       skin: Скины
@@ -423,7 +421,6 @@ messages:
       tab: <gold>Список игроков
       home: <gold>Дома
       spawn: <gold>Спавн
-      teleport: <gold>Телепортация
       vanish: <gold>Невидимость
       afk: <gold>AFK
       skin: <gold>Скины
@@ -457,11 +454,6 @@ messages:
       delhome: <gray>Удалить сохранённый дом.
       spawn: <gray>Телепорт на спавн.
       setspawn: <gray>Сохранить точку спавна. Требуются права администратора.
-      tpa: <gray>Отправить запрос телепорта к игроку.
-      tpahere: <gray>Пригласить игрока к себе.
-      tpaccept: <gray>Принять запрос телепорта.
-      tpdeny: <gray>Отклонить запрос телепорта.
-      back: <gray>Вернуться к предыдущей позиции.
       vanish: <gray>Переключить невидимость. Требуется соответствующее право.
       afk: <gray>Переключить статус AFK.
       skin: <gray>Установить скин по имени игрока.
@@ -769,7 +761,6 @@ messages:
           _label: <gold>Время до AFK, секунды
         kick-after-seconds:
           _label: <gold>Время до отключения AFK, секунды
-      teleport: {}
       traces:
         default-enabled:
           _label: <gold>Показывать следы новым игрокам
@@ -823,9 +814,7 @@ messages:
             _label: <gold>Разрешённые команды
       motd: {}
       portal: {}
-      home:
-        default-limit:
-          _label: <gold>Базовый лимит домов
+      home: {}
       tab:
         engine:
           _label: <gold>Движок списка игроков
@@ -1132,11 +1121,9 @@ messages:
       tab:
       - <gray>Список игроков, имена, группы, scoreboard и bossbar.
       home:
-      - <gray>Лимит домов и доступность команд сохранения/телепорта.
+      - <gray>Доступность команд сохранения дома и возврата домой.
       spawn:
       - <gray>Доступность сохранённых точек спавна.
-      teleport:
-      - <gray>Запросы телепорта и возврат на предыдущую позицию.
       vanish:
       - <gray>Скрытие игрока с сохранением состояния между входами.
       afk:
@@ -1409,9 +1396,6 @@ messages:
         _description: <gray>Как часто сохранять снимок профиля в SQLite, в секундах.
       cards:
         _description: <gray>Карточки досье. У каждой есть иконка, текст и отдельное право просмотра.
-    home:
-      default-limit:
-        _description: <gray>Сколько домов можно сохранить без повышающего лимит права.
     afk:
       timeout-seconds:
         _description: <gray>Через сколько секунд без активности считать игрока AFK.
@@ -1543,10 +1527,6 @@ messages:
     saved: <green>Изменения сохранены.
     prefix: <dark_gray>[<gold>Love<dark_gray>] <reset>
     commands: <aqua>[Команды]
-    teleport-request: <gold>Телепортация <dark_gray>» <white><player> <gray>хочет переместиться к вам.
-    teleport-here: <gold>Телепортация <dark_gray>» <white><player> <gray>приглашает вас к себе.
-    accept: <green>[Принять]
-    deny: <red>[Отклонить]
     reply: <aqua>[Ответить]
   input-extra:
     comfort-context: <gold>Настройка своей игровой механики

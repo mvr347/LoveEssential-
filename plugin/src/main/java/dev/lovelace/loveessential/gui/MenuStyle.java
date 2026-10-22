@@ -173,13 +173,16 @@ public final class MenuStyle {
       item = head(texture, lang.render(title), Arrays.stream(lore).map(lang::render).toList());
     }
     var styled = settings == null ? item : settings.styleButton(title, item);
-    if (title.equals("gui.close")) {
-      var meta = styled.getItemMeta();
-      meta.getPersistentDataContainer()
-          .set(CLOSE, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
-      styled.setItemMeta(meta);
-    }
-    return styled;
+    return title.equals("gui.close") ? markClose(styled) : styled;
+  }
+
+  /** Close is recognised by this marker, so replacing its icon or translating it keeps it valid. */
+  public static ItemStack markClose(ItemStack item) {
+    var meta = item.getItemMeta();
+    meta.getPersistentDataContainer()
+        .set(CLOSE, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+    item.setItemMeta(meta);
+    return item;
   }
 
   // Close is recognised by this marker rather than by its translated name.

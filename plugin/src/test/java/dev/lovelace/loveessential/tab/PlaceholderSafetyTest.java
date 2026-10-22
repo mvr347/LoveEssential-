@@ -37,4 +37,14 @@ class PlaceholderSafetyTest {
           parsed.children().stream().anyMatch(c -> c.clickEvent() instanceof ClickEvent), hostile);
     }
   }
+
+  @Test
+  void tagsOutsideTheStylingSetStayLiteralTextInsteadOfBeingInterpreted() {
+    for (String literal :
+        new String[] {"<font:uniform>font</font>", "<key:key.inventory>key</key>", "<lang:a.b>x"}) {
+      var parsed = Placeholders.styleOnly(literal);
+      assertEquals(literal, PlainTextComponentSerializer.plainText().serialize(parsed), literal);
+      assertNull(parsed.font(), literal);
+    }
+  }
 }

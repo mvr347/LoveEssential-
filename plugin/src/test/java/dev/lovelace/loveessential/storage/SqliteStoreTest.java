@@ -200,4 +200,27 @@ class SqliteStoreTest {
       assertEquals("true", db.profile(id, "loveessential.vanish").get().orElseThrow());
     }
   }
+
+  record Strict(String name) {
+    Strict {
+      if (name == null) throw new IllegalArgumentException("name");
+    }
+  }
+
+  @Test
+  void listSkipsRowsThatNoLongerSatisfyTheirRecordInsteadOfFailingEveryLoader() throws Exception {
+    var file = dir.resolve("data.db");
+    try (var db = new SqliteStore(file, 32)) {
+      db.save("strict", "good", 0, new Strict("ok"), "a").get();
+      db.save("strict", "bad", 0, new Strict("temporary"), "a").get();
+      try (var c = DriverManager.getConnection("jdbc:sqlite:" + file);
+          var s = c.createStatement()) {
+        s.executeUpdate("UPDATE documents SET payload='{}' WHERE id='bad'");
+      }
+      var all = db.list("strict", Strict.class).get();
+      assertEquals(List.of("good"), all.stream().map(SqliteStore.Document::id).toList());
+      var prefixed = db.listPrefix("strict", "", Strict.class).get();
+      assertEquals(List.of("good"), prefixed.stream().map(SqliteStore.Document::id).toList());
+    }
+  }
 }

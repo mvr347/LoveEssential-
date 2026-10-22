@@ -97,13 +97,18 @@ public final class GuiSettings {
               .getConfig()
               .getString(
                   module(layout.guiId()) + ".gui.navigation." + nav.getKey() + ".texture", "");
-      if (current != null && current.getType() == Material.PLAYER_HEAD && !texture.isBlank())
-        inventory.setItem(
-            nav.getValue(),
+      if (current != null && current.getType() == Material.PLAYER_HEAD && !texture.isBlank()) {
+        var head =
             MenuStyle.head(
                 texture,
                 current.getItemMeta().displayName(),
-                Objects.requireNonNullElse(current.getItemMeta().lore(), List.of())));
+                Objects.requireNonNullElse(current.getItemMeta().lore(), List.of()));
+        inventory.setItem(
+            nav.getValue(),
+            nav.getKey().equals("close") || MenuStyle.isClose(current)
+                ? MenuStyle.markClose(head)
+                : head);
+      }
     }
     String root = path(layout.guiId());
     var variables = new HashMap<String, String>(Map.of("player", p.getName()));

@@ -3,6 +3,28 @@ enabled: true
 click-to-sit: true
 ride-range: 4.0
 player-riding-enabled: true
+# 2026-10-22: на ком нельзя ехать. Летающие и водные существа дают бесплатный полёт мимо границ
+# приватов (всадник вне зоны досягаемости патруля) или топят всадника на суше, поэтому они
+# отсечены списком, а не проверкой «на земле ли моб»: список виден админу и правится без кода.
+ride-denied-types:
+- HAPPY_GHAST
+- GHAST
+- PHANTOM
+- BAT
+- ALLAY
+- VEX
+- PARROT
+- BEE
+- BREEZE
+- BLAZE
+- WITHER
+- ENDER_DRAGON
+- GUARDIAN
+- ELDER_GUARDIAN
+- SQUID
+- GLOW_SQUID
+- DOLPHIN
+- AXOLOTL
 access:
   allowed-worlds: []
   denied-worlds: []

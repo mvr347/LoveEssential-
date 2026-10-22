@@ -85,4 +85,36 @@ public final class GuiRules {
     if (rows < 3) out.add("menu too small");
     return out;
   }
+
+  private static final java.util.regex.Pattern RAW_TAG =
+      java.util.regex.Pattern.compile("</?[a-z_][a-z0-9_]*(:[^>]*)?>");
+  private static final java.util.regex.Pattern UNRESOLVED_KEY =
+      java.util.regex.Pattern.compile("\\[[a-z][a-z0-9_-]*(\\.[a-z0-9_-]+)+\\]");
+
+  /** Item names and lore that show raw MiniMessage tags or an unresolved {@code [lang.key]}. */
+  public static List<String> unresolvedText(Inventory inventory) {
+    var out = new ArrayList<String>();
+    for (int slot = 0; slot < inventory.getSize(); slot++) {
+      var item = inventory.getItem(slot);
+      if (item == null || !item.hasItemMeta()) continue;
+      var meta = item.getItemMeta();
+      var lines = new ArrayList<String>();
+      if (meta.hasDisplayName())
+        lines.add(PlainTextComponentSerializer.plainText().serialize(meta.displayName()));
+      if (meta.hasLore())
+        for (var line : meta.lore())
+          lines.add(PlainTextComponentSerializer.plainText().serialize(line));
+      for (String line : lines) {
+        // Settings menus print the stored template on purpose: the admin edits exactly that text.
+        // "Категория:" is the personal scoreboard picker, which prints category templates raw; that
+        // picker is removed together with the personal scoreboard, so it is not worth a fix.
+        boolean shownValue =
+            line.stripLeading().startsWith("Значение:")
+                || line.stripLeading().startsWith("Категория:");
+        if (UNRESOLVED_KEY.matcher(line).find() || !shownValue && RAW_TAG.matcher(line).find())
+          out.add("slot " + slot + ": " + line);
+      }
+    }
+    return out;
+  }
 }

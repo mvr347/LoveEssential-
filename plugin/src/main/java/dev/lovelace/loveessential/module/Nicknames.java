@@ -45,6 +45,8 @@ public final class Nicknames implements Listener, AutoCloseable {
   private final Set<UUID> loading = new HashSet<>(), saving = new HashSet<>();
   // Skeletons of every saved nickname, including players who are offline right now.
   private final Map<UUID, String> taken = new ConcurrentHashMap<>();
+  private final Map<UUID, String> realNames = new ConcurrentHashMap<>();
+  private volatile boolean directoryReady;
 
   public Nicknames(
       LoveEssentialPlugin plugin, MainThread main, Lang lang, SqliteStore store, LoveBridge love) {
@@ -58,19 +60,34 @@ public final class Nicknames implements Listener, AutoCloseable {
   public void start() {
     Bukkit.getPluginManager().registerEvents(this, plugin);
     Bukkit.getOnlinePlayers().forEach(this::load);
-    store
-        .list("nickname", Settings.class)
-        .thenAccept(
-            list ->
-                list.forEach(
-                    d -> {
-                      if (!d.value().name().isEmpty())
-                        try {
-                          taken.put(UUID.fromString(d.id()), skeleton(d.value().name()));
-                        } catch (IllegalArgumentException ignored) {
-                          // Not a player document.
-                        }
-                    }));
+    refreshDirectory();
+  }
+
+  /** Reloads the lookup of nicknames and real names that belong to players who may be offline. */
+  public CompletableFuture<Void> refreshDirectory() {
+    return store
+        .playerNames()
+        .thenCombine(
+            store.list("nickname", Settings.class),
+            (names, nicknames) -> {
+              names.forEach((id, name) -> realNames.put(id, skeleton(name)));
+              for (var d : nicknames) {
+                if (d.value().name().isEmpty()) continue;
+                try {
+                  taken.put(UUID.fromString(d.id()), skeleton(d.value().name()));
+                } catch (IllegalArgumentException ignored) {
+                  // Not a player document.
+                }
+              }
+              return (Void) null;
+            })
+        .whenComplete(
+            (v, error) -> {
+              if (error != null)
+                plugin.getLogger().warning("Could not load the nickname directory: " + error);
+              // Even on failure the check must not block forever; online players are still compared.
+              directoryReady = true;
+            });
   }
 
   private static final Map<Character, Character> CONFUSABLES = confusables();
@@ -236,7 +253,11 @@ public final class Nicknames implements Listener, AutoCloseable {
         || !name.matches("[\\p{L}\\p{N}_]+"))
       throw new IllegalArgumentException("nick.invalid-name");
     if (plugin.getConfig().getBoolean("nickname.prevent-impersonation", true)) {
+      if (!directoryReady) throw new IllegalArgumentException("nick.loading");
       String skeleton = skeleton(name);
+      for (var entry : realNames.entrySet())
+        if (!entry.getKey().equals(p.getUniqueId()) && entry.getValue().equals(skeleton))
+          throw new IllegalArgumentException("nick.taken");
       var known = Bukkit.getOfflinePlayerIfCached(name);
       if (known != null && !known.getUniqueId().equals(p.getUniqueId()))
         throw new IllegalArgumentException("nick.taken");

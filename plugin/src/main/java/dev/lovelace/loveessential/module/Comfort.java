@@ -404,7 +404,8 @@ public final class Comfort implements Listener, AutoCloseable {
             || !love.authenticated(other)
             || gameplay.vanished(other)
             || !plugin.getConfig().getBoolean("sitride.player-riding-enabled", true)
-            || love.combat(other))) throw new IllegalArgumentException("comfort.ride-consent");
+            || love.combat(other)
+            || airborne(other))) throw new IllegalArgumentException("comfort.ride-consent");
     if (!love.territorialAccess(p, target.getLocation()))
       throw new IllegalArgumentException("errors.territory");
     if (!target.addPassenger(p)) throw new IllegalArgumentException("comfort.ride-target");
@@ -417,18 +418,17 @@ public final class Comfort implements Listener, AutoCloseable {
    */
   private boolean rideable(Entity target) {
     return !target.getPersistentDataContainer().has(npcKey, PersistentDataType.STRING)
-        && rideableKind(target);
+        && rideableType(
+            target.getType(), plugin.getConfig().getStringList("sitride.ride-denied-types"));
   }
 
-  static boolean rideableKind(Entity target) {
-    if (target instanceof Player) return true;
-    return !(target instanceof Flying
-        || target instanceof Bat
-        || target instanceof Allay
-        || target instanceof Vex
-        || target instanceof Parrot
-        || target instanceof Bee
-        || target instanceof EnderDragon);
+  static boolean rideableType(EntityType type, Collection<String> denied) {
+    return type == EntityType.PLAYER || denied.stream().noneMatch(n -> n.equalsIgnoreCase(type.name()));
+  }
+
+  /** A flying or gliding carrier would take the rider over claim borders and out of reach. */
+  private static boolean airborne(Player carrier) {
+    return carrier.isFlying() || carrier.isGliding();
   }
 
   private static boolean clear(Location at, double height) {
@@ -510,7 +510,8 @@ public final class Comfort implements Listener, AutoCloseable {
                                   .getConfig()
                                   .getBoolean("sitride.player-riding-enabled", true)
                               || gameplay.vanished(other)
-                              || love.combat(other));
+                              || love.combat(other)
+                              || airborne(other));
               if (stop && p != null && target.getPassengers().contains(p)) p.leaveVehicle();
               return stop;
             });

@@ -15,10 +15,12 @@ public final class ActionEngine {
   private final Map<String, ActionProvider> providers = new ConcurrentHashMap<>();
   private final JavaPlugin plugin;
   private final Lang lang;
+  private final LoveBridge love;
 
   public ActionEngine(JavaPlugin plugin, Lang lang, LoveBridge love) {
     this.plugin = plugin;
     this.lang = lang;
+    this.love = love;
     register(
         "charge",
         (p, a) -> {
@@ -111,13 +113,18 @@ public final class ActionEngine {
 
   public boolean execute(Player p, List<Action> actions) {
     MainThread.require();
+    // Reject the whole list before anything is taken from the player.
+    for (var a : actions)
+      if (!providers.containsKey(a.type())) {
+        lang.send(p, "errors.action-unavailable", Map.of("type", a.type()));
+        return false;
+      }
+    long charged = 0;
     for (var a : actions) {
       var provider = providers.get(a.type());
+      boolean done;
       try {
-        if (provider == null || !provider.execute(p, a.args())) {
-          lang.send(p, "errors.action-unavailable", Map.of("type", a.type()));
-          return false;
-        }
+        done = provider != null && provider.execute(p, a.args());
       } catch (RuntimeException e) {
         plugin
             .getLogger()
@@ -127,11 +134,35 @@ public final class ActionEngine {
                     + a.type()
                     + "] "
                     + e.getClass().getSimpleName());
+        done = false;
+      }
+      if (!done) {
         lang.send(p, "errors.action-unavailable", Map.of("type", a.type()));
+        refund(p, charged);
         return false;
       }
+      if (a.type().equals("charge")) charged += chargedAmount(a);
     }
     return true;
+  }
+
+  private static long chargedAmount(Action a) {
+    try {
+      return Long.parseLong(a.args().get("amount"));
+    } catch (RuntimeException e) {
+      return 0;
+    }
+  }
+
+  /** Gives back what earlier charge actions took when a later action of the list failed. */
+  private void refund(Player p, long amount) {
+    if (amount <= 0) return;
+    var economy = love.economy();
+    if (economy.isPresent()) economy.get().give(p, amount);
+    else
+      plugin
+          .getLogger()
+          .warning("Could not refund " + amount + " to " + p.getName() + ": economy unavailable");
   }
 
   public List<String> types() {

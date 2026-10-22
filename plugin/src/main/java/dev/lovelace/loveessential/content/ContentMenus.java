@@ -183,17 +183,19 @@ public final class ContentMenus implements Listener, AutoCloseable {
       String nameOn,
       String nameOff,
       Consumer<InventoryClickEvent> click) {
-    var vars =
+    var parts =
         Map.of(
-            "now", lang.text(on ? "gui.state-on" : "gui.state-off"),
-            "next", lang.text(on ? "gui.state-off" : "gui.state-on"));
+            "now", lang.render(on ? "gui.state-on" : "gui.state-off"),
+            "next", lang.render(on ? "gui.state-off" : "gui.state-on"));
     item(
         v,
         slot,
         MenuStyle.item(
             Material.LEVER,
             lang.render(on ? nameOn : nameOff),
-            lang.lines("gui.toggle-lore").stream().map(t -> lang.renderText(t, vars)).toList()),
+            lang.lines("gui.toggle-lore").stream()
+                .map(t -> lang.renderText(t, Map.of(), parts))
+                .toList()),
         click);
   }
 

@@ -176,7 +176,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                           try {
                             SqliteStore.pruneBackups(
                                 folder, plugin.getConfig().getInt("storage.backup-keep", 10));
-                          } catch (java.io.IOException e) {
+                          } catch (java.io.IOException | RuntimeException e) {
                             plugin.getLogger().warning("Backup rotation failed: " + e);
                           }
                           return saved;
