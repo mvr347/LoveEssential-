@@ -74,6 +74,13 @@ public final class CommandSuggestions {
     this.profiles = profiles;
   }
 
+  private dev.lovelace.loveessential.module.Revive revive;
+
+  public CommandSuggestions revive(dev.lovelace.loveessential.module.Revive revive) {
+    this.revive = revive;
+    return this;
+  }
+
   public List<String> complete(CommandSender sender, String command, String[] args) {
     if (!plugin.ready()) return List.of();
     if (sender instanceof Player p && !love.authenticated(p)) return List.of();
@@ -259,6 +266,16 @@ public final class CommandSuggestions {
       var options = new ArrayList<>(players(sender));
       options.addAll(List.of("eject", "сбросить"));
       return options;
+    }
+    if (command.equals("revive") && plugin.module("revive")) {
+      if (args.length == 1)
+        return List.of("suicide", "revive", "down", "kill").stream()
+            .filter(sub -> sub.equals("suicide") || sender.hasPermission("loveessential.revive.command." + sub))
+            .toList();
+      if (args.length == 2 && Set.of("revive", "kill").contains(args[0].toLowerCase(Locale.ROOT)))
+        return revive == null ? List.of() : revive.downedNames();
+      if (args.length == 2 && args[0].equalsIgnoreCase("down")) return players(sender);
+      return List.of();
     }
     if (command.equals("traces") && args.length == 1 && plugin.module("traces"))
       return List.of("on", "off");

@@ -383,6 +383,7 @@ messages:
       scenarios: Сценарии событий
       dialogs: Диалоговые окна
       scoreboard: Личное табло
+      revive: Раненые игроки
       crafting: Рецепты крафта
       starter: Стартовые предметы
       nickname: Никнеймы
@@ -409,6 +410,7 @@ messages:
       scenarios: <gold>Сценарии событий
       dialogs: <gold>Диалоговые окна
       scoreboard: <gold>Личное табло
+      revive: <gold>Раненые игроки
       crafting: <gold>Рецепты крафта
       starter: <gold>Стартовые предметы
       nickname: <gold>Никнеймы
@@ -482,6 +484,45 @@ messages:
       dialogs:
         max-definitions:
           _label: <gold>Максимум диалоговых окон
+      revive:
+        death-delay:
+          _label: <gold>Время до смерти раненого (секунды)
+        death-count-action:
+          _label: <gold>Действие по истечении времени (kill или revive)
+        reliving-count:
+          _label: <gold>Время подъёма (секунды)
+        reliving-distance-min:
+          _label: <gold>Расстояние начала подъёма
+        reliving-distance-max:
+          _label: <gold>Расстояние, дальше которого подъём прерывается
+        invulnerability-delay:
+          _label: <gold>Неуязвимость после падения (секунды)
+        downed-health:
+          _label: <gold>Здоровье раненого
+        revived-health:
+          _label: <gold>Здоровье после подъёма
+        suicide-count:
+          _label: <gold>Время удержания приседа для сдачи
+        suicide-delay:
+          _label: <gold>Задержка перед сдачей
+        crawl-speed:
+          _label: <gold>Скорость ползком
+        totem-first:
+          _label: <gold>Сначала срабатывает тотем
+        mobs-ignore:
+          _label: <gold>Мобы не замечают раненого
+        disconnect-kill:
+          _label: <gold>Убивать раненого при выходе
+        keep-inventory:
+          _label: <gold>Сохранять инвентарь при смерти раненого
+        death-message:
+          _label: <gold>Показывать сообщение о смерти
+        start-cooldown:
+          _label: <gold>Пауза между подъёмами (секунды)
+        nearby-check-range:
+          _label: <gold>Радиус проверки помощников (0 — выкл.)
+        max-downs-per-life:
+          _label: <gold>Падений за жизнь (0 — без ограничения)
       scoreboard:
         refresh-ticks:
           _label: <gold>Интервал обновления табло (тики)
@@ -1109,6 +1150,8 @@ messages:
       - '<gray>Нативные окна Paper: текст, поля ввода и кнопки. /le dialog.'
       scoreboard:
       - <gray>Личные строки, форматы и наборы табло; перенос LoveTweaks. /le scoreboard.
+      revive:
+      - <gray>Смертельный удар роняет игрока: подъём, переноска, обыск. /revive.
       crafting:
       - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
       starter:

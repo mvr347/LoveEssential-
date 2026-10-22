@@ -133,6 +133,8 @@ commands:
     aliases: [gm, режим]
   repair:
     aliases: [починить]
+  revive:
+    aliases: [rv, поднять]
 permissions:
   loveessential.worlds.admin:
     default: op
@@ -257,4 +259,26 @@ permissions:
   loveessential.gamemode:
     default: op
   loveessential.repair:
+    default: op
+  loveessential.revive.downable:
+    default: true
+  loveessential.revive.reviver:
+    default: true
+  loveessential.revive.picker:
+    default: true
+  loveessential.revive.pickable:
+    default: true
+  loveessential.revive.robber:
+    default: true
+  loveessential.revive.stealable:
+    default: true
+  loveessential.revive.free:
+    default: op
+  loveessential.revive.command.suicide:
+    default: true
+  loveessential.revive.command.revive:
+    default: op
+  loveessential.revive.command.down:
+    default: op
+  loveessential.revive.command.kill:
     default: op

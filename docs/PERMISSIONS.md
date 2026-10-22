@@ -35,6 +35,16 @@
 | `loveessential.vanish` | OP | Переключение невидимости |
 | `loveessential.vanish.see` | OP | Видеть игроков, скрытых модулем vanish |
 | `loveessential.vanish.gui` | OP | Меню `/vanish` со списком игроков и прыжком к ним |
+| `loveessential.revive.downable` | Все | Смертельный удар роняет игрока, а не убивает |
+| `loveessential.revive.reviver` | Все | Поднимать раненых |
+| `loveessential.revive.picker` | Все | Брать раненого на руки |
+| `loveessential.revive.pickable` | Все | Позволять брать себя на руки |
+| `loveessential.revive.robber` | Все | Обыскивать раненых |
+| `loveessential.revive.stealable` | Все | Позволять обыскивать себя, когда ранен |
+| `loveessential.revive.free` | OP | Поднимать без платы |
+| `loveessential.revive.speed.<ранг>` | — | Множитель скорости подъёма из `revive.ranks` |
+| `loveessential.revive.command.suicide` | Все | `/revive suicide` |
+| `loveessential.revive.command.revive`, `.down`, `.kill` | OP | Административные подкоманды `/revive` |
 | `loveessential.afk.bypass` | OP | Исключение из автоматического AFK-кика |
 | `loveessential.npc.import` | OP | Импорт NPC; последующая работа черновика требует npc.edit |
 | `loveessential.npc.export` | OP | Экспорт NPC |

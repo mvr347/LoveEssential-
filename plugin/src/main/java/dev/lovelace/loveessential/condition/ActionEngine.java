@@ -88,6 +88,20 @@ public final class ActionEngine {
           return true;
         });
     register(
+        "potion",
+        (p, a) -> {
+          var type =
+              org.bukkit.Registry.POTION_EFFECT_TYPE.get(
+                  org.bukkit.NamespacedKey.minecraft(
+                      a.getOrDefault("effect", "").toLowerCase(Locale.ROOT)));
+          double seconds = Double.parseDouble(a.getOrDefault("seconds", "10"));
+          int amplifier = Integer.parseInt(a.getOrDefault("amplifier", "0"));
+          if (type == null || seconds <= 0 || seconds > 3600 || amplifier < 0 || amplifier > 9)
+            return false;
+          return p.addPotionEffect(
+              new org.bukkit.potion.PotionEffect(type, (int) Math.round(seconds * 20), amplifier));
+        });
+    register(
         "command",
         (p, a) -> {
           String command = a.getOrDefault("value", "");

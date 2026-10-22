@@ -68,6 +68,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.extensions = extensions;
   }
 
+  private dev.lovelace.loveessential.module.Revive revive;
+
+  public void revive(dev.lovelace.loveessential.module.Revive revive) {
+    this.revive = revive;
+  }
+
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     try {
@@ -86,6 +92,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
         extensions.ui.cancel(p);
         menus.cancelInput(p);
         wizard.cancelInput(p);
+      }
+      if (cmd.equals("revive")) {
+        revive.command(sender, args);
+        return true;
       }
       if (cmd.equals("loveessential")) {
         if (args.length == 0) {
@@ -551,6 +561,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                         ? contentMenus.suggestions(
                             p, CommandSuggestions.resolve(plugin, args[0]), slice(args, 1))
                         : new CommandSuggestions(plugin, npcs, gameplay, love, messages, profiles)
+                            .revive(revive)
                             .complete(sender, cmd.getName(), args);
     String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
     return candidates.stream()

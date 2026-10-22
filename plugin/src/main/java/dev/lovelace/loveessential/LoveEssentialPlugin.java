@@ -43,7 +43,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "worlds",
           "scenarios",
           "dialogs",
-          "scoreboard");
+          "scoreboard",
+          "revive");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -90,6 +91,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   }
 
   private EssentialApi essentialApi;
+  private dev.lovelace.loveessential.module.Revive revive;
   private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
@@ -266,6 +268,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
         new dev.lovelace.loveessential.module.PrivateMessages(
             this, main, lang, store, love, gameplay, nicknames);
     inventories = new dev.lovelace.loveessential.module.InventoryInspector(this, lang, love);
+    revive = new dev.lovelace.loveessential.module.Revive(this, lang, love, actions, inventories);
     profiles =
         new dev.lovelace.loveessential.module.PlayerProfiles(
             this, lang, love, gameplay, store, placeholders, messages, inventories);
@@ -273,6 +276,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
         id -> {
           var values = new HashMap<>(profiles.values(id));
           values.putAll(nicknames.values(id));
+          values.putAll(revive.values(id));
           return Map.copyOf(values);
         });
     npcs.vanish(gameplay::vanished);
@@ -346,6 +350,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
             nicknames,
             contentMenus,
             extensions);
+    commands.revive(revive);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -406,6 +411,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     nicknames.start();
     messages.start();
     inventories.start();
+    revive.start();
     profiles.start();
     if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
       expansion =
@@ -434,6 +440,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
             new dev.lovelace.loveessential.module.LoveEssentialPresence(gameplay, nicknames),
             this,
             ServicePriority.Normal);
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.revive.DownedOracle.class, revive, this, ServicePriority.Normal);
     getLogger().info(lang.text("logs.ready"));
     Bukkit.getPluginManager().callEvent(new LoveEssentialReadyEvent(essentialApi));
   }
@@ -684,6 +694,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
     if (npcProvider != null) npcProvider.close();
+    if (revive != null) revive.close();
     if (extensions != null) extensions.close();
     if (contentMenus != null) contentMenus.close();
     if (starter != null) starter.close();
