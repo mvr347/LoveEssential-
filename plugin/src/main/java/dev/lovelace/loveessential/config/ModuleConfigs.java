@@ -147,6 +147,7 @@ public final class ModuleConfigs {
                 && oldLang.contains(key)
                 && !module.contains("texts." + key)) module.set("texts." + key, oldLang.get(key));
         fill(module, moduleDefaults);
+        if (id.equals("scoreboard")) ScoreboardDocument.order(module);
         if (!(module.get("enabled") instanceof Boolean))
           throw new IllegalArgumentException("errors.config");
         guis.put(id, gui);
@@ -156,13 +157,16 @@ public final class ModuleConfigs {
       }
       core.set("modules", null);
       core.set("actions", null);
-      core.set("config-version", 5);
+      core.set("config-version", 6);
       var merged = merge(core, modules);
       var catalog = ScoreboardDocument.read(modules.get("scoreboard"));
       if (catalog != null) merged.createSection("scoreboard.catalog", catalog);
       Presentation.runtime(merged);
       LoveEssentialPlugin.validateConfig(merged);
+      if (original.getInt("config-version", 0) < 6 && Files.exists(mainFile))
+        backup(mainFile, ".pre-gui6.bak");
       if (migrated && Files.exists(mainFile)) backup(mainFile, ".pre-modules.bak");
+      var documents = new LinkedHashMap<Path, String>();
       for (var entry : modules.entrySet()) {
         entry.getValue().set("gui", null);
         if (original.getInt("config-version", 0) < 5) {
@@ -171,12 +175,20 @@ public final class ModuleConfigs {
           if (Files.exists(guiFile(entry.getKey())))
             backup(guiFile(entry.getKey()), ".pre-inline.bak");
         }
-        writeIfChanged(configFile(entry.getKey()), entry.getValue());
-        writeIfChanged(guiFile(entry.getKey()), guis.get(entry.getKey()));
+        if (original.getInt("config-version", 0) < 6) {
+          if (Files.exists(configFile(entry.getKey())))
+            backup(configFile(entry.getKey()), ".pre-gui6.bak");
+          if (Files.exists(guiFile(entry.getKey())))
+            backup(guiFile(entry.getKey()), ".pre-gui6.bak");
+        }
+        documents.put(configFile(entry.getKey()), entry.getValue().saveToString());
+        documents.put(guiFile(entry.getKey()), guis.get(entry.getKey()).saveToString());
       }
-      writeIfChanged(mainFile, core);
+      documents.put(mainFile, core.saveToString());
+      // Prepare legacy backups before committing the replacement documents too.
+      for (Path old : oldFiles) backup(old, ".pre-folders.bak");
+      ConfigBatch.write(documents);
       for (Path old : oldFiles) {
-        backup(old, ".pre-folders.bak");
         Files.delete(old);
       }
       return merged;
@@ -255,11 +267,21 @@ public final class ModuleConfigs {
     return value;
   }
 
+  public static void setValue(ConfigurationSection target, String path, Object value) {
+    Object copy = snapshot(value);
+    if (copy instanceof Map<?, ?> map) {
+      @SuppressWarnings("unchecked")
+      var values = (Map<String, Object>) map;
+      target.createSection(path, values);
+    } else target.set(path, copy);
+  }
+
   public synchronized YamlConfiguration update(
       String module, String path, Object expected, Object value) throws Exception {
     synchronized (ModuleConfigs.class) {
       if (!LoveEssentialPlugin.MODULES.contains(module) || path.isBlank() || path.equals("enabled"))
         throw new IllegalArgumentException("errors.config");
+      path = Presentation.canonicalPath(module, path);
       var merged = load();
       boolean gui = path.startsWith("gui.");
       Path file = gui ? guiFile(module) : configFile(module);
@@ -284,6 +306,7 @@ public final class ModuleConfigs {
       merged.set(runtimePath(module, path), value);
       var candidate = new YamlConfiguration();
       candidate.loadFromString(merged.saveToString());
+      Presentation.runtime(candidate);
       LoveEssentialPlugin.validateConfig(candidate);
       Files.copy(
           file,
@@ -324,13 +347,14 @@ public final class ModuleConfigs {
     if (id.equals("npc") && runtime.isConfigurationSection("actions"))
       copy(runtime.getConfigurationSection("actions"), y, "actions.");
     stripAliases(y);
+    Presentation.stripRuntime(y, id);
     if (id.equals("scoreboard")) y.set("catalog", null);
     return y;
   }
 
   private static void stripAliases(ConfigurationSection section) {
     for (String key : List.copyOf(section.getKeys(true)))
-      if (key.endsWith("-key") || key.endsWith("-keys")) section.set(key, null);
+      if (Presentation.referencePath(key)) section.set(key, null);
   }
 
   private static YamlConfiguration merge(
@@ -361,6 +385,9 @@ public final class ModuleConfigs {
                 "presets",
                 "users",
                 "worlds",
+                "menus.profile-menu-statistics.categories",
+                "menus.profile-menu-settings.controls",
+                "menus.players-title.cards",
                 "header-footer.profiles")
             .stream()
             .filter(target::contains)

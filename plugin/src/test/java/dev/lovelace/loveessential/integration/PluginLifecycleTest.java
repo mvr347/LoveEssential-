@@ -199,12 +199,16 @@ class PluginLifecycleTest {
   }
 
   void click(PlayerMock p, int slot) {
+    click(p, slot, org.bukkit.event.inventory.ClickType.LEFT);
+  }
+
+  void click(PlayerMock p, int slot, org.bukkit.event.inventory.ClickType type) {
     var event =
         new org.bukkit.event.inventory.InventoryClickEvent(
             p.getOpenInventory(),
             org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
             slot,
-            org.bukkit.event.inventory.ClickType.LEFT,
+            type,
             org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
     server.getPluginManager().callEvent(event);
     server.getScheduler().performOneTick();
@@ -253,7 +257,7 @@ class PluginLifecycleTest {
     var p = admin();
     server.dispatchCommand(p, "le npc");
     assertLayout(p);
-    click(p, p.getOpenInventory().getTopInventory().getSize() - 3); // create prompt
+    click(p, itemNamed(p, "Создать NPC"));
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
@@ -272,8 +276,7 @@ class PluginLifecycleTest {
     assertEquals("VILLAGER", api.npc("menu_guard").orElseThrow().entityType());
     assertTrue(suggestions(p, "loveessential", "npc", "delete", "").contains("1"));
     server.dispatchCommand(p, "le npc");
-    click(p, itemNamed(p, "№1"));
-    click(p, itemNamed(p, "Удалить NPC")); // delete -> confirmation
+    click(p, itemNamed(p, "№1"), org.bukkit.event.inventory.ClickType.RIGHT);
     assertTrue(api.npc("menu_guard").isPresent(), "opening confirmation must not delete anything");
     String target =
         net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()

@@ -634,7 +634,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
             "input.npc-field",
             Map.of(
                 "npc",
-                Component.text(w.draft.npc().id()),
+                Component.text(
+                    npcs.number(w.draft.npc().id()) == 0
+                        ? lang.text("wizard.new-npc")
+                        : "№" + npcs.number(w.draft.npc().id())),
                 "field",
                 lang.render("wizard.fields." + key)));
     String example =
@@ -1558,10 +1561,14 @@ public final class NpcWizard implements Listener, AutoCloseable {
       var item = button(fieldIcon(key), "wizard.fields." + key);
       var meta = item.getItemMeta();
       String value = fieldValue(w, key);
+      Component displayed =
+          NpcValidator.BOOLEAN_OPTIONS.contains(key) || key.equals("enabled")
+              ? lang.render(Boolean.parseBoolean(value) ? "gui.enabled" : "gui.disabled")
+              : lang.contains("wizard.choices." + value)
+                  ? lang.render("wizard.choices." + value)
+                  : Component.text(value.isBlank() ? lang.text("input.empty") : value);
       var lore = new ArrayList<Component>();
-      lore.add(
-          lang.render(
-              "wizard.value", Map.of("value", value.isBlank() ? lang.text("input.empty") : value)));
+      lore.add(lang.rich("wizard.value", Map.of("value", displayed)));
       if (lang.contains("npc-help.fields." + key))
         lore.addAll(MenuStyle.description(lang, "npc-help.fields." + key));
       lore.add(lang.render("gui.separator"));

@@ -853,6 +853,219 @@ class ExtensionsIntegrationTest {
     return -1;
   }
 
+  @Test
+  void sidebarFilterBackKeepsPageAndChoosingAFilterOrRowDoesNotCreateNavigationLoops()
+      throws Exception {
+    var before =
+        await(store.get("scoreboard-catalog", "default", Sidebar.Catalog.class)).orElseThrow();
+    var lines = new ArrayList<Sidebar.Line>();
+    for (int i = 0; i < 35; i++)
+      lines.add(
+          new Sidebar.Line(
+              "line" + i,
+              "@inline:Строка " + String.format("%02d", i),
+              i % 2 == 0 ? "general" : "clans",
+              List.of("@inline:<gold>♜ " + i),
+              "",
+              "",
+              ""));
+    var entries = lines.stream().limit(8).map(line -> new Sidebar.Selection(line.id(), 0)).toList();
+    await(
+        ext.sidebar.saveCatalog(
+            new Sidebar.Catalog(
+                "@inline:Шапка",
+                "@inline:—",
+                "@inline:Подвал",
+                8,
+                20,
+                List.of(),
+                Map.of("general", "@inline:Общие", "clans", "@inline:Кланы"),
+                lines,
+                List.of(new Sidebar.Preset("standard", "@inline:Стандартный", entries)),
+                "standard"),
+            before.revision(),
+            "test",
+            Map.of()));
+    var p = admin();
+    waitFor(() -> ext.sidebar.state(p.getUniqueId()) != null);
+    ext.sidebar.open(p, "", 0);
+    var root = p.getOpenInventory().getTopInventory();
+    clickSidebar(p, 11, ClickType.LEFT);
+    clickSidebar(p, 44, ClickType.LEFT);
+    var secondPage = p.getOpenInventory().getTopInventory();
+    assertEquals(54, secondPage.getSize());
+    clickSidebar(p, 3, ClickType.LEFT);
+    clickSidebar(p, p.getOpenInventory().getTopInventory().getSize() - 2, ClickType.LEFT);
+    assertSame(secondPage, p.getOpenInventory().getTopInventory());
+    clickSidebar(p, 3, ClickType.LEFT);
+    clickSidebar(p, named(p, "Кланы"), ClickType.LEFT);
+    clickSidebar(p, p.getOpenInventory().getTopInventory().getSize() - 2, ClickType.LEFT);
+    assertSame(root, p.getOpenInventory().getTopInventory());
+    clickSidebar(p, 11, ClickType.LEFT);
+    var picker = p.getOpenInventory().getTopInventory();
+    clickSidebar(p, named(p, "Строка 09"), ClickType.LEFT);
+    waitFor(() -> p.getOpenInventory().getTopInventory() != picker);
+    assertEquals(36, p.getOpenInventory().getTopInventory().getSize());
+    assertFalse(
+        plain(p.getOpenInventory().getTopInventory().getItem(34).getItemMeta().displayName())
+            .contains("Назад"));
+    assertEquals("line9", ext.sidebar.state(p.getUniqueId()).value().entries().getFirst().id());
+  }
+
+  @Test
+  void deletedPresetsStayDeletedAndUnavailablePresetKeepsCurrentSelection() throws Exception {
+    var before =
+        await(store.get("scoreboard-catalog", "default", Sidebar.Catalog.class)).orElseThrow();
+    var ready =
+        new Sidebar.Line(
+            "ready", "@inline:Доступная", "general", List.of("@inline:<gold>Текст"), "", "", "");
+    var unavailable =
+        new Sidebar.Line(
+            "blocked",
+            "@inline:Недоступная",
+            "general",
+            List.of("@inline:%missing_placeholder%"),
+            "",
+            "",
+            "");
+    await(
+        ext.sidebar.saveCatalog(
+            new Sidebar.Catalog(
+                "@inline:Шапка",
+                "@inline:—",
+                "@inline:Подвал",
+                8,
+                20,
+                List.of(),
+                Map.of("general", "@inline:Общие"),
+                List.of(ready, unavailable),
+                List.of(
+                    new Sidebar.Preset(
+                        "standard",
+                        "@inline:Стандартный",
+                        List.of(new Sidebar.Selection("ready", 0))),
+                    new Sidebar.Preset(
+                        "pvp", "@inline:ПвП", List.of(new Sidebar.Selection("blocked", 0)))),
+                "standard"),
+            before.revision(),
+            "test",
+            Map.of()));
+    var p = admin();
+    waitFor(() -> ext.sidebar.state(p.getUniqueId()) != null);
+    var state = ext.sidebar.state(p.getUniqueId());
+    ext.sidebar.open(p, "", 0);
+    int preset = named(p, "ПвП");
+    assertTrue(
+        p.getOpenInventory().getTopInventory().getItem(preset).getItemMeta().lore().stream()
+            .map(this::plain)
+            .anyMatch(text -> text.contains("Ваш выбор останется прежним")));
+    clickSidebar(p, preset, ClickType.LEFT);
+    assertSame(state, ext.sidebar.state(p.getUniqueId()));
+    // Reload restarts timers; MockBukkit does not implement Paper's numberFormat accessor.
+    await(plugin.module("scoreboard", false));
+    var file = plugin.getDataFolder().toPath().resolve("modules/scoreboard/scoreboard.yml");
+    var yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
+    Object templates =
+        dev.lovelace.loveessential.config.ModuleConfigs.snapshot(yaml.get("placeholders"));
+    yaml.createSection("presets");
+    yaml.set("default-preset", "");
+    yaml.save(file.toFile());
+    await(plugin.reloadSettings());
+    await(plugin.reloadSettings());
+    yaml.load(file.toFile());
+    assertTrue(yaml.getConfigurationSection("presets").getKeys(false).isEmpty());
+    assertTrue(ext.sidebar.catalog().presets().isEmpty());
+    assertEquals(
+        templates,
+        dev.lovelace.loveessential.config.ModuleConfigs.snapshot(yaml.get("placeholders")));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void sidebarZeroToEightRowsKeepsLongFooterAndAllFourPresetsUseExistingLines() throws Exception {
+    var old =
+        await(store.get("scoreboard-catalog", "default", Sidebar.Catalog.class)).orElseThrow();
+    var lines = new ArrayList<Sidebar.Line>();
+    for (int i = 0; i < 8; i++)
+      lines.add(
+          new Sidebar.Line(
+              "row" + i,
+              "@inline:Строка " + i,
+              "general",
+              List.of("@inline:<gold>♜ <white>Строка " + i + " | <player>"),
+              "",
+              "",
+              ""));
+    var selections = lines.stream().map(line -> new Sidebar.Selection(line.id(), 0)).toList();
+    var presets =
+        List.of(
+            new Sidebar.Preset("standard", "@inline:Стандартный", selections),
+            new Sidebar.Preset("minimal", "@inline:Минимализм", selections.subList(0, 2)),
+            new Sidebar.Preset("pvp", "@inline:ПвП", selections.subList(0, 4)),
+            new Sidebar.Preset("adventure", "@inline:Приключения", selections.subList(0, 6)));
+    String heading = "Очень длинная шапка королевства",
+        footer = "Очень длинный подвал королевства: каждое слово должно остаться";
+    await(
+        ext.sidebar.saveCatalog(
+            new Sidebar.Catalog(
+                "@inline:<bold>" + heading,
+                "@inline:<dark_gray>───",
+                "@inline:<gold>" + footer,
+                8,
+                20,
+                List.of(),
+                Map.of("general", "@inline:Общие"),
+                lines,
+                presets,
+                "standard"),
+            old.revision(),
+            "test",
+            Map.of()));
+    var p = admin();
+    waitFor(() -> ext.sidebar.state(p.getUniqueId()) != null);
+    var field = Sidebar.class.getDeclaredField("states");
+    field.setAccessible(true);
+    var states = (Map<UUID, SqliteStore.Document<Sidebar.State>>) field.get(ext.sidebar);
+    var board = paperBoard(server.getScoreboardManager().getNewScoreboard());
+    for (int count = 0; count <= 8; count++) {
+      states.put(
+          p.getUniqueId(),
+          new SqliteStore.Document<>(
+              p.getUniqueId().toString(),
+              0,
+              new Sidebar.State(true, false, selections.subList(0, count))));
+      var output = ext.sidebar.lines(p);
+      ext.sidebar.render(p, board);
+      if (count == 0) {
+        assertTrue(output.isEmpty());
+        assertNull(board.getObjective("le_sidebar"));
+        continue;
+      }
+      assertEquals(count + (count + 1) / 2 + 2, output.size());
+      assertTrue(output.size() <= 15);
+      assertEquals(footer, plain(output.getLast()).replace("\u00a0", ""));
+      var title = board.getObjective("le_sidebar").displayName();
+      assertEquals(heading, plain(title).replace("\u00a0", ""));
+      assertTrue(
+          Math.abs(
+                  dev.lovelace.loveessential.scoreboard.SidebarWidth.width(title)
+                      - dev.lovelace.loveessential.scoreboard.SidebarWidth.width(output.getLast()))
+              <= 7);
+      assertTrue(plain(output.get(1)).contains(p.getName()));
+    }
+    ext.sidebar.open(p, "", 0);
+    for (int i = 0; i < 4; i++) {
+      int slot = new int[] {2, 3, 5, 6}[i];
+      assertEquals(
+          presets.get(i).nameKey().substring(8),
+          plain(p.getOpenInventory().getTopInventory().getItem(slot).getItemMeta().displayName()));
+      var previous = ext.sidebar.state(p.getUniqueId());
+      clickSidebar(p, slot, ClickType.LEFT);
+      waitFor(() -> ext.sidebar.state(p.getUniqueId()) != previous);
+      assertEquals(presets.get(i).entries(), ext.sidebar.state(p.getUniqueId()).value().entries());
+    }
+  }
+
   void clickSidebar(PlayerMock p, int slot, ClickType type) {
     var event =
         new InventoryClickEvent(

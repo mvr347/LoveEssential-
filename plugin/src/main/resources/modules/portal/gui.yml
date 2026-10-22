@@ -5,9 +5,76 @@ menus:
   portal-ui-list:
     size: 54
     title: <gold>Порталы
+    labels:
+      portal-ui:
+        create: <gold>Создать портал
   portal-ui-wizard:
     size: 54
     title: <gold>Мастер портала
+    labels:
+      portal-ui:
+        create-help: <green>ЛКМ <dark_gray>— <gray>открыть мастер или продолжить черновик
+        new-name: <gold>Новый портал
+        migrated-name: <gold>Портал
+        id: '<gray>ID: <white><id>'
+        coordinates: '<gray>Точка: <white><x> <y> <z>'
+        not-set: <gray>Телепортация не назначена
+        destination-here: <gold>Назначить текущую позицию
+        destination-clear: <gold>Убрать телепортацию
+        destination-set: <green>Назначение установлено
+        action-count: '<gray>Действий: <white><count>'
+        first: <gold>Первая точка
+        first-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок первой точки
+        second: <gold>Вторая точка
+        second-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок второй точки
+        destination: <gold>Назначение
+        destination-help: <green>ЛКМ <dark_gray>— <gray>назначить своё текущее положение
+        actions-help: <green>ЛКМ <dark_gray>— <gray>добавить, изменить или переставить команды
+        access: <gold>Условия входа
+        access-help: <gray>Доступ, игровые режимы, бой, задержка и транспорт.
+        effects: <gold>Оформление частиц
+        effects-help: <gray>Тип частиц, цвет, плотность и заполнение области.
+        preview: <gold>Предпросмотр
+        preview-help: <green>ЛКМ <dark_gray>— <gray>показать область только себе
+        name: <gold>Название портала
+        name-help: <gray>Название MiniMessage сохраняется в конфиге модуля. ID назначается автоматически.
+        publish: <green>Опубликовать портал
+        publish-help: <green>ЛКМ <dark_gray>— <gray>сохранить и показать анимацию создания
+        discard: <gray>Отменить черновик
+        discard-help: <green>ЛКМ <dark_gray>— <gray>удалить только несохранённые изменения
+        discard-confirm: <gold>Удалить черновик портала?
+        delete-confirm: <gold>Удалить опубликованный портал?
+        select-first: '<gray>Нажмите ПКМ по блоку первой точки. Отмена: /портал отмена.'
+        select-second: '<gray>Нажмите ПКМ по блоку второй точки. Отмена: /портал отмена.'
+        same-world: <gray>Обе точки должны находиться в одном мире.
+        draft-exists: '<gray>Сначала завершите или отмените текущий черновик: /портал мастер.'
+        no-draft: '<gray>Сначала откройте мастер: /портал мастер.'
+        permission: <gold>Право входа (пусто — всем)
+        modes: <gold>Режимы игры через запятую (пусто — все)
+        cooldown: <gold>Задержка повторного входа, секунды
+        warmup: <gold>Ожидание активации, тики
+        enabled: <gold>Портал включён
+        block-combat: <gold>Блокировать во время боя
+        vehicles: <gold>Разрешать вход в транспорте
+        particle: <gold>Тип частиц
+        color: '<gold>Цвет HEX без #'
+        fill: <gold>Заполнять область частицами
+        spacing: <gold>Расстояние между частицами
+        add-command: <gold>Добавить команду
+        command-help: <gray>Без начального /. {player} заменяется именем входящего игрока. Корень команды должен быть разрешён
+          в modules/portal/portal.yml.
+        command-title: <gold>Действие <white><index>
+        command-title-base: <gold>Команда портала
+        command-value: '<gray>Команда: <white><value>'
+        sender: <gold>От чьего имени
+        command: <gold>Команда без /
+        command-denied: <gray>Разрешите корень команды в allowed-player-commands или allowed-console-commands файла modules/portal/portal.yml.
+        published: <gray>Портал опубликован.
+        warming: <gray>Подготовка портала…
+        no-action: <gray>Добавьте хотя бы одну команду или назначение телепортации.
+        invalid: <gray>Проверьте область, задержки и оформление портала.
+        limit: <gray>Достигнут лимит порталов.
+        usage: <gray>/портал [мастер | изменить ID | удалить ID | отмена]
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -15,69 +82,3 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-messages:
-  portal-ui:
-    create: <gold>Создать портал
-    create-help: <green>ЛКМ <dark_gray>— <gray>открыть мастер или продолжить черновик
-    new-name: <gold>Новый портал
-    migrated-name: <gold>Портал
-    id: '<gray>ID: <white><id>'
-    coordinates: '<gray>Точка: <white><x> <y> <z>'
-    not-set: <gray>Телепортация не назначена
-    destination-here: <gold>Назначить текущую позицию
-    destination-clear: <gold>Убрать телепортацию
-    destination-set: <green>Назначение установлено
-    action-count: '<gray>Действий: <white><count>'
-    first: <gold>Первая точка
-    first-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок первой точки
-    second: <gold>Вторая точка
-    second-help: <green>ЛКМ <dark_gray>— <gray>выбрать блок второй точки
-    destination: <gold>Назначение
-    destination-help: <green>ЛКМ <dark_gray>— <gray>назначить своё текущее положение
-    actions-help: <green>ЛКМ <dark_gray>— <gray>добавить, изменить или переставить команды
-    access: <gold>Условия входа
-    access-help: <gray>Доступ, игровые режимы, бой, задержка и транспорт.
-    effects: <gold>Оформление частиц
-    effects-help: <gray>Тип частиц, цвет, плотность и заполнение области.
-    preview: <gold>Предпросмотр
-    preview-help: <green>ЛКМ <dark_gray>— <gray>показать область только себе
-    name: <gold>Название портала
-    name-help: <gray>Название MiniMessage сохраняется в конфиге модуля. ID назначается автоматически.
-    publish: <green>Опубликовать портал
-    publish-help: <green>ЛКМ <dark_gray>— <gray>сохранить и показать анимацию создания
-    discard: <gray>Отменить черновик
-    discard-help: <green>ЛКМ <dark_gray>— <gray>удалить только несохранённые изменения
-    discard-confirm: <gold>Удалить черновик портала?
-    delete-confirm: <gold>Удалить опубликованный портал?
-    select-first: '<gray>Нажмите ПКМ по блоку первой точки. Отмена: /портал отмена.'
-    select-second: '<gray>Нажмите ПКМ по блоку второй точки. Отмена: /портал отмена.'
-    same-world: <gray>Обе точки должны находиться в одном мире.
-    draft-exists: '<gray>Сначала завершите или отмените текущий черновик: /портал мастер.'
-    no-draft: '<gray>Сначала откройте мастер: /портал мастер.'
-    permission: <gold>Право входа (пусто — всем)
-    modes: <gold>Режимы игры через запятую (пусто — все)
-    cooldown: <gold>Задержка повторного входа, секунды
-    warmup: <gold>Ожидание активации, тики
-    enabled: <gold>Портал включён
-    block-combat: <gold>Блокировать во время боя
-    vehicles: <gold>Разрешать вход в транспорте
-    particle: <gold>Тип частиц
-    color: '<gold>Цвет HEX без #'
-    fill: <gold>Заполнять область частицами
-    spacing: <gold>Расстояние между частицами
-    add-command: <gold>Добавить команду
-    command-help: <gray>Без начального /. {player} заменяется именем входящего игрока. Корень команды должен быть
-      разрешён в modules/portal/portal.yml.
-    command-title: <gold>Действие <white><index>
-    command-title-base: <gold>Команда портала
-    command-value: '<gray>Команда: <white><value>'
-    sender: <gold>От чьего имени
-    command: <gold>Команда без /
-    command-denied: <gray>Разрешите корень команды в allowed-player-commands или allowed-console-commands файла
-      modules/portal/portal.yml.
-    published: <gray>Портал опубликован.
-    warming: <gray>Подготовка портала…
-    no-action: <gray>Добавьте хотя бы одну команду или назначение телепортации.
-    invalid: <gray>Проверьте область, задержки и оформление портала.
-    limit: <gray>Достигнут лимит порталов.
-    usage: <gray>/портал [мастер | изменить ID | удалить ID | отмена]

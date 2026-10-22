@@ -50,10 +50,25 @@ public final class MenuNavigation implements Listener, AutoCloseable {
     var route = routes.get(player.getUniqueId(), id -> new Route());
     if (route.current == inventory) return;
     var holder = (GuiLayout) inventory.getHolder();
+    // Returning by an action (for example, choosing a filter or saving a row) must
+    // consume the old ancestor too. Otherwise A -> B -> A grows a false B parent.
+    if (!route.returning
+        && route.current != null
+        && (!(route.current.getHolder() instanceof GuiLayout current)
+            || !current.guiRoute().equals(holder.guiRoute()))) {
+      Inventory ancestor = null;
+      for (var candidate : route.parents)
+        if (candidate.getHolder() instanceof GuiLayout previous
+            && previous.guiRoute().equals(holder.guiRoute())) ancestor = candidate;
+      if (ancestor != null) {
+        while (route.parents.removeLast() != ancestor) {}
+        route.returning = true;
+      }
+    }
     if (!route.returning
         && route.current != null
         && route.current.getHolder() instanceof GuiLayout previous
-        && !previous.guiId().equals(holder.guiId())) {
+        && !previous.guiRoute().equals(holder.guiRoute())) {
       if (route.parents.size() == 16) route.parents.removeFirst();
       route.parents.addLast(route.current);
     }

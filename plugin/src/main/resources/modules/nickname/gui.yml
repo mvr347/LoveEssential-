@@ -8,6 +8,54 @@ menus:
   nick-title:
     size: 54
     title: <gold>Никнейм и оформление
+    labels:
+      nick:
+        profile-name: '<gray>Никнейм: <nickname>'
+        set: <gold>Изменить никнейм
+        clear-style: <gold>Сбросить цвет и градиент
+        reset: <gold>Вернуть имя аккаунта и стандартное оформление
+        custom-color: <gold>Свой HEX-цвет
+        custom-gradient: <gold>Свой градиент
+        preview: <gray>Так выглядит ваш никнейм сейчас.
+        real-name: '<gray>Имя аккаунта: <white><name>'
+        prompt-name: <yellow>Введите никнейм — буквы, цифры и _. Пробелы и теги не допускаются.
+        prompt-color: '<yellow>Введите HEX-цвет, например #ff6699, или название, например gold.'
+        prompt-gradient: '<yellow>Введите 2–5 цветов через пробел, например #ff6699 #55ffff.'
+        loading: <yellow>Никнейм загружается или сохраняется. Повторите через секунду.
+        saved: <green>Никнейм и оформление сохранены.
+        invalid-name: <red>Недопустимый никнейм. Используйте буквы, цифры и _ в пределах настроенной длины.
+        invalid-color: '<red>Неизвестный цвет. Пример: #ff6699 или gold.'
+        taken: <red>Это имя занято другим игроком.
+        usage:
+        - <yellow>/le nick <gray>— открыть меню
+        - <yellow>/le nick set Имя <gray>— изменить никнейм
+        - <yellow>/le nick color gold <gray>— выбрать цвет, в том числе HEX
+        - '<yellow>/le nick gradient #ff6699 #55ffff <gray>— градиент из 2–5 цветов'
+        - <yellow>/le nick color reset <gray>— сбросить оформление, сохранив ник
+        - <yellow>/le nick reset <gray>— вернуть имя аккаунта и стандартное оформление
+        - <yellow>/le nick player Игрок set Имя <gray>— изменить чужой ник при наличии права
+        gradients:
+          kingdom: <gold>Королевское золото
+          sunset: <gold>Закат
+          ocean: <gold>Океан
+          forest: <gold>Лес
+        colors:
+          black: Чёрный
+          dark_blue: Тёмно-синий
+          dark_green: Тёмно-зелёный
+          dark_aqua: Тёмно-бирюзовый
+          dark_red: Тёмно-красный
+          dark_purple: Тёмно-фиолетовый
+          gold: Золотой
+          gray: Серый
+          dark_gray: Тёмно-серый
+          blue: Синий
+          green: Зелёный
+          aqua: Бирюзовый
+          red: Красный
+          light_purple: Светло-фиолетовый
+          yellow: Жёлтый
+          white: Белый
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -15,51 +63,3 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-messages:
-  nick:
-    profile-name: '<gray>Никнейм: <nickname>'
-    set: <gold>Изменить никнейм
-    clear-style: <gold>Сбросить цвет и градиент
-    reset: <gold>Вернуть имя аккаунта и стандартное оформление
-    custom-color: <gold>Свой HEX-цвет
-    custom-gradient: <gold>Свой градиент
-    preview: <gray>Так выглядит ваш никнейм сейчас.
-    real-name: '<gray>Имя аккаунта: <white><name>'
-    prompt-name: <yellow>Введите никнейм — буквы, цифры и _. Пробелы и теги не допускаются.
-    prompt-color: '<yellow>Введите HEX-цвет, например #ff6699, или название, например gold.'
-    prompt-gradient: '<yellow>Введите 2–5 цветов через пробел, например #ff6699 #55ffff.'
-    loading: <yellow>Никнейм загружается или сохраняется. Повторите через секунду.
-    saved: <green>Никнейм и оформление сохранены.
-    invalid-name: <red>Недопустимый никнейм. Используйте буквы, цифры и _ в пределах настроенной длины.
-    invalid-color: '<red>Неизвестный цвет. Пример: #ff6699 или gold.'
-    taken: <red>Это имя занято другим игроком.
-    usage:
-    - <yellow>/le nick <gray>— открыть меню
-    - <yellow>/le nick set Имя <gray>— изменить никнейм
-    - <yellow>/le nick color gold <gray>— выбрать цвет, в том числе HEX
-    - '<yellow>/le nick gradient #ff6699 #55ffff <gray>— градиент из 2–5 цветов'
-    - <yellow>/le nick color reset <gray>— сбросить оформление, сохранив ник
-    - <yellow>/le nick reset <gray>— вернуть имя аккаунта и стандартное оформление
-    - <yellow>/le nick player Игрок set Имя <gray>— изменить чужой ник при наличии права
-    gradients:
-      kingdom: <gold>Королевское золото
-      sunset: <gold>Закат
-      ocean: <gold>Океан
-      forest: <gold>Лес
-    colors:
-      black: Чёрный
-      dark_blue: Тёмно-синий
-      dark_green: Тёмно-зелёный
-      dark_aqua: Тёмно-бирюзовый
-      dark_red: Тёмно-красный
-      dark_purple: Тёмно-фиолетовый
-      gold: Золотой
-      gray: Серый
-      dark_gray: Тёмно-серый
-      blue: Синий
-      green: Зелёный
-      aqua: Бирюзовый
-      red: Красный
-      light_purple: Светло-фиолетовый
-      yellow: Жёлтый
-      white: Белый

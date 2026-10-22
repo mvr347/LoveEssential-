@@ -28,15 +28,722 @@ menus:
         texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
         title: <gold>Адаптации
     title: <gold>Профиль <dark_gray>| <white><player>
+    textures:
+      profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
+      profile-menu.settings: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
+      profile-menu.customization: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzU0NWM0YWE5N2MxOWJlZDdjYWMxODE3ZmM1MTAzZmU4ZGQ1ODlmYTEyMDgzNWEzZTRlMTJmMzUyMjMwYTVhNiJ9fX0=
+      profile-menu.adaptations: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
+      profile-menu.reputation: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmFlNjM0NGNlYmFjZDIxZDhjNmNhMGQyZTM0YjNjMzQ5MmRjNzliZjQ0MzE0MGQxMmE1MDg4N2FlM2ViN2Y4ZiJ9fX0=
+      profile-menu.statistics: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
+      profile-menu.notifications: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg2NWVlOWM3MDg3NjkwZGRjMjA2NTRmZTZhYzNmNjBlMzI3NmZkYzM3ODgzNTAyYzUzM2U3YjljY2I2NGIzZCJ9fX0=
+      profile-menu.scoreboard: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODY3MjA4NWZmNWRmMGVlODUyMTM2ZTJkNDFhNzY5MjI5MjkxZDY2NmIyOGU5ZmIwNGQ2YzkyZjE1OGU0MmJiIn19fQ==
+      profile-menu.grammar: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
+      profile-menu.silent: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
+      profile-menu.mentions: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
+      profile-menu.channel: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzE5ZjUwYjQzMmQ4NjhhZTM1OGUxNmY2MmVjMjZmMzU0MzdhZWI5NDkyYmNlMTM1NmM5YWE2YmIxOWEzODYifX19
+      profile-menu.clan-invites: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
+      profile-menu.player-trades: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
+      enabled: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
+      disabled: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTRmZWY3NTNkNWI0ZmYyYTljYWU3NWJjMmVkZWIzMTUzMDI1YWJjNWNjMjc0NDI4NWYzMTk2NGY5NDA4YTFmIn19fQ==
+      profile-menu.channel-global: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmU1MzVjNTlmZDg4YjY4ZDI1ZGEzYTNlYjYwMTQxOTBjYjU3MDYzY2QxNmE3YzE1NTFkNmIyMTZkOWI1NjNlZSJ9fX0=
+      profile-menu.channel-local: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzE5ZjUwYjQzMmQ4NjhhZTM1OGUxNmY2MmVjMjZmMzU0MzdhZWI5NDkyYmNlMTM1NmM5YWE2YmIxOWEzODYifX19
+      profile-menu.channel-admin: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTY3ZDgxM2FlN2ZmZTViZTk1MWE0ZjQxZjJhYTYxOWE1ZTM4OTRlODVlYTVkNDk4NmY4NDk0OWM2M2Q3NjcyZSJ9fX0=
+      profile-menu.nickname: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=
+      profile-menu.suffixes: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ==
+    labels:
+      profile-menu:
+        behavior: <gold>Поведение
+        open-behavior: <gold>Открыть LoveBehavior
+        no-data: —
+        saved-activity-lore:
+        - <gray>Время игры и статистика на момент выхода.
+        - <gray>Видимость определяется отдельной настройкой активности.
+        - <green>ЛКМ — открыть сохранённые данные.
+        saved-customization-lore:
+        - '<gray>Ник: <white><display_name>'
+        - '<gray>Пометка: <white><external_lovesubnames_current>'
+        saved-adaptations-lore:
+        - '<gray>Текущая: <white><external_loveadaptation_current_name>'
+        - '<gray>Прогресс: <white><external_loveadaptation_current_progress>'
+        - <green>ЛКМ — посмотреть сохранённые адаптации.
+        saved-reputation-lore:
+        - '<gray>Репутация: <white><reputation>'
+        - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
+        - '<gray>Стиль: <white><external_lovebehavior_playstyle_name>'
+        - <gray>Это сохранённые сведения на момент выхода.
+        saved-adaptation-detail:
+        - '<gray>Статус: <white><status>'
+        - '<gray>Прогресс: <white><progress>'
+        - <gray>Данные на момент последнего сохранения.
+        online: В сети
+        offline: Не в сети
+        offline-loading: <gray>Загружаю сохранённый профиль…
+        no-snapshot: <yellow>Сохранённый профиль не найден. Игрок должен хотя бы раз зайти после установки LoveEssential.
+        saved-heading: <gold>Профиль <dark_gray>| <white><player>
+        saved-heading-lore:
+        - '<gray>Состояние: <white><online_state>'
+        - '<gray>Последний визит: <white><last_seen_local>'
+        - '<gray>Часовой пояс: Europe/Kiev'
+        - <gray>Показаны данные на момент последнего сохранения.
+        saved-information: <gold>Об игроке
+        saved-information-lore:
+        - '<gray>Ник: <white><display_name>'
+        - '<gray>Первый вход: <white><first_join_local>'
+        - '<gray>Клан: <white><clan>'
+        - '<gray>Репутация: <white><reputation>'
+        - <gray>Редактирование и живые команды доступны в сети.
+        states:
+          'yes': Да
+          'no': Нет
+          'true': Включено
+          'false': Выключено
+          global: Глобальный
+          local: Локальный
+          admin: Административный
+        heading: <gold>Профиль <dark_gray>| <nickname>
+        heading-lore:
+        - <gray>Личная карточка игрока
+        - '<gray>Имя: <white><player>'
+        - '<gray>Клан: <gold><clan>'
+        - '<gray>Пометка: <suffix>'
+        - <green>ЛКМ <dark_gray>— <gray>обновить информацию
+        account: <gold>Безопасность
+        account-lore:
+        - <gray>Учётная запись LoveAuth
+        - <gray>Пароль, привязки и активные сессии.
+        - <green>ЛКМ <dark_gray>— <gray>открыть безопасность своей учётной записи
+        public-account-lore:
+        - '<gray>Авторизация: <white><authenticated_state>'
+        - <gray>Личные настройки безопасности доступны только владельцу.
+        public-customization-lore:
+        - '<gray>Ник: <nickname>'
+        - '<gray>Пометка: <suffix>'
+        - '<gray>Получено пометок: <papi:lovesubnames_unlocked_count:"—">'
+        - <gray>Редактировать чужой внешний вид через профиль нельзя.
+        adaptations: <gold>Адаптации
+        adaptations-lore:
+        - <gray>Путь и прогресс LoveAdaptation
+        - '<gray>Текущая: <white><papi:loveadaptation_current_name:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_current_progress:"—">'
+        - '<gray>Следующая: <white><papi:loveadaptation_progress_next_adaptation:"—">'
+        - <green>ЛКМ <dark_gray>— <gray>просмотреть адаптации этого игрока
+        open-adaptations: <gold>Открыть LoveAdaptation
+        reputation: <gold>Репутация
+        behavior-lore:
+        - <gray>Поведение LoveBehavior
+        - '<gray>Вежливость: <white><papi:lovebehavior_politeness_name:"—">'
+        - '<gray>Стиль игры: <white><papi:lovebehavior_playstyle_name:"—">'
+        - '<gray>Репутация: <white><reputation>'
+        - <green>ЛКМ <dark_gray>— <gray>открыть своё меню поведения
+        reputation-lore:
+        - <gray>Оценить игрока <white><player>
+        - '<gray>Вежливость: <white><papi:lovebehavior_politeness_name:"—">'
+        - '<gray>Стиль игры: <white><papi:lovebehavior_playstyle_name:"—">'
+        - '<gray>Репутация: <white><reputation>'
+        - <green>ЛКМ <dark_gray>— <gray>открыть /rep для этого игрока
+        activity: <gold>Активность и приватность
+        activity-settings-lore:
+        - '<gray>Видимость профиля: <white><profile_visibility_label>'
+        - '<gray>Видимость активности: <white><activity_visibility_label>'
+        - <gray>Эти переключатели не изменяют прогресс адаптаций.
+        - <green>ЛКМ <dark_gray>— <gray>настроить отдельно
+        public-activity-lore:
+        - <gray>Время игры, состояние и доступная информация.
+        - <green>ЛКМ <dark_gray>— <gray>просмотреть активность
+        activity-hidden-lore:
+        - <gray>Владелец скрыл свою активность.
+        - <gray>Адаптации доступны отдельно.
+        activity-hidden: <yellow>Игрок скрыл свою активность.
+        visibility-on: <green>Профиль доступен другим
+        visibility-off: <gray>Профиль скрыт от других
+        visibility-help: <gray>Переключить доступ к своему профилю. Владелец видит его всегда.
+        activity-on: <green>Активность доступна другим
+        activity-off: <gray>Активность скрыта от других
+        activity-help: <gray>Отдельно скрывает время игры, состояние и местоположение в профиле.
+        profile-public: <green>Ваш профиль теперь доступен другим игрокам.
+        profile-private: <gray>Ваш профиль скрыт от других игроков.
+        activity-public: <green>Ваша активность доступна при открытом профиле.
+        activity-private: <gray>Ваша активность скрыта. Видимость адаптаций не изменена.
+        visibility-public: Открыт
+        visibility-private: Скрыт
+        hidden: <yellow>Профиль недоступен или скрыт владельцем.
+        loading: <yellow>Настройки приватности ещё загружаются. Повторите действие через секунду.
+        load-failed: Не удалось загрузить настройки приватности профиля.
+        usage: <gray>/profile [игрок] · view <игрок> · list · settings · hide/show/toggle · activity [show|hide|toggle] ·
+          privacy <public|private>
+        integration-unavailable: <gray>Этот модуль или его команда сейчас недоступны либо не хватает прав.
+        messages-lore:
+        - <gray>Включение личных сообщений и игнор-лист.
+        - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки ЛС
+        enabled: <green>Включено
+        disabled: <gray>Выключено
+        last-channel: '<yellow>Сначала включите другой канал: последний канал отключить нельзя.'
+        scoreboard: <gold>Боковая панель
+        scoreboard-lore:
+        - <gray>Строки и оформление личного табло.
+        - <green>ЛКМ <dark_gray>— <gray>открыть редактор
+        adaptation-water: <gold>Вода
+        adaptation-water-lore:
+        - '<gray>Статус: <white><papi:loveadaptation_water_status:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_water_progress:"—">'
+        - <papi:loveadaptation_water_bar:"—">
+        adaptation-nether: <gold>Незер
+        adaptation-nether-lore:
+        - '<gray>Статус: <white><papi:loveadaptation_nether_status:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_nether_progress:"—">'
+        - <papi:loveadaptation_nether_bar:"—">
+        adaptation-cave: <gold>Пещеры
+        adaptation-cave-lore:
+        - '<gray>Статус: <white><papi:loveadaptation_cave_status:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_cave_progress:"—">'
+        - <papi:loveadaptation_cave_bar:"—">
+        adaptation-height: <gold>Высота
+        adaptation-height-lore:
+        - '<gray>Статус: <white><papi:loveadaptation_height_status:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_height_progress:"—">'
+        - <papi:loveadaptation_height_bar:"—">
+        adaptation-abyss: <gold>Бездна
+        adaptation-abyss-lore:
+        - '<gray>Статус: <white><papi:loveadaptation_abyss_status:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_abyss_progress:"—">'
+        - <papi:loveadaptation_abyss_bar:"—">
+        adaptation-combat: <gold>Бой
+        adaptation-combat-lore:
+        - '<gray>Статус: <white><papi:loveadaptation_combat_status:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_combat_progress:"—">'
+        - <papi:loveadaptation_combat_bar:"—">
+        adaptation-travel: <gold>Путешествия
+        adaptation-travel-lore:
+        - '<gray>Статус: <white><papi:loveadaptation_travel_status:"—">'
+        - '<gray>Прогресс: <white><papi:loveadaptation_travel_progress:"—">'
+        - <papi:loveadaptation_travel_bar:"—">
   public-profile-title:
     size: 27
     title: <gold>Профиль <dark_gray>| <white><player>
+    labels:
+      public-profile:
+        report: <gold>Пожаловаться
+        report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
+        offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
   profile-menu-statistics:
     size: 27
     title: <gold>Статистика
+    categories:
+      world:
+        enabled: true
+        plugin: ''
+        activity-sensitive: true
+        details:
+          visits:
+            title: <gold>Время и визиты
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+            - '<gray>Первый вход: <first_join_local>'
+            - '<gray>Последние данные: <last_seen_local>'
+            - '<gray>Часовой пояс: Europe/Kiev'
+          movement:
+            title: <gold>Передвижение
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Пешком: <walk_km> км'
+            - '<gray>Бегом: <sprint_km> км'
+            - '<gray>Вплавь: <swim_km> км'
+            - '<gray>На элитрах: <fly_km> км'
+            - '<gray>Прыжков: <jumps>'
+          mining:
+            title: <gold>Добыча и использование
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Добыто блоков: <blocks_mined>'
+            - '<gray>Использовано предметов-блоков: <blocks_used>'
+            - <gray>Использование включает установки и другие действия.
+          survival:
+            title: <gold>Выживание и бои
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Убийств игроков: <kills>'
+            - '<gray>Побеждено мобов: <mob_kills>'
+            - '<gray>Смертей: <deaths>'
+            - '<gray>K/D: <kd_ratio>'
+            - '<gray>Нанесено урона: <damage_dealt>'
+            - '<gray>Получено урона: <damage_taken>'
+            - '<gray>После смерти: <time_since_death_hours> ч'
+        title: <gold>Мир и выживание
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+        - '<gray>Смертей: <deaths>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+        - '<gray>Первый вход: <first_join_local>'
+      duels:
+        enabled: true
+        plugin: LoveDuels
+        activity-sensitive: false
+        details:
+          results:
+            title: <gold>Результаты
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Побед: <duels_wins>'
+            - '<gray>Поражений: <duels_losses>'
+            - '<gray>Побед: <duels_winrate>'
+          streaks:
+            title: <gold>Серии
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Текущая серия: <duels_streak>'
+            - '<gray>Лучшая серия: <duels_best_streak>'
+          rewards:
+            title: <gold>Честь и награды
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Честь: <duels_honor>'
+            - '<gray>Выиграно: <duels_money_won>'
+        title: <gold>Дуэли
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>Побед: <duels_wins>'
+        - '<gray>Честь: <duels_honor>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>Побед: <duels_wins>'
+        - '<gray>Честь: <duels_honor>'
+      hunt:
+        enabled: true
+        plugin: LoveHunt
+        activity-sensitive: false
+        details:
+          orders:
+            title: <gold>Заказы
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Выполнено: <hunt_completed>'
+            - '<gray>Провалено: <hunt_failed>'
+          rating:
+            title: <gold>Рейтинг
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Рейтинг: <hunt_rating>'
+            - '<gray>Ранг: <hunt_rank>'
+            - '<gray>Модификатор награды: <hunt_reward_modifier>%'
+        title: <gold>Охота
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>Ранг: <hunt_rank>'
+        - '<gray>Выполнено: <hunt_completed>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>Ранг: <hunt_rank>'
+        - '<gray>Выполнено: <hunt_completed>'
+      contracts:
+        enabled: true
+        plugin: LoveContracts
+        activity-sensitive: false
+        details:
+          completed:
+            title: <gold>Выполнение
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Выполнено всего: <contracts_completed>'
+            - '<gray>Сегодня: <contracts_daily_completed>'
+            - '<gray>Принято: <contracts_accepted>'
+            - '<gray>Провалено: <contracts_failed>'
+            - '<gray>Успешность: <contracts_success_rate>'
+          streaks:
+            title: <gold>Серии контрактов
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Текущая: <contracts_streak>'
+            - '<gray>Лучшая: <contracts_best_streak>'
+        title: <gold>Контракты
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>Выполнено: <contracts_completed>'
+        - '<gray>Успешность: <contracts_success_rate>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>Выполнено: <contracts_completed>'
+        - '<gray>Успешность: <contracts_success_rate>'
+      activities:
+        enabled: true
+        plugin: LoveActivities
+        activity-sensitive: false
+        details:
+          results:
+            title: <gold>Общие результаты
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Побед: <activities_wins>'
+            - '<gray>Поражений: <activities_losses>'
+            - '<gray>Побед: <activities_winrate>'
+          money:
+            title: <gold>Итоги наград
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Выиграно: <activities_money_won>'
+            - '<gray>Проиграно: <activities_money_lost>'
+        title: <gold>Активности
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>Побед: <activities_wins>'
+        - '<gray>Побед: <activities_winrate>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>Побед: <activities_wins>'
+        - '<gray>Побед: <activities_winrate>'
+      economy:
+        enabled: true
+        plugin: ''
+        activity-sensitive: false
+        details:
+          fishing:
+            title: <gold>Рыбалка и животные
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Поймано рыбы: <fish_caught>'
+            - '<gray>Разведено животных: <animals_bred>'
+          villagers:
+            title: <gold>Торговля с жителями
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Совершено сделок: <villager_trades>'
+          wallet:
+            title: <gold>Кошелёк
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Баланс: <balance> <currency>'
+        title: <gold>Хозяйство
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>Поймано рыбы: <fish_caught>'
+        - '<gray>Сделок с жителями: <villager_trades>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>Поймано рыбы: <fish_caught>'
+        - '<gray>Сделок с жителями: <villager_trades>'
+    labels:
+      profile-menu:
+        statistics-lore:
+        - <gray>Реальные счётчики Minecraft и сохранённые данные.
+        - <gray>Время, бои, путешествия, добыча и торговля.
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробную статистику
+      profile-statistics:
+        time:
+          title: <gold>Время и визиты
+          lore:
+          - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+          - '<gray>Первый вход: <first_join_local>'
+          - '<gray>Последние данные: <last_seen_local>'
+          - '<gray>Часовой пояс: Europe/Kiev'
+        combat:
+          title: <gold>Бои и выживание
+          lore:
+          - '<gray>Убийств игроков: <kills>'
+          - '<gray>Смертей: <deaths>'
+          - '<gray>K/D: <kd_ratio>'
+          - '<gray>Побеждено мобов: <mob_kills>'
+          - '<gray>Нанесено урона: <damage_dealt>'
+          - '<gray>Получено урона: <damage_taken>'
+          - '<gray>После смерти: <time_since_death_hours> ч'
+        travel:
+          title: <gold>Путешествия
+          lore:
+          - '<gray>Пешком: <walk_km> км'
+          - '<gray>Бегом: <sprint_km> км'
+          - '<gray>Вплавь: <swim_km> км'
+          - '<gray>На элитрах: <fly_km> км'
+          - '<gray>Прыжков: <jumps>'
+        building:
+          title: <gold>Добыча и строительство
+          lore:
+          - '<gray>Добыто блоков: <blocks_mined>'
+          - '<gray>Использовано блоков-предметов: <blocks_used>'
+          - <gray>Счётчик использования Minecraft включает установки и другие применения.
+        economy:
+          title: <gold>Хозяйство и торговля
+          lore:
+          - '<gray>Поймано рыбы: <fish_caught>'
+          - '<gray>Разведено животных: <animals_bred>'
+          - '<gray>Сделок с жителями: <villager_trades>'
+          - '<gray>Баланс: <balance> <currency>'
+        progress:
+          title: <gold>Прогресс
+          lore:
+          - '<gray>Уровень: <level>'
+          - '<gray>Опыт Minecraft: <total_exp>'
+          - '<gray>Домов LoveEssential: <homes>'
+          - <gray>Адаптации доступны отдельной кнопкой в профиле.
+      profile-stats:
+        behavior-lore:
+        - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
+        - '<gray>Стиль: <white><external_lovebehavior_playstyle_name>'
+        - '<gray>Репутация: <white><reputation>'
+        world:
+          title: <gold>Мир и выживание
+          summary:
+          - <dark_gray>Личная статистика
+          - ''
+          - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+          - '<gray>Смертей: <deaths>'
+          - <dark_gray><st>─────────────────────
+          - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+          public:
+          - <dark_gray>Общая статистика
+          - ''
+          - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+          - '<gray>Первый вход: <first_join_local>'
+          visits:
+            title: <gold>Время и визиты
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
+            - '<gray>Первый вход: <first_join_local>'
+            - '<gray>Последние данные: <last_seen_local>'
+            - '<gray>Часовой пояс: Europe/Kiev'
+          movement:
+            title: <gold>Передвижение
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Пешком: <walk_km> км'
+            - '<gray>Бегом: <sprint_km> км'
+            - '<gray>Вплавь: <swim_km> км'
+            - '<gray>На элитрах: <fly_km> км'
+            - '<gray>Прыжков: <jumps>'
+          mining:
+            title: <gold>Добыча и использование
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Добыто блоков: <blocks_mined>'
+            - '<gray>Использовано предметов-блоков: <blocks_used>'
+            - <gray>Использование включает установки и другие действия.
+          survival:
+            title: <gold>Выживание и бои
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Убийств игроков: <kills>'
+            - '<gray>Побеждено мобов: <mob_kills>'
+            - '<gray>Смертей: <deaths>'
+            - '<gray>K/D: <kd_ratio>'
+            - '<gray>Нанесено урона: <damage_dealt>'
+            - '<gray>Получено урона: <damage_taken>'
+            - '<gray>После смерти: <time_since_death_hours> ч'
+        duels:
+          title: <gold>Дуэли
+          summary:
+          - <dark_gray>Личная статистика
+          - ''
+          - '<gray>Побед: <duels_wins>'
+          - '<gray>Честь: <duels_honor>'
+          - <dark_gray><st>─────────────────────
+          - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+          public:
+          - <dark_gray>Общая статистика
+          - ''
+          - '<gray>Побед: <duels_wins>'
+          - '<gray>Честь: <duels_honor>'
+          results:
+            title: <gold>Результаты
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Побед: <duels_wins>'
+            - '<gray>Поражений: <duels_losses>'
+            - '<gray>Побед: <duels_winrate>'
+          streaks:
+            title: <gold>Серии
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Текущая серия: <duels_streak>'
+            - '<gray>Лучшая серия: <duels_best_streak>'
+          rewards:
+            title: <gold>Честь и награды
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Честь: <duels_honor>'
+            - '<gray>Выиграно: <duels_money_won>'
+        hunt:
+          title: <gold>Охота
+          summary:
+          - <dark_gray>Личная статистика
+          - ''
+          - '<gray>Ранг: <hunt_rank>'
+          - '<gray>Выполнено: <hunt_completed>'
+          - <dark_gray><st>─────────────────────
+          - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+          public:
+          - <dark_gray>Общая статистика
+          - ''
+          - '<gray>Ранг: <hunt_rank>'
+          - '<gray>Выполнено: <hunt_completed>'
+          orders:
+            title: <gold>Заказы
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Выполнено: <hunt_completed>'
+            - '<gray>Провалено: <hunt_failed>'
+          rating:
+            title: <gold>Рейтинг
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Рейтинг: <hunt_rating>'
+            - '<gray>Ранг: <hunt_rank>'
+            - '<gray>Модификатор награды: <hunt_reward_modifier>%'
+        contracts:
+          title: <gold>Контракты
+          summary:
+          - <dark_gray>Личная статистика
+          - ''
+          - '<gray>Выполнено: <contracts_completed>'
+          - '<gray>Успешность: <contracts_success_rate>'
+          - <dark_gray><st>─────────────────────
+          - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+          public:
+          - <dark_gray>Общая статистика
+          - ''
+          - '<gray>Выполнено: <contracts_completed>'
+          - '<gray>Успешность: <contracts_success_rate>'
+          completed:
+            title: <gold>Выполнение
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Выполнено всего: <contracts_completed>'
+            - '<gray>Сегодня: <contracts_daily_completed>'
+            - '<gray>Принято: <contracts_accepted>'
+            - '<gray>Провалено: <contracts_failed>'
+            - '<gray>Успешность: <contracts_success_rate>'
+          streaks:
+            title: <gold>Серии контрактов
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Текущая: <contracts_streak>'
+            - '<gray>Лучшая: <contracts_best_streak>'
+        activities:
+          title: <gold>Активности
+          summary:
+          - <dark_gray>Личная статистика
+          - ''
+          - '<gray>Побед: <activities_wins>'
+          - '<gray>Побед: <activities_winrate>'
+          - <dark_gray><st>─────────────────────
+          - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+          public:
+          - <dark_gray>Общая статистика
+          - ''
+          - '<gray>Побед: <activities_wins>'
+          - '<gray>Побед: <activities_winrate>'
+          results:
+            title: <gold>Общие результаты
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Побед: <activities_wins>'
+            - '<gray>Поражений: <activities_losses>'
+            - '<gray>Побед: <activities_winrate>'
+          money:
+            title: <gold>Итоги наград
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Выиграно: <activities_money_won>'
+            - '<gray>Проиграно: <activities_money_lost>'
+        economy:
+          title: <gold>Хозяйство
+          summary:
+          - <dark_gray>Личная статистика
+          - ''
+          - '<gray>Поймано рыбы: <fish_caught>'
+          - '<gray>Сделок с жителями: <villager_trades>'
+          - <dark_gray><st>─────────────────────
+          - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+          public:
+          - <dark_gray>Общая статистика
+          - ''
+          - '<gray>Поймано рыбы: <fish_caught>'
+          - '<gray>Сделок с жителями: <villager_trades>'
+          fishing:
+            title: <gold>Рыбалка и животные
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Поймано рыбы: <fish_caught>'
+            - '<gray>Разведено животных: <animals_bred>'
+          villagers:
+            title: <gold>Торговля с жителями
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Совершено сделок: <villager_trades>'
+          wallet:
+            title: <gold>Кошелёк
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Баланс: <balance> <currency>'
+        subcategory: <gray><name> <dark_gray>· <white><page>/<total>
+        next: <green>ЛКМ <dark_gray>— <gray>следующая подкатегория
+        previous: <gold>ПКМ <dark_gray>— <gray>предыдущая подкатегория
   players-list-title:
     size: 54
     title: <gold>Выберите игрока
+    labels:
+      players:
+        select-profile: <gray>Открыть подробное досье игрока.
+        select-msg: <gray>Написать личное сообщение.
+        select-ignore: <gray>Добавить или убрать игрока из игнор-листа.
+        select-invsee: <gray>Открыть живой просмотр инвентаря.
   profile-menu-activity-title:
     size: 54
     title: <gold>Активность <dark_gray>| <white><player>
@@ -46,94 +753,272 @@ menus:
   profile-menu-notifications:
     size: 54
     title: <gold>Уведомления
+    labels:
+      profile-menu:
+        notifications-lore:
+        - '<gray>Каналы LoveCore: чат, над панелью, заголовок.'
+        - <green>ЛКМ <dark_gray>— <gray>открыть переключатели
+        notification-lore:
+        - <gray>ЛКМ — переключить этот канал уведомлений.
+        - <gray>Важные сообщения и кнопки остаются доступны в чате.
+        notify-chat: '<gold>Канал: чат'
+        notify-actionbar: '<gold>Канал: Над панелью'
+        notify-title: '<gold>Канал: Заголовок'
   profile-menu-settings:
     size: 54
     title: <gold>Настройки
-  profile-stats-details-title:
-    size: 54
-    title: <gold>Статистика <dark_gray>| <white><category>
-textures:
-  profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
-  profile-menu.settings: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
-  profile-menu.customization: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzU0NWM0YWE5N2MxOWJlZDdjYWMxODE3ZmM1MTAzZmU4ZGQ1ODlmYTEyMDgzNWEzZTRlMTJmMzUyMjMwYTVhNiJ9fX0=
-  profile-menu.adaptations: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
-  profile-menu.reputation: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmFlNjM0NGNlYmFjZDIxZDhjNmNhMGQyZTM0YjNjMzQ5MmRjNzliZjQ0MzE0MGQxMmE1MDg4N2FlM2ViN2Y4ZiJ9fX0=
-  profile-menu.statistics: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
-  profile-menu.notifications: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg2NWVlOWM3MDg3NjkwZGRjMjA2NTRmZTZhYzNmNjBlMzI3NmZkYzM3ODgzNTAyYzUzM2U3YjljY2I2NGIzZCJ9fX0=
-  profile-menu.scoreboard: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODY3MjA4NWZmNWRmMGVlODUyMTM2ZTJkNDFhNzY5MjI5MjkxZDY2NmIyOGU5ZmIwNGQ2YzkyZjE1OGU0MmJiIn19fQ==
-  profile-menu.grammar: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
-  profile-menu.silent: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
-  profile-menu.mentions: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
-  profile-menu.channel: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzE5ZjUwYjQzMmQ4NjhhZTM1OGUxNmY2MmVjMjZmMzU0MzdhZWI5NDkyYmNlMTM1NmM5YWE2YmIxOWEzODYifX19
-  profile-menu.clan-invites: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
-  profile-menu.player-trades: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
-  enabled: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
-  disabled: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTRmZWY3NTNkNWI0ZmYyYTljYWU3NWJjMmVkZWIzMTUzMDI1YWJjNWNjMjc0NDI4NWYzMTk2NGY5NDA4YTFmIn19fQ==
-  profile-menu.channel-global: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmU1MzVjNTlmZDg4YjY4ZDI1ZGEzYTNlYjYwMTQxOTBjYjU3MDYzY2QxNmE3YzE1NTFkNmIyMTZkOWI1NjNlZSJ9fX0=
-  profile-menu.channel-local: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzE5ZjUwYjQzMmQ4NjhhZTM1OGUxNmY2MmVjMjZmMzU0MzdhZWI5NDkyYmNlMTM1NmM5YWE2YmIxOWEzODYifX19
-  profile-menu.channel-admin: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTY3ZDgxM2FlN2ZmZTViZTk1MWE0ZjQxZjJhYTYxOWE1ZTM4OTRlODVlYTVkNDk4NmY4NDk0OWM2M2Q3NjcyZSJ9fX0=
-  profile-menu.nickname: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=
-  profile-menu.suffixes: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ==
-cards:
-  identity:
-    enabled: true
-    material: PLAYER_HEAD
-    title: <gold>Личность и облик
-    lore: []
-  survival:
-    enabled: true
-    material: GOLDEN_APPLE
-    title: <gold>Состояние
-    lore:
-    - - '<gray>Здоровье: <white><health>/<max_health>'
-      - '<gray>Сытость: <white><food>/20'
-      - '<gray>Насыщение: <white><saturation>'
-      - '<gray>Режим: <white><gamemode_name>'
-      - '<gray>Задержка: <white><ping> мс'
-      - '<gray>AFK: <white><afk_state>'
-      - '<gray>В бою: <white><combat_state>'
-  progress:
-    enabled: true
-    material: EXPERIENCE_BOTTLE
-    title: <gold>Путь в королевстве
-    lore:
-    - - '<gray>Уровень: <white><level>'
-      - '<gray>До следующего уровня: <white><exp>% прогресса'
-      - '<gray>Всего опыта: <white><total_exp>'
-      - '<gray>Время в игре: <white><playtime_hours> ч <playtime_minutes> мин'
-      - '<gray>Сохранённых домов: <white><homes>'
-  statistics:
-    enabled: false
-    material: IRON_SWORD
-    title: <gold>Подвиги и испытания
-    lore:
-    - - '<gray>Побед над игроками: <white><kills>'
-      - '<gray>Побед над мобами: <white><mob_kills>'
-      - '<gray>Смертей: <white><deaths>'
-      - '<gray>Прыжков: <white><jumps>'
-      - '<gray>Нанесено урона: <white><damage_dealt>'
-      - '<gray>Получено урона: <white><damage_taken>'
-      - '<gray>Пройдено пешком: <white><walk_km> км'
-  social:
-    enabled: true
-    material: BELL
-    title: <gold>Связи в королевстве
-    lore:
-    - - '<gray>Клан: <white><clan>'
-      - '<gray>Репутация: <white><reputation>'
-      - '<gray>Монеты в инвентаре: <white><balance> <currency>'
-  location:
-    enabled: true
-    material: COMPASS
-    permission: loveessential.profile.location
-    title: <gold>Местоположение и возможности
-    lore:
-    - - '<gray>Мир: <white><world>'
-      - '<gray>Координаты: <white><x> <y> <z>'
-      - '<gray>Территория: <white><territory>'
-      - '<gray>Полёт разрешён: <white><flight_allowed_state>'
-      - '<gray>Летает: <white><flying_state>'
-      - '<gray>Невидимость: <white><vanished_state>'
+    controls:
+      grammar:
+        material: WRITABLE_BOOK
+        link: grammar
+        title: <gold>Грамматика
+        lore:
+        - <gray>Автоисправление LoveChat
+        - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+        - <gray>ЛКМ — переключить.
+      silent:
+        material: FEATHER
+        link: silent
+        title: <gold>Тихий режим
+        lore:
+        - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
+        - <gray>ЛКМ — переключить.
+      mentions:
+        material: NOTE_BLOCK
+        link: mentions
+        title: <gold>Упоминания
+        lore:
+        - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
+        - <gray>ЛКМ — переключить.
+      channel:
+        material: PAPER
+        link: channel
+        title: <gold>Канал чата
+        lore:
+        - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
+        - <gray>ЛКМ — переключить локальный/глобальный канал.
+      clan-invites:
+        material: WHITE_BANNER
+        link: clan-invites
+        title: <gold>Приглашения в клан
+        lore:
+        - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
+        - <gray>ЛКМ — переключить.
+      player-trades:
+        material: EMERALD
+        link: player-trades
+        title: <gold>Обмен с игроками
+        lore:
+        - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
+        - <gray>ЛКМ — переключить.
+    labels:
+      profile-menu:
+        settings-overview: <gold>Настройте игру под себя
+        settings-overview-lore:
+        - <gray>Верхний ряд — приватность, ЛС и интерфейс.
+        - <gray>Ниже — чат, приглашения и обмен.
+        - <gray>Кнопки показывают текущее состояние.
+        settings-lore:
+        - <gray>Параметры персонажа
+        - <gray>Активность и приватность, чат, уведомления, личные сообщения.
+        - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки
+        customization-lore:
+        - '<gray>Внешний вид: <nickname> <suffix>'
+        - <gray>Цвета, градиенты, сброс ника и пометки.
+        - <green>ЛКМ <dark_gray>— <gray>открыть персонализацию
+        nickname: <gold>Никнейм
+        nickname-lore:
+        - '<gray>Текущий: <nickname>'
+        - <gray>Цвет, градиент, текст и сброс к стандартному имени.
+        suffixes: <gold>Пометки
+        suffixes-lore:
+        - '<gray>Текущая: <suffix>'
+        - '<gray>Открыто: <papi:lovesubnames_unlocked_count:"—">/<papi:lovesubnames_total_count:"—">'
+        - <green>ЛКМ <dark_gray>— <gray>открыть каталог LoveSubnames
+        grammar: <gold>Грамматика
+        grammar-lore:
+        - <gray>Автоисправление LoveChat
+        - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+        - <gray>ЛКМ — переключить.
+        silent: <gold>Тихий режим
+        silent-lore:
+        - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
+        - <gray>ЛКМ — переключить.
+        mentions: <gold>Упоминания
+        mentions-lore:
+        - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
+        - <gray>ЛКМ — переключить.
+        channel: <gold>Канал чата
+        channel-lore:
+        - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
+        - <gray>ЛКМ — переключить локальный/глобальный канал.
+        clan-invites: <gold>Приглашения в клан
+        clan-invites-lore:
+        - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
+        - <gray>ЛКМ — переключить.
+        player-trades: <gold>Обмен с игроками
+        player-trades-lore:
+        - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
+        - <gray>ЛКМ — переключить.
+  players-title:
+    cards:
+      identity:
+        enabled: true
+        material: PLAYER_HEAD
+        title: <gold>Личность и облик
+        lore: []
+      survival:
+        enabled: true
+        material: GOLDEN_APPLE
+        title: <gold>Состояние
+        lore:
+        - - '<gray>Здоровье: <white><health>/<max_health>'
+          - '<gray>Сытость: <white><food>/20'
+          - '<gray>Насыщение: <white><saturation>'
+          - '<gray>Режим: <white><gamemode_name>'
+          - '<gray>Задержка: <white><ping> мс'
+          - '<gray>AFK: <white><afk_state>'
+          - '<gray>В бою: <white><combat_state>'
+      progress:
+        enabled: true
+        material: EXPERIENCE_BOTTLE
+        title: <gold>Путь в королевстве
+        lore:
+        - - '<gray>Уровень: <white><level>'
+          - '<gray>До следующего уровня: <white><exp>% прогресса'
+          - '<gray>Всего опыта: <white><total_exp>'
+          - '<gray>Время в игре: <white><playtime_hours> ч <playtime_minutes> мин'
+          - '<gray>Сохранённых домов: <white><homes>'
+      statistics:
+        enabled: false
+        material: IRON_SWORD
+        title: <gold>Подвиги и испытания
+        lore:
+        - - '<gray>Побед над игроками: <white><kills>'
+          - '<gray>Побед над мобами: <white><mob_kills>'
+          - '<gray>Смертей: <white><deaths>'
+          - '<gray>Прыжков: <white><jumps>'
+          - '<gray>Нанесено урона: <white><damage_dealt>'
+          - '<gray>Получено урона: <white><damage_taken>'
+          - '<gray>Пройдено пешком: <white><walk_km> км'
+      social:
+        enabled: true
+        material: BELL
+        title: <gold>Связи в королевстве
+        lore:
+        - - '<gray>Клан: <white><clan>'
+          - '<gray>Репутация: <white><reputation>'
+          - '<gray>Монеты в инвентаре: <white><balance> <currency>'
+      location:
+        enabled: true
+        material: COMPASS
+        permission: loveessential.profile.location
+        title: <gold>Местоположение и возможности
+        lore:
+        - - '<gray>Мир: <white><world>'
+          - '<gray>Координаты: <white><x> <y> <z>'
+          - '<gray>Территория: <white><territory>'
+          - '<gray>Полёт разрешён: <white><flight_allowed_state>'
+          - '<gray>Летает: <white><flying_state>'
+          - '<gray>Невидимость: <white><vanished_state>'
+    labels:
+      profile:
+        info:
+        - <gold><player>
+        - '<gray>Авторизация: <authenticated>'
+        - '<gray>Клан: <clan>'
+        - '<gray>Репутация: <reputation>'
+      players:
+        menu: <gold>Мой профиль
+        title: <gold>Досье <dark_gray>| <yellow><player>
+        entry: <gold><player>
+        unavailable: <red>Игрок недоступен или не в сети.
+        message: <gold>Написать сообщение
+        ignore: <gold>Переключить игнор
+        inventory: <gold>Инвентарь игрока
+        refresh: <gold>Обновить досье
+        save-failed: Не удалось сохранить снимок информации об игроке.
+        gamemodes:
+          survival: Выживание
+          creative: Творческий
+          adventure: Приключение
+          spectator: Наблюдатель
+        cards:
+          identity:
+            title: <gold>Личность и облик
+            lore:
+            - '<gray>Имя: <white><player>'
+            - '<gray>Отображаемое имя: <white><display_name>'
+            - '<gray>Первый вход (UTC): <white><first_join>'
+            - '<gray>Модель скина: <white><skin_model>'
+            - <gray>Голова использует текущий скин игрока.
+          survival:
+            title: <gold>Состояние
+            lore:
+            - '<gray>Здоровье: <white><health>/<max_health>'
+            - '<gray>Сытость: <white><food>/20'
+            - '<gray>Насыщение: <white><saturation>'
+            - '<gray>Режим: <white><gamemode_name>'
+            - '<gray>Задержка: <white><ping> мс'
+            - '<gray>Бездействие: <white><afk_state>'
+            - '<gray>В бою: <white><combat_state>'
+          progress:
+            title: <gold>Путь в королевстве
+            lore:
+            - '<gray>Уровень: <white><level>'
+            - '<gray>До следующего уровня: <white><exp>% прогресса'
+            - '<gray>Всего опыта: <white><total_exp>'
+            - '<gray>Время в игре: <white><playtime_hours> ч <playtime_minutes> мин'
+            - '<gray>Сохранённых домов: <white><homes>'
+          statistics:
+            title: <gold>Подвиги и испытания
+            lore:
+            - '<gray>Побед над игроками: <white><kills>'
+            - '<gray>Побед над мобами: <white><mob_kills>'
+            - '<gray>Смертей: <white><deaths>'
+            - '<gray>Прыжков: <white><jumps>'
+            - '<gray>Нанесено урона: <white><damage_dealt>'
+            - '<gray>Получено урона: <white><damage_taken>'
+            - '<gray>Пройдено пешком: <white><walk_km> км'
+          social:
+            title: <gold>Связи в королевстве
+            lore:
+            - '<gray>Клан: <white><clan>'
+            - '<gray>Репутация: <white><reputation>'
+            - '<gray>Монеты в инвентаре: <white><balance> <currency>'
+          location:
+            title: <gold>Местоположение и возможности
+            lore:
+            - '<gray>Мир: <white><world>'
+            - '<gray>Координаты: <white><x> <y> <z>'
+            - '<gray>Территория: <white><territory>'
+            - '<gray>Полёт разрешён: <white><flight_allowed_state>'
+            - '<gray>Летает: <white><flying_state>'
+            - '<gray>Невидимость: <white><vanished_state>'
+        'yes': Включено
+        'no': Выключено
+        list-title: <gold>Список игроков
+  profile-reports-title:
+    labels:
+      profile-reports:
+        title: <gold>Жалобы игроков
+        create: <gold>Отправить жалобу
+        help: <gray>Опишите ситуацию. Жалоба сохраняется для проверки администрацией и сама по себе не изменяет репутацию.
+        reason: <gold>Причина жалобы
+        send: <gold>Отправить
+        sent: <gray>Жалоба отправлена администрации.
+        reason-length: '<gray>Опишите ситуацию: от 8 до 1024 символов.'
+        cooldown: <gray>Вы недавно отправляли жалобу. Попробуйте позже.
+        entry: <gold>Жалоба на <white><player>
+        author: '<gray>Автор: <white><player>'
+        new: <yellow>Не рассмотрена
+        resolved: <gray>Рассмотрена
+        detail: <gold>Рассмотрение жалобы
+        detail-help: <gray>Это сохранённые сведения. Изменение полей здесь не меняет исходную жалобу.
+        author-label: <gold>Автор
+        target-label: <gold>Игрок
+        resolve: <gold>Отметить рассмотренной
+        usage: <gray>/жалоба <ник>
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -141,598 +1026,3 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
-messages:
-  profile:
-    info:
-    - <gold><player>
-    - '<gray>Авторизация: <authenticated>'
-    - '<gray>Клан: <clan>'
-    - '<gray>Репутация: <reputation>'
-  players:
-    menu: <gold>Мой профиль
-    title: <gold>Досье <dark_gray>| <yellow><player>
-    entry: <gold><player>
-    unavailable: <red>Игрок недоступен или не в сети.
-    message: <gold>Написать сообщение
-    ignore: <gold>Переключить игнор
-    inventory: <gold>Инвентарь игрока
-    refresh: <gold>Обновить досье
-    select-profile: <gray>Открыть подробное досье игрока.
-    select-msg: <gray>Написать личное сообщение.
-    select-ignore: <gray>Добавить или убрать игрока из игнор-листа.
-    select-invsee: <gray>Открыть живой просмотр инвентаря.
-    save-failed: Не удалось сохранить снимок информации об игроке.
-    gamemodes:
-      survival: Выживание
-      creative: Творческий
-      adventure: Приключение
-      spectator: Наблюдатель
-    cards:
-      identity:
-        title: <gold>Личность и облик
-        lore:
-        - '<gray>Имя: <white><player>'
-        - '<gray>Отображаемое имя: <white><display_name>'
-        - '<gray>Первый вход (UTC): <white><first_join>'
-        - '<gray>Модель скина: <white><skin_model>'
-        - <gray>Голова использует текущий скин игрока.
-      survival:
-        title: <gold>Состояние
-        lore:
-        - '<gray>Здоровье: <white><health>/<max_health>'
-        - '<gray>Сытость: <white><food>/20'
-        - '<gray>Насыщение: <white><saturation>'
-        - '<gray>Режим: <white><gamemode_name>'
-        - '<gray>Задержка: <white><ping> мс'
-        - '<gray>Бездействие: <white><afk_state>'
-        - '<gray>В бою: <white><combat_state>'
-      progress:
-        title: <gold>Путь в королевстве
-        lore:
-        - '<gray>Уровень: <white><level>'
-        - '<gray>До следующего уровня: <white><exp>% прогресса'
-        - '<gray>Всего опыта: <white><total_exp>'
-        - '<gray>Время в игре: <white><playtime_hours> ч <playtime_minutes> мин'
-        - '<gray>Сохранённых домов: <white><homes>'
-      statistics:
-        title: <gold>Подвиги и испытания
-        lore:
-        - '<gray>Побед над игроками: <white><kills>'
-        - '<gray>Побед над мобами: <white><mob_kills>'
-        - '<gray>Смертей: <white><deaths>'
-        - '<gray>Прыжков: <white><jumps>'
-        - '<gray>Нанесено урона: <white><damage_dealt>'
-        - '<gray>Получено урона: <white><damage_taken>'
-        - '<gray>Пройдено пешком: <white><walk_km> км'
-      social:
-        title: <gold>Связи в королевстве
-        lore:
-        - '<gray>Клан: <white><clan>'
-        - '<gray>Репутация: <white><reputation>'
-        - '<gray>Монеты в инвентаре: <white><balance> <currency>'
-      location:
-        title: <gold>Местоположение и возможности
-        lore:
-        - '<gray>Мир: <white><world>'
-        - '<gray>Координаты: <white><x> <y> <z>'
-        - '<gray>Территория: <white><territory>'
-        - '<gray>Полёт разрешён: <white><flight_allowed_state>'
-        - '<gray>Летает: <white><flying_state>'
-        - '<gray>Невидимость: <white><vanished_state>'
-    'yes': Включено
-    'no': Выключено
-    list-title: <gold>Список игроков
-  profile-menu:
-    behavior: <gold>Поведение
-    open-behavior: <gold>Открыть LoveBehavior
-    no-data: —
-    saved-activity-lore:
-    - <gray>Время игры и статистика на момент выхода.
-    - <gray>Видимость определяется отдельной настройкой активности.
-    - <green>ЛКМ — открыть сохранённые данные.
-    saved-customization-lore:
-    - '<gray>Ник: <white><display_name>'
-    - '<gray>Пометка: <white><external_lovesubnames_current>'
-    saved-adaptations-lore:
-    - '<gray>Текущая: <white><external_loveadaptation_current_name>'
-    - '<gray>Прогресс: <white><external_loveadaptation_current_progress>'
-    - <green>ЛКМ — посмотреть сохранённые адаптации.
-    saved-reputation-lore:
-    - '<gray>Репутация: <white><reputation>'
-    - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
-    - '<gray>Стиль: <white><external_lovebehavior_playstyle_name>'
-    - <gray>Это сохранённые сведения на момент выхода.
-    saved-adaptation-detail:
-    - '<gray>Статус: <white><status>'
-    - '<gray>Прогресс: <white><progress>'
-    - <gray>Данные на момент последнего сохранения.
-    settings-overview: <gold>Настройте игру под себя
-    settings-overview-lore:
-    - <gray>Верхний ряд — приватность, ЛС и интерфейс.
-    - <gray>Ниже — чат, приглашения и обмен.
-    - <gray>Кнопки показывают текущее состояние.
-    statistics-lore:
-    - <gray>Реальные счётчики Minecraft и сохранённые данные.
-    - <gray>Время, бои, путешествия, добыча и торговля.
-    - <green>ЛКМ <dark_gray>— <gray>открыть подробную статистику
-    online: В сети
-    offline: Не в сети
-    offline-loading: <gray>Загружаю сохранённый профиль…
-    no-snapshot: <yellow>Сохранённый профиль не найден. Игрок должен хотя бы раз зайти после установки LoveEssential.
-    saved-heading: <gold>Профиль <dark_gray>| <white><player>
-    saved-heading-lore:
-    - '<gray>Состояние: <white><online_state>'
-    - '<gray>Последний визит: <white><last_seen_local>'
-    - '<gray>Часовой пояс: Europe/Kiev'
-    - <gray>Показаны данные на момент последнего сохранения.
-    saved-information: <gold>Об игроке
-    saved-information-lore:
-    - '<gray>Ник: <white><display_name>'
-    - '<gray>Первый вход: <white><first_join_local>'
-    - '<gray>Клан: <white><clan>'
-    - '<gray>Репутация: <white><reputation>'
-    - <gray>Редактирование и живые команды доступны в сети.
-    states:
-      'yes': Да
-      'no': Нет
-      'true': Включено
-      'false': Выключено
-      global: Глобальный
-      local: Локальный
-      admin: Административный
-    heading: <gold>Профиль <dark_gray>| <nickname>
-    heading-lore:
-    - <gray>Личная карточка игрока
-    - '<gray>Имя: <white><player>'
-    - '<gray>Клан: <gold><clan>'
-    - '<gray>Пометка: <suffix>'
-    - <green>ЛКМ <dark_gray>— <gray>обновить информацию
-    account: <gold>Безопасность
-    account-lore:
-    - <gray>Учётная запись LoveAuth
-    - <gray>Пароль, привязки и активные сессии.
-    - <green>ЛКМ <dark_gray>— <gray>открыть безопасность своей учётной записи
-    public-account-lore:
-    - '<gray>Авторизация: <white><authenticated_state>'
-    - <gray>Личные настройки безопасности доступны только владельцу.
-    settings-lore:
-    - <gray>Параметры персонажа
-    - <gray>Активность и приватность, чат, уведомления, личные сообщения.
-    - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки
-    customization-lore:
-    - '<gray>Внешний вид: <nickname> <suffix>'
-    - <gray>Цвета, градиенты, сброс ника и пометки.
-    - <green>ЛКМ <dark_gray>— <gray>открыть персонализацию
-    public-customization-lore:
-    - '<gray>Ник: <nickname>'
-    - '<gray>Пометка: <suffix>'
-    - '<gray>Получено пометок: <papi:lovesubnames_unlocked_count:"—">'
-    - <gray>Редактировать чужой внешний вид через профиль нельзя.
-    adaptations: <gold>Адаптации
-    adaptations-lore:
-    - <gray>Путь и прогресс LoveAdaptation
-    - '<gray>Текущая: <white><papi:loveadaptation_current_name:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_current_progress:"—">'
-    - '<gray>Следующая: <white><papi:loveadaptation_progress_next_adaptation:"—">'
-    - <green>ЛКМ <dark_gray>— <gray>просмотреть адаптации этого игрока
-    open-adaptations: <gold>Открыть LoveAdaptation
-    reputation: <gold>Репутация
-    behavior-lore:
-    - <gray>Поведение LoveBehavior
-    - '<gray>Вежливость: <white><papi:lovebehavior_politeness_name:"—">'
-    - '<gray>Стиль игры: <white><papi:lovebehavior_playstyle_name:"—">'
-    - '<gray>Репутация: <white><reputation>'
-    - <green>ЛКМ <dark_gray>— <gray>открыть своё меню поведения
-    reputation-lore:
-    - <gray>Оценить игрока <white><player>
-    - '<gray>Вежливость: <white><papi:lovebehavior_politeness_name:"—">'
-    - '<gray>Стиль игры: <white><papi:lovebehavior_playstyle_name:"—">'
-    - '<gray>Репутация: <white><reputation>'
-    - <green>ЛКМ <dark_gray>— <gray>открыть /rep для этого игрока
-    activity: <gold>Активность и приватность
-    activity-settings-lore:
-    - '<gray>Видимость профиля: <white><profile_visibility_label>'
-    - '<gray>Видимость активности: <white><activity_visibility_label>'
-    - <gray>Эти переключатели не изменяют прогресс адаптаций.
-    - <green>ЛКМ <dark_gray>— <gray>настроить отдельно
-    public-activity-lore:
-    - <gray>Время игры, состояние и доступная информация.
-    - <green>ЛКМ <dark_gray>— <gray>просмотреть активность
-    activity-hidden-lore:
-    - <gray>Владелец скрыл свою активность.
-    - <gray>Адаптации доступны отдельно.
-    activity-hidden: <yellow>Игрок скрыл свою активность.
-    visibility-on: <green>Профиль доступен другим
-    visibility-off: <gray>Профиль скрыт от других
-    visibility-help: <gray>Переключить доступ к своему профилю. Владелец видит его всегда.
-    activity-on: <green>Активность доступна другим
-    activity-off: <gray>Активность скрыта от других
-    activity-help: <gray>Отдельно скрывает время игры, состояние и местоположение в профиле.
-    profile-public: <green>Ваш профиль теперь доступен другим игрокам.
-    profile-private: <gray>Ваш профиль скрыт от других игроков.
-    activity-public: <green>Ваша активность доступна при открытом профиле.
-    activity-private: <gray>Ваша активность скрыта. Видимость адаптаций не изменена.
-    visibility-public: Открыт
-    visibility-private: Скрыт
-    hidden: <yellow>Профиль недоступен или скрыт владельцем.
-    loading: <yellow>Настройки приватности ещё загружаются. Повторите действие через секунду.
-    load-failed: Не удалось загрузить настройки приватности профиля.
-    usage: <gray>/profile [игрок] · view <игрок> · list · settings · hide/show/toggle · activity [show|hide|toggle]
-      · privacy <public|private>
-    integration-unavailable: <gray>Этот модуль или его команда сейчас недоступны либо не хватает прав.
-    messages-lore:
-    - <gray>Включение личных сообщений и игнор-лист.
-    - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки ЛС
-    notifications-lore:
-    - '<gray>Каналы LoveCore: чат, над панелью, заголовок.'
-    - <green>ЛКМ <dark_gray>— <gray>открыть переключатели
-    notification-lore:
-    - <gray>ЛКМ — переключить этот канал уведомлений.
-    - <gray>Важные сообщения и кнопки остаются доступны в чате.
-    notify-chat: '<gold>Канал: чат'
-    notify-actionbar: '<gold>Канал: Над панелью'
-    notify-title: '<gold>Канал: Заголовок'
-    enabled: <green>Включено
-    disabled: <gray>Выключено
-    last-channel: '<yellow>Сначала включите другой канал: последний канал отключить нельзя.'
-    scoreboard: <gold>Боковая панель
-    scoreboard-lore:
-    - <gray>Строки и оформление личного табло.
-    - <green>ЛКМ <dark_gray>— <gray>открыть редактор
-    nickname: <gold>Никнейм
-    nickname-lore:
-    - '<gray>Текущий: <nickname>'
-    - <gray>Цвет, градиент, текст и сброс к стандартному имени.
-    suffixes: <gold>Пометки
-    suffixes-lore:
-    - '<gray>Текущая: <suffix>'
-    - '<gray>Открыто: <papi:lovesubnames_unlocked_count:"—">/<papi:lovesubnames_total_count:"—">'
-    - <green>ЛКМ <dark_gray>— <gray>открыть каталог LoveSubnames
-    grammar: <gold>Грамматика
-    grammar-lore:
-    - <gray>Автоисправление LoveChat
-    - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
-    - <gray>ЛКМ — переключить.
-    silent: <gold>Тихий режим
-    silent-lore:
-    - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
-    - <gray>ЛКМ — переключить.
-    mentions: <gold>Упоминания
-    mentions-lore:
-    - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
-    - <gray>ЛКМ — переключить.
-    channel: <gold>Канал чата
-    channel-lore:
-    - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
-    - <gray>ЛКМ — переключить локальный/глобальный канал.
-    clan-invites: <gold>Приглашения в клан
-    clan-invites-lore:
-    - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
-    - <gray>ЛКМ — переключить.
-    player-trades: <gold>Обмен с игроками
-    player-trades-lore:
-    - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
-    - <gray>ЛКМ — переключить.
-    adaptation-water: <gold>Вода
-    adaptation-water-lore:
-    - '<gray>Статус: <white><papi:loveadaptation_water_status:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_water_progress:"—">'
-    - <papi:loveadaptation_water_bar:"—">
-    adaptation-nether: <gold>Незер
-    adaptation-nether-lore:
-    - '<gray>Статус: <white><papi:loveadaptation_nether_status:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_nether_progress:"—">'
-    - <papi:loveadaptation_nether_bar:"—">
-    adaptation-cave: <gold>Пещеры
-    adaptation-cave-lore:
-    - '<gray>Статус: <white><papi:loveadaptation_cave_status:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_cave_progress:"—">'
-    - <papi:loveadaptation_cave_bar:"—">
-    adaptation-height: <gold>Высота
-    adaptation-height-lore:
-    - '<gray>Статус: <white><papi:loveadaptation_height_status:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_height_progress:"—">'
-    - <papi:loveadaptation_height_bar:"—">
-    adaptation-abyss: <gold>Бездна
-    adaptation-abyss-lore:
-    - '<gray>Статус: <white><papi:loveadaptation_abyss_status:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_abyss_progress:"—">'
-    - <papi:loveadaptation_abyss_bar:"—">
-    adaptation-combat: <gold>Бой
-    adaptation-combat-lore:
-    - '<gray>Статус: <white><papi:loveadaptation_combat_status:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_combat_progress:"—">'
-    - <papi:loveadaptation_combat_bar:"—">
-    adaptation-travel: <gold>Путешествия
-    adaptation-travel-lore:
-    - '<gray>Статус: <white><papi:loveadaptation_travel_status:"—">'
-    - '<gray>Прогресс: <white><papi:loveadaptation_travel_progress:"—">'
-    - <papi:loveadaptation_travel_bar:"—">
-  profile-statistics:
-    time:
-      title: <gold>Время и визиты
-      lore:
-      - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
-      - '<gray>Первый вход: <first_join_local>'
-      - '<gray>Последние данные: <last_seen_local>'
-      - '<gray>Часовой пояс: Europe/Kiev'
-    combat:
-      title: <gold>Бои и выживание
-      lore:
-      - '<gray>Убийств игроков: <kills>'
-      - '<gray>Смертей: <deaths>'
-      - '<gray>K/D: <kd_ratio>'
-      - '<gray>Побеждено мобов: <mob_kills>'
-      - '<gray>Нанесено урона: <damage_dealt>'
-      - '<gray>Получено урона: <damage_taken>'
-      - '<gray>После смерти: <time_since_death_hours> ч'
-    travel:
-      title: <gold>Путешествия
-      lore:
-      - '<gray>Пешком: <walk_km> км'
-      - '<gray>Бегом: <sprint_km> км'
-      - '<gray>Вплавь: <swim_km> км'
-      - '<gray>На элитрах: <fly_km> км'
-      - '<gray>Прыжков: <jumps>'
-    building:
-      title: <gold>Добыча и строительство
-      lore:
-      - '<gray>Добыто блоков: <blocks_mined>'
-      - '<gray>Использовано блоков-предметов: <blocks_used>'
-      - <gray>Счётчик использования Minecraft включает установки и другие применения.
-    economy:
-      title: <gold>Хозяйство и торговля
-      lore:
-      - '<gray>Поймано рыбы: <fish_caught>'
-      - '<gray>Разведено животных: <animals_bred>'
-      - '<gray>Сделок с жителями: <villager_trades>'
-      - '<gray>Баланс: <balance> <currency>'
-    progress:
-      title: <gold>Прогресс
-      lore:
-      - '<gray>Уровень: <level>'
-      - '<gray>Опыт Minecraft: <total_exp>'
-      - '<gray>Домов LoveEssential: <homes>'
-      - <gray>Адаптации доступны отдельной кнопкой в профиле.
-  public-profile:
-    report: <gold>Пожаловаться
-    report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
-    offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
-  profile-stats:
-    behavior-lore:
-    - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
-    - '<gray>Стиль: <white><external_lovebehavior_playstyle_name>'
-    - '<gray>Репутация: <white><reputation>'
-    world:
-      title: <gold>Мир и выживание
-      summary:
-      - <dark_gray>Личная статистика
-      - ''
-      - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
-      - '<gray>Смертей: <deaths>'
-      - <dark_gray><st>─────────────────────
-      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-      public:
-      - <dark_gray>Общая статистика
-      - ''
-      - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
-      - '<gray>Первый вход: <first_join_local>'
-      visits:
-        title: <gold>Время и визиты
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
-        - '<gray>Первый вход: <first_join_local>'
-        - '<gray>Последние данные: <last_seen_local>'
-        - '<gray>Часовой пояс: Europe/Kiev'
-      movement:
-        title: <gold>Передвижение
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Пешком: <walk_km> км'
-        - '<gray>Бегом: <sprint_km> км'
-        - '<gray>Вплавь: <swim_km> км'
-        - '<gray>На элитрах: <fly_km> км'
-        - '<gray>Прыжков: <jumps>'
-      mining:
-        title: <gold>Добыча и использование
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Добыто блоков: <blocks_mined>'
-        - '<gray>Использовано предметов-блоков: <blocks_used>'
-        - <gray>Использование включает установки и другие действия.
-      survival:
-        title: <gold>Выживание и бои
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Убийств игроков: <kills>'
-        - '<gray>Побеждено мобов: <mob_kills>'
-        - '<gray>Смертей: <deaths>'
-        - '<gray>K/D: <kd_ratio>'
-        - '<gray>Нанесено урона: <damage_dealt>'
-        - '<gray>Получено урона: <damage_taken>'
-        - '<gray>После смерти: <time_since_death_hours> ч'
-    duels:
-      title: <gold>Дуэли
-      summary:
-      - <dark_gray>Личная статистика
-      - ''
-      - '<gray>Побед: <duels_wins>'
-      - '<gray>Честь: <duels_honor>'
-      - <dark_gray><st>─────────────────────
-      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-      public:
-      - <dark_gray>Общая статистика
-      - ''
-      - '<gray>Побед: <duels_wins>'
-      - '<gray>Честь: <duels_honor>'
-      results:
-        title: <gold>Результаты
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Побед: <duels_wins>'
-        - '<gray>Поражений: <duels_losses>'
-        - '<gray>Побед: <duels_winrate>'
-      streaks:
-        title: <gold>Серии
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Текущая серия: <duels_streak>'
-        - '<gray>Лучшая серия: <duels_best_streak>'
-      rewards:
-        title: <gold>Честь и награды
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Честь: <duels_honor>'
-        - '<gray>Выиграно: <duels_money_won>'
-    hunt:
-      title: <gold>Охота
-      summary:
-      - <dark_gray>Личная статистика
-      - ''
-      - '<gray>Ранг: <hunt_rank>'
-      - '<gray>Выполнено: <hunt_completed>'
-      - <dark_gray><st>─────────────────────
-      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-      public:
-      - <dark_gray>Общая статистика
-      - ''
-      - '<gray>Ранг: <hunt_rank>'
-      - '<gray>Выполнено: <hunt_completed>'
-      orders:
-        title: <gold>Заказы
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Выполнено: <hunt_completed>'
-        - '<gray>Провалено: <hunt_failed>'
-      rating:
-        title: <gold>Рейтинг
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Рейтинг: <hunt_rating>'
-        - '<gray>Ранг: <hunt_rank>'
-        - '<gray>Модификатор награды: <hunt_reward_modifier>%'
-    contracts:
-      title: <gold>Контракты
-      summary:
-      - <dark_gray>Личная статистика
-      - ''
-      - '<gray>Выполнено: <contracts_completed>'
-      - '<gray>Успешность: <contracts_success_rate>'
-      - <dark_gray><st>─────────────────────
-      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-      public:
-      - <dark_gray>Общая статистика
-      - ''
-      - '<gray>Выполнено: <contracts_completed>'
-      - '<gray>Успешность: <contracts_success_rate>'
-      completed:
-        title: <gold>Выполнение
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Выполнено всего: <contracts_completed>'
-        - '<gray>Сегодня: <contracts_daily_completed>'
-        - '<gray>Принято: <contracts_accepted>'
-        - '<gray>Провалено: <contracts_failed>'
-        - '<gray>Успешность: <contracts_success_rate>'
-      streaks:
-        title: <gold>Серии контрактов
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Текущая: <contracts_streak>'
-        - '<gray>Лучшая: <contracts_best_streak>'
-    activities:
-      title: <gold>Активности
-      summary:
-      - <dark_gray>Личная статистика
-      - ''
-      - '<gray>Побед: <activities_wins>'
-      - '<gray>Побед: <activities_winrate>'
-      - <dark_gray><st>─────────────────────
-      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-      public:
-      - <dark_gray>Общая статистика
-      - ''
-      - '<gray>Побед: <activities_wins>'
-      - '<gray>Побед: <activities_winrate>'
-      results:
-        title: <gold>Общие результаты
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Побед: <activities_wins>'
-        - '<gray>Поражений: <activities_losses>'
-        - '<gray>Побед: <activities_winrate>'
-      money:
-        title: <gold>Итоги наград
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Выиграно: <activities_money_won>'
-        - '<gray>Проиграно: <activities_money_lost>'
-    economy:
-      title: <gold>Хозяйство
-      summary:
-      - <dark_gray>Личная статистика
-      - ''
-      - '<gray>Поймано рыбы: <fish_caught>'
-      - '<gray>Сделок с жителями: <villager_trades>'
-      - <dark_gray><st>─────────────────────
-      - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-      public:
-      - <dark_gray>Общая статистика
-      - ''
-      - '<gray>Поймано рыбы: <fish_caught>'
-      - '<gray>Сделок с жителями: <villager_trades>'
-      fishing:
-        title: <gold>Рыбалка и животные
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Поймано рыбы: <fish_caught>'
-        - '<gray>Разведено животных: <animals_bred>'
-      villagers:
-        title: <gold>Торговля с жителями
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Совершено сделок: <villager_trades>'
-      wallet:
-        title: <gold>Кошелёк
-        lore:
-        - <dark_gray>Подробности категории
-        - ''
-        - '<gray>Баланс: <balance> <currency>'
-    subcategory: <gray><name> <dark_gray>· <white><page>/<total>
-    next: <green>ЛКМ <dark_gray>— <gray>следующая подкатегория
-    previous: <gold>ПКМ <dark_gray>— <gray>предыдущая подкатегория
-  profile-reports:
-    title: <gold>Жалобы игроков
-    create: <gold>Отправить жалобу
-    help: <gray>Опишите ситуацию. Жалоба сохраняется для проверки администрацией и сама по себе не изменяет репутацию.
-    reason: <gold>Причина жалобы
-    send: <gold>Отправить
-    sent: <gray>Жалоба отправлена администрации.
-    reason-length: '<gray>Опишите ситуацию: от 8 до 1024 символов.'
-    cooldown: <gray>Вы недавно отправляли жалобу. Попробуйте позже.
-    entry: <gold>Жалоба на <white><player>
-    author: '<gray>Автор: <white><player>'
-    new: <yellow>Не рассмотрена
-    resolved: <gray>Рассмотрена
-    detail: <gold>Рассмотрение жалобы
-    detail-help: <gray>Это сохранённые сведения. Изменение полей здесь не меняет исходную жалобу.
-    author-label: <gold>Автор
-    target-label: <gold>Игрок
-    resolve: <gold>Отметить рассмотренной
-    usage: <gray>/жалоба <ник>
