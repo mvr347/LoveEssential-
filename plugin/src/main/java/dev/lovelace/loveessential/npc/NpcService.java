@@ -52,6 +52,32 @@ public final class NpcService implements Listener, AutoCloseable {
     spawnGate = Objects.requireNonNull(gate);
   }
 
+  /** NPC ids hidden by an integration (LoveCore spawn/despawn); they are never spawned into the world. */
+  private final Set<String> hidden = ConcurrentHashMap.newKeySet();
+
+  /**
+   * Hides an NPC: removes its live entities, and later world spawns are refused until {@link
+   * #show(String)}. Editor previews are not affected. Main thread only.
+   */
+  public void hide(String id) {
+    hidden.add(id);
+    remove(id);
+  }
+
+  /**
+   * Allows the NPC to spawn again. The next NPC tick spawns it if a player is in range; the
+   * spawn failure backoff is cleared so that tick is not delayed. Main thread only.
+   */
+  public void show(String id) {
+    hidden.remove(id);
+    spawnFailures.remove(id);
+  }
+
+  /** Whether the NPC is currently hidden by {@link #hide(String)}. */
+  public boolean hidden(String id) {
+    return hidden.contains(id);
+  }
+
   public String resolve(String id) {
     return numbers.entrySet().stream()
         .filter(e -> e.getValue().toString().equals(id))
@@ -424,6 +450,7 @@ public final class NpcService implements Listener, AutoCloseable {
     Location at = n.spawn().location();
     if (!at.getWorld().isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4) || !safe(n, at))
       return null;
+    if (!preview && hidden.contains(n.id())) return null;
     if (!preview && !spawnGate.test(n)) {
       spawnFailures.put(n.id(), tick + 40);
       return null;

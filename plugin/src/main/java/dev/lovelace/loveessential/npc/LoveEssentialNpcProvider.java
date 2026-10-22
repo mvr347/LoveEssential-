@@ -295,6 +295,28 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
       return entity().isPresent();
     }
 
+    /**
+     * Shows the NPC. The entity appears on a following NPC tick once a player is in range, so this
+     * can still return {@code false} right after the call.
+     */
+    @Override
+    public boolean spawn() {
+      npcs.show(id);
+      return spawned();
+    }
+
+    @Override
+    public boolean despawn() {
+      boolean wasSpawned = spawned();
+      npcs.hide(id);
+      return wasSpawned;
+    }
+
+    @Override
+    public Optional<String> skinName() {
+      return view(id).map(n -> n.settings().get("skin")).filter(name -> !name.isBlank());
+    }
+
     @Override
     public Location location() {
       return entity().map(Entity::getLocation).orElseGet(() -> view(id).orElseThrow().spawn().location());

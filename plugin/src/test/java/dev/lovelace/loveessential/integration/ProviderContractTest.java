@@ -12,6 +12,7 @@ import dev.lovelace.lovecore.api.npc.NpcClickEvent;
 import dev.lovelace.lovecore.api.npc.NpcProvider;
 import dev.lovelace.lovecore.api.npc.NpcSpec;
 import dev.lovelace.lovecore.api.presence.PresenceOracle;
+import dev.lovelace.lovecore.api.presence.SkinTexture;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -188,5 +189,30 @@ class ProviderContractTest implements Listener {
     server.getScheduler().performTicks(25);
     var events = seen.stream().filter(AfkChangeEvent.class::isInstance).map(AfkChangeEvent.class::cast).toList();
     assertEquals(List.of(true, false), events.stream().map(AfkChangeEvent::isAfk).toList());
+  }
+
+  @Test
+  void despawnAndSpawnReportTheWorldStateAndHidingTwiceIsHarmless() throws Exception {
+    var handle = provider().create(NpcSpec.at(Component.text("Shy"), here()).withType(EntityType.VILLAGER));
+    var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
+    waitFor(() -> api.npc(handle.key()).isPresent());
+    assertFalse(handle.despawn(), "nothing was in the world, so despawn reports false");
+    assertFalse(handle.despawn(), "hiding a hidden NPC again is harmless");
+    assertFalse(handle.spawn(), "no player is near, so the NPC is not in the world yet");
+    assertFalse(handle.spawned());
+  }
+
+  @Test
+  void skinNameReadsTheNameSkinSettingAndIsEmptyForTextures() throws Exception {
+    var named = provider().create(NpcSpec.at(Component.text("Named"), here()).withType(EntityType.VILLAGER).withSkinName("Notch"));
+    var plain = provider().create(NpcSpec.at(Component.text("Plain"), here()).withType(EntityType.VILLAGER));
+    assertEquals(java.util.Optional.of("Notch"), named.skinName());
+    assertTrue(plain.skinName().isEmpty());
+    named.setSkin(new SkinTexture("texture-value", "signature"));
+    waitFor(() -> named.skinName().isEmpty());
+    assertTrue(named.skinName().isEmpty(), "a texture skin has no nickname");
+    named.setSkin("Dinnerbone");
+    waitFor(() -> "Dinnerbone".equals(named.skinName().orElse(null)));
+    assertEquals(java.util.Optional.of("Dinnerbone"), named.skinName());
   }
 }
