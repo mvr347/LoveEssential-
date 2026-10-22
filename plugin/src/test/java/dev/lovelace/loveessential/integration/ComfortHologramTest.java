@@ -307,6 +307,8 @@ class ComfortHologramTest {
     var edited = holograms.get(id).orElseThrow();
     assertEquals(line, edited.value().pages().getFirst().lines().get(1));
     command(p, "hologram edit " + id);
+    // Page management lives in its own menu, not in the editor's footer.
+    click(p, named(p, "Страницы"), ClickType.LEFT);
     click(p, named(p, "Добавить страницу"), ClickType.LEFT);
     waitFor(() -> holograms.get(id).orElseThrow().value().pages().size() == 2);
     command(p, "hologram edit " + id);

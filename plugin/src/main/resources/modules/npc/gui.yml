@@ -352,6 +352,8 @@ menus:
           - '<gray>Нативные окна Paper: текст, поля ввода и кнопки. /le dialog.'
           scoreboard:
           - <gray>Личные строки, форматы и наборы табло; перенос LoveTweaks. /le scoreboard.
+          revive:
+          - <gray>Смертельный удар роняет игрока: подъём, переноска, обыск. /revive.
           crafting:
           - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
           starter:
@@ -362,11 +364,9 @@ menus:
           tab:
           - <gray>Список игроков, имена, группы, scoreboard и bossbar.
           home:
-          - <gray>Лимит домов и доступность команд сохранения/телепорта.
+          - <gray>Доступность команд сохранения дома и возврата домой.
           spawn:
           - <gray>Доступность сохранённых точек спавна.
-          teleport:
-          - <gray>Запросы телепорта и возврат на предыдущую позицию.
           vanish:
           - <gray>Скрытие игрока с сохранением состояния между входами.
           afk:
@@ -438,7 +438,6 @@ messages:
     dialog-expired: <red>Диалог устарел. Обратитесь к NPC снова.
     teleport-blocked: '<red>Телепорт недоступен: авторизация, бой, территория или выгруженный мир.'
     unsafe: <red>В точке назначения нет безопасного места.
-    home-limit: <red>Достигнут лимит домов.
     inventory: <red>Освободите место в инвентаре.
     config: <red>Некорректная конфигурация.
     tab-engine: <red>Для этого режима установите TAB и PlaceholderAPI.
@@ -496,8 +495,6 @@ messages:
     confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
   dialog:
     finished: <gray>Разговор завершён.
-  vanish:
-    changed: '<gray>Невидимость: <state>'
   gui:
     title: <gold>LoveEssential <dark_gray>| <yellow>Управление
     separator: <dark_gray><st>─────────────────────</st>
@@ -515,6 +512,19 @@ messages:
     page: <gold>Страница <white><page> <dark_gray>/ <white><pages>
     enabled: <green>Включено
     disabled: <gray>Отключено
+    state-on: <green>Вкл
+    state-off: <red>Выкл
+    module-toggle-on: '<gold><module> <dark_gray>| <green>Включён'
+    module-toggle-off: '<gold><module> <dark_gray>| <red>Выключен'
+    npc-toggle-on: '<gold>NPC <dark_gray>| <green>Включён'
+    npc-toggle-off: '<gold>NPC <dark_gray>| <red>Выключен'
+    toggle-lore:
+    - <dark_gray>Переключатель
+    - ''
+    - <dark_gray>▪ <gray>После клика:
+    - '  <gray>Состояние: <now> <dark_gray>→ <next>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>переключить
     locked: <red>Действие недоступно
     permission: '<red>Причина: <gray>Недостаточно прав или модуль отключён.'
     file: '<gray>Файл: <white><path>'
@@ -569,6 +579,7 @@ messages:
       scenarios: Сценарии событий
       dialogs: Диалоговые окна
       scoreboard: Личное табло
+      revive: Раненые игроки
       crafting: Рецепты крафта
       starter: Стартовые предметы
       nickname: Никнеймы
@@ -579,7 +590,6 @@ messages:
       tab: Список игроков
       home: Дома
       spawn: Спавн
-      teleport: Телепортация
       vanish: Невидимость
       afk: AFK
       skin: Скины
@@ -596,6 +606,7 @@ messages:
       scenarios: <gold>Сценарии событий
       dialogs: <gold>Диалоговые окна
       scoreboard: <gold>Личное табло
+      revive: <gold>Раненые игроки
       crafting: <gold>Рецепты крафта
       starter: <gold>Стартовые предметы
       nickname: <gold>Никнеймы
@@ -606,7 +617,6 @@ messages:
       tab: <gold>Список игроков
       home: <gold>Дома
       spawn: <gold>Спавн
-      teleport: <gold>Телепортация
       vanish: <gold>Невидимость
       afk: <gold>AFK
       skin: <gold>Скины
@@ -640,11 +650,6 @@ messages:
       delhome: <gray>Удалить сохранённый дом.
       spawn: <gray>Телепорт на спавн.
       setspawn: <gray>Сохранить точку спавна. Требуются права администратора.
-      tpa: <gray>Отправить запрос телепорта к игроку.
-      tpahere: <gray>Пригласить игрока к себе.
-      tpaccept: <gray>Принять запрос телепорта.
-      tpdeny: <gray>Отклонить запрос телепорта.
-      back: <gray>Вернуться к предыдущей позиции.
       vanish: <gray>Переключить невидимость. Требуется соответствующее право.
       afk: <gray>Переключить статус AFK.
       skin: <gray>Установить скин по имени игрока.
@@ -675,6 +680,45 @@ messages:
       dialogs:
         max-definitions:
           _label: <gold>Максимум диалоговых окон
+      revive:
+        death-delay:
+          _label: <gold>Время до смерти раненого (секунды)
+        death-count-action:
+          _label: <gold>Действие по истечении времени (kill или revive)
+        reliving-count:
+          _label: <gold>Время подъёма (секунды)
+        reliving-distance-min:
+          _label: <gold>Расстояние начала подъёма
+        reliving-distance-max:
+          _label: <gold>Расстояние, дальше которого подъём прерывается
+        invulnerability-delay:
+          _label: <gold>Неуязвимость после падения (секунды)
+        downed-health:
+          _label: <gold>Здоровье раненого
+        revived-health:
+          _label: <gold>Здоровье после подъёма
+        suicide-count:
+          _label: <gold>Время удержания приседа для сдачи
+        suicide-delay:
+          _label: <gold>Задержка перед сдачей
+        crawl-speed:
+          _label: <gold>Скорость ползком
+        totem-first:
+          _label: <gold>Сначала срабатывает тотем
+        mobs-ignore:
+          _label: <gold>Мобы не замечают раненого
+        disconnect-kill:
+          _label: <gold>Убивать раненого при выходе
+        keep-inventory:
+          _label: <gold>Сохранять инвентарь при смерти раненого
+        death-message:
+          _label: <gold>Показывать сообщение о смерти
+        start-cooldown:
+          _label: <gold>Пауза между подъёмами (секунды)
+        nearby-check-range:
+          _label: <gold>Радиус проверки помощников (0 — выкл.)
+        max-downs-per-life:
+          _label: <gold>Падений за жизнь (0 — без ограничения)
       scoreboard:
         refresh-ticks:
           _label: <gold>Интервал обновления табло (тики)
@@ -999,9 +1043,9 @@ messages:
             _label: <gold>Лимит экономической операции
           allowed-player-commands:
             _label: <gold>Разрешённые команды
-      home:
-        default-limit:
-          _label: <gold>Базовый лимит домов
+      motd: {}
+      portal: {}
+      home: {}
       tab:
         engine:
           _label: <gold>Движок списка игроков
@@ -1425,9 +1469,6 @@ messages:
         _description: <gray>Как часто сохранять снимок профиля в SQLite, в секундах.
       cards:
         _description: <gray>Карточки досье. У каждой есть иконка, текст и отдельное право просмотра.
-    home:
-      default-limit:
-        _description: <gray>Сколько домов можно сохранить без повышающего лимит права.
     afk:
       timeout-seconds:
         _description: <gray>Через сколько секунд без активности считать игрока AFK.
@@ -1559,10 +1600,6 @@ messages:
     saved: <green>Изменения сохранены.
     prefix: <dark_gray>[<gold>Love<dark_gray>] <reset>
     commands: <aqua>[Команды]
-    teleport-request: <gold>Телепортация <dark_gray>» <white><player> <gray>хочет переместиться к вам.
-    teleport-here: <gold>Телепортация <dark_gray>» <white><player> <gray>приглашает вас к себе.
-    accept: <green>[Принять]
-    deny: <red>[Отклонить]
     reply: <aqua>[Ответить]
   input-extra:
     comfort-context: <gold>Настройка своей игровой механики

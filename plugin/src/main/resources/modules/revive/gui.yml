@@ -1,0 +1,44 @@
+menus: {}
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+messages:
+  revive:
+    title: '<red>Вы ранены'
+    subtitle: '<gray>Ждите помощи или сдайтесь'
+    bar-downed: '<red>Вы ранены <dark_gray>| <white><seconds> с'
+    bar-reviving: '<green>Вас поднимает <white><reviver> <dark_gray>| <bar>'
+    action-reviving: '<green>Вы поднимаете <white><downed> <dark_gray>| <bar> <white><percent>%'
+    action-carry: '<gray>Присядьте, чтобы опустить <white><downed>'
+    action-carried: '<gray>Вас несёт <white><carrier>'
+    action-suicide: '<gray>Сдаться: <bar>'
+    hint-nearby: '<yellow><downed> <gray>ранен — присядьте рядом, чтобы поднять'
+    revived: '<green>Вы снова на ногах'
+    revived-by: '<green><reviver> поднял вас'
+    revived-helper: '<green>Вы подняли <white><downed>'
+    refused: '<red>Сейчас поднять нельзя'
+    no-funds: '<red>Чтобы поднять игрока, нужно: <white><price>'
+    price-money: '<amount> монет'
+    price-level: '<amount> ур. опыта'
+    price-item: '<amount> × <item>'
+    refused-combat: '<red>Вы в бою — поднимать нельзя'
+    refused-clan: '<red>Поднять можно только соклановца'
+    refused-claim: '<red>Здесь вы не можете поднимать игроков'
+    refused-cooldown: '<red>Подождите <seconds> с до следующего подъёма'
+    died: '<gray>Время вышло'
+    command-usage:
+    - '<yellow>/revive suicide <gray>— сдаться, будучи раненым'
+    - '<yellow>/revive revive <игрок> <gray>— поднять игрока'
+    - '<yellow>/revive down <игрок> <gray>— уронить игрока'
+    - '<yellow>/revive kill <игрок> <gray>— добить раненого'
+    command-done: '<green>Готово'
+    command-not-downed: '<red>Этот игрок не ранен'
+    command-already-downed: '<red>Этот игрок уже ранен'
+    command-not-found: '<red>Игрок не найден'
+    command-not-yet: '<red>Сдаться можно через <seconds> с'
+    status-downed: Ранен
+    status-none: ''

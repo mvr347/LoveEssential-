@@ -36,6 +36,7 @@ public final class GuiSettings {
         || id.startsWith("content.kit")) return "starter";
     if (id.startsWith("content")) return "crafting";
     if (id.contains("nick")) return "nickname";
+    if (id.startsWith("vanish")) return "vanish";
     if (id.contains("module") || id.startsWith("gui.settings")) return "npc";
     if (id.startsWith("holo")) return "hologram";
     return "npc";
@@ -97,13 +98,18 @@ public final class GuiSettings {
               .getConfig()
               .getString(
                   module(layout.guiId()) + ".gui.navigation." + nav.getKey() + ".texture", "");
-      if (current != null && current.getType() == Material.PLAYER_HEAD && !texture.isBlank())
-        inventory.setItem(
-            nav.getValue(),
+      if (current != null && current.getType() == Material.PLAYER_HEAD && !texture.isBlank()) {
+        var head =
             MenuStyle.head(
                 texture,
                 current.getItemMeta().displayName(),
-                Objects.requireNonNullElse(current.getItemMeta().lore(), List.of())));
+                Objects.requireNonNullElse(current.getItemMeta().lore(), List.of()));
+        inventory.setItem(
+            nav.getValue(),
+            nav.getKey().equals("close") || MenuStyle.isClose(current)
+                ? MenuStyle.markClose(head)
+                : head);
+      }
     }
     String root = path(layout.guiId());
     var variables = new HashMap<String, String>(Map.of("player", p.getName()));
@@ -280,7 +286,8 @@ public final class GuiSettings {
   }
 
   private boolean closeItem(ItemStack item) {
-    return item != null
+    return MenuStyle.isClose(item)
+        || item != null
         && item.hasItemMeta()
         && item.getItemMeta().hasDisplayName()
         && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()

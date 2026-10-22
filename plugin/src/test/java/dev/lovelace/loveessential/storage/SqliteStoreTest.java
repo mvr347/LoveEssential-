@@ -171,4 +171,56 @@ class SqliteStoreTest {
     }
     assertThrows(SQLException.class, () -> new SqliteStore(file, 32));
   }
+
+  @Test
+  void pruneBackupsKeepsOnlyTheNewestAndIgnoresOtherFiles() throws Exception {
+    for (long stamp : new long[] {100, 300, 200, 400})
+      Files.writeString(dir.resolve("backup-" + stamp + ".db"), "x");
+    Files.writeString(dir.resolve("notes.txt"), "keep me");
+    assertEquals(2, SqliteStore.pruneBackups(dir, 2));
+    assertFalse(Files.exists(dir.resolve("backup-100.db")));
+    assertFalse(Files.exists(dir.resolve("backup-200.db")));
+    assertTrue(Files.exists(dir.resolve("backup-300.db")));
+    assertTrue(Files.exists(dir.resolve("backup-400.db")));
+    assertTrue(Files.exists(dir.resolve("notes.txt")));
+    assertEquals(0, SqliteStore.pruneBackups(dir.resolve("missing"), 2));
+    // A zero or negative limit must never wipe every backup.
+    assertEquals(1, SqliteStore.pruneBackups(dir, 0));
+    assertTrue(Files.exists(dir.resolve("backup-400.db")));
+  }
+
+  @Test
+  void profileWritesNotifyListenersSoCachesDropStaleValues() throws Exception {
+    try (var db = new SqliteStore(dir.resolve("data.db"), 32)) {
+      var seen = new CopyOnWriteArrayList<String>();
+      db.onProfileWritten((player, key) -> seen.add(player + "/" + key));
+      var id = UUID.randomUUID();
+      db.profile(id, "loveessential.vanish", "true").get();
+      assertEquals(List.of(id + "/loveessential.vanish"), seen);
+      assertEquals("true", db.profile(id, "loveessential.vanish").get().orElseThrow());
+    }
+  }
+
+  record Strict(String name) {
+    Strict {
+      if (name == null) throw new IllegalArgumentException("name");
+    }
+  }
+
+  @Test
+  void listSkipsRowsThatNoLongerSatisfyTheirRecordInsteadOfFailingEveryLoader() throws Exception {
+    var file = dir.resolve("data.db");
+    try (var db = new SqliteStore(file, 32)) {
+      db.save("strict", "good", 0, new Strict("ok"), "a").get();
+      db.save("strict", "bad", 0, new Strict("temporary"), "a").get();
+      try (var c = DriverManager.getConnection("jdbc:sqlite:" + file);
+          var s = c.createStatement()) {
+        s.executeUpdate("UPDATE documents SET payload='{}' WHERE id='bad'");
+      }
+      var all = db.list("strict", Strict.class).get();
+      assertEquals(List.of("good"), all.stream().map(SqliteStore.Document::id).toList());
+      var prefixed = db.listPrefix("strict", "", Strict.class).get();
+      assertEquals(List.of("good"), prefixed.stream().map(SqliteStore.Document::id).toList());
+    }
+  }
 }

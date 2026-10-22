@@ -1,5 +1,6 @@
 package dev.lovelace.loveessential.module;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
 import dev.lovelace.loveessential.*;
 import dev.lovelace.loveessential.api.*;
 import dev.lovelace.loveessential.integration.LoveBridge;
@@ -7,6 +8,8 @@ import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.storage.SqliteStore;
 import dev.lovelace.loveessential.tab.Placeholders;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.bukkit.*;
 import org.bukkit.entity.*;
@@ -34,11 +37,15 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final Predicate<String> enabled;
   private final TeleportService teleport;
   private final Map<String, SqliteStore.Document<Place>> places = new HashMap<>();
-  private final Set<UUID> vanished = new HashSet<>(),
-      loading = new HashSet<>(),
-      manualAfk = new HashSet<>();
-  private final Map<UUID, Long> active = new HashMap<>();
+  // PlaceholderAPI expansions can be queried from async chat threads, so these are concurrent.
+  private final Set<UUID> vanished = ConcurrentHashMap.newKeySet(),
+      loading = ConcurrentHashMap.newKeySet(),
+      manualAfk = ConcurrentHashMap.newKeySet();
+  private final Map<UUID, Long> active = new ConcurrentHashMap<>();
+  private final Map<UUID, net.kyori.adventure.text.Component> vanillaJoin =
+      new ConcurrentHashMap<>();
   private final Comfort comfort;
+  private final Vanish vanishFx;
   private final Holograms hologramService;
   private final dev.lovelace.loveessential.portal.Portals portals;
 
@@ -65,11 +72,16 @@ public final class Gameplay implements Listener, AutoCloseable {
         new dev.lovelace.loveessential.portal.Portals(
             (LoveEssentialPlugin) plugin, main, store, lang, love, teleport, actions);
     comfort = new Comfort((LoveEssentialPlugin) plugin, main, store, lang, love, this);
+    vanishFx = new Vanish((LoveEssentialPlugin) plugin, this, lang);
     hologramService = new Holograms((LoveEssentialPlugin) plugin, main, store, lang, love);
   }
 
   public dev.lovelace.loveessential.portal.Portals portals() {
     return portals;
+  }
+
+  public Vanish vanishEffects() {
+    return vanishFx;
   }
 
   public Holograms holograms() {
@@ -100,6 +112,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     for (var p : Bukkit.getOnlinePlayers()) loadPlayer(p, false);
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20, 20);
     comfort.start();
+    vanishFx.start();
     portals.start();
     hologramService.start();
   }
@@ -116,32 +129,118 @@ public final class Gameplay implements Listener, AutoCloseable {
     return vanished.contains(p.getUniqueId());
   }
 
+  /** Millisecond timestamp of the player's last movement or click; empty for offline players. */
+  public OptionalLong lastActivity(UUID id) {
+    Long at = active.get(id);
+    return at == null ? OptionalLong.empty() : OptionalLong.of(at);
+  }
+
+  private final Set<UUID> afkReported = ConcurrentHashMap.newKeySet();
+
+  /** Fires {@link AfkChangeEvent} on each transition; AFK itself is derived from the clock. */
+  private void reportAfk() {
+    for (var p : Bukkit.getOnlinePlayers()) {
+      boolean now = afk(p);
+      if (now ? afkReported.add(p.getUniqueId()) : afkReported.remove(p.getUniqueId()))
+        Bukkit.getPluginManager().callEvent(new AfkChangeEvent(p, now));
+    }
+  }
+
   private void loadPlayer(Player p, boolean announce) {
     active.put(p.getUniqueId(), System.currentTimeMillis());
     loading.add(p.getUniqueId());
     applyVanish();
+    // Each login owns its own chain of reads, so a quick relog cannot announce twice.
+    var session = new Object();
+    loadSessions.put(p.getUniqueId(), session);
+    readVanish(p, announce, session, 0);
+    applySavedSkin(p);
+  }
+
+  private static final int LOAD_RETRIES = 3;
+  private final Map<UUID, Object> loadSessions = new ConcurrentHashMap<>();
+
+  private void readVanish(Player p, boolean announce, Object session, int attempt) {
     store
         .profile(p.getUniqueId(), "loveessential.vanish")
         .whenComplete(
             (v, error) ->
                 main.execute(
                     () -> {
-                      if (!p.isOnline()) return;
+                      var id = p.getUniqueId();
+                      if (!p.isOnline() || loadSessions.get(id) != session) return;
+                      if (error != null) {
+                        // A failed read (for example storage-busy during a join wave) must never
+                        // leave an ordinary player hidden from everyone until the next relog. Staff
+                        // who may be vanished stay hidden and keep retrying instead: showing them
+                        // by mistake would reveal exactly what vanish is meant to hide.
+                        boolean staff = p.hasPermission("loveessential.vanish");
+                        if (attempt + 1 < LOAD_RETRIES || staff) {
+                          if (attempt + 1 == LOAD_RETRIES) lang.send(p, "errors.storage");
+                          Bukkit.getScheduler()
+                              .runTaskLater(
+                                  plugin,
+                                  () -> readVanish(p, announce, session, attempt + 1),
+                                  attempt + 1 < LOAD_RETRIES ? 40L : 200L);
+                          return;
+                        }
+                        lang.send(p, "errors.storage");
+                      }
+                      loadSessions.remove(id);
+                      loading.remove(id);
+                      if (error == null && Boolean.parseBoolean(v.orElse("false"))) {
+                        vanished.add(id);
+                        vanishFx.apply(p, true);
+                        Bukkit.getPluginManager().callEvent(new VanishChangeEvent(p, true));
+                      }
+                      applyVanish();
+                      var vanilla = vanillaJoin.remove(id);
+                      if (!announce || vanished(p)) return;
+                      var message =
+                          ((LoveEssentialPlugin) plugin).allows("joinquit", p)
+                              ? lang.render("joinquit.join", Map.of("player", p.getName()))
+                              : vanilla;
+                      if (message != null)
+                        for (var viewer : Bukkit.getOnlinePlayers())
+                          if (viewer.canSee(p)) viewer.sendMessage(message);
+                    }));
+  }
+
+  /** Changes and saves the vanish state; the side effects follow once the write succeeded. */
+  public CompletableFuture<Void> setVanish(Player p, boolean value) {
+    check("vanish");
+    ((LoveEssentialPlugin) plugin).requireAccess("vanish", p);
+    if (!p.hasPermission("loveessential.vanish"))
+      throw new IllegalArgumentException("errors.permission");
+    var result = new CompletableFuture<Void>();
+    store
+        .profile(p.getUniqueId(), "loveessential.vanish", Boolean.toString(value))
+        .whenComplete(
+            (v, error) ->
+                main.execute(
+                    () -> {
                       if (error != null) {
                         lang.send(p, "errors.storage");
+                        result.completeExceptionally(error);
                         return;
                       }
-                      loading.remove(p.getUniqueId());
-                      if (Boolean.parseBoolean(v.orElse("false"))) vanished.add(p.getUniqueId());
+                      if (!p.isOnline()) {
+                        result.complete(null);
+                        return;
+                      }
+                      boolean was = vanished.contains(p.getUniqueId());
+                      if (value) vanished.add(p.getUniqueId());
+                      else vanished.remove(p.getUniqueId());
                       applyVanish();
-                      if (announce
-                          && ((LoveEssentialPlugin) plugin).allows("joinquit", p)
-                          && !vanished(p))
-                        for (var viewer : Bukkit.getOnlinePlayers())
-                          if (viewer.canSee(p))
-                            viewer.sendMessage(
-                                lang.render("joinquit.join", Map.of("player", p.getName())));
+                      vanishFx.apply(p, value);
+                      if (was != value) {
+                        Bukkit.getPluginManager().callEvent(new VanishChangeEvent(p, value));
+                        vanishFx.announce(p, value);
+                      }
+                      lang.send(p, value ? "vanish.enabled" : "vanish.disabled");
+                      result.complete(null);
                     }));
+    return result;
   }
 
   public void applyVanish() {
@@ -193,7 +292,7 @@ public final class Gameplay implements Listener, AutoCloseable {
           lang.send(p, "home.none");
           return;
         }
-        teleport.teleport(p, place.value().position());
+        travel(p, "home", place.value().position());
       }
       case "delhome" -> {
         check("home");
@@ -212,26 +311,14 @@ public final class Gameplay implements Listener, AutoCloseable {
         go(p, "spawn:" + name);
       }
       case "vanish" -> {
-        check("vanish");
-        ((LoveEssentialPlugin) plugin).requireAccess("vanish", p);
-        if (!p.hasPermission("loveessential.vanish"))
-          throw new IllegalArgumentException("errors.permission");
-        boolean value = !vanished(p);
-        store
-            .profile(p.getUniqueId(), "loveessential.vanish", Boolean.toString(value))
-            .whenComplete(
-                (v, error) ->
-                    main.execute(
-                        () -> {
-                          if (error != null) {
-                            lang.send(p, "errors.storage");
-                            return;
-                          }
-                          if (value) vanished.add(p.getUniqueId());
-                          else vanished.remove(p.getUniqueId());
-                          applyVanish();
-                          lang.send(p, "vanish.changed", Map.of("state", Boolean.toString(value)));
-                        }));
+        boolean value =
+            switch (args.length == 0 ? "toggle" : args[0].toLowerCase(Locale.ROOT)) {
+              case "on", "вкл" -> true;
+              case "off", "выкл" -> false;
+              case "toggle", "переключить" -> !vanished(p);
+              default -> throw new IllegalArgumentException("vanish.usage");
+            };
+        setVanish(p, value);
       }
       case "afk" -> {
         check("afk");
@@ -242,34 +329,24 @@ public final class Gameplay implements Listener, AutoCloseable {
       case "skin" -> {
         check("skin");
         ((LoveEssentialPlugin) plugin).requireAccess("skin", p);
-        String skin = name.equals("default") ? p.getName() : name;
+        boolean reset = name.equals("default") || name.equalsIgnoreCase(p.getName());
+        String skin = reset ? p.getName() : name;
         if (!skin.matches("[a-zA-Z0-9_]{1,16}")) throw new IllegalArgumentException("errors.input");
+        long now = System.currentTimeMillis();
+        var last = lastSkin.get(p.getUniqueId());
+        if (last != null && now - last < SKIN_COOLDOWN_MS) {
+          lang.send(
+              p, "skin.cooldown", Map.of("seconds", Long.toString(SKIN_COOLDOWN_MS / 1000)));
+          return;
+        }
+        lastSkin.put(p.getUniqueId(), now);
         var profile = Bukkit.createProfile(skin);
         java.util.concurrent.CompletableFuture.supplyAsync(
-                () -> {
-                  profile.complete();
-                  return profile;
-                },
+                () -> new SkinLookup(profile, profile.complete()),
                 ((LoveEssentialPlugin) plugin).io())
-            .thenAccept(
-                updated ->
-                    main.execute(
-                        () -> {
-                          if (!p.isOnline()) return;
-                          store
-                              .profile(p.getUniqueId(), "loveessential.skin", skin)
-                              .whenComplete(
-                                  (v, error) ->
-                                      main.execute(
-                                          () -> {
-                                            if (error != null) {
-                                              lang.send(p, "errors.storage");
-                                              return;
-                                            }
-                                            p.setPlayerProfile(updated);
-                                            lang.send(p, "common.done");
-                                          }));
-                        }));
+            .whenComplete(
+                (lookup, failure) ->
+                    main.execute(() -> applyLookup(p, skin, reset, lookup, failure)));
       }
       case "profile" ->
           lang.send(
@@ -296,6 +373,7 @@ public final class Gameplay implements Listener, AutoCloseable {
 
   private void tick() {
     ticks += 20;
+    reportAfk();
     if (enabled.test("nightskip"))
       for (World w : Bukkit.getWorlds())
         if (w.getTime() > 12500 && w.getTime() < 23500) {
@@ -381,12 +459,97 @@ public final class Gameplay implements Listener, AutoCloseable {
   private void go(Player p, String id) {
     var place = places.get(id);
     if (place == null) throw new IllegalArgumentException("errors.not-found");
-    teleport.teleport(p, place.value().position());
+    travel(p, id.startsWith("home:") ? "home" : "spawn", place.value().position());
+  }
+
+  /** Home and spawn share one gate: the module's world rules also apply to where you land. */
+  private void travel(Player p, String module, Position destination) {
+    var world = Bukkit.getWorld(destination.world());
+    if (world == null) throw new IllegalArgumentException("worlds.not-loaded");
+    ((LoveEssentialPlugin) plugin).requireDestination(module, world.getName());
+    teleport.teleport(p, destination);
   }
 
   private String home(Player p, String name) {
     if (!name.matches("[a-zA-Z0-9_-]{1,32}")) throw new IllegalArgumentException("validation.id");
     return "home:" + p.getUniqueId() + ":" + name.toLowerCase(Locale.ROOT);
+  }
+
+  private static final long SKIN_COOLDOWN_MS = 10_000;
+  private final Map<UUID, Long> lastSkin = new ConcurrentHashMap<>();
+
+  private record SkinLookup(com.destroystokyo.paper.profile.PlayerProfile profile, boolean ok) {}
+
+  private void applyLookup(
+      Player p, String skin, boolean reset, SkinLookup lookup, Throwable failure) {
+    if (!p.isOnline()) return;
+    // A failed or rate-limited lookup says nothing about the skin; leave everything as it is.
+    // The cooldown stays: a failed lookup is still a request to Mojang.
+    if (failure != null || lookup == null || !lookup.ok()) {
+      lang.send(p, "skin.lookup-failed");
+      return;
+    }
+    // Only the textures move to the player; the fetched profile also carries another account's
+    // name and UUID, which must never replace our own.
+    var textures =
+        lookup.profile().getProperties().stream()
+            .filter(property -> property.getName().equals("textures"))
+            .findFirst();
+    if (textures.isEmpty() && !reset) {
+      lang.send(p, "errors.not-found");
+      return;
+    }
+    String value = textures.map(ProfileProperty::getValue).orElse("");
+    String signature = textures.map(ProfileProperty::getSignature).orElse("");
+    if (signature == null) signature = "";
+    String finalSignature = signature;
+    // Reset applies the account's own textures but forgets the saved choice.
+    String saved = reset ? "" : String.join("\n", skin, value, signature);
+    store
+        .profile(p.getUniqueId(), SKIN_KEY, saved)
+        .whenComplete(
+            (v, error) ->
+                main.execute(
+                    () -> {
+                      if (error != null) {
+                        lang.send(p, "errors.storage");
+                        return;
+                      }
+                      if (!p.isOnline()) return;
+                      applyTextures(p, value, finalSignature);
+                      lang.send(p, "common.done");
+                    }));
+  }
+
+  /** The saved choice is one record, "name\ntextures\nsignature", so it can never be half-written. */
+  private static final String SKIN_KEY = "loveessential.skin";
+
+  /** Swaps only the textures property; the account name and UUID of the profile stay untouched. */
+  private static void applyTextures(Player p, String value, String signature) {
+    var current = p.getPlayerProfile();
+    current.removeProperty("textures");
+    if (value != null && !value.isBlank())
+      current.setProperty(
+          new ProfileProperty(
+              "textures", value, signature == null || signature.isBlank() ? null : signature));
+    p.setPlayerProfile(current);
+  }
+
+  /** A chosen skin is persisted as signed textures, so it survives a relog without a Mojang call. */
+  private void applySavedSkin(Player p) {
+    if (!enabled.test("skin")) return;
+    store
+        .profile(p.getUniqueId(), SKIN_KEY)
+        .thenAccept(
+            saved ->
+                main.execute(
+                    () -> {
+                      if (!p.isOnline()) return;
+                      // Older installs stored just the name here; that carries no textures.
+                      var parts = saved.orElse("").split("\n", -1);
+                      if (parts.length == 3 && !parts[1].isBlank())
+                        applyTextures(p, parts[1], parts[2]);
+                    }));
   }
 
   private void check(String module) {
@@ -400,8 +563,12 @@ public final class Gameplay implements Listener, AutoCloseable {
 
   @EventHandler
   public void join(PlayerJoinEvent e) {
+    // The vanish state is read asynchronously, so the vanilla message is held back and re-sent
+    // by loadPlayer only to viewers who can see the player.
+    if (!enabled.test("joinquit") && enabled.test("vanish") && e.joinMessage() != null)
+      vanillaJoin.put(e.getPlayer().getUniqueId(), e.joinMessage());
+    if (enabled.test("joinquit") || enabled.test("vanish")) e.joinMessage(null);
     loadPlayer(e.getPlayer(), true);
-    if (enabled.test("joinquit")) e.joinMessage(null);
   }
 
   @EventHandler
@@ -412,10 +579,15 @@ public final class Gameplay implements Listener, AutoCloseable {
           vanished(p) || !((LoveEssentialPlugin) plugin).allows("joinquit", p)
               ? null
               : lang.render("joinquit.quit", Map.of("player", p.getName())));
+    else if (vanished(p)) e.quitMessage(null);
+    vanillaJoin.remove(p.getUniqueId());
+    loadSessions.remove(p.getUniqueId());
     vanished.remove(p.getUniqueId());
     loading.remove(p.getUniqueId());
     active.remove(p.getUniqueId());
+    afkReported.remove(p.getUniqueId());
     manualAfk.remove(p.getUniqueId());
+    lastSkin.remove(p.getUniqueId());
     teleport.forget(p);
   }
 
@@ -449,6 +621,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
     comfort.close();
+    vanishFx.close();
     hologramService.close();
     portals.close();
     for (var viewer : Bukkit.getOnlinePlayers())

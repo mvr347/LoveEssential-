@@ -1,0 +1,50 @@
+# Модуль revive: раненые игроки
+
+Смертельный удар не убивает, а роняет игрока на землю. Модуль выключен по умолчанию: он меняет саму смерть.
+Включите его `/le module enable revive` и не держите вместе с ReviveMe — два модуля будут спорить за один и тот же удар.
+Все значения — в `modules/revive/revive.yml`, у каждого есть комментарий с причиной выбора.
+
+## Как это работает
+
+1. **Падение.** Если удар убил бы игрока, урон отменяется, здоровье становится `downed-health`, игрок ползёт
+   (поза «плавание», скорость `crawl-speed`, без прыжка). Виды урона из `instant-kill-causes` (бездна и т. п.)
+   убивают сразу. Тотем в руке срабатывает первым (`totem-first`).
+2. **Окно неуязвимости.** `invulnerability-delay` секунд урон не проходит; после него раненого можно добить.
+   Неуязвимость сделана отменой урона, а не флагом `setInvulnerable`: флаг сохраняется в данных игрока и когда-то
+   оставлял людей бессмертными после выхода.
+3. **Таймер.** `death-delay` секунд; по окончании `death-count-action`: `kill` (обычная смерть через
+   `setHealth(0)`, вещи выпадают штатно) или `revive`.
+4. **Подъём.** Сосед садится (присед) в радиусе `reliving-distance-min` и держит присед `reliving-count` секунд;
+   подъём не прерывается, пока он ближе `reliving-distance-max`. Скорость умножается на ранг
+   (`ranks`, право `loveessential.revive.speed.<ранг>`). Помогающий не должен быть раненым.
+5. **Цена.** `price.type`: `money` (через LoveEconomy), `level` или `item`. Снимается в начале подъёма и
+   возвращается, если подъём прервали (`refund-on-stop`). Право `loveessential.revive.free` освобождает.
+6. **Переноска.** Левый клик по раненому сажает его на голову; присед несущего опускает. Урон по несущему
+   роняет раненого (`carry.drop-on-damage`). Эндер-жемчуг несущему и раненому запрещён.
+7. **Обыск.** Присед + правый клик открывает живой инвентарь раненого (права `robber` и `stealable`).
+   Окно закрывается, как только жертву подняли, она умерла или грабитель отошёл дальше 6 блоков.
+8. **Сдача.** Присед `suicide-count` секунд (не раньше `suicide-delay`) или `/revive suicide`.
+9. **Выход из игры.** `disconnect-kill: true` убивает раненого (вещи выпадают); иначе при входе здоровье
+   восстанавливается до `revived-health`.
+
+## Ограничения для раненого
+`blocked-actions`: `attack`, `blocks`, `items`, `pickup`, `drop`, `craft`, `glide`, `inventory`, `sprint`, `commands`.
+Команды: `blocked-commands` (`*` — все) за вычетом `allowed-commands`. Мобы теряют раненого (`mobs-ignore`).
+Естественная регенерация у раненого отключена.
+
+## События и действия
+Bukkit-события (`dev.lovelace.loveessential.api.revive`): `DownedEvent`, `StartRevivingEvent`, `RevivingEvent`
+(каждые 0,1 с), `StopRevivingEvent`, `ReviveEvent`, `PickupDownedEvent`, `DropDownedEvent`,
+`DownedSuicideEvent`, `DownedDelayCountEvent`, `DownedDeathEvent`, `DownedQuitEvent`.
+Те же моменты можно привязать к действиям в `revive.events.<событие>.<роль>` (`downed` — раненый, `actor` —
+помогающий, несущий). События: `down`, `start`, `stop`, `revive`, `pickup`, `drop`, `death`, `quit`.
+Действие `potion` выдаёт эффект: `{type: potion, effect: regeneration, seconds: 5, amplifier: 1}`.
+
+## Другие плагины
+Модуль регистрирует `DownedOracle` (LoveCore, провайдер `loveessential`): дуэли и охота могут не засчитывать
+раненых как живые цели. Плейсхолдеры PlaceholderAPI: `%loveessential_revive_status%`,
+`_revive_death_delay%`, `_revive_invulnerability%`, `_revive_reviver%`, `_revive_suicide%`, `_revive_bar%`.
+
+## Не сделано в первой версии
+Зоны, где падение запрещено или разрешено отдельно, и GPS-подсказка до раненого. Поза ползком и вид
+переноски проверены только по логике — внешний вид стоит посмотреть на живом сервере.

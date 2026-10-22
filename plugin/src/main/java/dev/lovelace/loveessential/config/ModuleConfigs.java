@@ -131,11 +131,14 @@ public final class ModuleConfigs {
                   && !gui.contains("texts." + key)) gui.set("texts." + key, oldLang.get(key));
         }
         fill(gui, guiDefaults);
+        refreshRetiredTexts(id, gui, guiDefaults);
         if (id.equals("tab")) {
           module.set("engine", null);
           module.set("external", null);
           inlineTab(module, oldLang);
         }
+        // The multi-home limit was never used: a home is a single point.
+        if (id.equals("home")) module.set("default-limit", null);
         var moduleDefaults = resource("modules/" + id + "/" + id + ".yml");
         var defaultsTexts = moduleDefaults.getConfigurationSection("texts");
         if (!Files.exists(configFile(id)) && defaultsTexts != null)
@@ -190,6 +193,33 @@ public final class ModuleConfigs {
       }
       return merged;
     }
+  }
+
+  /**
+   * Shipped texts that turned out to be wrong and were replaced. An installation still holding one
+   * of these exact old values gets the new default; anything an admin edited is left alone.
+   */
+  private static final Map<String, Map<String, List<String>>> RETIRED_TEXTS =
+      Map.of(
+          "sitride",
+          Map.of(
+              "messages.comfort.ride-consent",
+              List.of(
+                  "<yellow>Игрок должен разрешить посадку правом loveessential.ride.accept и"
+                      + " находиться вне боя.",
+                  "<yellow>Сесть на этого игрока сейчас нельзя: он не виден вам, не авторизован,"
+                      + " находится в бою, либо посадка на игроков отключена.")));
+
+  static void refreshRetiredTexts(
+      String id, YamlConfiguration gui, ConfigurationSection defaults) {
+    var retired = RETIRED_TEXTS.get(id);
+    if (retired == null) return;
+    retired.forEach(
+        (path, olds) -> {
+          String current = gui.getString(path);
+          String fresh = defaults.getString(path);
+          if (current != null && fresh != null && olds.contains(current)) gui.set(path, fresh);
+        });
   }
 
   private void inlineTab(YamlConfiguration module, YamlConfiguration legacyLanguage)

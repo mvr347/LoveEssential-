@@ -1,0 +1,373 @@
+package dev.lovelace.loveessential.integration;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import dev.lovelace.loveessential.LoveEssentialPlugin;
+import dev.lovelace.loveessential.api.revive.*;
+import dev.lovelace.lovecore.api.LoveCore;
+import dev.lovelace.lovecore.api.revive.DownedOracle;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BooleanSupplier;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.inventory.ItemStack;
+import org.junit.jupiter.api.*;
+import org.mockbukkit.mockbukkit.*;
+import org.mockbukkit.mockbukkit.entity.PlayerMock;
+
+/** The downed state: falling, the timer, reviving, price, restrictions and the events around it. */
+class ReviveTest implements Listener {
+  ServerMock server;
+  LoveEssentialPlugin plugin;
+  PlayerMock victim, helper;
+  final List<Object> seen = new ArrayList<>();
+
+  @EventHandler
+  public void downed(DownedEvent e) {
+    seen.add(e);
+  }
+
+  @EventHandler
+  public void revived(ReviveEvent e) {
+    seen.add(e);
+  }
+
+  @EventHandler
+  public void died(DownedDeathEvent e) {
+    seen.add(e);
+  }
+
+  @EventHandler
+  public void stopped(StopRevivingEvent e) {
+    seen.add(e);
+  }
+
+  @BeforeEach
+  void setup() throws Exception {
+    server = MockBukkit.mock();
+    server.addSimpleWorld("world");
+    MockBukkit.createMockPlugin("LoveCore");
+    server.getPluginManager().registerEvents(this, MockBukkit.createMockPlugin("Observer"));
+    plugin = MockBukkit.load(LoveEssentialPlugin.class);
+    waitFor(plugin::ready);
+    plugin.getConfig().set("npc.max-active", 0);
+    for (var module : List.of("scoreboard", "tab", "starter")) await(plugin.module(module, false));
+    await(plugin.module("revive", true));
+    plugin.getConfig().set("revive.reliving-count", 2);
+    victim = join("Victim");
+    helper = join("Helper");
+    victim.setOp(false);
+    helper.setOp(false);
+  }
+
+  @AfterEach
+  void close() {
+    MockBukkit.unmock();
+  }
+
+  void waitFor(BooleanSupplier test) throws Exception {
+    long end = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+    while (!test.getAsBoolean() && System.nanoTime() < end) {
+      server.getScheduler().performOneTick();
+      Thread.sleep(5);
+    }
+    assertTrue(test.getAsBoolean(), "async server operation did not finish");
+  }
+
+  <T> T await(java.util.concurrent.CompletableFuture<T> future) throws Exception {
+    waitFor(future::isDone);
+    return future.get();
+  }
+
+  PlayerMock join(String name) throws Exception {
+    var p = server.addPlayer(name);
+    var watcher = server.getOnlinePlayers().iterator().next();
+    waitFor(() -> watcher.equals(p) || watcher.canSee(p));
+    return p;
+  }
+
+  DownedOracle oracle() {
+    return LoveCore.provider(DownedOracle.class, "loveessential").orElseThrow();
+  }
+
+  void hit(PlayerMock p, EntityDamageEvent.DamageCause cause, double amount) {
+    var event =
+        new EntityDamageEvent(
+            p, cause, DamageSource.builder(DamageType.GENERIC).build(), amount);
+    server.getPluginManager().callEvent(event);
+    lastHit = event;
+  }
+
+  EntityDamageEvent lastHit;
+
+  void fall() {
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
+    assertTrue(oracle().downed(victim.getUniqueId()), "the lethal blow must put the player down");
+  }
+
+  @Test
+  void aLethalBlowDropsThePlayerInsteadOfKillingThem() {
+    fall();
+    assertTrue(lastHit.isCancelled());
+    assertEquals(1.0, victim.getHealth(), 0.001);
+    assertTrue(seen.stream().anyMatch(DownedEvent.class::isInstance));
+    assertFalse(oracle().reviving(victim.getUniqueId()));
+  }
+
+  @Test
+  void aNonLethalBlowLeavesThePlayerAlone() {
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 3);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertFalse(lastHit.isCancelled());
+  }
+
+  @Test
+  void voidDamageStillKillsOutright() {
+    hit(victim, EntityDamageEvent.DamageCause.VOID, 100);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertFalse(lastHit.isCancelled());
+  }
+
+  @Test
+  void aTotemInHandActsFirst() {
+    victim.getInventory().setItemInMainHand(new ItemStack(Material.TOTEM_OF_UNDYING));
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+  }
+
+  @Test
+  void theModuleDoesNothingWhileItIsOff() throws Exception {
+    await(plugin.module("revive", false));
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertFalse(lastHit.isCancelled());
+  }
+
+  @Test
+  void aDownedPlayerIsInvulnerableOnlyForTheConfiguredWindow() {
+    plugin.getConfig().set("revive.invulnerability-delay", 1);
+    fall();
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
+    assertTrue(lastHit.isCancelled(), "inside the window nothing hurts");
+    server.getScheduler().performTicks(30);
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
+    assertFalse(lastHit.isCancelled(), "after the window damage goes through");
+  }
+
+  @Test
+  void aSneakingNeighbourRevivesAfterTheConfiguredTime() {
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(60);
+    assertTrue(oracle().reviving(victim.getUniqueId()) || !oracle().downed(victim.getUniqueId()));
+    server.getScheduler().performTicks(60);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(4.0, victim.getHealth(), 0.001);
+    var revived = seen.stream().filter(ReviveEvent.class::isInstance).map(ReviveEvent.class::cast).findFirst().orElseThrow();
+    assertEquals(helper, revived.getReviver());
+  }
+
+  @Test
+  void standingUpOrWalkingAwayStopsTheRevive() {
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(20);
+    helper.setSneaking(false);
+    server.getScheduler().performTicks(20);
+    assertTrue(oracle().downed(victim.getUniqueId()));
+    assertTrue(seen.stream().anyMatch(StopRevivingEvent.class::isInstance));
+    assertFalse(oracle().reviving(victim.getUniqueId()));
+  }
+
+  @Test
+  void aHelperOutsideTheStartDistanceDoesNotStart() {
+    fall();
+    helper.teleport(victim.getLocation().add(3, 0, 0));
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(60);
+    assertFalse(oracle().reviving(victim.getUniqueId()));
+  }
+
+  @Test
+  void theTimerKillsTheDownedPlayerWhenItRunsOut() {
+    plugin.getConfig().set("revive.death-delay", 1);
+    plugin.getConfig().set("revive.invulnerability-delay", 0);
+    fall();
+    server.getScheduler().performTicks(40);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    var death = seen.stream().filter(DownedDeathEvent.class::isInstance).map(DownedDeathEvent.class::cast).findFirst().orElseThrow();
+    assertEquals(DownedDeathEvent.Cause.TIMER, death.getCause());
+  }
+
+  @Test
+  void theTimerCanReviveInsteadOfKilling() {
+    plugin.getConfig().set("revive.death-delay", 1);
+    plugin.getConfig().set("revive.death-count-action", "revive");
+    fall();
+    server.getScheduler().performTicks(40);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertTrue(seen.stream().anyMatch(ReviveEvent.class::isInstance));
+  }
+
+  @Test
+  void suicideIsRefusedTooEarlyAndWorksAfterTheDelay() {
+    plugin.getConfig().set("revive.suicide-delay", 1);
+    fall();
+    server.dispatchCommand(victim, "revive suicide");
+    assertTrue(oracle().downed(victim.getUniqueId()), "too early");
+    server.getScheduler().performTicks(30);
+    server.dispatchCommand(victim, "revive suicide");
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(
+        DownedDeathEvent.Cause.SUICIDE,
+        seen.stream().filter(DownedDeathEvent.class::isInstance).map(DownedDeathEvent.class::cast).findFirst().orElseThrow().getCause());
+  }
+
+  @Test
+  void aDownedPlayerCannotBreakBlocksOrRunCommands() {
+    fall();
+    var block = victim.getWorld().getBlockAt(0, 64, 0);
+    var breaking = new BlockBreakEvent(block, victim);
+    server.getPluginManager().callEvent(breaking);
+    assertTrue(breaking.isCancelled());
+    var command = new PlayerCommandPreprocessEvent(victim, "/home");
+    server.getPluginManager().callEvent(command);
+    assertTrue(command.isCancelled());
+    var allowed = new PlayerCommandPreprocessEvent(victim, "/revive suicide");
+    server.getPluginManager().callEvent(allowed);
+    assertFalse(allowed.isCancelled());
+  }
+
+  @Test
+  void adminCommandsReviveDownAndKill() throws Exception {
+    var admin = join("Boss");
+    admin.setOp(true);
+    server.dispatchCommand(admin, "revive down Victim");
+    assertTrue(oracle().downed(victim.getUniqueId()));
+    server.dispatchCommand(admin, "revive revive Victim");
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    server.dispatchCommand(admin, "revive down Victim");
+    server.dispatchCommand(admin, "revive kill Victim");
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    server.dispatchCommand(victim, "revive down Helper");
+    assertFalse(oracle().downed(helper.getUniqueId()), "players cannot use admin subcommands");
+  }
+
+  @Test
+  void leavingWithoutDisconnectKillRestoresHealthOnNextJoin() throws Exception {
+    plugin.getConfig().set("revive.disconnect-kill", false);
+    fall();
+    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerQuitEvent(victim, net.kyori.adventure.text.Component.empty(), org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(1.0, victim.getHealth(), 0.001);
+    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerJoinEvent(victim, net.kyori.adventure.text.Component.empty()));
+    assertEquals(4.0, victim.getHealth(), 0.001);
+  }
+
+  @Test
+  void disconnectKillEndsTheDownedStateWithAQuitDeath() {
+    fall();
+    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerQuitEvent(victim, net.kyori.adventure.text.Component.empty(), org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertTrue(seen.stream().anyMatch(e -> e instanceof DownedDeathEvent d && d.getCause() == DownedDeathEvent.Cause.QUIT));
+  }
+
+  void configurePrice(int levels) {
+    plugin.getConfig().set("revive.price.type", "level");
+    plugin.getConfig().set("revive.price.amount", levels);
+  }
+
+  @Test
+  void thePriceIsTakenOnStartRefundedOnStopAndKeptOnSuccess() {
+    configurePrice(2);
+    fall();
+    helper.setLevel(5);
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(10);
+    assertEquals(3, helper.getLevel(), "charged when the revive starts");
+    helper.setSneaking(false);
+    server.getScheduler().performTicks(10);
+    assertEquals(5, helper.getLevel(), "refunded when the helper gives up");
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(100);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(3, helper.getLevel(), "kept once the revive finished");
+  }
+
+  @Test
+  void aHelperWhoCannotPayDoesNotStart() {
+    configurePrice(2);
+    fall();
+    helper.setLevel(1);
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(40);
+    assertFalse(oracle().reviving(victim.getUniqueId()));
+    assertEquals(1, helper.getLevel());
+  }
+
+  @Test
+  void configuredActionsRunWhenSomebodyIsRevived() {
+    plugin.getConfig().set(
+        "revive.events.revive.downed",
+        List.of(java.util.Map.of("type", "potion", "effect", "regeneration", "seconds", 5, "amplifier", 1)));
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(100);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertNotNull(victim.getPotionEffect(org.bukkit.potion.PotionEffectType.REGENERATION));
+  }
+
+  @Test
+  void aSneakingPlayerCanOpenTheInventoryOfADownedOne() {
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    var click = new org.bukkit.event.player.PlayerInteractEntityEvent(helper, victim, org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(click);
+    assertTrue(click.isCancelled());
+    assertEquals(54, helper.getOpenInventory().getTopInventory().getSize());
+    server.dispatchCommand(server.addPlayer("Boss"), "revive revive Victim");
+  }
+
+  @Test
+  void aStandingPlayerCannotRobAHealthyOne() {
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    var click = new org.bukkit.event.player.PlayerInteractEntityEvent(helper, victim, org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(click);
+    assertFalse(click.isCancelled());
+  }
+
+  @Test
+  void hittingADownedPlayerPicksThemUpAndSneakingPutsThemDown() {
+    fall();
+    helper.teleport(victim.getLocation());
+    var hit =
+        new org.bukkit.event.entity.EntityDamageByEntityEvent(
+            helper,
+            victim,
+            EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+            DamageSource.builder(DamageType.PLAYER_ATTACK).withDirectEntity(helper).withCausingEntity(helper).build(),
+            1);
+    server.getPluginManager().callEvent(hit);
+    assertTrue(hit.isCancelled());
+    assertTrue(helper.getPassengers().contains(victim));
+    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    assertFalse(helper.getPassengers().contains(victim));
+    assertTrue(oracle().downed(victim.getUniqueId()));
+  }
+}

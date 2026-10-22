@@ -180,6 +180,15 @@ public final class Lang {
     return mm.deserialize(template, b.build());
   }
 
+  /** Plain values stay literal; components keep their own colors and may be inserted anywhere. */
+  public Component renderText(
+      String template, Map<String, String> variables, Map<String, Component> components) {
+    var b = TagResolver.builder();
+    variables.forEach((k, v) -> b.resolver(Placeholder.unparsed(k, v)));
+    components.forEach((k, v) -> b.resolver(Placeholder.component(k, v)));
+    return mm.deserialize(template, b.build());
+  }
+
   public Component rich(String key, Map<String, Component> variables) {
     var b = TagResolver.builder();
     variables.forEach((k, v) -> b.resolver(Placeholder.component(k, v)));

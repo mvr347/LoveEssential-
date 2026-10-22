@@ -47,8 +47,14 @@ public final class NpcValidator {
     this.action = action;
   }
 
+  /** Owner marks set through the provider contract: {@code tag.<key>}, any plugin may add its own. */
+  public static final java.util.regex.Pattern TAG = java.util.regex.Pattern.compile("tag\\.[a-z0-9_.-]{1,48}");
+
   public static boolean knownOption(String k) {
-    return BOOLEAN_OPTIONS.contains(k)
+    return TAG.matcher(k).matches()
+        || k.equals("skin-value")
+        || k.equals("skin-signature")
+        || BOOLEAN_OPTIONS.contains(k)
         || NUMERIC_OPTIONS.containsKey(k)
         || Set.of(
                 "skin",
@@ -103,6 +109,7 @@ public final class NpcValidator {
           }
         yield valid;
       }
+      case "skin-value", "skin-signature" -> v.length() <= 8192 && v.matches("[A-Za-z0-9+/=]*");
       case "pose" -> {
         try {
           org.bukkit.entity.Pose.valueOf(v);

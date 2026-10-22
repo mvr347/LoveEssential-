@@ -84,6 +84,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     final Predicate<Player> allowed;
     boolean root;
     Map<String, String> variables = Map.of();
+    Runnable reopen;
     Object route;
 
     public Object guiRoute() {
@@ -92,6 +93,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
     public Map<String, String> guiVariables() {
       return variables;
+    }
+
+    public Runnable guiReopen() {
+      return reopen;
     }
 
     public boolean guiAllowed(Player player) {
@@ -180,6 +185,44 @@ public final class ControlMenus implements Listener, AutoCloseable {
     m.actions.put(slot, click);
   }
 
+  /** Tile whose lore comes from a language list: subtitle, sections, separator and click line. */
+  private void tile(
+      Menu m,
+      int slot,
+      Material icon,
+      String nameKey,
+      String loreKey,
+      Map<String, String> vars,
+      Consumer<ClickType> click) {
+    tile(m, slot, icon, nameKey, loreKey, vars, Map.of(), click);
+  }
+
+  private void tile(
+      Menu m,
+      int slot,
+      Material icon,
+      String nameKey,
+      String loreKey,
+      Map<String, String> vars,
+      Map<String, Component> parts,
+      Consumer<ClickType> click) {
+    entry(
+        m,
+        slot,
+        icon,
+        lang.renderText(lang.text(nameKey), vars, parts),
+        lang.lines(loreKey).stream().map(text -> lang.renderText(text, vars, parts)).toList(),
+        click);
+  }
+
+  /** Components for {@code gui.toggle-lore}: the state now and the state after the click. */
+  private Map<String, Component> toggleParts(boolean now, Map<String, Component> extra) {
+    var parts = new HashMap<>(extra);
+    parts.put("now", lang.render(now ? "gui.state-on" : "gui.state-off"));
+    parts.put("next", lang.render(now ? "gui.state-off" : "gui.state-on"));
+    return parts;
+  }
+
   private void navigation(Menu m, Player p, int page, int total, IntConsumer pages, Runnable back) {
     navigation(m, p, page, total, MenuStyle.CONTENT.length, pages, back);
   }
@@ -222,6 +265,150 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   public void home(Player p) {
     modules(p);
+  }
+
+  private static final String[] VANISH_FILTERS = {"all", "world", "near"};
+  private final Map<UUID, Integer> vanishFilter = new HashMap<>();
+
+  private boolean vanishAllowed(Player p) {
+    return plugin.module("vanish")
+        && p.hasPermission("loveessential.vanish")
+        && p.hasPermission("loveessential.vanish.gui");
+  }
+
+  /** Online players the viewer may jump to under the chosen filter, sorted by name. */
+  private List<Player> vanishTargets(Player p, int filter) {
+    double radius = plugin.getConfig().getDouble("vanish.gui.near-radius", 64);
+    return Bukkit.getOnlinePlayers().stream()
+        .filter(t -> !t.equals(p) && p.canSee(t))
+        .filter(
+            t ->
+                switch (filter) {
+                  case 1 -> t.getWorld().equals(p.getWorld());
+                  case 2 ->
+                      t.getWorld().equals(p.getWorld())
+                          && t.getLocation().distanceSquared(p.getLocation()) <= radius * radius;
+                  default -> true;
+                })
+        .sorted(Comparator.comparing(t -> t.getName().toLowerCase(Locale.ROOT)))
+        .map(t -> (Player) t)
+        .toList();
+  }
+
+  /** Staff menu: every visible player as a head; a click moves the viewer there, hidden. */
+  public void vanishMenu(Player p, int page) {
+    var m = menu(p, "vanish.gui-title", Map.of(), this::vanishAllowed);
+    m.root = true;
+    int filter = vanishFilter.getOrDefault(p.getUniqueId(), 0);
+    boolean hidden = gameplay.vanished(p);
+    boolean flight = gameplay.vanishEffects().flight(p);
+    tile(
+        m,
+        3,
+        hidden ? Material.ENDER_EYE : Material.ENDER_PEARL,
+        hidden ? "vanish.toggle-on" : "vanish.toggle-off",
+        "gui.toggle-lore",
+        Map.of(),
+        toggleParts(hidden, Map.of()),
+        c -> gameplay.setVanish(p, !hidden).thenRun(() -> vanishMenu(p, page)));
+    tile(
+        m,
+        4,
+        Material.COMPASS,
+        "vanish.filter",
+        "vanish.filter-lore",
+        Map.of("filter", lang.text("vanish.filter-" + VANISH_FILTERS[filter])),
+        Map.of(),
+        c -> {
+          vanishFilter.put(p.getUniqueId(), (filter + 1) % VANISH_FILTERS.length);
+          vanishMenu(p, 0);
+        });
+    tile(
+        m,
+        5,
+        Material.FEATHER,
+        flight ? "vanish.fly-on" : "vanish.fly-off",
+        "gui.toggle-lore",
+        Map.of(),
+        toggleParts(flight, Map.of()),
+        c -> {
+          gameplay.vanishEffects().flight(p, !flight);
+          vanishMenu(p, page);
+        });
+    var targets = vanishTargets(p, filter);
+    int from = page * MenuStyle.CONTENT.length;
+    var shown = targets.subList(Math.min(from, targets.size()), Math.min(targets.size(), from + 21));
+    if (shown.isEmpty())
+      m.inventory.setItem(22, MenuStyle.button(lang, Material.BARRIER, "vanish.empty", "vanish.empty-help"));
+    for (int i = 0; i < shown.size(); i++) vanishHead(m, p, shown.get(i), MenuStyle.slot(i, shown.size()), page);
+    navigation(m, p, page, targets.size(), n -> vanishMenu(p, n), () -> {});
+    MenuStyle.open(p, m.inventory);
+  }
+
+  private void vanishHead(Menu m, Player viewer, Player target, int slot, int page) {
+    var loc = target.getLocation();
+    var vars =
+        Map.of(
+            "player", target.getName(),
+            "world", loc.getWorld().getName(),
+            "x", Integer.toString(loc.getBlockX()),
+            "y", Integer.toString(loc.getBlockY()),
+            "z", Integer.toString(loc.getBlockZ()),
+            "mode", lang.text("vanish.mode-" + target.getGameMode().name().toLowerCase(Locale.ROOT)),
+            "afk", lang.text(gameplay.afk(target) ? "vanish.afk-yes" : "vanish.afk-no"));
+    var item =
+        MenuStyle.item(
+            Material.PLAYER_HEAD,
+            lang.renderText(lang.text("vanish.player"), vars, Map.of()),
+            lang.lines("vanish.player-lore").stream()
+                .map(text -> lang.renderText(text, vars, Map.of()))
+                .toList());
+    var meta = (org.bukkit.inventory.meta.SkullMeta) item.getItemMeta();
+    meta.setPlayerProfile(target.getPlayerProfile());
+    item.setItemMeta(meta);
+    m.inventory.setItem(slot, item);
+    m.actions.put(
+        slot,
+        click -> {
+          if (!target.isOnline()) {
+            vanishMenu(viewer, page);
+            return;
+          }
+          switch (click) {
+            case LEFT -> jumpTo(viewer, target);
+            case RIGHT -> command(viewer, "profile " + target.getName());
+            case SHIFT_LEFT -> {
+              if (viewer.hasPermission("loveessential.invsee"))
+                command(viewer, "invsee " + target.getName());
+              else throw new IllegalArgumentException("errors.permission");
+            }
+            default -> {}
+          }
+        });
+  }
+
+  private java.util.function.BiConsumer<Player, Location> jumper =
+      (who, to) -> who.teleportAsync(to);
+
+  /** Replaces the teleport used by the player menu (the mock server cannot teleport async). */
+  public void jumper(java.util.function.BiConsumer<Player, Location> jumper) {
+    this.jumper = Objects.requireNonNull(jumper);
+  }
+
+  /** Staff tool: instant jump, no warmup and no combat check, hiding the viewer first if asked. */
+  private void jumpTo(Player viewer, Player target) {
+    viewer.closeInventory();
+    if (gameplay.vanished(viewer)
+        || !plugin.getConfig().getBoolean("vanish.gui.auto-vanish", true)) {
+      jumper.accept(viewer, target.getLocation());
+      return;
+    }
+    // Hide first, so nobody sees the arrival; a failed save keeps the viewer where they are.
+    gameplay
+        .setVanish(viewer, true)
+        .thenRun(() -> {
+          if (viewer.isOnline() && target.isOnline()) jumper.accept(viewer, target.getLocation());
+        });
   }
 
   private void locked(Menu m, int slot) {
@@ -267,7 +454,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             case "tab", "nickname" -> Material.NAME_TAG;
             case "home" -> Material.RED_BED;
             case "spawn" -> Material.RESPAWN_ANCHOR;
-            case "teleport", "portal" -> Material.ENDER_PEARL;
+            case "portal" -> Material.ENDER_PEARL;
             case "messages" -> Material.WRITABLE_BOOK;
             case "inventory" -> Material.CHEST;
             case "afk" -> Material.CLOCK;
@@ -465,12 +652,14 @@ public final class ControlMenus implements Listener, AutoCloseable {
           else
             settings(p, id, path.contains(".") ? path.substring(0, path.lastIndexOf('.')) : "", 0);
         });
-    put(
+    tile(
         m,
         4,
         plugin.module(id) ? Material.LIME_DYE : Material.GRAY_DYE,
-        plugin.module(id) ? "gui.enabled" : "gui.disabled",
-        "gui.click.switch",
+        plugin.module(id) ? "gui.module-toggle-on" : "gui.module-toggle-off",
+        "gui.toggle-lore",
+        Map.of(),
+        toggleParts(plugin.module(id), Map.of("module", lang.render("gui.module-names." + id))),
         c ->
             complete(
                 p, plugin.module(id, !plugin.module(id)), () -> settings(p, id, path, page), true));
@@ -861,8 +1050,50 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 Integer.toString(v.pages().size())),
             allowed);
     Runnable reopen = () -> hologram(p, id, selected, scroll);
-    for (int i = scroll * 21; i < Math.min(current.lines().size(), (scroll + 1) * 21); i++) {
+    m.reopen = reopen;
+    // Lines come first; the two "add" tiles follow them as content, never as footer controls.
+    boolean canAdd = current.lines().size() < 32;
+    int total = current.lines().size() + (canAdd ? 2 : 0);
+    for (int i = scroll * 21; i < Math.min(total, (scroll + 1) * 21); i++) {
       int index = i;
+      if (i >= current.lines().size()) {
+        if (i == current.lines().size())
+          tile(
+              m,
+              MenuStyle.CONTENT[i % 21],
+              Material.WRITABLE_BOOK,
+              "holo.add-text",
+              "holo.add-text-lore",
+              Map.of(),
+              c ->
+                  ask(
+                      p,
+                      "holo.prompt-text",
+                      allowed,
+                      text -> holoText(p, old, selected, -1, text, reopen),
+                      reopen));
+        else
+          tile(
+              m,
+              MenuStyle.CONTENT[i % 21],
+              Material.ITEM_FRAME,
+              "holo.add-item",
+              "holo.add-item-lore",
+              Map.of(),
+              c -> {
+                var lines = new ArrayList<>(current.lines());
+                lines.add(
+                    dev.lovelace.loveessential.module.Holograms.item(
+                        p.getInventory().getItemInMainHand()));
+                var pages = new ArrayList<>(v.pages());
+                pages.set(
+                    selected,
+                    new dev.lovelace.loveessential.api.HologramService.Page(
+                        lines, current.action()));
+                holoPages(p, old, pages, reopen);
+              });
+        continue;
+      }
       var line = current.lines().get(i);
       boolean item = !line.item().isBlank();
       var lore = new ArrayList<Component>();
@@ -895,7 +1126,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         m,
         p,
         scroll,
-        current.lines().size(),
+        total,
         n -> hologram(p, id, selected, n),
         () -> places(p, "hologram", 0));
     entry(
@@ -1026,9 +1257,17 @@ public final class ControlMenus implements Listener, AutoCloseable {
               v.range(),
               reopen);
         });
-    put(
+    tile(
         m,
         8,
+        Material.BOOK,
+        "holo.pages",
+        "holo.pages-lore",
+        Map.of("count", Integer.toString(v.pages().size())),
+        c -> hologramPages(p, id, selected));
+    put(
+        m,
+        50,
         Material.BARRIER,
         "gui.remove",
         "gui.click.delete",
@@ -1040,56 +1279,34 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 reopen,
                 allowed,
                 id));
-    if (selected > 0)
-      put(
-          m,
-          45,
-          Material.ARROW,
-          "holo.previous-page",
-          "gui.click.open",
-          c -> hologram(p, id, selected - 1, 0));
-    if (selected + 1 < v.pages().size())
-      put(
-          m,
-          46,
-          Material.ARROW,
-          "holo.next-page",
-          "gui.click.open",
-          c -> hologram(p, id, selected + 1, 0));
-    if (v.pages().size() < 16)
-      put(
-          m,
-          47,
-          Material.BOOK,
-          "holo.add-page",
-          "holo.page-help",
-          c -> {
-            var pages = new ArrayList<>(v.pages());
-            pages.add(new dev.lovelace.loveessential.api.HologramService.Page(List.of(), null));
-            holoPages(p, old, pages, () -> hologram(p, id, pages.size() - 1, 0));
-          });
-    if (v.pages().size() > 1)
-      put(
-          m,
-          48,
-          Material.RED_DYE,
-          "holo.delete-page",
-          "gui.click.delete",
-          c ->
-              confirm(
-                  p,
-                  "holo.delete-page",
-                  () -> {
-                    var pages = new ArrayList<>(v.pages());
-                    pages.remove(selected);
-                    holoPages(p, old, pages, () -> hologram(p, id, Math.max(0, selected - 1), 0));
-                  },
-                  reopen,
-                  allowed,
-                  Integer.toString(selected + 1)));
+    MenuStyle.open(p, m.inventory);
+  }
+
+  /** Page manager: one tile per page, with the page action and deletion as header controls. */
+  public void hologramPages(Player p, String id, int selected) {
+    var old =
+        gameplay
+            .holograms()
+            .get(id)
+            .orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+    var v = old.value();
+    int page = Math.clamp(selected, 0, v.pages().size() - 1);
+    var current = v.pages().get(page);
+    Predicate<Player> allowed =
+        who ->
+            admin(who)
+                && plugin.module("hologram")
+                && gameplay
+                    .holograms()
+                    .get(id)
+                    .map(s -> s.revision() == old.revision())
+                    .orElse(false);
+    var m = menu(p, "holo.pages-title", Map.of("id", id), allowed);
+    Runnable reopen = () -> hologramPages(p, id, page);
+    m.reopen = reopen;
     entry(
         m,
-        49,
+        3,
         Material.COMMAND_BLOCK,
         lang.render("holo.action"),
         List.of(
@@ -1116,44 +1333,68 @@ public final class ControlMenus implements Listener, AutoCloseable {
                           : new dev.lovelace.loveessential.api.Action(
                               "command", Map.of("value", text));
                   pages.set(
-                      selected,
+                      page,
                       new dev.lovelace.loveessential.api.HologramService.Page(
                           current.lines(), action));
                   holoPages(p, old, pages, reopen);
                 },
                 reopen));
-    if (current.lines().size() < 32) {
+    if (v.pages().size() > 1)
       put(
           m,
-          50,
-          Material.WRITABLE_BOOK,
-          "holo.add-text",
-          "holo.text-help",
+          5,
+          Material.RED_DYE,
+          "holo.delete-page",
+          "gui.click.delete",
           c ->
-              ask(
+              confirm(
                   p,
-                  "holo.prompt-text",
+                  "holo.delete-page",
+                  () -> {
+                    var pages = new ArrayList<>(v.pages());
+                    pages.remove(page);
+                    holoPages(
+                        p, old, pages, () -> hologramPages(p, id, Math.max(0, page - 1)));
+                  },
+                  reopen,
                   allowed,
-                  text -> holoText(p, old, selected, -1, text, reopen),
-                  reopen));
-      put(
+                  Integer.toString(page + 1)));
+    for (int i = 0; i < v.pages().size(); i++) {
+      int index = i;
+      boolean chosen = i == page;
+      tile(
           m,
-          53,
-          Material.ITEM_FRAME,
-          "holo.add-item",
-          "holo.item-help",
+          MenuStyle.CONTENT[i],
+          Material.PAPER,
+          chosen ? "holo.page-entry-selected" : "holo.page-entry",
+          chosen ? "holo.page-lore-selected" : "holo.page-lore",
+          Map.of(
+              "number", Integer.toString(i + 1),
+              "count", Integer.toString(v.pages().get(i).lines().size())),
           c -> {
-            var lines = new ArrayList<>(current.lines());
-            lines.add(
-                dev.lovelace.loveessential.module.Holograms.item(
-                    p.getInventory().getItemInMainHand()));
-            var pages = new ArrayList<>(v.pages());
-            pages.set(
-                selected,
-                new dev.lovelace.loveessential.api.HologramService.Page(lines, current.action()));
-            holoPages(p, old, pages, reopen);
+            if (!chosen) hologramPages(p, id, index);
+            else {
+              // Return through Back so the manager is not stacked under the editor, then open the
+              // editor on the page that was chosen here.
+              MenuStyle.back(p);
+              hologram(p, id, page, 0);
+            }
           });
     }
+    if (v.pages().size() < 16)
+      tile(
+          m,
+          MenuStyle.CONTENT[v.pages().size()],
+          Material.BOOK,
+          "holo.add-page",
+          "holo.add-page-lore",
+          Map.of(),
+          c -> {
+            var pages = new ArrayList<>(v.pages());
+            pages.add(new dev.lovelace.loveessential.api.HologramService.Page(List.of(), null));
+            holoPages(p, old, pages, () -> hologramPages(p, id, pages.size() - 1));
+          });
+    navigation(m, p, 0, v.pages().size() + 1, n -> {}, () -> hologram(p, id, page, 0));
     MenuStyle.open(p, m.inventory);
   }
 
@@ -1583,7 +1824,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                           plugin.module("utilities") && who.hasPermission("loveessential." + name),
                       value -> command(p, name + " " + value),
                       () -> commands(p, page));
-              case "tpa", "tpahere", "sethome", "setspawn", "reply" ->
+              case "sethome", "setspawn", "reply" ->
                   ask(
                       p,
                       "gui.prompt-value",

@@ -175,6 +175,30 @@ public final class ContentMenus implements Listener, AutoCloseable {
     v.clicks.put(slot, click);
   }
 
+  /** Switch named "Name | State" whose lore shows the state before and after the click. */
+  private void toggle(
+      View v,
+      int slot,
+      boolean on,
+      String nameOn,
+      String nameOff,
+      Consumer<InventoryClickEvent> click) {
+    var parts =
+        Map.of(
+            "now", lang.render(on ? "gui.state-on" : "gui.state-off"),
+            "next", lang.render(on ? "gui.state-off" : "gui.state-on"));
+    item(
+        v,
+        slot,
+        MenuStyle.item(
+            Material.LEVER,
+            lang.render(on ? nameOn : nameOff),
+            lang.lines("gui.toggle-lore").stream()
+                .map(t -> lang.renderText(t, Map.of(), parts))
+                .toList()),
+        click);
+  }
+
   private void item(View v, int slot, ItemStack item, Consumer<InventoryClickEvent> click) {
     v.inventory.setItem(slot, item.clone());
     v.clicks.put(slot, click);
@@ -426,10 +450,7 @@ public final class ContentMenus implements Listener, AutoCloseable {
           GRID[i],
           data == null
               ? MenuStyle.button(
-                  lang,
-                  Material.LIGHT_GRAY_STAINED_GLASS_PANE,
-                  "content.ingredient",
-                  "content.ingredient-help")
+                  lang, Material.STRUCTURE_VOID, "content.ingredient", "content.ingredient-help")
               : preview(data, d.texts),
           e -> {
             d.ingredients.set(
@@ -486,11 +507,12 @@ public final class ContentMenus implements Listener, AutoCloseable {
                   craftEditor(p, d);
                 },
                 () -> craftEditor(p, d)));
-    put(
+    toggle(
         v,
         7,
-        Material.LEVER,
-        d.enabled ? "gui.enabled" : "gui.disabled",
+        d.enabled,
+        "content.recipe-on",
+        "content.recipe-off",
         e -> {
           d.enabled = !d.enabled;
           craftEditor(p, d);
@@ -583,11 +605,12 @@ public final class ContentMenus implements Listener, AutoCloseable {
           kitIcon(entry),
           e -> {});
     }
-    put(v, 49, Material.CHEST, "content.claim", e -> starter.claim(p, true));
+    put(v, 50, Material.CHEST, "content.claim", e -> starter.claim(p, true));
+    // Edit is a menu control, so it lives in the header; the footer keeps one extra button.
     if (editor(p, "starter"))
       put(
           v,
-          50,
+          4,
           Material.COMPARATOR,
           "content.edit",
           e -> command(p, "starter", new String[] {"edit"}));
@@ -645,11 +668,12 @@ public final class ContentMenus implements Listener, AutoCloseable {
                   () -> kitEditor(p, d, actual));
           });
     }
-    put(
+    toggle(
         v,
         1,
-        Material.LEVER,
-        d.enabled ? "gui.enabled" : "gui.disabled",
+        d.enabled,
+        "content.kit-on",
+        "content.kit-off",
         e -> {
           d.enabled = !d.enabled;
           kitEditor(p, d, actual);

@@ -44,4 +44,15 @@ class NicknamesTest {
         "Test",
         PlainTextComponentSerializer.plainText().serialize(Nicknames.LEGACY.deserialize(encoded)));
   }
+
+  @Test
+  void lookAlikeLettersCaseAndWidthCollapseToTheSameSkeleton() {
+    String latin = Nicknames.skeleton("Admin");
+    // Cyrillic "А" and "і", fullwidth Latin and shouting must not slip past the clash check.
+    assertEquals(latin, Nicknames.skeleton("Аdmіn"));
+    assertEquals(latin, Nicknames.skeleton("ＡＤＭＩＮ"));
+    assertEquals(latin, Nicknames.skeleton("ADMIN"));
+    assertNotEquals(latin, Nicknames.skeleton("Admins"));
+    assertNotEquals(latin, Nicknames.skeleton("Adm1n"));
+  }
 }

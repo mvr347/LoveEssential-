@@ -7,6 +7,8 @@ navigation:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
 messages:
   content:
+    kit-on: '<gold>Набор <dark_gray>| <green>Включён'
+    kit-off: '<gold>Набор <dark_gray>| <red>Выключен'
     starter-title: <gold>Первое путешествие • стартовый набор
     starter-editor: <gold>Настройка стартового набора
     kit-entry: '<gray>Количество в наборе: <white><amount>'

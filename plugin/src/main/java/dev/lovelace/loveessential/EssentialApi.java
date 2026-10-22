@@ -30,6 +30,10 @@ public final class EssentialApi implements LoveEssentialService {
     conditions = c;
     actions = a;
     store = s;
+    // Internal writers (vanish, skin, traces) bypass this class, so the cache listens to the store.
+    s.onProfileWritten(
+        (player, key) ->
+            profiles.invalidate(new dev.lovelace.loveessential.cache.ProfileCache.Key(player, key)));
   }
 
   public Optional<NpcDefinition> npc(String id) {
@@ -38,6 +42,22 @@ public final class EssentialApi implements LoveEssentialService {
 
   public Collection<NpcDefinition> npcs() {
     return npcs.all();
+  }
+
+  public int number(String id) {
+    return npcs.number(id);
+  }
+
+  public Optional<String> byNumber(int number) {
+    return npcs.byNumber(number);
+  }
+
+  public Optional<String> identify(org.bukkit.entity.Entity entity) {
+    return npcs.identify(entity);
+  }
+
+  public Optional<org.bukkit.entity.Entity> entity(String id) {
+    return npcs.entity(id);
   }
 
   public CompletableFuture<NpcDefinition> save(NpcDefinition n, long expected) {

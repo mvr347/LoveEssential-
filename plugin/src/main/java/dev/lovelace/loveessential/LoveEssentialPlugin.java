@@ -23,7 +23,6 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "tab",
           "home",
           "spawn",
-          "teleport",
           "vanish",
           "afk",
           "skin",
@@ -44,7 +43,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "worlds",
           "scenarios",
           "dialogs",
-          "scoreboard");
+          "scoreboard",
+          "revive");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -86,7 +86,13 @@ public class LoveEssentialPlugin extends JavaPlugin {
     else if (!module(module)) throw new IllegalArgumentException("errors.module-disabled");
   }
 
+  public void requireDestination(String module, String world) {
+    if (modulePolicy != null) modulePolicy.requireDestination(module, world);
+  }
+
   private EssentialApi essentialApi;
+  private dev.lovelace.loveessential.module.Revive revive;
+  private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
   private TabModule tab;
@@ -225,7 +231,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       getServer().getPluginManager().disablePlugin(this);
                       return;
                     }
-                    setup();
+                    try {
+                      setup();
+                    } catch (RuntimeException e) {
+                      // Without this the plugin stays enabled but half-built, answering "starting".
+                      getLogger()
+                          .log(java.util.logging.Level.SEVERE, "[loveessential.setup]", e);
+                      getServer().getPluginManager().disablePlugin(this);
+                    }
                   });
             });
   }
@@ -255,6 +268,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
         new dev.lovelace.loveessential.module.PrivateMessages(
             this, main, lang, store, love, gameplay, nicknames);
     inventories = new dev.lovelace.loveessential.module.InventoryInspector(this, lang, love);
+    revive = new dev.lovelace.loveessential.module.Revive(this, lang, love, actions, inventories);
     profiles =
         new dev.lovelace.loveessential.module.PlayerProfiles(
             this, lang, love, gameplay, store, placeholders, messages, inventories);
@@ -262,6 +276,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
         id -> {
           var values = new HashMap<>(profiles.values(id));
           values.putAll(nicknames.values(id));
+          values.putAll(revive.values(id));
           return Map.copyOf(values);
         });
     npcs.vanish(gameplay::vanished);
@@ -335,6 +350,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
             nicknames,
             contentMenus,
             extensions);
+    commands.revive(revive);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
       if (command != null) {
@@ -377,32 +393,59 @@ public class LoveEssentialPlugin extends JavaPlugin {
                         getServer().getPluginManager().disablePlugin(this);
                         return;
                       }
-                      if (module("npc")) npcs.start();
-                      gameplay.start();
-                      nicknames.start();
-                      messages.start();
-                      inventories.start();
-                      profiles.start();
-                      if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-                        expansion =
-                            new LoveExpansion(
-                                placeholders, lang, love, gameplay::afk, gameplay::vanished);
-                        expansion.register();
-                      }
-                      if (module("tab")) tab.start();
                       try {
-                        content.refresh();
+                        startServices();
                       } catch (RuntimeException e) {
+                        ready = false;
                         getLogger()
                             .log(java.util.logging.Level.SEVERE, lang.text("logs.start-failed"), e);
                         getServer().getPluginManager().disablePlugin(this);
-                        return;
                       }
-                      ready = true;
-                      starter.start();
-                      extensions.start();
-                      getLogger().info(lang.text("logs.ready"));
                     }));
+  }
+
+  /** Starts every service once the stored data is loaded; any failure disables the plugin. */
+  private void startServices() {
+    if (module("npc")) npcs.start();
+    gameplay.start();
+    nicknames.start();
+    messages.start();
+    inventories.start();
+    revive.start();
+    profiles.start();
+    if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+      expansion =
+          new LoveExpansion(placeholders, lang, love, gameplay::afk, gameplay::vanished);
+      expansion.register();
+    }
+    if (module("tab")) tab.start();
+    content.refresh();
+    ready = true;
+    starter.start();
+    extensions.start();
+    // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
+    npcProvider = new dev.lovelace.loveessential.npc.LoveEssentialNpcProvider(this, main, npcs, gameplay.holograms());
+    npcProvider.start();
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.npc.NpcProvider.class,
+            npcProvider,
+            this,
+            ServicePriority.Normal);
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.presence.PresenceOracle.class,
+            new dev.lovelace.loveessential.module.LoveEssentialPresence(gameplay, nicknames),
+            this,
+            ServicePriority.Normal);
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.revive.DownedOracle.class, revive, this, ServicePriority.Normal);
+    getLogger().info(lang.text("logs.ready"));
+    Bukkit.getPluginManager().callEvent(new LoveEssentialReadyEvent(essentialApi));
   }
 
   public boolean ready() {
@@ -507,6 +550,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (sidebarCatalog != null && !sidebarCatalog.getKeys(false).isEmpty())
       dev.lovelace.loveessential.scoreboard.SidebarConfig.read(sidebarCatalog);
     bounded(config, "storage.write-queue", 1, 65536);
+    bounded(config, "storage.backup-keep", 1, 1000);
     bounded(config, "crafting.max-recipes", 1, 10000);
     bounded(config, "worlds.max-worlds", 1, 256);
     bounded(config, "scenarios.max-rules", 1, 10000);
@@ -566,6 +610,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
     decimal(config, "traces.stride", .2, 3);
     decimal(config, "traces.view-distance", 4, 64);
     decimal(config, "sitride.ride-range", 1, 8);
+    if (config.contains("sitride.ride-denied-types")) {
+      if (!(config.get("sitride.ride-denied-types") instanceof java.util.List<?> denied))
+        throw new IllegalArgumentException("errors.config");
+      for (Object type : denied)
+        try {
+          org.bukkit.entity.EntityType.valueOf(type.toString().toUpperCase(java.util.Locale.ROOT));
+        } catch (RuntimeException e) {
+          throw new IllegalArgumentException("errors.config", e);
+        }
+    }
     bounded(config, "portal.max-portals", 1, 1024);
     bounded(config, "portal.max-volume", 1, 262144);
     bounded(config, "portal.default-cooldown-seconds", 0, 86400);
@@ -577,7 +631,6 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (config.contains("traces.color")
         && !config.getString("traces.color", "").matches("[0-9a-fA-F]{6}"))
       throw new IllegalArgumentException("errors.config");
-    bounded(config, "home.default-limit", 1, 1000);
     bounded(config, "afk.timeout-seconds", 1, 31536000);
     bounded(config, "afk.kick-after-seconds", 0, 31536000);
     bounded(config, "night-skip.max-multiplier", 1, 1000);
@@ -641,6 +694,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     MainThread.stop(this);
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
+    if (npcProvider != null) npcProvider.close();
+    if (revive != null) revive.close();
     if (extensions != null) extensions.close();
     if (contentMenus != null) contentMenus.close();
     if (starter != null) starter.close();

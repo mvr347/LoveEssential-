@@ -89,21 +89,49 @@ public final class TeleportService {
         var at = target.clone().add(0, dy * sign, 0);
         if (at.getY() <= at.getWorld().getMinHeight()
             || at.getY() + 2 >= at.getWorld().getMaxHeight()) continue;
-        var ground = at.clone().subtract(0, 1, 0).getBlock().getType();
-        if (at.getBlock().isPassable()
-            && at.clone().add(0, 1, 0).getBlock().isPassable()
-            && ground.isSolid()
-            && !Set.of(
-                    Material.LAVA,
-                    Material.FIRE,
-                    Material.MAGMA_BLOCK,
-                    Material.CACTUS,
-                    Material.CAMPFIRE,
-                    Material.SOUL_CAMPFIRE)
-                .contains(ground)) return at;
+        if (standable(at)) return at;
       }
     return null;
   }
+
+  /** True when a player fits at {@code at} on solid ground that cannot hurt them. */
+  public static boolean standable(Location at) {
+    var feet = at.getBlock();
+    var head = at.clone().add(0, 1, 0).getBlock();
+    var ground = at.clone().subtract(0, 1, 0).getBlock().getType();
+    return feet.isPassable()
+        && head.isPassable()
+        && !hazardous(feet.getType())
+        && !hazardous(head.getType())
+        && ground.isSolid()
+        && !HARMFUL_GROUND.contains(ground);
+  }
+
+  /** Passable blocks that still harm or trap whoever stands in them; plain water is allowed for lake homes. */
+  public static boolean hazardous(Material type) {
+    return type == Material.LAVA || FIRE_AND_TRAPS.contains(type);
+  }
+
+  private static final Set<Material> FIRE_AND_TRAPS =
+      Set.of(
+          Material.FIRE,
+          Material.SOUL_FIRE,
+          Material.POWDER_SNOW,
+          Material.COBWEB,
+          Material.SWEET_BERRY_BUSH,
+          Material.WITHER_ROSE,
+          Material.CAMPFIRE,
+          Material.SOUL_CAMPFIRE,
+          Material.POINTED_DRIPSTONE);
+
+  private static final Set<Material> HARMFUL_GROUND =
+      Set.of(
+          Material.LAVA,
+          Material.FIRE,
+          Material.MAGMA_BLOCK,
+          Material.CACTUS,
+          Material.CAMPFIRE,
+          Material.SOUL_CAMPFIRE);
 
   public void forget(Player p) {
     pending.remove(p.getUniqueId());

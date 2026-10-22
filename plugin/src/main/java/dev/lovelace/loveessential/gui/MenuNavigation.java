@@ -98,7 +98,18 @@ public final class MenuNavigation implements Listener, AutoCloseable {
     var inventory = route.parents.removeLast();
     var layout = (GuiLayout) inventory.getHolder();
     if (!layout.guiAllowed(player)) {
-      player.closeInventory();
+      var reopen = layout.guiReopen();
+      if (reopen == null) {
+        player.closeInventory();
+        return;
+      }
+      // The stale parent is replaced by a fresh copy; the child must not be stacked under it.
+      route.returning = true;
+      try {
+        reopen.run();
+      } finally {
+        route.returning = false;
+      }
       return;
     }
     route.returning = true;

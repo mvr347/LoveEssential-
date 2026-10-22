@@ -1,6 +1,5 @@
 # Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
 enabled: true
-default-limit: 3
 access:
   allowed-worlds: []
   denied-worlds: []

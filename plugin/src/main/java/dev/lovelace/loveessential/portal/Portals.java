@@ -132,8 +132,17 @@ public final class Portals implements Listener, AutoCloseable {
                       portals.clear();
                       saved.forEach(
                           d -> {
-                            validate(d.value(), false);
-                            portals.put(d.id(), d);
+                            try {
+                              validate(d.value(), false);
+                              portals.put(d.id(), d);
+                            } catch (RuntimeException e) {
+                              // A limit tightened after the portal was saved must not take the
+                              // whole plugin down; the record stays in the database untouched.
+                              plugin
+                                  .getLogger()
+                                  .warning(
+                                      "Skipping portal '" + d.id() + "': " + e.getMessage());
+                            }
                           });
                       return null;
                     }))

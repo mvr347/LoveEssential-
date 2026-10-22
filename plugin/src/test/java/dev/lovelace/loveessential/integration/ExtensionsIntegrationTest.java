@@ -21,6 +21,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.*;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.ServicePriority;
 import org.junit.jupiter.api.*;
@@ -438,6 +439,90 @@ class ExtensionsIntegrationTest {
     var e = new PlayerTeleportEvent(visitor, visitor.getLocation(), w.getSpawnLocation());
     server.getPluginManager().callEvent(e);
     assertTrue(e.isCancelled());
+  }
+
+  @Test
+  void leavingAnEnforcingWorldRestoresThePreviousGameMode() throws Exception {
+    var options = Worlds.Options.defaults();
+    var adventure =
+        new Worlds.Options(
+            options.pvp(),
+            options.difficulty(),
+            "ADVENTURE",
+            true,
+            options.time(),
+            options.freezeTime(),
+            options.weather(),
+            options.borderSize(),
+            options.borderX(),
+            options.borderZ(),
+            options.rules(),
+            options.respawnWorld());
+    await(
+        ext.worlds.save(
+            new Worlds.Definition("lobby", "NORMAL", "NORMAL", 0, true, false, "", null, adventure),
+            0,
+            "test"));
+    var lobby = server.addSimpleWorld("lobby");
+    var player = server.addPlayer("Traveler");
+    player.setGameMode(GameMode.SURVIVAL);
+    player.teleport(lobby.getSpawnLocation());
+    server.getPluginManager().callEvent(new PlayerChangedWorldEvent(player, server.getWorld("world")));
+    assertEquals(GameMode.ADVENTURE, player.getGameMode());
+    player.teleport(server.getWorld("world").getSpawnLocation());
+    server.getPluginManager().callEvent(new PlayerChangedWorldEvent(player, lobby));
+    assertEquals(GameMode.SURVIVAL, player.getGameMode());
+  }
+
+  @Test
+  void previousGameModeSurvivesARelogInsideTheEnforcingWorld() throws Exception {
+    var options = Worlds.Options.defaults();
+    var adventure =
+        new Worlds.Options(
+            options.pvp(),
+            options.difficulty(),
+            "ADVENTURE",
+            true,
+            options.time(),
+            options.freezeTime(),
+            options.weather(),
+            options.borderSize(),
+            options.borderX(),
+            options.borderZ(),
+            options.rules(),
+            options.respawnWorld());
+    await(
+        ext.worlds.save(
+            new Worlds.Definition("lobby", "NORMAL", "NORMAL", 0, true, false, "", null, adventure),
+            0,
+            "test"));
+    var lobby = server.addSimpleWorld("lobby");
+    var player = server.addPlayer("Traveler");
+    var key = "loveessential.worlds.mode-before";
+    player.setGameMode(GameMode.SURVIVAL);
+    player.teleport(lobby.getSpawnLocation());
+    server.getPluginManager().callEvent(new PlayerChangedWorldEvent(player, server.getWorld("world")));
+    assertEquals(GameMode.ADVENTURE, player.getGameMode());
+    waitFor(() -> store.profile(player.getUniqueId(), key).join().orElse("").equals("SURVIVAL"));
+
+    // Relog while still inside: the in-memory record is gone, the saved one brings it back.
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.player.PlayerQuitEvent(
+                player,
+                Component.empty(),
+                org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
+    ext.worlds.restore(player);
+    server.getScheduler().performTicks(5);
+    Thread.sleep(200);
+    server.getScheduler().performTicks(5);
+    assertEquals(GameMode.ADVENTURE, player.getGameMode(), "still inside the lobby");
+
+    player.teleport(server.getWorld("world").getSpawnLocation());
+    server.getPluginManager().callEvent(new PlayerChangedWorldEvent(player, lobby));
+    assertEquals(GameMode.SURVIVAL, player.getGameMode());
+    waitFor(() -> store.profile(player.getUniqueId(), key).join().orElse("x").isEmpty());
   }
 
   @Test

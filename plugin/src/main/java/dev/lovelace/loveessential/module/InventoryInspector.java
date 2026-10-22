@@ -27,6 +27,8 @@ public final class InventoryInspector implements Listener, AutoCloseable {
     final Player viewer, target;
     Inventory inventory;
     boolean editing;
+    /** Set for robbing a downed player: replaces the invsee permission and module checks. */
+    java.util.function.BiPredicate<Player, Player> robbery;
 
     Session(Player viewer, Player target, boolean editing) {
       this.viewer = viewer;
@@ -67,6 +69,14 @@ public final class InventoryInspector implements Listener, AutoCloseable {
   }
 
   private boolean allowed(Session s) {
+    if (s.robbery != null)
+      return plugin.ready()
+          && s.viewer.isOnline()
+          && s.target.isOnline()
+          && !s.viewer.isDead()
+          && !s.target.isDead()
+          && love.authenticated(s.viewer)
+          && s.robbery.test(s.viewer, s.target);
     return plugin.ready()
         && plugin.allows("inventory", s.viewer)
         && s.viewer.isOnline()
@@ -82,8 +92,25 @@ public final class InventoryInspector implements Listener, AutoCloseable {
 
   public void open(Player viewer, Player target, boolean editing) {
     plugin.requireAccess("inventory", viewer);
+    open(viewer, target, editing, null);
+  }
+
+  /**
+   * Opens the live inventory of a downed player for a robber. {@code valid} is asked every tick, so
+   * the window closes the moment the victim is revived, dies or the robber loses the right.
+   */
+  public void rob(Player robber, Player victim, java.util.function.BiPredicate<Player, Player> valid) {
+    open(robber, victim, true, java.util.Objects.requireNonNull(valid));
+  }
+
+  private void open(
+      Player viewer,
+      Player target,
+      boolean editing,
+      java.util.function.BiPredicate<Player, Player> robbery) {
     if (viewer.equals(target)) throw new IllegalArgumentException("inventory.self");
     var s = new Session(viewer, target, editing);
+    s.robbery = robbery;
     if (!allowed(s)) throw new IllegalArgumentException("errors.permission");
     s.inventory =
         Bukkit.createInventory(

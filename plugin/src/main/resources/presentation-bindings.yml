@@ -7,10 +7,18 @@ bindings:
   file: gui.yml
   key: holo.title
   path: menus.holo-title.title
+- module: hologram
+  file: gui.yml
+  key: holo.pages-title
+  path: menus.holo-pages-title.title
 - module: messages
   file: gui.yml
   key: messages.settings
   path: menus.messages-settings.title
+- module: vanish
+  file: gui.yml
+  key: vanish.gui-title
+  path: menus.vanish-gui-title.title
 - module: nickname
   file: gui.yml
   key: nick.color
@@ -2629,8 +2637,8 @@ bindings:
   path: menus.module-menu-title.labels.module-menu.descriptions.spawn
 - module: npc
   file: gui.yml
-  key: module-menu.descriptions.teleport
-  path: menus.module-menu-title.labels.module-menu.descriptions.teleport
+  key: module-menu.descriptions.revive
+  path: menus.module-menu-title.labels.module-menu.descriptions.revive
 - module: npc
   file: gui.yml
   key: module-menu.descriptions.vanish
@@ -3273,8 +3281,40 @@ bindings:
   path: menus.holo-title.labels.holo.delete-page
 - module: hologram
   file: gui.yml
-  key: holo.page-help
-  path: menus.holo-title.labels.holo.page-help
+  key: holo.pages
+  path: menus.holo-title.labels.holo.pages
+- module: hologram
+  file: gui.yml
+  key: holo.pages-lore
+  path: menus.holo-title.labels.holo.pages-lore
+- module: hologram
+  file: gui.yml
+  key: holo.page-entry
+  path: menus.holo-title.labels.holo.page-entry
+- module: hologram
+  file: gui.yml
+  key: holo.page-entry-selected
+  path: menus.holo-title.labels.holo.page-entry-selected
+- module: hologram
+  file: gui.yml
+  key: holo.page-lore
+  path: menus.holo-title.labels.holo.page-lore
+- module: hologram
+  file: gui.yml
+  key: holo.page-lore-selected
+  path: menus.holo-title.labels.holo.page-lore-selected
+- module: hologram
+  file: gui.yml
+  key: holo.add-page-lore
+  path: menus.holo-title.labels.holo.add-page-lore
+- module: hologram
+  file: gui.yml
+  key: holo.add-text-lore
+  path: menus.holo-title.labels.holo.add-text-lore
+- module: hologram
+  file: gui.yml
+  key: holo.add-item-lore
+  path: menus.holo-title.labels.holo.add-item-lore
 - module: hologram
   file: gui.yml
   key: holo.action

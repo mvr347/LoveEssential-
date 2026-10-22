@@ -38,6 +38,20 @@ public final class NpcService implements Listener, AutoCloseable {
     return numbers.getOrDefault(id, 0);
   }
 
+  public Optional<String> byNumber(int number) {
+    return numbers.entrySet().stream()
+        .filter(e -> e.getValue() == number)
+        .map(Map.Entry::getKey)
+        .findFirst();
+  }
+
+  /** Lets an integration veto a spawn (schedules, provider contract); true allows it. */
+  private volatile Predicate<NpcDefinition> spawnGate = n -> true;
+
+  public void spawnGate(Predicate<NpcDefinition> gate) {
+    spawnGate = Objects.requireNonNull(gate);
+  }
+
   public String resolve(String id) {
     return numbers.entrySet().stream()
         .filter(e -> e.getValue().toString().equals(id))
@@ -410,6 +424,10 @@ public final class NpcService implements Listener, AutoCloseable {
     Location at = n.spawn().location();
     if (!at.getWorld().isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4) || !safe(n, at))
       return null;
+    if (!preview && !spawnGate.test(n)) {
+      spawnFailures.put(n.id(), tick + 40);
+      return null;
+    }
     var entity =
         at.getWorld()
             .spawnEntity(
@@ -450,7 +468,13 @@ public final class NpcService implements Listener, AutoCloseable {
               ? lang.render(n.option("description-key", ""))
               : null);
       String skin = n.option("skin", "");
-      if (!skin.isBlank()) {
+      if (!n.option("skin-value", "").isBlank()) {
+        var profile = ResolvableProfile.resolvableProfile();
+        profile.addProperty(
+            new com.destroystokyo.paper.profile.ProfileProperty(
+                "textures", n.option("skin-value", ""), n.option("skin-signature", "").isBlank() ? null : n.option("skin-signature", "")));
+        m.setProfile(profile.build());
+      } else if (!skin.isBlank()) {
         var profile = ResolvableProfile.resolvableProfile();
         try {
           profile.uuid(UUID.fromString(skin));
@@ -916,7 +940,14 @@ public final class NpcService implements Listener, AutoCloseable {
     long now = System.currentTimeMillis();
     if (now - clicked.getOrDefault(p.getUniqueId(), 0L) < n.number("cooldown-ms", 500)) return;
     clicked.put(p.getUniqueId(), now);
-    var event = new NpcInteractEvent(p, n);
+    var event =
+        new NpcInteractEvent(
+            p,
+            n,
+            trigger == Trigger.LEFT_CLICK
+                ? NpcInteractEvent.Click.LEFT
+                : NpcInteractEvent.Click.RIGHT,
+            e);
     Bukkit.getPluginManager().callEvent(event);
     if (event.isCancelled()) return;
     String soundName = n.option("interaction-sound", "");

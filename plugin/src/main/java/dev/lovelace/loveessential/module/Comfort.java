@@ -18,6 +18,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.persistence.PersistentDataType;
 
 /** Temporary vehicles are owned, bounded and removed on every exit path. */
 public final class Comfort implements Listener, AutoCloseable {
@@ -51,6 +52,7 @@ public final class Comfort implements Listener, AutoCloseable {
   private final Map<UUID, Seat> seats = new HashMap<>();
   private final Map<UUID, Lying> lying = new HashMap<>();
   private final Map<UUID, Entity> rides = new HashMap<>();
+  private final NamespacedKey npcKey;
   private final Map<UUID, Step> steps = new HashMap<>();
   private final Map<UUID, Boolean> traces = new HashMap<>();
   private org.bukkit.scheduler.BukkitTask task;
@@ -68,6 +70,7 @@ public final class Comfort implements Listener, AutoCloseable {
     this.lang = lang;
     this.love = love;
     this.gameplay = gameplay;
+    this.npcKey = new NamespacedKey(plugin, "npc");
   }
 
   public void start() {
@@ -394,17 +397,38 @@ public final class Comfort implements Listener, AutoCloseable {
         || target instanceof ArmorStand
         || !target.isValid()
         || !target.getPassengers().isEmpty()
-        || target.isInsideVehicle()) throw new IllegalArgumentException("comfort.ride-target");
+        || target.isInsideVehicle()
+        || !rideable(target)) throw new IllegalArgumentException("comfort.ride-target");
     if (target instanceof Player other
         && (!p.canSee(other)
             || !love.authenticated(other)
             || gameplay.vanished(other)
             || !plugin.getConfig().getBoolean("sitride.player-riding-enabled", true)
-            || love.combat(other))) throw new IllegalArgumentException("comfort.ride-consent");
+            || love.combat(other)
+            || airborne(other))) throw new IllegalArgumentException("comfort.ride-consent");
     if (!love.territorialAccess(p, target.getLocation()))
       throw new IllegalArgumentException("errors.territory");
     if (!target.addPassenger(p)) throw new IllegalArgumentException("comfort.ride-target");
     rides.put(p.getUniqueId(), target);
+  }
+
+  /**
+   * Players and ground mobs only. Flying mobs would turn /ride into free flight that ignores claim
+   * borders, and NPCs are scripted entities that must not be dragged around by a passenger.
+   */
+  private boolean rideable(Entity target) {
+    return !target.getPersistentDataContainer().has(npcKey, PersistentDataType.STRING)
+        && rideableType(
+            target.getType(), plugin.getConfig().getStringList("sitride.ride-denied-types"));
+  }
+
+  static boolean rideableType(EntityType type, Collection<String> denied) {
+    return type == EntityType.PLAYER || denied.stream().noneMatch(n -> n.equalsIgnoreCase(type.name()));
+  }
+
+  /** A flying or gliding carrier would take the rider over claim borders and out of reach. */
+  private static boolean airborne(Player carrier) {
+    return carrier.isFlying() || carrier.isGliding();
   }
 
   private static boolean clear(Location at, double height) {
@@ -479,13 +503,15 @@ public final class Comfort implements Listener, AutoCloseable {
                       || !target.getPassengers().contains(p)
                       || !love.authenticated(p)
                       || love.combat(p)
+                      || !love.territorialAccess(p, target.getLocation())
                       || target instanceof Player other
                           && (!love.authenticated(other)
                               || !plugin
                                   .getConfig()
                                   .getBoolean("sitride.player-riding-enabled", true)
                               || gameplay.vanished(other)
-                              || love.combat(other));
+                              || love.combat(other)
+                              || airborne(other));
               if (stop && p != null && target.getPassengers().contains(p)) p.leaveVehicle();
               return stop;
             });

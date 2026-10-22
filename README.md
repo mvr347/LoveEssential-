@@ -24,7 +24,7 @@
 | Никнеймы | Цвета, HEX, градиенты из 2–5 цветов, предпросмотр, сброс оформления или всего никнейма |
 | Инвентарь | Живой просмотр инвентаря онлайн-игрока и перенос предметов с отдельным правом на редактирование |
 | Досье игрока | Свой профиль из пяти разделов, прямые переходы в LoveBehavior/LoveAdaptation, статистика, краткие чужие и офлайн-профили, репутация и жалобы |
-| Essentials-функции | Одна точка дома, спавны, vanish, AFK, смена скина, /sit, /lay, /ride, /hat |
+| Essentials-функции | Одна точка дома, спавны, vanish (меню игроков с прыжком, мобы не берут в цель, предметы не подбираются, без звуков, вибраций и записи в списке серверов), AFK, смена скина, /sit, /lay, /ride, /hat |
 | Ограничения | Разрешённые/запрещённые миры и режимы, допустимые/обязательные/запрещённые состояния, редактор условий |
 | Мир и оформление | Порталы, TextDisplay-голограммы, ускорение ночи, частицы следов, join/quit и MOTD |
 | Данные и язык | SQLite, отдельные конфиги модулей, локальные `messages` в файлах модулей, резервная копия базы, API для других плагинов |
@@ -108,7 +108,7 @@ plugins/LoveEssential/
 └── exports/            # Экспорт NPC для переноса
 ```
 
-Доступны 26 модулей: `npc`, `tab`, `home`, `spawn`, `teleport`, `vanish`, `afk`, `skin`, `sitride`, `utilities`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`, `worlds`, `scenarios`, `dialogs`, `scoreboard`.
+Доступны 26 модулей: `npc`, `tab`, `home`, `spawn`, `vanish`, `afk`, `skin`, `sitride`, `utilities`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`, `worlds`, `scenarios`, `dialogs`, `scoreboard`, `revive`.
 
 `/le module` открывает список: ЛКМ — настройки, ПКМ — включение/отключение. Состояние, заданное командой или GUI, сохраняется в SQLite и имеет приоритет над `enabled` в файле модуля. `/le reload` перечитывает конфиги и язык. Старый монолитный конфиг переносится с копией `config.yml.pre-modules.bak`; плоские файлы модулей — с копиями `*.yml.pre-folders.bak`. Пользовательские тексты и оформление сохраняются.
 

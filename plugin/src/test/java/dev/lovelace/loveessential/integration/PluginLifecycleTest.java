@@ -65,23 +65,23 @@ class PluginLifecycleTest {
   @Test
   void flatModuleMigratesWithBackupAndGuiHasCurrentEditableTemplates() throws Exception {
     var directory = plugin.getDataFolder().toPath();
-    java.nio.file.Files.delete(directory.resolve("modules/home/home.yml"));
-    java.nio.file.Files.delete(directory.resolve("modules/home/gui.yml"));
+    java.nio.file.Files.delete(directory.resolve("modules/afk/afk.yml"));
+    java.nio.file.Files.delete(directory.resolve("modules/afk/gui.yml"));
     String legacy =
         "enabled: true\n"
-            + "default-limit: 19\n"
+            + "timeout-seconds: 19\n"
             + "gui:\n"
             + "  menus:\n"
             + "    example:\n"
             + "      title-key: common.back\n";
-    java.nio.file.Files.writeString(directory.resolve("modules/home.yml"), legacy);
+    java.nio.file.Files.writeString(directory.resolve("modules/afk.yml"), legacy);
     await(plugin.reloadSettings());
-    assertEquals(19, plugin.getConfig().getInt("home.default-limit"));
+    assertEquals(19, plugin.getConfig().getInt("afk.timeout-seconds"));
     assertEquals(
         legacy,
-        java.nio.file.Files.readString(directory.resolve("modules/home.yml.pre-folders.bak")));
-    assertFalse(java.nio.file.Files.exists(directory.resolve("modules/home.yml")));
-    assertEquals("<gray>Назад", plugin.getConfig().getString("home.gui.menus.example.title"));
+        java.nio.file.Files.readString(directory.resolve("modules/afk.yml.pre-folders.bak")));
+    assertFalse(java.nio.file.Files.exists(directory.resolve("modules/afk.yml")));
+    assertEquals("<gray>Назад", plugin.getConfig().getString("afk.gui.menus.example.title"));
     var gui =
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
             directory.resolve("modules/profile/gui.yml").toFile());
@@ -318,26 +318,26 @@ class PluginLifecycleTest {
 
   @Test
   void moduleEditorPersistsOnlyToItsOwnFileAndRejectsStaleChanges() throws Exception {
-    await(plugin.editSetting("home", "default-limit", 3, 7));
-    assertEquals(7, plugin.getConfig().getInt("home.default-limit"));
+    await(plugin.editSetting("afk", "timeout-seconds", 300, 7));
+    assertEquals(7, plugin.getConfig().getInt("afk.timeout-seconds"));
     var folder = plugin.getDataFolder().toPath();
     var core =
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
             folder.resolve("config.yml").toFile());
-    assertFalse(core.contains("home"));
+    assertFalse(core.contains("afk"));
     assertFalse(core.contains("npc"));
     assertFalse(core.contains("tab"));
     assertEquals(
         7,
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                folder.resolve("modules/home/home.yml").toFile())
-            .getInt("default-limit"));
+                folder.resolve("modules/afk/afk.yml").toFile())
+            .getInt("timeout-seconds"));
     assertThrows(
         java.util.concurrent.ExecutionException.class,
-        () -> await(plugin.editSetting("home", "default-limit", 3, 9)));
-    assertEquals(7, plugin.getConfig().getInt("home.default-limit"));
+        () -> await(plugin.editSetting("afk", "timeout-seconds", 300, 9)));
+    assertEquals(7, plugin.getConfig().getInt("afk.timeout-seconds"));
     await(plugin.reloadSettings());
-    assertEquals(7, plugin.getConfig().getInt("home.default-limit"));
+    assertEquals(7, plugin.getConfig().getInt("afk.timeout-seconds"));
   }
 
   @Test
@@ -352,8 +352,8 @@ class PluginLifecycleTest {
             + "modules:\n"
             + "  tab: false\n"
             + "  traces: true\n"
-            + "home:\n"
-            + "  default-limit: 17\n"
+            + "afk:\n"
+            + "  timeout-seconds: 17\n"
             + "npc:\n"
             + "  max-active: 0\n"
             + "tab:\n"
@@ -365,7 +365,7 @@ class PluginLifecycleTest {
             + "  max-economy-amount: 42\n";
     java.nio.file.Files.writeString(folder.resolve("config.yml"), legacy);
     await(plugin.reloadSettings());
-    assertEquals(17, plugin.getConfig().getInt("home.default-limit"));
+    assertEquals(17, plugin.getConfig().getInt("afk.timeout-seconds"));
     assertEquals(25, plugin.getConfig().getInt("tab.refresh-ticks"));
     assertNull(plugin.getConfig().getString("tab.external.config.custom-value"));
     assertEquals(42, plugin.getConfig().getInt("actions.max-economy-amount"));
@@ -1116,12 +1116,12 @@ class PluginLifecycleTest {
   @Test
   void numericSettingsHaveButtonsAndContextualCancellableManualInput() throws Exception {
     var p = admin();
-    server.dispatchCommand(p, "le module home");
-    click(p, itemNamed(p, "Базовый лимит домов"));
+    server.dispatchCommand(p, "le module afk");
+    click(p, itemNamed(p, "Время до AFK, секунды"));
     assertLayout(p);
-    int before = plugin.getConfig().getInt("home.default-limit");
+    int before = plugin.getConfig().getInt("afk.timeout-seconds");
     click(p, itemNamed(p, "+1"));
-    waitFor(() -> plugin.getConfig().getInt("home.default-limit") == before + 1);
+    waitFor(() -> plugin.getConfig().getInt("afk.timeout-seconds") == before + 1);
     waitFor(
         () ->
             p.getOpenInventory().getTopInventory() != null
@@ -1132,7 +1132,7 @@ class PluginLifecycleTest {
     assertLayout(p);
     click(p, p.getOpenInventory().getTopInventory().getSize() - 3);
     respond(p, "save", java.util.Map.of("value", "8"));
-    waitFor(() -> plugin.getConfig().getInt("home.default-limit") == 8);
+    waitFor(() -> plugin.getConfig().getInt("afk.timeout-seconds") == 8);
   }
 
   @Test
