@@ -90,6 +90,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   }
 
   private EssentialApi essentialApi;
+  private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
   private TabModule tab;
@@ -416,7 +417,25 @@ public class LoveEssentialPlugin extends JavaPlugin {
     ready = true;
     starter.start();
     extensions.start();
+    // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
+    npcProvider = new dev.lovelace.loveessential.npc.LoveEssentialNpcProvider(this, main, npcs, gameplay.holograms());
+    npcProvider.start();
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.npc.NpcProvider.class,
+            npcProvider,
+            this,
+            ServicePriority.Normal);
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.presence.PresenceOracle.class,
+            new dev.lovelace.loveessential.module.LoveEssentialPresence(gameplay, nicknames),
+            this,
+            ServicePriority.Normal);
     getLogger().info(lang.text("logs.ready"));
+    Bukkit.getPluginManager().callEvent(new LoveEssentialReadyEvent(essentialApi));
   }
 
   public boolean ready() {
@@ -664,6 +683,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     MainThread.stop(this);
     getServer().getServicesManager().unregisterAll(this);
     if (expansion != null) expansion.unregister();
+    if (npcProvider != null) npcProvider.close();
     if (extensions != null) extensions.close();
     if (contentMenus != null) contentMenus.close();
     if (starter != null) starter.close();

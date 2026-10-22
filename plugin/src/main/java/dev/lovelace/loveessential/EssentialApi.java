@@ -44,6 +44,22 @@ public final class EssentialApi implements LoveEssentialService {
     return npcs.all();
   }
 
+  public int number(String id) {
+    return npcs.number(id);
+  }
+
+  public Optional<String> byNumber(int number) {
+    return npcs.byNumber(number);
+  }
+
+  public Optional<String> identify(org.bukkit.entity.Entity entity) {
+    return npcs.identify(entity);
+  }
+
+  public Optional<org.bukkit.entity.Entity> entity(String id) {
+    return npcs.entity(id);
+  }
+
   public CompletableFuture<NpcDefinition> save(NpcDefinition n, long expected) {
     return npcs.save(n, expected);
   }

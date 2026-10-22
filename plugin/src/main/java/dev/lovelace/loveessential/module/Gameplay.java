@@ -129,6 +129,23 @@ public final class Gameplay implements Listener, AutoCloseable {
     return vanished.contains(p.getUniqueId());
   }
 
+  /** Millisecond timestamp of the player's last movement or click; empty for offline players. */
+  public OptionalLong lastActivity(UUID id) {
+    Long at = active.get(id);
+    return at == null ? OptionalLong.empty() : OptionalLong.of(at);
+  }
+
+  private final Set<UUID> afkReported = ConcurrentHashMap.newKeySet();
+
+  /** Fires {@link AfkChangeEvent} on each transition; AFK itself is derived from the clock. */
+  private void reportAfk() {
+    for (var p : Bukkit.getOnlinePlayers()) {
+      boolean now = afk(p);
+      if (now ? afkReported.add(p.getUniqueId()) : afkReported.remove(p.getUniqueId()))
+        Bukkit.getPluginManager().callEvent(new AfkChangeEvent(p, now));
+    }
+  }
+
   private void loadPlayer(Player p, boolean announce) {
     active.put(p.getUniqueId(), System.currentTimeMillis());
     loading.add(p.getUniqueId());
@@ -356,6 +373,7 @@ public final class Gameplay implements Listener, AutoCloseable {
 
   private void tick() {
     ticks += 20;
+    reportAfk();
     if (enabled.test("nightskip"))
       for (World w : Bukkit.getWorlds())
         if (w.getTime() > 12500 && w.getTime() < 23500) {
@@ -567,6 +585,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     vanished.remove(p.getUniqueId());
     loading.remove(p.getUniqueId());
     active.remove(p.getUniqueId());
+    afkReported.remove(p.getUniqueId());
     manualAfk.remove(p.getUniqueId());
     lastSkin.remove(p.getUniqueId());
     teleport.forget(p);

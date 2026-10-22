@@ -39,6 +39,18 @@ public interface LoveEssentialService {
 
   Collection<NpcDefinition> npcs();
 
+  /** Number shown to players (and accepted by commands) for this NPC; 0 when unknown. */
+  int number(String id);
+
+  /** Id of the NPC with this number, if there is one. */
+  Optional<String> byNumber(int number);
+
+  /** Id of the NPC whose body this entity is. */
+  Optional<String> identify(org.bukkit.entity.Entity entity);
+
+  /** Live body of the NPC visible to everybody; empty while it is not spawned. */
+  Optional<org.bukkit.entity.Entity> entity(String id);
+
   CompletableFuture<NpcDefinition> save(NpcDefinition npc, long expectedRevision);
 
   CompletableFuture<Void> delete(String id, long expectedRevision);
