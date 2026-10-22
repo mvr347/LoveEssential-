@@ -7,15 +7,15 @@ import org.bukkit.configuration.ConfigurationSection;
 public final class ScoreboardDocument {
   private static final List<String> FIELDS =
       List.of(
-          "presets-version",
-          "title",
-          "separator",
-          "bottom",
           "max",
           "interval",
           "disabled-worlds",
+          "title",
+          "separator",
           "categories",
           "placeholders",
+          "bottom",
+          "presets-version",
           "presets",
           "default-preset");
 
@@ -36,10 +36,75 @@ public final class ScoreboardDocument {
 
   public static void write(ConfigurationSection file, Map<String, ?> catalog) {
     for (String key : FIELDS)
-      if (!key.equals("disabled-worlds")) file.set(fileKey(key), catalog.get(key));
+      if (!key.equals("disabled-worlds")) {
+        Object value = catalog.get(key);
+        // The typed public API intentionally knows only its own fields. Keep custom
+        // icons/textures and other extension data on surviving entries, not deleted IDs.
+        if ((key.equals("placeholders") || key.equals("presets"))
+            && value instanceof Map<?, ?> entries) {
+          var preserved = new LinkedHashMap<String, Object>();
+          for (var entry : entries.entrySet()) {
+            String id = entry.getKey().toString();
+            preserved.put(
+                id,
+                extras(
+                    ModuleConfigs.snapshot(file.get(fileKey(key) + "." + id)), entry.getValue()));
+          }
+          value = preserved;
+        }
+        ModuleConfigs.setValue(file, fileKey(key), value);
+      }
     if (catalog.containsKey("disabled-worlds"))
       file.set("disabled-worlds", catalog.get("disabled-worlds"));
     file.set("catalog", null);
+    order(file);
+  }
+
+  private static Object extras(Object previous, Object current) {
+    if (!(previous instanceof Map<?, ?> old) || !(current instanceof Map<?, ?> next))
+      return current;
+    var result = new LinkedHashMap<String, Object>();
+    old.forEach((key, value) -> result.put(key.toString(), value));
+    next.forEach((key, value) -> result.put(key.toString(), extras(old.get(key), value)));
+    return result;
+  }
+
+  /** Rules first; preserve unknown settings, comments and every literal catalog value. */
+  public static void order(ConfigurationSection file) {
+    var values = new LinkedHashMap<String, Object>();
+    var comments = new HashMap<String, List<String>>();
+    var inline = new HashMap<String, List<String>>();
+    for (String key : file.getKeys(true)) {
+      comments.put(key, file.getComments(key));
+      inline.put(key, file.getInlineComments(key));
+    }
+    var content =
+        Set.of(
+            "header",
+            "separator",
+            "categories",
+            "placeholders",
+            "footer",
+            "presets-version",
+            "presets",
+            "default-preset");
+    for (String key : file.getKeys(false))
+      if (!content.contains(key)) values.put(key, ModuleConfigs.snapshot(file.get(key)));
+    for (String key :
+        List.of(
+            "header",
+            "separator",
+            "categories",
+            "placeholders",
+            "footer",
+            "presets-version",
+            "presets",
+            "default-preset"))
+      if (file.contains(key)) values.put(key, ModuleConfigs.snapshot(file.get(key)));
+    for (String key : List.copyOf(file.getKeys(false))) file.set(key, null);
+    values.forEach((key, value) -> ModuleConfigs.setValue(file, key, value));
+    comments.forEach((key, value) -> file.setComments(key, value));
+    inline.forEach((key, value) -> file.setInlineComments(key, value));
   }
 
   public static void migrate(ConfigurationSection file) {

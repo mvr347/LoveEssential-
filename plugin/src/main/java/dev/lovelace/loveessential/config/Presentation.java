@@ -10,8 +10,11 @@ import org.bukkit.configuration.file.YamlConfiguration;
 public final class Presentation {
   public record Binding(String module, String file, String key, String path) {}
 
+  public record Move(String module, String from, String to) {}
+
   private static final List<Binding> BINDINGS;
   private static final List<Map<?, ?>> ALIASES, UPDATES;
+  private static final List<Move> MOVES;
 
   static {
     try (var stream =
@@ -20,6 +23,15 @@ public final class Presentation {
       y.load(new InputStreamReader(Objects.requireNonNull(stream), StandardCharsets.UTF_8));
       ALIASES = List.copyOf(y.getMapList("aliases"));
       UPDATES = List.copyOf(y.getMapList("updates"));
+      MOVES =
+          y.getMapList("moves").stream()
+              .map(
+                  v ->
+                      new Move(
+                          v.get("module").toString(),
+                          v.get("from").toString(),
+                          v.get("to").toString()))
+              .toList();
       BINDINGS =
           y.getMapList("bindings").stream()
               .map(
@@ -89,6 +101,19 @@ public final class Presentation {
           document.set(binding.path(), value);
         document.set("messages." + binding.key(), null);
       }
+    for (var move : MOVES)
+      if (move.module().equals(id)) {
+        var source = move.from().startsWith("gui.") ? gui : module;
+        var target = move.to().startsWith("gui.") ? gui : module;
+        String from = local(move.from()), to = local(move.to());
+        if (source.contains(from)) {
+          if (!target.contains(to)) ModuleConfigs.setValue(target, to, source.get(from));
+          else if (!Objects.equals(
+              ModuleConfigs.snapshot(source.get(from)), ModuleConfigs.snapshot(target.get(to))))
+            throw new IllegalArgumentException("errors.conflict");
+          source.set(from, null);
+        }
+      }
     for (var update : UPDATES)
       if (update.get("module").equals(id)) {
         var document = update.get("file").equals("gui.yml") ? gui : module;
@@ -96,11 +121,28 @@ public final class Presentation {
         if (Objects.equals(ModuleConfigs.snapshot(document.get(path)), update.get("previous")))
           document.set(path, update.get("value"));
       }
+    if (id.equals("profile")) gui.set("menus.profile-stats-details-title", null);
+  }
+
+  private static String local(String path) {
+    return path.startsWith("gui.") ? path.substring(4) : path;
+  }
+
+  public static String canonicalPath(String module, String path) {
+    for (var move : MOVES)
+      if (move.module().equals(module)
+          && (path.equals(move.from()) || path.startsWith(move.from() + ".")))
+        return move.to() + path.substring(move.from().length());
+    return path;
+  }
+
+  public static void stripRuntime(ConfigurationSection section, String module) {
+    for (var move : MOVES) if (move.module().equals(module)) section.set(move.from(), null);
   }
 
   private static void inline(ConfigurationSection document, Map<String, Object> language) {
     for (String path : List.copyOf(document.getKeys(true))) {
-      if (!path.endsWith("-key") && !path.endsWith("-keys")) continue;
+      if (!referencePath(path)) continue;
       Object raw = document.get(path);
       String target = path.substring(0, path.lastIndexOf('-'));
       if (raw instanceof ConfigurationSection section) {
@@ -118,8 +160,24 @@ public final class Presentation {
     }
   }
 
+  static boolean referencePath(String path) {
+    if (!path.endsWith("-key") && !path.endsWith("-keys")) return false;
+    // Catalog IDs and templates are user data, even when their names end in '-key'.
+    if (path.startsWith("placeholders.") || path.contains(".placeholders.")) return false;
+    int dot = path.lastIndexOf('.');
+    if (dot < 0) return true;
+    String parent = path.substring(0, dot);
+    parent = parent.substring(parent.lastIndexOf('.') + 1);
+    return !Set.of("presets", "categories", "groups", "users", "worlds").contains(parent);
+  }
+
   /** Old implementation names exist only in memory, never in files. */
   public static void runtime(ConfigurationSection document) {
+    for (var move : MOVES) {
+      String root = ModuleConfigs.prefix(move.module()) + ".";
+      Object value = document.get(root + move.to());
+      if (value != null) ModuleConfigs.setValue(document, root + move.from(), value);
+    }
     for (var alias : ALIASES) {
       String module = alias.get("module").toString();
       String root =

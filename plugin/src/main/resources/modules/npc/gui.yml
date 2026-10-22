@@ -2,6 +2,32 @@ menus:
   access-editor-choice-title:
     size: 54
     title: <gold>Выбор условия
+    labels:
+      access-editor:
+        access:
+          title: <gold>Ограничения использования
+          help: <gray>Правила для действий игрока и показа модуля. Административный редактор доступен по своему праву.
+        allowed-worlds:
+          title: <gold>Разрешённые миры
+          help: <gray>Пустой список разрешает все миры. Поддерживаются шаблоны world_*; регистр не учитывается.
+        denied-worlds:
+          title: <gold>Запрещённые миры
+          help: <gray>Запрет имеет приоритет над разрешением. Название мира или шаблон, например arena_*.
+        allowed-gamemodes:
+          title: <gold>Разрешённые режимы
+          help: <gray>Пустой список разрешает все игровые режимы. Выберите нужные режимы в меню.
+        denied-gamemodes:
+          title: <gold>Запрещённые режимы
+          help: <gray>Игрок не может использовать модуль в любом из выбранных режимов.
+        allowed-states:
+          title: <gold>Допустимые состояния
+          help: <gray>Нужно хотя бы одно выбранное состояние. Пустой список не добавляет ограничений.
+        denied-states:
+          title: <gold>Запрещённые состояния
+          help: '<gray>Любое совпадение блокирует действие: например бой, AFK или полёт.'
+        required-states:
+          title: <gold>Обязательные состояния
+          help: <gray>Нужны сразу все выбранные состояния, например авторизован и на земле.
   gui-commands:
     size: 54
     title: <gold>Все команды
@@ -11,9 +37,49 @@ menus:
   gui-npc-title:
     size: 54
     title: <gold>NPC <dark_gray>| <yellow><id>
+    labels:
+      npc-editor:
+        route-title: <gold>Точки маршрута NPC
+        point: <gold>Точка <number>
+        point-title: <gold>Точка маршрута <number>
+        position: '<gray>Позиция: <white><x> <y> <z>'
+        point-details: '<gray>Пауза: <white><wait> <gray>тиков • скорость: <white><speed> <gray>• радиус: <white><radius>'
+        empty-route: <gray>Добавьте первую точку маршрута кнопкой в рабочей зоне.
+        move-point: <gold>Перенести точку в вашу позицию
+        move-up: <gold>Переместить точку раньше
+        move-down: <gold>Переместить точку позже
+        delete-point: <gold>Удалить эту точку маршрута
+        point-fields:
+          wait: <gold>Ожидание в точке
+          speed: <gold>Скорость к точке
+          radius: <gold>Радиус достижения
+        point-help:
+          wait: '<gray>Время остановки: 20 тиков = 1 секунда. Допустимо 0–72000.'
+          speed: '<gray>Множитель скорости движения: от 0.1 до 5.'
+          radius: '<gray>На каком расстоянии точка считается достигнутой: 0.1–8 блоков.'
+        actions-title: <gold>Назначенные действия NPC
+        action-order: '<gray>Порядок выполнения: <white><number>'
+        action-controls: '<gray>ЛКМ: поднять раньше в списке. ПКМ: удалить с подтверждением.'
+        empty-actions: <gray>Действий пока нет. Вернитесь и выберите нужное действие.
+        stale: <yellow>Черновик уже изменён. Открыт актуальный редактор.
+        actions-summary: 'Действий: <count>'
+        conditions-summary: 'Условий: <count>'
+        route-summary: 'Точек: <count>'
+        dialog-summary: 'Реплик: <count>'
   gui-npcs:
     size: 54
     title: <gold>Персонажи
+    create:
+      title: <green>Создать NPC
+      lore:
+      - <gray>Создайте персонажа и настройте его действия.
+      - <gray>Черновик сохраняется автоматически.
+      - <dark_gray>─────────────────────
+      - <green>ЛКМ — открыть мастер
+    labels:
+      gui:
+        npc-list-edit: <green>ЛКМ — редактировать NPC
+        npc-list-delete: <yellow>ПКМ — удалить NPC с подтверждением
   gui-place-title:
     size: 54
     title: <gold>Объект <dark_gray>| <yellow><id>
@@ -23,15 +89,314 @@ menus:
   gui-settings-title:
     size: 54
     title: <gold>Настройки <dark_gray>| <yellow><module>
+    labels:
+      settings-help:
+        section: <gray>Откройте раздел, чтобы настроить его параметры.
+        boolean: <gray>Переключатель функции. Нажмите для смены состояния.
+        number: <gray>Изменяйте число кнопками или введите точное значение.
+        list: <gray>Откройте список, чтобы добавить, изменить или удалить элемент.
+        text: <gray>Текстовое значение. При вводе «-» строка очищается.
+        choices:
+          native: <gold>Средствами Paper
+          tab: <gold>Через установленный TAB от NEZNAMY
+        change: <gold>Изменить на <amount>
+        npc-number-shortcuts: '<gray>ПКМ: увеличить; Shift+ПКМ: уменьшить. ЛКМ: точный ввод.'
   gui-skin-title:
     size: 54
     title: <gold>Облик игрока
   gui-wizard-title:
     size: 54
     title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
+    labels:
+      wizard:
+        new-npc: Новый NPC
+        title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
+        value: '<gray>Значение: <white><value>'
+        changed: '<green>Изменено: <field>'
+        saved: <green>Черновик сохранён.
+        discarded: <gray>Черновик отменён.
+        published: <green>NPC <id> опубликован.
+        preview: <aqua>Личный предпросмотр на 20 секунд.
+        point-added: <green>Добавлена точка <point>.
+        recording: '<gray>Запись маршрута: <state>'
+        no-draft: <red>Сначала откройте /npc wizard.
+        existing-draft: <yellow>Уже открыт черновик. Сохраните или отмените его.
+        busy: <yellow>Дождитесь завершения сохранения.
+        no-prompt: <gray>Нет активного запроса ввода.
+        route-tool: <gold>Редактор маршрута — ПКМ добавляет вашу позицию
+        confirm-discard: <yellow>Введите DELETE для отмены черновика.
+        prompt-value: <yellow>Введите значение в чат.
+        prompt-mode: '<yellow>Режим: ONCE, LOOP, PING_PONG, RANDOM.'
+        prompt-point: '<yellow>Введите: номер поле значение. Поля: wait, speed, radius, position, condition, actions.'
+        prompt-node: '<yellow>Введите: id_узла текст реплики.'
+        prompt-answer: '<yellow>Введите: узел id_ответа следующий_узел|end текст ответа.'
+        prompt-start: <yellow>Введите ID начального узла.
+        prompt-answer-condition: '<yellow>Введите: узел id_ответа JSON_условия.'
+        prompt-answer-actions: '<yellow>Введите: узел id_ответа JSON_массива_действий.'
+        prompt-template: '<yellow>Шаблон: guard, guide, merchant, quest, decoration.'
+        fields:
+          template: <gold>Шаблон
+          id: <gold>Технический ID
+          name: <gold>Имя NPC
+          type: <gold>Тип сущности
+          spawn: <gold>Появление — текущая позиция
+          skin: <gold>Скин — имя или UUID
+          helmet: <gold>Шлем
+          chestplate: <gold>Нагрудник
+          leggings: <gold>Поножи
+          boots: <gold>Ботинки
+          main-hand: <gold>Предмет в руке
+          off-hand: <gold>Предмет во второй руке
+          pose: <gold>Поза
+          scale: <gold>Размер
+          baby: <gold>Маленькая модель
+          glowing: <gold>Свечение
+          name-visible: <gold>Видимость имени
+          silent: <gold>Без звуков сущности
+          personal: <gold>Персональный экземпляр
+          visibility: <gold>Условия видимости
+          access: <gold>Условия взаимодействия
+          require-auth: <gold>Требовать авторизацию
+          interaction-range: <gold>Дистанция взаимодействия
+          cooldown-ms: <gold>Задержка кликов, мс
+          interaction-mode: '<gold>Взаимодействие: RIGHT_CLICK, LEFT_CLICK, BOTH'
+          line-of-sight: <gold>Требовать прямую видимость
+          interaction-sound: <gold>Звук взаимодействия — Sound или пусто
+          interaction-volume: <gold>Громкость звука (0–4)
+          interaction-pitch: <gold>Высота звука (0.5–2)
+          movement: '<gold>Движение: route, follow, stationary'
+          speed: <gold>Скорость
+          look-at: <gold>Смотреть на игрока
+          look-range: <gold>Радиус взгляда
+          pause-on-interact: <gold>Остановка при диалоге
+          stuck-policy: '<gold>Застревание: PAUSE, SKIP, RETURN_HOME'
+          activation-range: <gold>Радиус активации
+          point-add: <gold>Добавить текущую позицию
+          point-mode: <gold>Режим маршрута
+          point-record: <gold>Записывать движение
+          point-tool: <gold>Получить инструмент
+          point-show: <gold>Подсветить точки
+          point-edit: <gold>Редактировать точку
+          point-undo: <gold>Отменить изменение
+          point-redo: <gold>Повторить изменение
+          dialog-node: <gold>Создать/изменить реплику
+          dialog-answer: <gold>Создать/изменить ответ
+          dialog-start: <gold>Начальный узел
+          dialog-condition: <gold>Условие ответа
+          dialog-actions: <gold>Действия ответа
+          actions: <gold>Действия по клику
+          enabled-hours: <gold>Работа по игровому времени
+          hour-from: <gold>Начало, тики
+          hour-to: <gold>Окончание, тики
+          enabled: <gold>NPC включён
+          collidable: <gold>Коллизия
+          gravity: <gold>Гравитация
+          invulnerable: <gold>Неуязвимость
+          avoid-water: <gold>Избегать воды на маршруте
+          can-open-doors: <gold>Открывать двери на маршруте
+          teleport-on-stuck: <gold>Возврат домой при застревании
+          follow-player: <gold>Игрок для сопровождения
+          follow-distance: <gold>Дистанция сопровождения
+          stuck-ticks: <gold>Ожидание при застревании, тики
+        condition-title: <gold>Добавить условие
+        action-title: <gold>Добавить действие
+        clear-conditions: <red>Удалить все условия
+        clear-actions: <red>Удалить все действия
+        prompt-text: <yellow>Введите текст сообщения. Он будет сохранён в конфиге модуля.
+        conditions:
+          authenticated: <gold>Авторизация
+          permission: <gold>Право доступа
+          world: <gold>Мир
+          reputation: <gold>Минимальная репутация
+          clan: <gold>Клан
+          territory: <gold>Доступная территория
+          not-in-combat: <gold>Вне боя
+          item: <gold>Предмет в инвентаре
+          time: <gold>Игровое время
+          weather: <gold>Погода
+          balance: <gold>Достаточно монет LoveEconomy
+        action-types:
+          message: <gold>Сообщение
+          actionbar: <gold>Строка над панелью
+          sound: <gold>Звук
+          reputation: <gold>Изменить репутацию
+          stat: <gold>Изменить статистику
+          command: <gold>Разрешённая команда игрока
+          lovecontracts_board: <gold>Доска контрактов
+          lovecontracts_player-board: <gold>Контракты игроков
+          lovecontracts_my: <gold>Мои контракты
+          loveshops_banker: <gold>Банкир LoveShops
+          charge: <gold>Списать монеты LoveEconomy
+          give: <gold>Выдать монеты LoveEconomy
+        parameters:
+          value: <yellow>Введите значение условия или разрешённую команду.
+          min: <yellow>Введите минимальную репутацию (0–100).
+          material: <yellow>Введите материал, например EMERALD.
+          amount: <yellow>Введите количество.
+          from: <yellow>Введите начальное игровое время (0–23999).
+          to: <yellow>Введите конечное игровое время (0–23999).
+          sound: <yellow>Введите ID звука, например ENTITY_VILLAGER_YES.
+          delta: <yellow>Введите изменение репутации, например 5 или -5.
+          metric: <yellow>Введите идентификатор метрики.
+        sections-title: <gold>Разделы редактора
+        sections:
+          '0': <gold>Основное
+          '1': <gold>Внешность
+          '2': <gold>Взаимодействие
+          '3': <gold>Поведение
+          '4': <gold>Маршрут
+          '5': <gold>Диалоги
+          '6': <gold>Расписание и физика
+        choices:
+          AIR: <gray>Убрать предмет
+          NONE: <gray>Без звука
+          RIGHT_CLICK: <gold>Правая кнопка мыши
+          LEFT_CLICK: <gold>Левая кнопка мыши
+          BOTH: <gold>Обе кнопки мыши
+          route: <gold>По маршруту
+          follow: <gold>Следовать за игроком
+          stationary: <gold>Стоять на месте
+          PAUSE: <gold>Остановиться
+          SKIP: <gold>Пропустить точку
+          RETURN_HOME: <gold>Вернуться домой
+          guard: <gold>Страж
+          guide: <gold>Проводник
+          merchant: <gold>Торговец
+          quest: <gold>Квестодатель
+          decoration: <gold>Декорация
+          MANNEQUIN: <gold>Манекен
+          VILLAGER: <gold>Житель
+          WANDERING_TRADER: <gold>Странствующий торговец
+          ARMOR_STAND: <gold>Стойка для брони
+          ZOMBIE: <gold>Зомби
+          SKELETON: <gold>Скелет
+          CAT: <gold>Кошка
+          WOLF: <gold>Волк
+          IRON_GOLEM: <gold>Железный голем
+          ALLAY: <gold>Тихоня
+      npc-help:
+        fields:
+          id: '<gray>Уникальный ID NPC: 1–48 строчных латинских букв, цифр, _ или -. После публикации не меняется.'
+          name: <gray>Имя над NPC с поддержкой цветовой разметки MiniMessage. Текст сохраняется в конфиге модуля.
+          type: <gray>Модель сущности Minecraft. MANNEQUIN поддерживает скин игрока; возможности других моделей отличаются.
+          spawn: <gray>Нажмите, чтобы NPC появлялся в вашей текущей позиции. Проверяется безопасность и территория.
+          skin: <gray>Имя или UUID владельца скина для MANNEQUIN. «-» убирает выбранный скин.
+          helmet: <gray>Материал предмета на голове NPC. AIR убирает предмет.
+          chestplate: <gray>Материал нагрудника. AIR убирает предмет.
+          leggings: <gray>Материал поножей. AIR убирает предмет.
+          boots: <gray>Материал ботинок. AIR убирает предмет.
+          main-hand: <gray>Предмет в основной руке. Сам по себе не назначает NPC профессию или действие.
+          off-hand: <gray>Предмет во второй руке. AIR освобождает руку.
+          pose: <gray>Поза модели. Набор доступных поз зависит от выбранной сущности.
+          scale: '<gray>Размер модели: 1 — обычный, 0.1–8 — допустимые значения.'
+          baby: <gray>Включает детскую модель, если выбранная сущность её поддерживает.
+          glowing: <gray>Добавляет светящийся контур вокруг NPC.
+          name-visible: <gray>Показывает или скрывает имя над сущностью.
+          silent: <gray>Отключает обычные звуки сущности. Настроенный звук клика задаётся отдельно.
+          personal: <gray>Каждый подходящий игрок видит свой экземпляр NPC с отдельным движением.
+          visibility: <gray>Определяет, кто видит NPC. Можно назначить сразу несколько условий.
+          access: <gray>Определяет, кто может взаимодействовать с видимым NPC.
+          require-auth: <gray>При установленном LoveAuth допускает взаимодействие и видимость после авторизации.
+          interaction-range: '<gray>Максимальная дистанция клика: от 1 до 16 блоков.'
+          cooldown-ms: '<gray>Минимальная задержка между кликами игрока: 1000 мс = 1 секунда.'
+          interaction-mode: '<gray>На какие клики реагировать: левый, правый или оба. Выберите вариант в меню.'
+          line-of-sight: <gray>Запрещает взаимодействовать с NPC сквозь стену.
+          interaction-sound: <gray>Звук при успешном клике. NONE или «-» отключает звук.
+          interaction-volume: '<gray>Громкость звука клика: 0–4.'
+          interaction-pitch: '<gray>Высота звука клика: 0.5–2.'
+          movement: '<gray>Независимое поведение: стоять, идти по маршруту или следовать за игроком.'
+          speed: '<gray>Множитель скорости передвижения: 0.1–5.'
+          look-at: <gray>Поворачивает NPC к ближайшему доступному игроку, в том числе во время остановки движения.
+          look-range: '<gray>На какой дистанции искать игрока для взгляда: 1–64 блока.'
+          pause-on-interact: <gray>После клика останавливает движение на 10 секунд; взгляд продолжает работать.
+          stuck-policy: '<gray>Что делать после неудачных попыток пройти: остановиться, пропустить точку или вернуться.'
+          activation-range: '<gray>Дистанция появления и активности NPC: 4–192 блока.'
+          follow-player: <gray>Настоящее имя игрока, за которым идти. «-» выбирает ближайшего доступного игрока.
+          follow-distance: '<gray>На каком расстоянии остановиться при сопровождении: 1–32 блока.'
+          stuck-ticks: <gray>Сколько тиков ждать при препятствии перед повторным поиском пути. 20 тиков = 1 секунда.
+          point-add: <gray>Добавить вашу позицию в конец маршрута. Сначала встаньте на безопасное место.
+          point-mode: <gray>ONCE — один проход; LOOP — круг; PING_PONG — туда-обратно; RANDOM — случайная точка.
+          point-record: <gray>Переключает запись точек при вашем движении. Повторное нажатие выключает запись.
+          point-tool: <gray>Выдаёт инструмент. ПКМ добавляет вашу текущую позицию в маршрут.
+          point-show: <gray>Показывает точки частицами только вам.
+          point-edit: <gray>Открывает список точек. Выберите точку, чтобы изменить ожидание, скорость, радиус или порядок.
+          point-undo: <gray>Отменяет последнее изменение маршрута.
+          point-redo: <gray>Повторяет отменённое изменение маршрута.
+          dialog-node: '<gray>Добавить или изменить реплику: ID узла и текст, который увидит игрок.'
+          dialog-answer: '<gray>Добавить вариант ответа: узел, ID ответа, следующий узел или end и текст.'
+          dialog-start: <gray>ID реплики, с которой начинается диалог NPC.
+          dialog-condition: <gray>Условие доступности конкретного ответа в диалоге.
+          dialog-actions: <gray>Действия, которые выполняются после выбора ответа.
+          actions: <gray>Любые назначенные действия по клику. Один NPC может сочетать меню, сообщения, оплату и диалог.
+          enabled-hours: <gray>Показывать NPC только в выбранные часы игрового мира.
+          hour-from: '<gray>Начало работы в тиках мира: 0 — утро, 12000 — закат, 18000 — полночь.'
+          hour-to: '<gray>Конец работы в тиках мира: 0–23999. Можно задать интервал через полночь.'
+          enabled: <gray>Разрешает появление этого NPC. Остальные настройки сохраняются.
+          collidable: <gray>Разрешает столкновения с моделью NPC.
+          gravity: <gray>Разрешает сущности падать под действием гравитации.
+          invulnerable: <gray>Защищает NPC от обычного урона.
+          avoid-water: <gray>Прокладывает наземный маршрут в обход воды.
+          can-open-doors: <gray>Разрешает NPC открывать двери на пути.
+          teleport-on-stuck: <gray>При RETURN_HOME разрешает безопасный телепорт к месту появления.
   module-menu-title:
     size: 54
     title: <gold>Настройки модулей LoveEssential
+    labels:
+      module-menu:
+        descriptions:
+          worlds:
+          - <gray>Создание, импорт, загрузка и настройки отдельных миров. /le worlds.
+          scenarios:
+          - <gray>Действия при первом входе и других событиях. /le scenario.
+          dialogs:
+          - '<gray>Нативные окна Paper: текст, поля ввода и кнопки. /le dialog.'
+          scoreboard:
+          - <gray>Личные строки, форматы и наборы табло; перенос LoveTweaks. /le scoreboard.
+          crafting:
+          - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
+          starter:
+          - '<gray>Набор первого входа после входа в LoveAuth. Редактор: /le starter edit.'
+          npc:
+          - <gray>Настройки универсальных NPC, появления и маршрутов.
+          - '<gray>Создание и редактор: /le npc.'
+          tab:
+          - <gray>Список игроков, имена, группы, scoreboard и bossbar.
+          home:
+          - <gray>Лимит домов и доступность команд сохранения/телепорта.
+          spawn:
+          - <gray>Доступность сохранённых точек спавна.
+          teleport:
+          - <gray>Запросы телепорта и возврат на предыдущую позицию.
+          vanish:
+          - <gray>Скрытие игрока с сохранением состояния между входами.
+          afk:
+          - <gray>Ручной и автоматический AFK, время до отключения.
+          skin:
+          - <gray>Смена скина по имени игрока и возврат своего скина.
+          utilities:
+          - <gray>Лечение, еда, полёт, скорость, игровой режим и ремонт.
+          sitride:
+          - <gray>Сидение и посадка на сущность при наличии прав.
+          nightskip:
+          - <gray>Ускорение ночи, когда игроки спят.
+          portal:
+          - '<gray>Области перехода и назначения. Объекты: /le portal.'
+          hologram:
+          - '<gray>Текстовые голограммы. Объекты: /le hologram.'
+          traces:
+          - <gray>Частицы следов за движущимися игроками.
+          joinquit:
+          - <gray>Сообщения о входе и выходе из королевства.
+          motd:
+          - <gray>Описание сервера в списке серверов Minecraft.
+          messages:
+          - <gray>Личные сообщения, задержка и лимит игнор-листа.
+          inventory:
+          - <gray>Живой просмотр и изменение инвентаря по правам.
+          profile:
+          - '<gray>Досье игрока: карточки, права и обновление данных.'
+          nickname:
+          - <gray>Псевдонимы, ограничения, цвета и готовые градиенты.
   settings-help-choice-title:
     size: 54
     title: <gold>Выберите значение
@@ -117,8 +482,7 @@ messages:
     - <gray>/le npc — список, создание и удаление через меню
     tab-settings: '<gray>Настройки собственного TAB: modules/tab/tab.yml; /le tab — меню настройки.'
     player: <gold>LoveEssential <dark_gray>· <gray>/профиль · /спавн · /дом · /msg <имя> <текст>
-    admin: <gold>LoveEssential <dark_gray>· <gray>/le — модули · /le npc · /le portals · /le tab · /le scoreboard
-      edit
+    admin: <gold>LoveEssential <dark_gray>· <gray>/le — модули · /le npc · /le portals · /le tab · /le scoreboard edit
   modules:
     list: '<gray>Модули: <modules>'
     state: '<gray><module>: <state>'
@@ -130,173 +494,6 @@ messages:
     debug: '<gray>Состояние: <state>'
     selected: '<gray>Выбран: <id>'
     confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
-    names: {}
-  wizard:
-    new-npc: Новый NPC
-    title: <gold>NPC <dark_gray>| <yellow>Шаг <step>/<total>
-    value: '<gray>Значение: <white><value>'
-    changed: '<green>Изменено: <field>'
-    saved: <green>Черновик сохранён.
-    discarded: <gray>Черновик отменён.
-    published: <green>NPC <id> опубликован.
-    preview: <aqua>Личный предпросмотр на 20 секунд.
-    point-added: <green>Добавлена точка <point>.
-    recording: '<gray>Запись маршрута: <state>'
-    no-draft: <red>Сначала откройте /npc wizard.
-    existing-draft: <yellow>Уже открыт черновик. Сохраните или отмените его.
-    busy: <yellow>Дождитесь завершения сохранения.
-    no-prompt: <gray>Нет активного запроса ввода.
-    route-tool: <gold>Редактор маршрута — ПКМ добавляет вашу позицию
-    confirm-discard: <yellow>Введите DELETE для отмены черновика.
-    prompt-value: <yellow>Введите значение в чат.
-    prompt-mode: '<yellow>Режим: ONCE, LOOP, PING_PONG, RANDOM.'
-    prompt-point: '<yellow>Введите: номер поле значение. Поля: wait, speed, radius, position, condition, actions.'
-    prompt-node: '<yellow>Введите: id_узла текст реплики.'
-    prompt-answer: '<yellow>Введите: узел id_ответа следующий_узел|end текст ответа.'
-    prompt-start: <yellow>Введите ID начального узла.
-    prompt-answer-condition: '<yellow>Введите: узел id_ответа JSON_условия.'
-    prompt-answer-actions: '<yellow>Введите: узел id_ответа JSON_массива_действий.'
-    prompt-template: '<yellow>Шаблон: guard, guide, merchant, quest, decoration.'
-    fields:
-      template: <gold>Шаблон
-      id: <gold>Технический ID
-      name: <gold>Имя NPC
-      type: <gold>Тип сущности
-      spawn: <gold>Появление — текущая позиция
-      skin: <gold>Скин — имя или UUID
-      helmet: <gold>Шлем
-      chestplate: <gold>Нагрудник
-      leggings: <gold>Поножи
-      boots: <gold>Ботинки
-      main-hand: <gold>Предмет в руке
-      off-hand: <gold>Предмет во второй руке
-      pose: <gold>Поза
-      scale: <gold>Размер
-      baby: <gold>Маленькая модель
-      glowing: <gold>Свечение
-      name-visible: <gold>Видимость имени
-      silent: <gold>Без звуков сущности
-      personal: <gold>Персональный экземпляр
-      visibility: <gold>Условия видимости
-      access: <gold>Условия взаимодействия
-      require-auth: <gold>Требовать авторизацию
-      interaction-range: <gold>Дистанция взаимодействия
-      cooldown-ms: <gold>Задержка кликов, мс
-      interaction-mode: '<gold>Взаимодействие: RIGHT_CLICK, LEFT_CLICK, BOTH'
-      line-of-sight: <gold>Требовать прямую видимость
-      interaction-sound: <gold>Звук взаимодействия — Sound или пусто
-      interaction-volume: <gold>Громкость звука (0–4)
-      interaction-pitch: <gold>Высота звука (0.5–2)
-      movement: '<gold>Движение: route, follow, stationary'
-      speed: <gold>Скорость
-      look-at: <gold>Смотреть на игрока
-      look-range: <gold>Радиус взгляда
-      pause-on-interact: <gold>Остановка при диалоге
-      stuck-policy: '<gold>Застревание: PAUSE, SKIP, RETURN_HOME'
-      activation-range: <gold>Радиус активации
-      point-add: <gold>Добавить текущую позицию
-      point-mode: <gold>Режим маршрута
-      point-record: <gold>Записывать движение
-      point-tool: <gold>Получить инструмент
-      point-show: <gold>Подсветить точки
-      point-edit: <gold>Редактировать точку
-      point-undo: <gold>Отменить изменение
-      point-redo: <gold>Повторить изменение
-      dialog-node: <gold>Создать/изменить реплику
-      dialog-answer: <gold>Создать/изменить ответ
-      dialog-start: <gold>Начальный узел
-      dialog-condition: <gold>Условие ответа
-      dialog-actions: <gold>Действия ответа
-      actions: <gold>Действия по клику
-      enabled-hours: <gold>Работа по игровому времени
-      hour-from: <gold>Начало, тики
-      hour-to: <gold>Окончание, тики
-      enabled: <gold>NPC включён
-      collidable: <gold>Коллизия
-      gravity: <gold>Гравитация
-      invulnerable: <gold>Неуязвимость
-      avoid-water: <gold>Избегать воды на маршруте
-      can-open-doors: <gold>Открывать двери на маршруте
-      teleport-on-stuck: <gold>Возврат домой при застревании
-      follow-player: <gold>Игрок для сопровождения
-      follow-distance: <gold>Дистанция сопровождения
-      stuck-ticks: <gold>Ожидание при застревании, тики
-    condition-title: <gold>Добавить условие
-    action-title: <gold>Добавить действие
-    clear-conditions: <red>Удалить все условия
-    clear-actions: <red>Удалить все действия
-    prompt-text: <yellow>Введите текст сообщения. Он будет сохранён в конфиге модуля.
-    conditions:
-      authenticated: <gold>Авторизация
-      permission: <gold>Право доступа
-      world: <gold>Мир
-      reputation: <gold>Минимальная репутация
-      clan: <gold>Клан
-      territory: <gold>Доступная территория
-      not-in-combat: <gold>Вне боя
-      item: <gold>Предмет в инвентаре
-      time: <gold>Игровое время
-      weather: <gold>Погода
-      balance: <gold>Достаточно монет LoveEconomy
-    action-types:
-      message: <gold>Сообщение
-      actionbar: <gold>Строка над панелью
-      sound: <gold>Звук
-      reputation: <gold>Изменить репутацию
-      stat: <gold>Изменить статистику
-      command: <gold>Разрешённая команда игрока
-      lovecontracts_board: <gold>Доска контрактов
-      lovecontracts_player-board: <gold>Контракты игроков
-      lovecontracts_my: <gold>Мои контракты
-      loveshops_banker: <gold>Банкир LoveShops
-      charge: <gold>Списать монеты LoveEconomy
-      give: <gold>Выдать монеты LoveEconomy
-    parameters:
-      value: <yellow>Введите значение условия или разрешённую команду.
-      min: <yellow>Введите минимальную репутацию (0–100).
-      material: <yellow>Введите материал, например EMERALD.
-      amount: <yellow>Введите количество.
-      from: <yellow>Введите начальное игровое время (0–23999).
-      to: <yellow>Введите конечное игровое время (0–23999).
-      sound: <yellow>Введите ID звука, например ENTITY_VILLAGER_YES.
-      delta: <yellow>Введите изменение репутации, например 5 или -5.
-      metric: <yellow>Введите идентификатор метрики.
-    sections-title: <gold>Разделы редактора
-    sections:
-      '0': <gold>Основное
-      '1': <gold>Внешность
-      '2': <gold>Взаимодействие
-      '3': <gold>Поведение
-      '4': <gold>Маршрут
-      '5': <gold>Диалоги
-      '6': <gold>Расписание и физика
-    choices:
-      AIR: <gray>Убрать предмет
-      NONE: <gray>Без звука
-      RIGHT_CLICK: <gold>Правая кнопка мыши
-      LEFT_CLICK: <gold>Левая кнопка мыши
-      BOTH: <gold>Обе кнопки мыши
-      route: <gold>По маршруту
-      follow: <gold>Следовать за игроком
-      stationary: <gold>Стоять на месте
-      PAUSE: <gold>Остановиться
-      SKIP: <gold>Пропустить точку
-      RETURN_HOME: <gold>Вернуться домой
-      guard: <gold>Страж
-      guide: <gold>Проводник
-      merchant: <gold>Торговец
-      quest: <gold>Квестодатель
-      decoration: <gold>Декорация
-      MANNEQUIN: <gold>Манекен
-      VILLAGER: <gold>Житель
-      WANDERING_TRADER: <gold>Странствующий торговец
-      ARMOR_STAND: <gold>Стойка для брони
-      ZOMBIE: <gold>Зомби
-      SKELETON: <gold>Скелет
-      CAT: <gold>Кошка
-      WOLF: <gold>Волк
-      IRON_GOLEM: <gold>Железный голем
-      ALLAY: <gold>Тихоня
   dialog:
     finished: <gray>Разговор завершён.
   vanish:
@@ -333,7 +530,6 @@ messages:
     add: <green>Добавить
     remove: <red>Удалить
     resume: <gold>Продолжить черновик
-    create-npc: <green>Создать NPC
     delete-npc: <red>Удалить NPC
     edit-npc: <gold>Редактировать NPC
     path-npc: <gold>Маршрут NPC
@@ -756,7 +952,6 @@ messages:
           _label: <gold>Время до AFK, секунды
         kick-after-seconds:
           _label: <gold>Время до отключения AFK, секунды
-      teleport: {}
       traces:
         default-enabled:
           _label: <gold>Показывать следы новым игрокам
@@ -768,15 +963,11 @@ messages:
           _label: <gold>Дальность видимости следов
         color:
           _label: <gold>Цвет следов, RGB
-      spawn: {}
-      joinquit: {}
       sitride:
         click-to-sit:
           _label: <gold>Садиться пустой рукой по ПКМ
         ride-range:
           _label: <gold>Дальность посадки на сущность
-      skin: {}
-      vanish: {}
       npc:
         allowed-types:
           _label: <gold>Допустимые типы NPC
@@ -808,8 +999,6 @@ messages:
             _label: <gold>Лимит экономической операции
           allowed-player-commands:
             _label: <gold>Разрешённые команды
-      motd: {}
-      portal: {}
       home:
         default-limit:
           _label: <gold>Базовый лимит домов
@@ -1099,61 +1288,6 @@ messages:
     skin-reset: <gold>Вернуть собственный скин
     prompt-skin: '<yellow>Введите имя владельца скина: латинские буквы, цифры и _, до 16 символов.'
     menu: <gold>Меню
-  module-menu:
-    descriptions:
-      worlds:
-      - <gray>Создание, импорт, загрузка и настройки отдельных миров. /le worlds.
-      scenarios:
-      - <gray>Действия при первом входе и других событиях. /le scenario.
-      dialogs:
-      - '<gray>Нативные окна Paper: текст, поля ввода и кнопки. /le dialog.'
-      scoreboard:
-      - <gray>Личные строки, форматы и наборы табло; перенос LoveTweaks. /le scoreboard.
-      crafting:
-      - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
-      starter:
-      - '<gray>Набор первого входа после входа в LoveAuth. Редактор: /le starter edit.'
-      npc:
-      - <gray>Настройки универсальных NPC, появления и маршрутов.
-      - '<gray>Создание и редактор: /le npc.'
-      tab:
-      - <gray>Список игроков, имена, группы, scoreboard и bossbar.
-      home:
-      - <gray>Лимит домов и доступность команд сохранения/телепорта.
-      spawn:
-      - <gray>Доступность сохранённых точек спавна.
-      teleport:
-      - <gray>Запросы телепорта и возврат на предыдущую позицию.
-      vanish:
-      - <gray>Скрытие игрока с сохранением состояния между входами.
-      afk:
-      - <gray>Ручной и автоматический AFK, время до отключения.
-      skin:
-      - <gray>Смена скина по имени игрока и возврат своего скина.
-      utilities:
-      - <gray>Лечение, еда, полёт, скорость, игровой режим и ремонт.
-      sitride:
-      - <gray>Сидение и посадка на сущность при наличии прав.
-      nightskip:
-      - <gray>Ускорение ночи, когда игроки спят.
-      portal:
-      - '<gray>Области перехода и назначения. Объекты: /le portal.'
-      hologram:
-      - '<gray>Текстовые голограммы. Объекты: /le hologram.'
-      traces:
-      - <gray>Частицы следов за движущимися игроками.
-      joinquit:
-      - <gray>Сообщения о входе и выходе из королевства.
-      motd:
-      - <gray>Описание сервера в списке серверов Minecraft.
-      messages:
-      - <gray>Личные сообщения, задержка и лимит игнор-листа.
-      inventory:
-      - <gray>Живой просмотр и изменение инвентаря по правам.
-      profile:
-      - '<gray>Досье игрока: карточки, права и обновление данных.'
-      nickname:
-      - <gray>Псевдонимы, ограничения, цвета и готовые градиенты.
   input:
     context: '<gold>Сейчас настраивается: <context>'
     npc: <gold>NPC <white><id>
@@ -1216,109 +1350,7 @@ messages:
       sound: ENTITY_EXPERIENCE_ORB_PICKUP
       delta: '5'
       metric: essential.npc.interactions
-  settings-help:
-    section: <gray>Откройте раздел, чтобы настроить его параметры.
-    boolean: <gray>Переключатель функции. Нажмите для смены состояния.
-    number: <gray>Изменяйте число кнопками или введите точное значение.
-    list: <gray>Откройте список, чтобы добавить, изменить или удалить элемент.
-    text: <gray>Текстовое значение. При вводе «-» строка очищается.
-    choices:
-      native: <gold>Средствами Paper
-      tab: <gold>Через установленный TAB от NEZNAMY
-    change: <gold>Изменить на <amount>
-    npc-number-shortcuts: '<gray>ПКМ: увеличить; Shift+ПКМ: уменьшить. ЛКМ: точный ввод.'
-  npc-editor:
-    route-title: <gold>Точки маршрута NPC
-    point: <gold>Точка <number>
-    point-title: <gold>Точка маршрута <number>
-    position: '<gray>Позиция: <white><x> <y> <z>'
-    point-details: '<gray>Пауза: <white><wait> <gray>тиков • скорость: <white><speed> <gray>• радиус: <white><radius>'
-    empty-route: <gray>Точек пока нет — нажмите кнопку добавления сверху.
-    move-point: <gold>Перенести точку в вашу позицию
-    move-up: <gold>Переместить точку раньше
-    move-down: <gold>Переместить точку позже
-    delete-point: <gold>Удалить эту точку маршрута
-    point-fields:
-      wait: <gold>Ожидание в точке
-      speed: <gold>Скорость к точке
-      radius: <gold>Радиус достижения
-    point-help:
-      wait: '<gray>Время остановки: 20 тиков = 1 секунда. Допустимо 0–72000.'
-      speed: '<gray>Множитель скорости движения: от 0.1 до 5.'
-      radius: '<gray>На каком расстоянии точка считается достигнутой: 0.1–8 блоков.'
-    actions-title: <gold>Назначенные действия NPC
-    action-order: '<gray>Порядок выполнения: <white><number>'
-    action-controls: '<gray>ЛКМ: поднять раньше в списке. ПКМ: удалить с подтверждением.'
-    empty-actions: <gray>Действий пока нет. Вернитесь и выберите нужное действие.
-    stale: <yellow>Черновик уже изменён. Открыт актуальный редактор.
-    actions-summary: 'Действий: <count>'
-    conditions-summary: 'Условий: <count>'
-    route-summary: 'Точек: <count>'
-    dialog-summary: 'Реплик: <count>'
   npc-help:
-    fields:
-      id: '<gray>Уникальный ID NPC: 1–48 строчных латинских букв, цифр, _ или -. После публикации не меняется.'
-      name: <gray>Имя над NPC с поддержкой цветовой разметки MiniMessage. Текст сохраняется в конфиге модуля.
-      type: <gray>Модель сущности Minecraft. MANNEQUIN поддерживает скин игрока; возможности других моделей отличаются.
-      spawn: <gray>Нажмите, чтобы NPC появлялся в вашей текущей позиции. Проверяется безопасность и территория.
-      skin: <gray>Имя или UUID владельца скина для MANNEQUIN. «-» убирает выбранный скин.
-      helmet: <gray>Материал предмета на голове NPC. AIR убирает предмет.
-      chestplate: <gray>Материал нагрудника. AIR убирает предмет.
-      leggings: <gray>Материал поножей. AIR убирает предмет.
-      boots: <gray>Материал ботинок. AIR убирает предмет.
-      main-hand: <gray>Предмет в основной руке. Сам по себе не назначает NPC профессию или действие.
-      off-hand: <gray>Предмет во второй руке. AIR освобождает руку.
-      pose: <gray>Поза модели. Набор доступных поз зависит от выбранной сущности.
-      scale: '<gray>Размер модели: 1 — обычный, 0.1–8 — допустимые значения.'
-      baby: <gray>Включает детскую модель, если выбранная сущность её поддерживает.
-      glowing: <gray>Добавляет светящийся контур вокруг NPC.
-      name-visible: <gray>Показывает или скрывает имя над сущностью.
-      silent: <gray>Отключает обычные звуки сущности. Настроенный звук клика задаётся отдельно.
-      personal: <gray>Каждый подходящий игрок видит свой экземпляр NPC с отдельным движением.
-      visibility: <gray>Определяет, кто видит NPC. Можно назначить сразу несколько условий.
-      access: <gray>Определяет, кто может взаимодействовать с видимым NPC.
-      require-auth: <gray>При установленном LoveAuth допускает взаимодействие и видимость после авторизации.
-      interaction-range: '<gray>Максимальная дистанция клика: от 1 до 16 блоков.'
-      cooldown-ms: '<gray>Минимальная задержка между кликами игрока: 1000 мс = 1 секунда.'
-      interaction-mode: '<gray>На какие клики реагировать: левый, правый или оба. Выберите вариант в меню.'
-      line-of-sight: <gray>Запрещает взаимодействовать с NPC сквозь стену.
-      interaction-sound: <gray>Звук при успешном клике. NONE или «-» отключает звук.
-      interaction-volume: '<gray>Громкость звука клика: 0–4.'
-      interaction-pitch: '<gray>Высота звука клика: 0.5–2.'
-      movement: '<gray>Независимое поведение: стоять, идти по маршруту или следовать за игроком.'
-      speed: '<gray>Множитель скорости передвижения: 0.1–5.'
-      look-at: <gray>Поворачивает NPC к ближайшему доступному игроку, в том числе во время остановки движения.
-      look-range: '<gray>На какой дистанции искать игрока для взгляда: 1–64 блока.'
-      pause-on-interact: <gray>После клика останавливает движение на 10 секунд; взгляд продолжает работать.
-      stuck-policy: '<gray>Что делать после неудачных попыток пройти: остановиться, пропустить точку или вернуться.'
-      activation-range: '<gray>Дистанция появления и активности NPC: 4–192 блока.'
-      follow-player: <gray>Настоящее имя игрока, за которым идти. «-» выбирает ближайшего доступного игрока.
-      follow-distance: '<gray>На каком расстоянии остановиться при сопровождении: 1–32 блока.'
-      stuck-ticks: <gray>Сколько тиков ждать при препятствии перед повторным поиском пути. 20 тиков = 1 секунда.
-      point-add: <gray>Добавить вашу позицию в конец маршрута. Сначала встаньте на безопасное место.
-      point-mode: <gray>ONCE — один проход; LOOP — круг; PING_PONG — туда-обратно; RANDOM — случайная точка.
-      point-record: <gray>Переключает запись точек при вашем движении. Повторное нажатие выключает запись.
-      point-tool: <gray>Выдаёт инструмент. ПКМ добавляет вашу текущую позицию в маршрут.
-      point-show: <gray>Показывает точки частицами только вам.
-      point-edit: <gray>Открывает список точек. Выберите точку, чтобы изменить ожидание, скорость, радиус или порядок.
-      point-undo: <gray>Отменяет последнее изменение маршрута.
-      point-redo: <gray>Повторяет отменённое изменение маршрута.
-      dialog-node: '<gray>Добавить или изменить реплику: ID узла и текст, который увидит игрок.'
-      dialog-answer: '<gray>Добавить вариант ответа: узел, ID ответа, следующий узел или end и текст.'
-      dialog-start: <gray>ID реплики, с которой начинается диалог NPC.
-      dialog-condition: <gray>Условие доступности конкретного ответа в диалоге.
-      dialog-actions: <gray>Действия, которые выполняются после выбора ответа.
-      actions: <gray>Любые назначенные действия по клику. Один NPC может сочетать меню, сообщения, оплату и диалог.
-      enabled-hours: <gray>Показывать NPC только в выбранные часы игрового мира.
-      hour-from: '<gray>Начало работы в тиках мира: 0 — утро, 12000 — закат, 18000 — полночь.'
-      hour-to: '<gray>Конец работы в тиках мира: 0–23999. Можно задать интервал через полночь.'
-      enabled: <gray>Разрешает появление этого NPC. Остальные настройки сохраняются.
-      collidable: <gray>Разрешает столкновения с моделью NPC.
-      gravity: <gray>Разрешает сущности падать под действием гравитации.
-      invulnerable: <gray>Защищает NPC от обычного урона.
-      avoid-water: <gray>Прокладывает наземный маршрут в обход воды.
-      can-open-doors: <gray>Разрешает NPC открывать двери на пути.
-      teleport-on-stuck: <gray>При RETURN_HOME разрешает безопасный телепорт к месту появления.
     examples:
       id: npc_01
       name: <gold>Хранитель
@@ -1337,11 +1369,10 @@ messages:
         _description: <gray>Суммарный бюджет TextDisplay, ItemDisplay и Interaction для всех игроков.
     sitride:
       click-to-sit:
-        _description: <gray>ПКМ пустой основной рукой по ступеням, плитам или ковру садит игрока. Shift пропускает
-          действие.
+        _description: <gray>ПКМ пустой основной рукой по ступеням, плитам или ковру садит игрока. Shift пропускает действие.
       ride-range:
-        _description: <gray>Максимальное расстояние до цели /ride. Проверяются прямая видимость, территория, бой
-          и согласие игрока.
+        _description: <gray>Максимальное расстояние до цели /ride. Проверяются прямая видимость, территория, бой и согласие
+          игрока.
     traces:
       default-enabled:
         _description: <gray>Начальное состояние следов. Личный выбор /traces хранится в SQLite и имеет приоритет.
@@ -1380,14 +1411,12 @@ messages:
         _description: <gray>Интервал обновления живого инвентаря. 20 тиков = 1 секунда.
     profile:
       privacy:
-        _description: <gray>Начальные значения для игроков без сохранённого выбора; личные переключатели хранятся
-          в SQLite.
+        _description: <gray>Начальные значения для игроков без сохранённого выбора; личные переключатели хранятся в SQLite.
       links:
-        _description: <gray>Команды исполняются от имени игрока, без OP и консоли. Проверяются плагин-владелец,
-          права и доступ к профилю.
+        _description: <gray>Команды исполняются от имени игрока, без OP и консоли. Проверяются плагин-владелец, права и доступ
+          к профилю.
       adaptation-cards:
-        _description: <gray>Карточки только для просмотра. Тексты из конфига модуля получают плейсхолдеры выбранного
-          игрока.
+        _description: <gray>Карточки только для просмотра. Тексты из конфига модуля получают плейсхолдеры выбранного игрока.
       setting-controls:
         _description: <gray>Кнопки личных настроек профиля со ссылкой на команду модуля и локализованные подписи.
       refresh-ticks:
@@ -1568,31 +1597,6 @@ messages:
       creative: Творческий
       adventure: Приключение
       spectator: Наблюдатель
-  access-editor:
-    access:
-      title: <gold>Ограничения использования
-      help: <gray>Правила для действий игрока и показа модуля. Административный редактор доступен по своему праву.
-    allowed-worlds:
-      title: <gold>Разрешённые миры
-      help: <gray>Пустой список разрешает все миры. Поддерживаются шаблоны world_*; регистр не учитывается.
-    denied-worlds:
-      title: <gold>Запрещённые миры
-      help: <gray>Запрет имеет приоритет над разрешением. Название мира или шаблон, например arena_*.
-    allowed-gamemodes:
-      title: <gold>Разрешённые режимы
-      help: <gray>Пустой список разрешает все игровые режимы. Выберите нужные режимы в меню.
-    denied-gamemodes:
-      title: <gold>Запрещённые режимы
-      help: <gray>Игрок не может использовать модуль в любом из выбранных режимов.
-    allowed-states:
-      title: <gold>Допустимые состояния
-      help: <gray>Нужно хотя бы одно выбранное состояние. Пустой список не добавляет ограничений.
-    denied-states:
-      title: <gold>Запрещённые состояния
-      help: '<gray>Любое совпадение блокирует действие: например бой, AFK или полёт.'
-    required-states:
-      title: <gold>Обязательные состояния
-      help: <gray>Нужны сразу все выбранные состояния, например авторизован и на земле.
   settings-labels:
     words:
       enabled: включение

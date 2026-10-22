@@ -1,5 +1,5 @@
 # Общие настройки. Конфигурация модулей: modules/<модуль>/<модуль>.yml и gui.yml.
-config-version: 5
+config-version: 6
 storage:
   profile-cache-mib: 16
   write-queue: 256

@@ -107,6 +107,74 @@ class GuiAuditTest {
   }
 
   @Test
+  void schemaSixMovesCustomScreenDataAndKeepsOldSettingPathsCompatible() throws Exception {
+    var root = plugin.getDataFolder().toPath();
+    var guiFile = root.resolve("modules/profile/gui.yml");
+    var moduleFile = root.resolve("modules/profile/profile.yml");
+    var gui = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(guiFile.toFile());
+    var module =
+        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(moduleFile.toFile());
+    String location = "menus.profile-menu-statistics.categories";
+    Object categories = dev.lovelace.loveessential.config.ModuleConfigs.snapshot(gui.get(location));
+    dev.lovelace.loveessential.config.ModuleConfigs.setValue(
+        module, "statistics.categories", categories);
+    module.set(
+        "statistics.categories.world.details.visits.lore",
+        java.util.List.of("<gold>♜ <playtime_hours> | %custom_value%"));
+    gui.set(location, null);
+    gui.set("messages.profile-stats.next", "<green>ЛКМ — мой следующий раздел");
+    gui.set("menus.profile-stats-details-title.size", 54);
+    gui.set("menus.profile-menu-statistics.labels.profile-stats.next", null);
+    gui.save(guiFile.toFile());
+    module.save(moduleFile.toFile());
+    String original = java.nio.file.Files.readString(guiFile);
+    var coreFile = root.resolve("config.yml");
+    var core = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(coreFile.toFile());
+    core.set("config-version", 5);
+    core.save(coreFile.toFile());
+    var reload = plugin.reloadSettings();
+    waitFor(reload::isDone);
+    reload.join();
+    assertEquals(
+        original,
+        java.nio.file.Files.readString(root.resolve("modules/profile/gui.yml.pre-gui6.bak")));
+    gui.load(guiFile.toFile());
+    module.load(moduleFile.toFile());
+    assertFalse(module.contains("statistics.categories"));
+    assertFalse(gui.contains("messages.profile-stats.next"));
+    assertFalse(gui.contains("menus.profile-stats-details-title"));
+    assertEquals(
+        java.util.List.of("<gold>♜ <playtime_hours> | %custom_value%"),
+        gui.getStringList(location + ".world.details.visits.lore"));
+    assertEquals(
+        "<green>ЛКМ — мой следующий раздел",
+        gui.getString("menus.profile-menu-statistics.labels.profile-stats.next"));
+    var edit = plugin.editSetting("profile", "statistics.categories.world.enabled", true, false);
+    waitFor(edit::isDone);
+    edit.join();
+    gui.load(guiFile.toFile());
+    assertFalse(gui.getBoolean(location + ".world.enabled"));
+    assertFalse(plugin.getConfig().getBoolean("profile.statistics.categories.world.enabled"));
+    module.load(moduleFile.toFile());
+    assertFalse(module.contains("statistics.categories"));
+  }
+
+  @Test
+  void malformedScreenMigrationDoesNotWriteAnyActiveConfig() throws Exception {
+    var root = plugin.getDataFolder().toPath();
+    var file = root.resolve("modules/profile/gui.yml");
+    String broken = "menus: [invalid YAML";
+    java.nio.file.Files.writeString(file, broken);
+    var board = root.resolve("modules/scoreboard/scoreboard.yml");
+    String before = java.nio.file.Files.readString(board);
+    var reload = plugin.reloadSettings();
+    waitFor(reload::isDone);
+    assertTrue(reload.isCompletedExceptionally());
+    assertEquals(broken, java.nio.file.Files.readString(file));
+    assertEquals(before, java.nio.file.Files.readString(board));
+  }
+
+  @Test
   void navigationReturnsToTheActualRootAndReleasesClosedSessions() throws Exception {
     var player = admin();
     var field = LoveEssentialPlugin.class.getDeclaredField("profiles");
@@ -135,6 +203,23 @@ class GuiAuditTest {
     var cache = (com.github.benmanes.caffeine.cache.Cache<?, ?>) routes.get(navigation);
     cache.cleanUp();
     assertEquals(0, cache.estimatedSize());
+  }
+
+  @Test
+  void nestedSettingsWithTheSameScreenTypeHaveSeparateParents() throws Exception {
+    var player = admin();
+    var field = LoveEssentialPlugin.class.getDeclaredField("menus");
+    field.setAccessible(true);
+    var menus = (dev.lovelace.loveessential.gui.ControlMenus) field.get(plugin);
+    menus.settings(player, "scoreboard", "", 0);
+    var root = player.getOpenInventory().getTopInventory();
+    menus.settings(player, "scoreboard", "overrides", 0);
+    var section = player.getOpenInventory().getTopInventory();
+    assertNotSame(root, section);
+    assertTrue(name(player, section.getSize() - 2).contains("Назад"));
+    click(player, section.getSize() - 2);
+    assertSame(root, player.getOpenInventory().getTopInventory());
+    assertFalse(name(player, root.getSize() - 2).contains("Назад"));
   }
 
   @Test
@@ -279,5 +364,20 @@ class GuiAuditTest {
     assertTrue(
         player.getOpenInventory().getTopInventory() == null
             || !(player.getOpenInventory().getTopInventory().getHolder() instanceof GuiLayout));
+  }
+
+  @Test
+  void emptyNpcListCreatesInTheWorkAreaAndDirectOpenHasNoBack() {
+    var player = admin();
+    server.dispatchCommand(player, "le npc");
+    var inventory = player.getOpenInventory().getTopInventory();
+    assertEquals(27, inventory.getSize());
+    assertTrue(name(player, 13).contains("Создать"));
+    assertFalse(name(player, 25).contains("Назад"));
+    assertTrue(name(player, 26).contains("Закрыть"));
+    assertTrue(
+        inventory.getItem(13).getItemMeta().lore().stream()
+            .map(PlainTextComponentSerializer.plainText()::serialize)
+            .anyMatch(line -> line.contains("автоматически")));
   }
 }

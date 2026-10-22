@@ -97,12 +97,16 @@ class ProfilePrivacyTest {
   }
 
   void click(PlayerMock p, int slot) {
+    click(p, slot, ClickType.LEFT);
+  }
+
+  void click(PlayerMock p, int slot, ClickType type) {
     var e =
         new InventoryClickEvent(
             p.getOpenInventory(),
             InventoryType.SlotType.CONTAINER,
             slot,
-            ClickType.LEFT,
+            type,
             InventoryAction.PICKUP_ALL);
     server.getPluginManager().callEvent(e);
     assertTrue(e.isCancelled());
@@ -316,6 +320,36 @@ class ProfilePrivacyTest {
     assertTrue(seen.toString().contains("Добыто блоков: 17"));
     click(target, target.getOpenInventory().getTopInventory().getSize() - 2);
     assertEquals("Настройки", title(target, 12));
+  }
+
+  @Test
+  void statisticCardsCycleIndependentlyInBothDirectionsAndResetAfterClosing() throws Exception {
+    MockBukkit.createMockPlugin("LoveDuels");
+    var p = player("Reader");
+    command(p, "profile stats");
+    var inventory = p.getOpenInventory().getTopInventory();
+    assertEquals(27, inventory.getSize());
+    int world = named(p, "Мир и выживание"), duels = named(p, "Дуэли");
+    var firstWorld = List.copyOf(inventory.getItem(world).getItemMeta().lore());
+    var firstDuels = List.copyOf(inventory.getItem(duels).getItemMeta().lore());
+    click(p, world);
+    assertEquals(firstDuels, inventory.getItem(duels).getItemMeta().lore());
+    click(p, world, ClickType.RIGHT);
+    assertEquals(firstWorld, inventory.getItem(world).getItemMeta().lore());
+    click(p, world, ClickType.RIGHT);
+    assertTrue(
+        inventory.getItem(world).getItemMeta().lore().stream()
+            .map(PlainTextComponentSerializer.plainText()::serialize)
+            .anyMatch(text -> text.contains("4/4")));
+    click(p, duels);
+    assertNotEquals(firstDuels, inventory.getItem(duels).getItemMeta().lore());
+    assertSame(inventory, p.getOpenInventory().getTopInventory());
+    click(p, inventory.getSize() - 1);
+    command(p, "profile stats");
+    assertEquals(
+        firstWorld, p.getOpenInventory().getTopInventory().getItem(world).getItemMeta().lore());
+    assertEquals(
+        firstDuels, p.getOpenInventory().getTopInventory().getItem(duels).getItemMeta().lore());
   }
 
   @Test

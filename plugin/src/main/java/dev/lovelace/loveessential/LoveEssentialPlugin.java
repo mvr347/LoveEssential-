@@ -500,6 +500,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   }
 
   public static void validateConfig(org.bukkit.configuration.ConfigurationSection config) {
+    dev.lovelace.loveessential.scoreboard.Sidebar.rowSlots(config);
     for (String module : MODULES)
       dev.lovelace.loveessential.module.ModulePolicy.validate(config, module);
     var sidebarCatalog = config.getConfigurationSection("scoreboard.catalog");
