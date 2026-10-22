@@ -280,6 +280,13 @@ public final class Commands implements CommandExecutor, TabCompleter {
         gameplay.portals().command(p, args);
         return true;
       }
+      if (cmd.equals("vanish")
+          && args.length == 0
+          && plugin.module("vanish")
+          && p.hasPermission("loveessential.vanish.gui")) {
+        menus.direct(p, () -> menus.vanishMenu(p, 0));
+        return true;
+      }
       gameplay.command(p, cmd, args);
     } catch (dev.lovelace.loveessential.module.ModulePolicy.Denied e) {
       lang.send(sender, e.getMessage(), e.variables());

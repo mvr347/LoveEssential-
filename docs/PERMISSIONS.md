@@ -34,6 +34,7 @@
 | `loveessential.npc.debug` | OP | Диагностика NPC |
 | `loveessential.vanish` | OP | Переключение невидимости |
 | `loveessential.vanish.see` | OP | Видеть игроков, скрытых модулем vanish |
+| `loveessential.vanish.gui` | OP | Меню `/vanish` со списком игроков и прыжком к ним |
 | `loveessential.afk.bypass` | OP | Исключение из автоматического AFK-кика |
 | `loveessential.npc.import` | OP | Импорт NPC; последующая работа черновика требует npc.edit |
 | `loveessential.npc.export` | OP | Экспорт NPC |

@@ -36,6 +36,7 @@ public final class GuiSettings {
         || id.startsWith("content.kit")) return "starter";
     if (id.startsWith("content")) return "crafting";
     if (id.contains("nick")) return "nickname";
+    if (id.startsWith("vanish")) return "vanish";
     if (id.contains("module") || id.startsWith("gui.settings")) return "npc";
     if (id.startsWith("holo")) return "hologram";
     return "npc";

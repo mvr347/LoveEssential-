@@ -298,8 +298,6 @@ messages:
       ALLAY: <gold>Тихоня
   dialog:
     finished: <gray>Разговор завершён.
-  vanish:
-    changed: '<gray>Невидимость: <state>'
   gui:
     title: <gold>LoveEssential <dark_gray>| <yellow>Управление
     separator: <dark_gray><st>─────────────────────</st>

@@ -8,6 +8,7 @@ import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.storage.SqliteStore;
 import dev.lovelace.loveessential.tab.Placeholders;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import org.bukkit.*;
@@ -44,6 +45,7 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final Map<UUID, net.kyori.adventure.text.Component> vanillaJoin =
       new ConcurrentHashMap<>();
   private final Comfort comfort;
+  private final Vanish vanishFx;
   private final Holograms hologramService;
   private final dev.lovelace.loveessential.portal.Portals portals;
 
@@ -70,11 +72,16 @@ public final class Gameplay implements Listener, AutoCloseable {
         new dev.lovelace.loveessential.portal.Portals(
             (LoveEssentialPlugin) plugin, main, store, lang, love, teleport, actions);
     comfort = new Comfort((LoveEssentialPlugin) plugin, main, store, lang, love, this);
+    vanishFx = new Vanish((LoveEssentialPlugin) plugin, this, lang);
     hologramService = new Holograms((LoveEssentialPlugin) plugin, main, store, lang, love);
   }
 
   public dev.lovelace.loveessential.portal.Portals portals() {
     return portals;
+  }
+
+  public Vanish vanishEffects() {
+    return vanishFx;
   }
 
   public Holograms holograms() {
@@ -105,6 +112,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     for (var p : Bukkit.getOnlinePlayers()) loadPlayer(p, false);
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20, 20);
     comfort.start();
+    vanishFx.start();
     portals.start();
     hologramService.start();
   }
@@ -163,8 +171,11 @@ public final class Gameplay implements Listener, AutoCloseable {
                       }
                       loadSessions.remove(id);
                       loading.remove(id);
-                      if (error == null && Boolean.parseBoolean(v.orElse("false")))
+                      if (error == null && Boolean.parseBoolean(v.orElse("false"))) {
                         vanished.add(id);
+                        vanishFx.apply(p, true);
+                        Bukkit.getPluginManager().callEvent(new VanishChangeEvent(p, true));
+                      }
                       applyVanish();
                       var vanilla = vanillaJoin.remove(id);
                       if (!announce || vanished(p)) return;
@@ -176,6 +187,43 @@ public final class Gameplay implements Listener, AutoCloseable {
                         for (var viewer : Bukkit.getOnlinePlayers())
                           if (viewer.canSee(p)) viewer.sendMessage(message);
                     }));
+  }
+
+  /** Changes and saves the vanish state; the side effects follow once the write succeeded. */
+  public CompletableFuture<Void> setVanish(Player p, boolean value) {
+    check("vanish");
+    ((LoveEssentialPlugin) plugin).requireAccess("vanish", p);
+    if (!p.hasPermission("loveessential.vanish"))
+      throw new IllegalArgumentException("errors.permission");
+    var result = new CompletableFuture<Void>();
+    store
+        .profile(p.getUniqueId(), "loveessential.vanish", Boolean.toString(value))
+        .whenComplete(
+            (v, error) ->
+                main.execute(
+                    () -> {
+                      if (error != null) {
+                        lang.send(p, "errors.storage");
+                        result.completeExceptionally(error);
+                        return;
+                      }
+                      if (!p.isOnline()) {
+                        result.complete(null);
+                        return;
+                      }
+                      boolean was = vanished.contains(p.getUniqueId());
+                      if (value) vanished.add(p.getUniqueId());
+                      else vanished.remove(p.getUniqueId());
+                      applyVanish();
+                      vanishFx.apply(p, value);
+                      if (was != value) {
+                        Bukkit.getPluginManager().callEvent(new VanishChangeEvent(p, value));
+                        vanishFx.announce(p, value);
+                      }
+                      lang.send(p, value ? "vanish.enabled" : "vanish.disabled");
+                      result.complete(null);
+                    }));
+    return result;
   }
 
   public void applyVanish() {
@@ -246,26 +294,14 @@ public final class Gameplay implements Listener, AutoCloseable {
         go(p, "spawn:" + name);
       }
       case "vanish" -> {
-        check("vanish");
-        ((LoveEssentialPlugin) plugin).requireAccess("vanish", p);
-        if (!p.hasPermission("loveessential.vanish"))
-          throw new IllegalArgumentException("errors.permission");
-        boolean value = !vanished(p);
-        store
-            .profile(p.getUniqueId(), "loveessential.vanish", Boolean.toString(value))
-            .whenComplete(
-                (v, error) ->
-                    main.execute(
-                        () -> {
-                          if (error != null) {
-                            lang.send(p, "errors.storage");
-                            return;
-                          }
-                          if (value) vanished.add(p.getUniqueId());
-                          else vanished.remove(p.getUniqueId());
-                          applyVanish();
-                          lang.send(p, "vanish.changed", Map.of("state", Boolean.toString(value)));
-                        }));
+        boolean value =
+            switch (args.length == 0 ? "toggle" : args[0].toLowerCase(Locale.ROOT)) {
+              case "on", "вкл" -> true;
+              case "off", "выкл" -> false;
+              case "toggle", "переключить" -> !vanished(p);
+              default -> throw new IllegalArgumentException("vanish.usage");
+            };
+        setVanish(p, value);
       }
       case "afk" -> {
         check("afk");
@@ -566,6 +602,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
     comfort.close();
+    vanishFx.close();
     hologramService.close();
     portals.close();
     for (var viewer : Bukkit.getOnlinePlayers())

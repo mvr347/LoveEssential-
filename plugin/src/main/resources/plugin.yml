@@ -192,6 +192,7 @@ permissions:
       loveessential.npc.debug: true
       loveessential.vanish: true
       loveessential.vanish.see: true
+      loveessential.vanish.gui: true
       loveessential.sit: true
       loveessential.lay: true
       loveessential.hat: true
@@ -224,6 +225,8 @@ permissions:
   loveessential.vanish:
     default: op
   loveessential.vanish.see:
+    default: op
+  loveessential.vanish.gui:
     default: op
   loveessential.ride:
     default: op

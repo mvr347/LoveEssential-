@@ -15,6 +15,10 @@ bindings:
   file: gui.yml
   key: messages.settings
   path: menus.messages-settings.title
+- module: vanish
+  file: gui.yml
+  key: vanish.gui-title
+  path: menus.vanish-gui-title.title
 - module: nickname
   file: gui.yml
   key: nick.color

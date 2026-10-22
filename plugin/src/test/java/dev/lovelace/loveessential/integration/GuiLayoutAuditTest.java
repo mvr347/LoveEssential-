@@ -60,7 +60,7 @@ class GuiLayoutAuditTest {
                 "le", "le module", "le help", "le npc", "le hologram", "le portal", "le nick",
                 "le recipes", "le starter edit", "le scoreboard", "le scoreboard edit",
                 "le reports", "profile", "profile settings", "profile stats", "le msg",
-                "le ignore", "le traces"));
+                "le ignore", "le traces", "vanish"));
     for (String module : MODULES) commands.add("le module " + module);
     return commands;
   }

@@ -1,4 +1,7 @@
-menus: {}
+menus:
+  vanish-gui-title:
+    size: 54
+    title: <gold>Невидимость <dark_gray>| <yellow>Игроки
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -6,3 +9,49 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+messages:
+  vanish:
+    enabled: '<gray>Невидимость: <green>включена'
+    disabled: '<gray>Невидимость: <red>выключена'
+    usage: '<yellow>/vanish <gray>[on|off|toggle] — без аргумента открывается меню игроков'
+    indicator: '<gray>Вы скрыты от игроков'
+    toggle-on: '<gold>Невидимость <dark_gray>| <green>Вкл'
+    toggle-off: '<gold>Невидимость <dark_gray>| <red>Выкл'
+    fly-on: '<gold>Полёт <dark_gray>| <green>Вкл'
+    fly-off: '<gold>Полёт <dark_gray>| <red>Выкл'
+    filter: '<gold>Фильтр <dark_gray>| <white><filter>'
+    filter-all: Все
+    filter-world: В мире
+    filter-near: Рядом
+    filter-lore:
+    - <dark_gray>Какие игроки в списке
+    - ''
+    - <dark_gray>▪ <gray>Сейчас:
+    - '  <gray>Показаны: <white><filter>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>сменить фильтр
+    player: '<gold><player>'
+    player-lore:
+    - <dark_gray>Игрок онлайн
+    - ''
+    - <dark_gray>▪ <gray>Сейчас:
+    - '  <gray>Мир: <white><world>'
+    - '  <gray>Координаты: <white><x> <y> <z>'
+    - '  <gray>Режим: <white><mode>'
+    - '  <gray>AFK: <white><afk>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>телепорт к игроку
+    - <gold>ПКМ <dark_gray>— <gray>открыть профиль
+    - <aqua>Shift+ЛКМ <dark_gray>— <gray>инвентарь игрока
+    afk-yes: Да
+    afk-no: Нет
+    mode-survival: Выживание
+    mode-creative: Творческий
+    mode-adventure: Приключение
+    mode-spectator: Наблюдатель
+    empty: '<gray>Нет игроков'
+    empty-help:
+    - <dark_gray>Список пуст
+    - ''
+    - <dark_gray>▪ <gray>Что делать:
+    - '  <gray>Смените фильтр на «Все».'

@@ -253,6 +253,150 @@ public final class ControlMenus implements Listener, AutoCloseable {
     modules(p);
   }
 
+  private static final String[] VANISH_FILTERS = {"all", "world", "near"};
+  private final Map<UUID, Integer> vanishFilter = new HashMap<>();
+
+  private boolean vanishAllowed(Player p) {
+    return plugin.module("vanish")
+        && p.hasPermission("loveessential.vanish")
+        && p.hasPermission("loveessential.vanish.gui");
+  }
+
+  /** Online players the viewer may jump to under the chosen filter, sorted by name. */
+  private List<Player> vanishTargets(Player p, int filter) {
+    double radius = plugin.getConfig().getDouble("vanish.gui.near-radius", 64);
+    return Bukkit.getOnlinePlayers().stream()
+        .filter(t -> !t.equals(p) && p.canSee(t))
+        .filter(
+            t ->
+                switch (filter) {
+                  case 1 -> t.getWorld().equals(p.getWorld());
+                  case 2 ->
+                      t.getWorld().equals(p.getWorld())
+                          && t.getLocation().distanceSquared(p.getLocation()) <= radius * radius;
+                  default -> true;
+                })
+        .sorted(Comparator.comparing(t -> t.getName().toLowerCase(Locale.ROOT)))
+        .map(t -> (Player) t)
+        .toList();
+  }
+
+  /** Staff menu: every visible player as a head; a click moves the viewer there, hidden. */
+  public void vanishMenu(Player p, int page) {
+    var m = menu(p, "vanish.gui-title", Map.of(), this::vanishAllowed);
+    m.root = true;
+    int filter = vanishFilter.getOrDefault(p.getUniqueId(), 0);
+    boolean hidden = gameplay.vanished(p);
+    boolean flight = gameplay.vanishEffects().flight(p);
+    tile(
+        m,
+        3,
+        hidden ? Material.ENDER_EYE : Material.ENDER_PEARL,
+        hidden ? "vanish.toggle-on" : "vanish.toggle-off",
+        "gui.toggle-lore",
+        Map.of(),
+        toggleParts(hidden, Map.of()),
+        c -> gameplay.setVanish(p, !hidden).thenRun(() -> vanishMenu(p, page)));
+    tile(
+        m,
+        4,
+        Material.COMPASS,
+        "vanish.filter",
+        "vanish.filter-lore",
+        Map.of("filter", lang.text("vanish.filter-" + VANISH_FILTERS[filter])),
+        Map.of(),
+        c -> {
+          vanishFilter.put(p.getUniqueId(), (filter + 1) % VANISH_FILTERS.length);
+          vanishMenu(p, 0);
+        });
+    tile(
+        m,
+        5,
+        Material.FEATHER,
+        flight ? "vanish.fly-on" : "vanish.fly-off",
+        "gui.toggle-lore",
+        Map.of(),
+        toggleParts(flight, Map.of()),
+        c -> {
+          gameplay.vanishEffects().flight(p, !flight);
+          vanishMenu(p, page);
+        });
+    var targets = vanishTargets(p, filter);
+    int from = page * MenuStyle.CONTENT.length;
+    var shown = targets.subList(Math.min(from, targets.size()), Math.min(targets.size(), from + 21));
+    if (shown.isEmpty())
+      m.inventory.setItem(22, MenuStyle.button(lang, Material.BARRIER, "vanish.empty", "vanish.empty-help"));
+    for (int i = 0; i < shown.size(); i++) vanishHead(m, p, shown.get(i), MenuStyle.slot(i, shown.size()), page);
+    navigation(m, p, page, targets.size(), n -> vanishMenu(p, n), () -> {});
+    MenuStyle.open(p, m.inventory);
+  }
+
+  private void vanishHead(Menu m, Player viewer, Player target, int slot, int page) {
+    var loc = target.getLocation();
+    var vars =
+        Map.of(
+            "player", target.getName(),
+            "world", loc.getWorld().getName(),
+            "x", Integer.toString(loc.getBlockX()),
+            "y", Integer.toString(loc.getBlockY()),
+            "z", Integer.toString(loc.getBlockZ()),
+            "mode", lang.text("vanish.mode-" + target.getGameMode().name().toLowerCase(Locale.ROOT)),
+            "afk", lang.text(gameplay.afk(target) ? "vanish.afk-yes" : "vanish.afk-no"));
+    var item =
+        MenuStyle.item(
+            Material.PLAYER_HEAD,
+            lang.renderText(lang.text("vanish.player"), vars, Map.of()),
+            lang.lines("vanish.player-lore").stream()
+                .map(text -> lang.renderText(text, vars, Map.of()))
+                .toList());
+    var meta = (org.bukkit.inventory.meta.SkullMeta) item.getItemMeta();
+    meta.setPlayerProfile(target.getPlayerProfile());
+    item.setItemMeta(meta);
+    m.inventory.setItem(slot, item);
+    m.actions.put(
+        slot,
+        click -> {
+          if (!target.isOnline()) {
+            vanishMenu(viewer, page);
+            return;
+          }
+          switch (click) {
+            case LEFT -> jumpTo(viewer, target);
+            case RIGHT -> command(viewer, "profile " + target.getName());
+            case SHIFT_LEFT -> {
+              if (viewer.hasPermission("loveessential.invsee"))
+                command(viewer, "invsee " + target.getName());
+              else throw new IllegalArgumentException("errors.permission");
+            }
+            default -> {}
+          }
+        });
+  }
+
+  private java.util.function.BiConsumer<Player, Location> jumper =
+      (who, to) -> who.teleportAsync(to);
+
+  /** Replaces the teleport used by the player menu (the mock server cannot teleport async). */
+  public void jumper(java.util.function.BiConsumer<Player, Location> jumper) {
+    this.jumper = Objects.requireNonNull(jumper);
+  }
+
+  /** Staff tool: instant jump, no warmup and no combat check, hiding the viewer first if asked. */
+  private void jumpTo(Player viewer, Player target) {
+    viewer.closeInventory();
+    if (gameplay.vanished(viewer)
+        || !plugin.getConfig().getBoolean("vanish.gui.auto-vanish", true)) {
+      jumper.accept(viewer, target.getLocation());
+      return;
+    }
+    // Hide first, so nobody sees the arrival; a failed save keeps the viewer where they are.
+    gameplay
+        .setVanish(viewer, true)
+        .thenRun(() -> {
+          if (viewer.isOnline() && target.isOnline()) jumper.accept(viewer, target.getLocation());
+        });
+  }
+
   private void locked(Menu m, int slot) {
     var item = m.inventory.getItem(slot);
     var meta = item.getItemMeta();
