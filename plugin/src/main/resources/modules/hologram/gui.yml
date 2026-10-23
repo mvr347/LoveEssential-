@@ -46,7 +46,7 @@ menus:
         pages-lore:
         - <dark_gray>Страницы голограммы
         - ''
-        - <dark_gray>▪ <gray>Сейчас:
+        - '<dark_gray>▪ <gray>Сейчас:'
         - '  <gray>Страниц: <white><count>'
         - <dark_gray><st>─────────────────────</st>
         - <green>ЛКМ <dark_gray>— <gray>открыть список страниц
@@ -55,14 +55,14 @@ menus:
         page-lore:
         - <dark_gray>Страница голограммы
         - ''
-        - <dark_gray>▪ <gray>Содержимое:
+        - '<dark_gray>▪ <gray>Содержимое:'
         - '  <gray>Строк: <white><count>'
         - <dark_gray><st>─────────────────────</st>
         - <green>ЛКМ <dark_gray>— <gray>выбрать страницу
         page-lore-selected:
         - <dark_gray>Страница голограммы
         - ''
-        - <dark_gray>▪ <gray>Содержимое:
+        - '<dark_gray>▪ <gray>Содержимое:'
         - '  <gray>Строк: <white><count>'
         - <dark_gray><st>─────────────────────</st>
         - <green>ЛКМ <dark_gray>— <gray>вернуться к редактору страницы

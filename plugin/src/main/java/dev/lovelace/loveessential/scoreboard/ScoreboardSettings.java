@@ -46,11 +46,12 @@ final class ScoreboardSettings {
     return new ListMenu.Item(ListMenu.entry(icon, title, lore), action);
   }
 
-  /** The list shows the title as plain text; raw MiniMessage tags would read as broken text. */
+  /** The list shows the title as plain text; raw MiniMessage tags or &-codes would read as broken text. */
   private static String plain(String miniMessage) {
     try {
       return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-          .serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(miniMessage));
+          .serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                  .deserialize(dev.lovelace.loveessential.tab.TabSyntax.legacy(miniMessage)));
     } catch (RuntimeException e) {
       return "";
     }
@@ -118,11 +119,11 @@ final class ScoreboardSettings {
     var fields =
         List.of(
             ui.text("id", "sidebar.id", old == null ? "" : old, 48),
-            ui.text("title", "sidebar.title", Objects.toString(value.getOrDefault("title", "")), 1024),
+            ui.text("title", "sidebar.title", Objects.toString(value.get("title"), ""), 1024),
             ui.text(
                 "display-condition",
                 "sidebar.display-condition",
-                Objects.toString(value.getOrDefault("display-condition", "")),
+                Objects.toString(value.get("display-condition"), ""),
                 48));
     var buttons = new ArrayList<NativeDialogs.Button>();
     buttons.add(

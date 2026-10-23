@@ -26,7 +26,7 @@ messages:
     filter-lore:
     - <dark_gray>Какие игроки в списке
     - ''
-    - <dark_gray>▪ <gray>Сейчас:
+    - '<dark_gray>▪ <gray>Сейчас:'
     - '  <gray>Показаны: <white><filter>'
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>сменить фильтр
@@ -34,7 +34,7 @@ messages:
     player-lore:
     - <dark_gray>Игрок онлайн
     - ''
-    - <dark_gray>▪ <gray>Сейчас:
+    - '<dark_gray>▪ <gray>Сейчас:'
     - '  <gray>Мир: <white><world>'
     - '  <gray>Координаты: <white><x> <y> <z>'
     - '  <gray>Режим: <white><mode>'
@@ -53,5 +53,5 @@ messages:
     empty-help:
     - <dark_gray>Список пуст
     - ''
-    - <dark_gray>▪ <gray>Что делать:
+    - '<dark_gray>▪ <gray>Что делать:'
     - '  <gray>Смените фильтр на «Все».'

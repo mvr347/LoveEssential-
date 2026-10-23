@@ -25,7 +25,7 @@ messages:
     all-on-lore:
     - <dark_gray>Сброс выбора
     - ''
-    - <dark_gray>▪ <gray>После клика:
+    - '<dark_gray>▪ <gray>После клика:'
     - '  <gray>Все теги и суффиксы других игроков снова видны вам.'
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>показать всё
@@ -34,7 +34,7 @@ messages:
     tile-lore:
     - <dark_gray>Только у вас
     - ''
-    - <dark_gray>▪ <gray>После клика:
+    - '<dark_gray>▪ <gray>После клика:'
     - '  <gray>Состояние: <now> <dark_gray>→ <next>'
     - '  <gray>Другие игроки ничего не заметят.'
     - <dark_gray><st>─────────────────────</st>
@@ -43,6 +43,6 @@ messages:
     tile-locked-lore:
     - <dark_gray>Недоступно
     - ''
-    - <dark_gray>▪ <red>Причина:
+    - '<dark_gray>▪ <red>Причина:'
     - '  <gray>Список игроков общий для всех,'
     - '  <gray>его нельзя изменить только для вас.'

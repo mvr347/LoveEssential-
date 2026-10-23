@@ -91,7 +91,11 @@ public final class GuiRules {
   private static final java.util.regex.Pattern UNRESOLVED_KEY =
       java.util.regex.Pattern.compile("\\[[a-z][a-z0-9_-]*(\\.[a-z0-9_-]+)+\\]");
 
-  /** Item names and lore that show raw MiniMessage tags or an unresolved {@code [lang.key]}. */
+  /** A value that was never filled in: {@code null}, {@code undefined}, a leftover {@code {0}} or {@code %s}. */
+  private static final java.util.regex.Pattern EMPTY_VALUE =
+      java.util.regex.Pattern.compile("\\b(null|undefined)\\b|\\{\\d+}|%[sd]\\b");
+
+  /** Item names and lore that show raw MiniMessage tags, an unresolved {@code [lang.key]} or a literal "null". */
   public static List<String> unresolvedText(Inventory inventory) {
     var out = new ArrayList<String>();
     for (int slot = 0; slot < inventory.getSize(); slot++) {
@@ -110,7 +114,9 @@ public final class GuiRules {
         boolean shownValue =
             line.stripLeading().startsWith("Значение:")
                 || line.stripLeading().startsWith("Категория:");
-        if (UNRESOLVED_KEY.matcher(line).find() || !shownValue && RAW_TAG.matcher(line).find())
+        if (UNRESOLVED_KEY.matcher(line).find()
+            || EMPTY_VALUE.matcher(line).find()
+            || !shownValue && RAW_TAG.matcher(line).find())
           out.add("slot " + slot + ": " + line);
       }
     }

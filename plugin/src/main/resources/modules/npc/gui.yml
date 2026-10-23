@@ -353,11 +353,11 @@ menus:
           scoreboard:
           - <gray>Личные строки, форматы и наборы табло; перенос LoveTweaks. /le scoreboard.
           revive:
-          - <gray>Смертельный удар роняет игрока: подъём, переноска, обыск. /revive.
+          - '<gray>Смертельный удар роняет игрока: подъём, переноска, обыск. /revive.'
           rtp:
           - <gray>Случайный перенос в безопасную точку своего мира. /rtp.
           display:
-          - <gray>Личный выбор: показывать ли тег клана и суффикс в чате, TAB и над головой. /display.
+          - '<gray>Личный выбор: показывать ли тег клана и суффикс в чате, TAB и над головой. /display.'
           crafting:
           - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
           starter:
@@ -525,7 +525,7 @@ messages:
     toggle-lore:
     - <dark_gray>Переключатель
     - ''
-    - <dark_gray>▪ <gray>После клика:
+    - '<dark_gray>▪ <gray>После клика:'
     - '  <gray>Состояние: <now> <dark_gray>→ <next>'
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>переключить
@@ -534,6 +534,7 @@ messages:
     file: '<gray>Файл: <white><path>'
     path: '<gray>Раздел настройки: <white><path>'
     value: '<gray>Значение: <white><value>'
+    value-empty: <dark_gray>не задано
     label: <gold><name>
     list-count: 'Элементов:'
     tab-export: <gold>Применить настройки в TAB
