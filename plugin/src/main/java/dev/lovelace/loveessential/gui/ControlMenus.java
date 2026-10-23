@@ -267,6 +267,97 @@ public final class ControlMenus implements Listener, AutoCloseable {
     modules(p);
   }
 
+  private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
+  /** Players whose display menu currently shows the "others" half instead of "own". */
+  private final Set<UUID> displayOthers = new HashSet<>();
+
+  public void display(dev.lovelace.loveessential.module.DisplayPreferences prefs) {
+    this.displayPrefs = prefs;
+  }
+
+  /**
+   * Personal menu for clan tags and suffixes. One half at a time (mine / other people's), six tiles:
+   * the clan tag and the suffix, each on chat, TAB and nametag. The TAB entry is shared by every
+   * viewer, so "other people's" cannot hide it for one viewer and that tile says why.
+   */
+  public void displayMenu(Player p) {
+    var m = menu(p, "display.gui-title", Map.of(), player -> plugin.module("display"));
+    m.root = true;
+    var id = p.getUniqueId();
+    var scope =
+        displayOthers.contains(id)
+            ? dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OTHERS
+            : dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OWN;
+    String scopeName = scope.name().toLowerCase(Locale.ROOT);
+    tile(
+        m,
+        3,
+        Material.COMPASS,
+        "display.mode",
+        "display.mode-lore",
+        Map.of(
+            "scope", lang.text("display.scope-" + scopeName),
+            "help", lang.text("display.scope-help-" + scopeName)),
+        Map.of(),
+        c -> {
+          if (!displayOthers.remove(id)) displayOthers.add(id);
+          displayMenu(p);
+        });
+    tile(
+        m,
+        5,
+        Material.LIME_DYE,
+        "display.all-on",
+        "display.all-on-lore",
+        Map.of(),
+        Map.of(),
+        c -> {
+          displayPrefs.setAll(id, true);
+          displayMenu(p);
+        });
+    var elements = dev.lovelace.lovecore.api.display.DisplayPrefs.Element.values();
+    var surfaces = dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.values();
+    int index = 0;
+    for (var element : elements)
+      for (var surface : surfaces) {
+        int slot = MenuStyle.slot(index++, elements.length * surfaces.length);
+        var vars =
+            Map.of(
+                "element", lang.text("display.element-" + element.name().toLowerCase(Locale.ROOT)),
+                "surface", lang.text("display.surface-" + surface.name().toLowerCase(Locale.ROOT)),
+                "scope", lang.text("display.scope-short-" + scopeName));
+        if (scope == dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OTHERS
+            && surface == dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.TAB) {
+          entry(
+              m,
+              slot,
+              Material.BARRIER,
+              lang.renderText(lang.text("display.tile-locked"), vars, Map.of()),
+              lang.lines("display.tile-locked-lore").stream()
+                  .map(text -> lang.renderText(text, vars, Map.of()))
+                  .toList(),
+              c -> {});
+          continue;
+        }
+        boolean shown = displayPrefs.shown(id, surface, element, scope);
+        var finalScope = scope;
+        tile(
+            m,
+            slot,
+            shown ? Material.LIME_DYE : Material.RED_DYE,
+            shown ? "display.tile-on" : "display.tile-off",
+            "display.tile-lore",
+            vars,
+            toggleParts(shown, Map.of()),
+            c -> {
+              displayPrefs.set(id, surface, element, finalScope, !shown);
+              displayMenu(p);
+            });
+      }
+    put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());
+    MenuStyle.open(p, m.inventory);
+  }
+
   private static final String[] VANISH_FILTERS = {"all", "world", "near"};
   private final Map<UUID, Integer> vanishFilter = new HashMap<>();
 
@@ -2156,6 +2247,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   public void quit(PlayerQuitEvent e) {
     prompts.remove(e.getPlayer().getUniqueId());
     roots.remove(e.getPlayer().getUniqueId());
+    displayOthers.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {

@@ -137,6 +137,8 @@ commands:
     aliases: [rv, поднять]
   rtp:
     aliases: [ртп]
+  display:
+    aliases: [оформление]
 permissions:
   loveessential.rtp:
     default: true

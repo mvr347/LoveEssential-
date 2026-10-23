@@ -52,7 +52,7 @@
 | `%loveessential_x%` | `<x>` | Блочная координата X |
 | `%loveessential_y%` | `<y>` | Блочная координата Y |
 | `%loveessential_z%` | `<z>` | Блочная координата Z |
-| `%loveessential_clan%` | `<clan>` | Тег клана через ProfileOracle |
+| `%loveessential_clan%` | `<clan>` | Тег клана через ProfileOracle. Исчезает из TAB и ника, если игрок скрыл тег (`/display`); `%loveessential_display_<где>_<что>_<чьи>%` — сами флаги (`true`, если показано), например `display_chat_clan_own` |
 | `%loveessential_reputation%` | `<reputation>` | Репутация через ReputationOracle |
 | `%loveessential_territory%` | `<territory>` | Название владельца территории через TerritoryOracle |
 | `%loveessential_balance%` | `<balance>` | Физические монеты в инвентаре через LoveEconomy |
@@ -129,7 +129,7 @@
 | `<online>` | Число онлайн-игроков, видимых зрителю |
 | `<visible_online>` | То же с явным названием |
 | `<max_players>` | Лимит игроков сервера |
-| `<suffix>` | Оформленный `%lovesubnames_current%` через PlaceholderAPI |
+| `<suffix>` | Оформленный `%lovesubnames_current%` через PlaceholderAPI. Исчезает, если игрок скрыл суффикс (`/display`) |
 | `<afk>` | `tab.status.afk` для AFK-игрока, иначе пустой компонент |
 | `<animation:имя>` | Кадры `animations.<имя>` из `modules/tab/tab.yml`; смена каждые `change-interval` мс (по умолчанию 500) |
 | `<condition:имя>` | Текст `yes` или `no` из именованного условия `conditions.<имя>` |

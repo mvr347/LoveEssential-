@@ -20,7 +20,7 @@ class GuiLayoutAuditTest {
           "npc", "tab", "home", "spawn", "vanish", "afk", "skin", "sitride",
           "utilities", "nightskip", "portal", "hologram", "traces", "joinquit", "motd",
           "messages", "inventory", "profile", "nickname", "crafting", "starter", "worlds",
-          "scenarios", "dialogs", "scoreboard", "revive", "rtp");
+          "scenarios", "dialogs", "scoreboard", "revive", "rtp", "display");
 
   ServerMock server;
   LoveEssentialPlugin plugin;
@@ -60,7 +60,7 @@ class GuiLayoutAuditTest {
                 "le", "le module", "le help", "le npc", "le hologram", "le portal", "le nick",
                 "le recipes", "le starter edit", "le scoreboard", "le scoreboard edit", "le tab",
                 "le reports", "profile", "profile settings", "profile stats", "le msg",
-                "le ignore", "le traces", "vanish"));
+                "le ignore", "le traces", "vanish", "display"));
     for (String module : MODULES) commands.add("le module " + module);
     return commands;
   }

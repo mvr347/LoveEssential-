@@ -68,6 +68,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.extensions = extensions;
   }
 
+  private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
+
+  public void display(dev.lovelace.loveessential.module.DisplayPreferences displayPrefs) {
+    this.displayPrefs = displayPrefs;
+  }
+
   private dev.lovelace.loveessential.module.Revive revive;
 
   public void revive(dev.lovelace.loveessential.module.Revive revive) {
@@ -300,6 +306,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
         gameplay.randomTeleport().command(p, args);
         return true;
       }
+      if (cmd.equals("display")) {
+        display(player(sender), args);
+        return true;
+      }
       if (cmd.equals("vanish")
           && args.length == 0
           && plugin.module("vanish")
@@ -517,6 +527,31 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private static Throwable root(Throwable e) {
     while (e.getCause() != null) e = e.getCause();
     return e;
+  }
+
+  /** {@code /display}: the menu, or {@code <own|others> <clan|suffix> <chat|tab|nametag> [on|off]}. */
+  private void display(Player p, String[] args) {
+    if (!plugin.module("display") || !love.authenticated(p))
+      throw new IllegalArgumentException("errors.permission");
+    if (!displayPrefs.loaded(p.getUniqueId())) throw new IllegalArgumentException("errors.starting");
+    if (args.length == 0) {
+      menus.direct(p, () -> menus.displayMenu(p));
+      return;
+    }
+    var choice = dev.lovelace.loveessential.module.DisplayPreferences.parse(args);
+    boolean value =
+        choice.value() != null
+            ? choice.value()
+            : !displayPrefs.shown(p.getUniqueId(), choice.surface(), choice.element(), choice.scope());
+    displayPrefs.set(p.getUniqueId(), choice.surface(), choice.element(), choice.scope(), value);
+    lang.send(p, value ? "display.changed-on" : "display.changed-off", displayVariables(choice));
+  }
+
+  private Map<String, String> displayVariables(dev.lovelace.loveessential.module.DisplayPreferences.Choice choice) {
+    return Map.of(
+        "scope", lang.text("display.scope-" + choice.scope().name().toLowerCase(Locale.ROOT)),
+        "element", lang.text("display.element-" + choice.element().name().toLowerCase(Locale.ROOT)),
+        "surface", lang.text("display.surface-" + choice.surface().name().toLowerCase(Locale.ROOT)));
   }
 
   private static Player player(CommandSender s) {

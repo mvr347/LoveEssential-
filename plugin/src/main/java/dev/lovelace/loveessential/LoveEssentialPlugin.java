@@ -45,7 +45,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "dialogs",
           "scoreboard",
           "revive",
-          "rtp");
+          "rtp",
+          "display");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -93,6 +94,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   private EssentialApi essentialApi;
   private dev.lovelace.loveessential.module.Revive revive;
+  private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
   private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
@@ -295,6 +297,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
             this, main, lang, store, love, gameplay, nicknames);
     inventories = new dev.lovelace.loveessential.module.InventoryInspector(this, lang, love);
     revive = new dev.lovelace.loveessential.module.Revive(this, lang, love, actions, inventories);
+    displayPrefs = new dev.lovelace.loveessential.module.DisplayPreferences(this, main, store);
     profiles =
         new dev.lovelace.loveessential.module.PlayerProfiles(
             this, lang, love, gameplay, store, placeholders, messages, inventories);
@@ -303,10 +306,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
           var values = new HashMap<>(profiles.values(id));
           values.putAll(nicknames.values(id));
           values.putAll(revive.values(id));
+          values.putAll(displayPrefs.values(id));
           return Map.copyOf(values);
         });
     npcs.vanish(gameplay::vanished);
     tab = new TabModule(this, lang, placeholders, visibility, main, store);
+    tab.display(displayPrefs);
     navigation = new dev.lovelace.loveessential.gui.MenuNavigation(this);
     dev.lovelace.loveessential.gui.MenuStyle.navigation(navigation);
     var api =
@@ -336,6 +341,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     menus =
         new dev.lovelace.loveessential.gui.ControlMenus(
             this, main, lang, love, npcs, wizard, gameplay, nicknames);
+    menus.display(displayPrefs);
     content = new dev.lovelace.loveessential.content.ContentLibrary(this, main, store, lang, love);
     starter =
         new dev.lovelace.loveessential.content.StarterItems(this, main, store, lang, love, content);
@@ -377,6 +383,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
             contentMenus,
             extensions);
     commands.revive(revive);
+    commands.display(displayPrefs);
     commands.tab(tab);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
@@ -454,6 +461,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     ready = true;
     starter.start();
     extensions.start();
+    displayPrefs.start();
     // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
     npcProvider = new dev.lovelace.loveessential.npc.LoveEssentialNpcProvider(this, main, npcs, gameplay.holograms());
     npcProvider.start();
@@ -475,6 +483,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
         .getServicesManager()
         .register(
             dev.lovelace.lovecore.api.revive.DownedOracle.class, revive, this, ServicePriority.Normal);
+    // Chat (LoveChat) reads the personal tag/suffix choices through this contract.
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.display.DisplayPrefs.class,
+            displayPrefs,
+            this,
+            ServicePriority.Normal);
     getLogger().info(lang.text("logs.ready"));
     Bukkit.getPluginManager().callEvent(new LoveEssentialReadyEvent(essentialApi));
   }
@@ -724,6 +740,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (expansion != null) expansion.unregister();
     if (npcProvider != null) npcProvider.close();
     if (revive != null) revive.close();
+    if (displayPrefs != null) displayPrefs.close();
     if (extensions != null) extensions.close();
     if (contentMenus != null) contentMenus.close();
     if (starter != null) starter.close();

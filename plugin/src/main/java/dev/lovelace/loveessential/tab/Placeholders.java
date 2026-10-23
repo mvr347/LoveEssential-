@@ -6,6 +6,7 @@ import dev.lovelace.loveessential.api.LoveEssentialService.Verdict;
 import dev.lovelace.loveessential.condition.ConditionEngine;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
+import dev.lovelace.lovecore.api.display.DisplayPrefs;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -167,8 +168,14 @@ public final class Placeholders {
 
   /** Tab list name; {@code <player>} shows the nickname when nicknames are used in the tab. */
   public Component renderTabName(String template, Player viewer, Player target) {
+    return renderTabName(template, viewer, target, NONE);
+  }
+
+  /** Tab list name with the given elements ({@code <clan>}, {@code <suffix>}) left out. */
+  public Component renderTabName(
+      String template, Player viewer, Player target, Set<DisplayPrefs.Element> hidden) {
     String text = nicknameTab.getAsBoolean() ? template.replace("<player>", "<nickname>") : template;
-    return renderText(text, viewer, target, 0);
+    return renderText(text, viewer, target, 0, hidden);
   }
 
   /** Plain text of a template, for settings that must parse as a number or an enum name. */
@@ -179,6 +186,15 @@ public final class Placeholders {
 
   public Component renderRaw(String template, Player viewer, Player target) {
     return renderText(template, viewer, target, 0);
+  }
+
+  /**
+   * Like {@link #renderRaw(String, Player, Player)}, with the given elements left out: {@code <clan>}
+   * and {@code <suffix>} render as nothing when their element is in {@code hidden}.
+   */
+  public Component renderRaw(
+      String template, Player viewer, Player target, Set<DisplayPrefs.Element> hidden) {
+    return renderText(template, viewer, target, 0, hidden);
   }
 
   /** Evaluates a named tab condition; false when the name does not exist. */
@@ -245,15 +261,23 @@ public final class Placeholders {
     }
   }
 
-  private Component conditionText(String name, Player viewer, Player target, int depth) {
+  private Component conditionText(
+      String name, Player viewer, Player target, int depth, Set<DisplayPrefs.Element> hidden) {
     var definition = definition(name);
     if (definition == null) return Component.empty();
     boolean holds = condition(name, viewer, target);
     String text = holds ? definition.yes() : definition.no();
-    return text.isEmpty() ? Component.empty() : renderText(text, viewer, target, depth + 1);
+    return text.isEmpty() ? Component.empty() : renderText(text, viewer, target, depth + 1, hidden);
   }
 
+  private static final Set<DisplayPrefs.Element> NONE = Set.of();
+
   private Component renderText(String template, Player viewer, Player target, int depth) {
+    return renderText(template, viewer, target, depth, NONE);
+  }
+
+  private Component renderText(
+      String template, Player viewer, Player target, int depth, Set<DisplayPrefs.Element> hidden) {
     if (depth > 4) return Component.empty();
     template = template.replaceAll("%([a-zA-Z0-9_:.]+)%", "<papi:'$1'>");
     var b = TagResolver.builder();
@@ -274,7 +298,12 @@ public final class Placeholders {
                         Bukkit.getOnlinePlayers().stream().filter(viewer::canSee).count())),
             Map.entry("max_players", () -> Integer.toString(Bukkit.getMaxPlayers())),
             Map.entry("ping", () -> Integer.toString(target.getPing())),
-            Map.entry("clan", () -> love.clan(target).orElse("")),
+            Map.entry(
+                "clan",
+                () ->
+                    hidden.contains(DisplayPrefs.Element.CLAN_TAG)
+                        ? ""
+                        : love.clan(target).orElse("")),
             Map.entry("territory", () -> love.territory(target)),
             Map.entry(
                 "reputation",
@@ -303,7 +332,10 @@ public final class Placeholders {
         TagResolver.resolver(
             "suffix",
             (args, context) ->
-                Tag.inserting(legacyOrMini(papi(viewer, target, "%lovesubnames_current%")))));
+                Tag.inserting(
+                    hidden.contains(DisplayPrefs.Element.SUFFIX)
+                        ? Component.empty()
+                        : legacyOrMini(papi(viewer, target, "%lovesubnames_current%")))));
     b.resolver(
         TagResolver.resolver(
             "papi",
@@ -321,7 +353,7 @@ public final class Placeholders {
             "condition",
             (args, context) -> {
               String name = args.popOr("condition name").value();
-              return Tag.inserting(conditionText(name, viewer, target, depth));
+              return Tag.inserting(conditionText(name, viewer, target, depth, hidden));
             }));
     b.resolver(
         TagResolver.resolver(
@@ -341,7 +373,8 @@ public final class Placeholders {
                                       animation.frames().size())),
                           viewer,
                           target,
-                          depth + 1));
+                          depth + 1,
+                          hidden));
             }));
     return mm.deserialize(template, b.build());
   }
