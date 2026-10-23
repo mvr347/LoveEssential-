@@ -144,9 +144,9 @@ NPC используют нативные сущности Paper, включая
 
 LoveEssential использует собственную реализацию на Paper. Настройки находятся в `modules/tab/tab.yml` и меню `/le tab`; внешние TAB и PlaceholderAPI для базовой работы не нужны. PAPI нужен для плейсхолдеров сторонних плагинов.
 
-Поддерживаются header/footer с профилями условий, группы, prefix/suffix, сортировка, nametag/коллизия, анимации, playerlist/below-name objectives, sidebar и несколько bossbar. Список из фиктивных игроков и общий список между proxy-серверами пока не реализованы. Это не заявление о полном совпадении всех возможностей NEZNAMY TAB.
+Поддерживаются свойства групп и игроков (`tabprefix`, `tabsuffix`, `customtabname`, `tagprefix`, `tagsuffix`, `header`, `footer`, `collision`, `visibility`) с приоритетом «игрок в мире → игрок → группа в мире → группа → `_DEFAULT_`», именованные условия, анимации, сортировка, имена над головами, полоски, список игроков по мирам, API `TabService` для временных имён и полосок. Подробнее: [MODULAR_CONFIGURATION.md](MODULAR_CONFIGURATION.md#tab).
 
-Старые `engine` и `external` удаляются из активной конфигурации при миграции, исходный файл сохраняется как `modules/tab/tab.yml.pre-native.bak`; старый монолитный конфиг имеет собственную резервную копию. Экспорт в сторонний TAB удалён. При параллельной установке другого плагина, меняющего TAB, согласуйте владельца scoreboard; штатно LoveEssential уважает чужую доску.
+При переходе со старой схемы группы переименовываются в свойства (`prefix` → `tabprefix` и т. д.), `default` становится `_DEFAULT_`; исходный файл сохраняется как `modules/tab/tab.yml.pre-properties.bak`. Экспорт в сторонний TAB удалён; `/le tab export` сохраняет эффективные данные в `tab-export.yml`.
 
 [Правила миров/состояний и оформление меню](MODULE_ACCESS_AND_GUI.md) · [Порталы](PORTALS.md).
 
@@ -336,9 +336,9 @@ NPC универсальны: категории и ролевые шаблон�
 Модули `crafting` и `starter` имеют отдельные файлы в `modules/`. Редакторы: `/le recipes`, `/le starter edit`; [руководство по созданию и переносу из LoveTweaks](CUSTOM_CONTENT.md).
 
 
-## Миры, сценарии, нативные диалоги и перенос scoreboard
+## Миры, сценарии, нативные диалоги и табло
 
-[Команды, настройка и ограничения](WORLDS_AND_AUTOMATION.md). Работа с содержимым открывается через `/le worlds`, `/le scenario`, `/le dialog`, `/le motd`, `/le scoreboard`. Главное `/le` содержит только настройки модулей. `/le guide` отложен.
+[Команды, настройка и ограничения](WORLDS_AND_AUTOMATION.md). Работа с содержимым открывается через `/le worlds`, `/le scenario`, `/le dialog`, `/le motd`, `/le scoreboard` (именованные табло: [SCOREBOARD.md](SCOREBOARD.md)). Главное `/le` содержит только настройки модулей. `/le guide` отложен.
 
 Редактор строк, страниц, фона, предметов и API голограмм, а также sit/ride/hat и следы: [подробное руководство](COMFORT_AND_HOLOGRAMS.md).
 

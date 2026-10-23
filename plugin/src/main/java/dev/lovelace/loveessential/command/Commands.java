@@ -74,6 +74,14 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.revive = revive;
   }
 
+  private dev.lovelace.loveessential.tab.TabCommands tabCommands;
+
+  public void tab(dev.lovelace.loveessential.tab.TabModule tab) {
+    this.tabCommands =
+        new dev.lovelace.loveessential.tab.TabCommands(
+            plugin, lang, love, tab, extensions.tabSettings);
+  }
+
   @Override
   public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
     try {
@@ -194,10 +202,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
                 "chat.saved");
           }
           case "tab", "таб" -> {
-            admin(sender);
-            if (args.length != 1) throw new IllegalArgumentException("errors.input");
-            if (sender instanceof Player p) extensions.tabSettings.open(p);
-            else lang.send(sender, "help.tab-settings");
+            if (tabCommands == null) throw new IllegalArgumentException("errors.starting");
+            tabCommands.run(sender, slice(args, 1));
           }
           default -> {
             String target = CommandSuggestions.resolve(plugin, args[0]);

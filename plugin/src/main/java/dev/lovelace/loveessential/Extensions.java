@@ -3,16 +3,19 @@ package dev.lovelace.loveessential;
 import dev.lovelace.loveessential.condition.*;
 import dev.lovelace.loveessential.content.ContentLibrary;
 import dev.lovelace.loveessential.dialog.*;
+import dev.lovelace.loveessential.gui.ListMenu;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.scenario.Scenarios;
-import dev.lovelace.loveessential.scoreboard.Sidebar;
+import dev.lovelace.loveessential.scoreboard.ScoreboardModule;
 import dev.lovelace.loveessential.storage.SqliteStore;
 import dev.lovelace.loveessential.tab.*;
 import dev.lovelace.loveessential.world.Worlds;
 import java.util.*;
 import java.util.concurrent.*;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.HandlerList;
 
 /** Lifecycle and command routing for optional world/content modules. */
 public final class Extensions implements AutoCloseable {
@@ -23,8 +26,9 @@ public final class Extensions implements AutoCloseable {
   public final Worlds worlds;
   public final Scenarios scenarios;
   public final Windows windows;
-  public final Sidebar sidebar;
+  public final ScoreboardModule scoreboard;
   public final TabSettings tabSettings;
+  private final ListMenu.Clicks menuClicks;
   private org.bukkit.scheduler.BukkitTask task;
 
   public Extensions(
@@ -41,11 +45,14 @@ public final class Extensions implements AutoCloseable {
     this.plugin = plugin;
     ui = new NativeDialogs(plugin, main, lang, love);
     tabSettings = new TabSettings(plugin, ui, lang, love);
+    menuClicks = new ListMenu.Clicks(plugin, lang);
+    Bukkit.getPluginManager().registerEvents(menuClicks, plugin);
     worlds = new Worlds(plugin, main, store, lang, love, ui);
     windows = new Windows(plugin, main, store, lang, love, ui, actions, texts, placeholders);
     scenarios = new Scenarios(plugin, main, store, lang, love, conditions, actions, ui, texts);
-    sidebar = new Sidebar(plugin, main, store, lang, love, placeholders, tab, texts);
-    sidebar.nativeDialogs(ui);
+    scoreboard =
+        new ScoreboardModule(plugin, main, store, lang, love, placeholders, tab, tabSettings);
+    scoreboard.nativeDialogs(ui);
     actions.register(
         "world",
         (p, a) -> {
@@ -61,18 +68,18 @@ public final class Extensions implements AutoCloseable {
   }
 
   public CompletableFuture<Void> load() {
-    return CompletableFuture.allOf(worlds.load(), windows.load(), scenarios.load(), sidebar.load());
+    return CompletableFuture.allOf(worlds.load(), windows.load(), scenarios.load());
   }
 
   public void start() {
     scenarios.start();
-    sidebar.start();
+    scoreboard.start();
     task = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, scenarios::tick, 20, 20);
   }
 
   public void refresh() {
     windows.refreshMotd();
-    sidebar.refresh();
+    scoreboard.refresh();
   }
 
   public void command(Player p, String command, String[] args) {
@@ -84,14 +91,7 @@ public final class Extensions implements AutoCloseable {
         if (args.length != 0) throw new IllegalArgumentException("errors.input");
         windows.motdEditor(p);
       }
-      case "scoreboard" -> {
-        if (args.length == 1 && args[0].equals("edit")) sidebar.settings(p);
-        else if (args.length == 1 && args[0].equals("worlds")) sidebar.worlds(p, 0);
-        else {
-          if (args.length != 0) throw new IllegalArgumentException("errors.input");
-          sidebar.open(p, "", 0);
-        }
-      }
+      case "scoreboard" -> scoreboard.command(p, args);
       default -> throw new IllegalArgumentException("errors.input");
     }
   }
@@ -101,10 +101,7 @@ public final class Extensions implements AutoCloseable {
       case "worlds" -> worlds.suggestions(p, args);
       case "scenario" -> scenarios.suggestions(p, args);
       case "dialog" -> windows.suggestions(p, args);
-      case "scoreboard" ->
-          p.hasPermission("loveessential.admin") && args.length == 1
-              ? List.of("edit", "worlds")
-              : List.of();
+      case "scoreboard" -> scoreboard.suggestions(p, args);
       default -> List.of();
     };
   }
@@ -114,8 +111,9 @@ public final class Extensions implements AutoCloseable {
     if (task != null) task.cancel();
     scenarios.close();
     worlds.close();
-    sidebar.close();
+    scoreboard.close();
     tabSettings.close();
+    HandlerList.unregisterAll(menuClicks);
     ui.close();
   }
 }

@@ -38,57 +38,77 @@ frame:
 
 ## TAB
 
-`/le tab` открывает редактор строк шапки/подвала, групп, сортировки, имён над игроками и локальных алиасов. Прямые шаблоны расположены в `modules/tab/tab.yml`:
+Файл `modules/tab/tab.yml`. Свойства игрока берутся из групп и игроков; приоритет от высшего к низшему:
+`users.<ник>.per-world.<мир>` → `users.<ник>` → `groups.<группа>.per-world.<мир>` → `groups.<группа>` → `_DEFAULT_`.
+Группа игрока — первая в файле, право `group.<id>` которой у него есть (либо поле `permission`, если оно задано).
+Условие `display-condition` у слоя: если оно ложно, слой пропускается целиком.
 
 ```yaml
-header-footer:
-  enabled: true
-  header:
-    - '<gold>Мой сервер'
-    - '<gray>В сети: <white><placeholder:online>'
-  footer:
-    - '<gray>Добро пожаловать, <white><player>'
-placeholders:
-  online: '%server_online%'
 groups:
-  guards:
-    priority: 10
-    permission: ''
-    players: [Ada123]
-    worlds: [world]
-    name: '<white><player>'
-    prefix: '<gold>[Страж] '
-    suffix: ' <gray>| <clan>'
+  admin:
+    tabprefix: '<red>[Страж] '
+    tabsuffix: ' <suffix><afk>'
+    customtabname: <red><player>
+    tagprefix: '<red>[Страж] '
+    tagsuffix: ''
+    collision: true        # необязательно: столкновения для этой группы
+    visibility: always     # необязательно: always или never (ник над головой)
+    per-world:
+      world_nether:
+        tabprefix: '<dark_red>[Страж] '
+  _DEFAULT_:
+    customtabname: <player>
+    header:
+      - <gold><animation:kingdom>
+      - '<gray>Игроков: <white><visible_online>'
+    footer:
+      - '<gray>Территория: <territory>'
+users:
+  Ada123:
+    tabprefix: '<light_purple>[Гость] '
 ```
 
-Меньший priority имеет преимущество. Игроки задаются настоящими именами без учёта регистра или UUID; пустые players/worlds не ограничивают группу. Удалённые группы и алиасы не восстанавливаются при reload. Собственный TAB не требует внешнего плагина; фиктивные игроки и сетевой список между proxy-серверами не реализованы.
+Свойства: `tabprefix`, `tabsuffix`, `customtabname`, `tagprefix`, `tagsuffix`, `header`, `footer`, `collision`, `visibility`.
+Значение `header` и `footer` может быть списком строк. Цвет команды для ника над головой берётся из последнего цвета `tagprefix`.
+
+Остальные разделы `tab.yml`:
+
+- `sorting` — критерии по порядку: `group` (порядок групп в файле), `name` / `a-z`, `z-a`, `number:%p%`, `number-desc:%p%`, `permissions:p1,p2` (раньше тот, у кого есть более ранее право), `placeholder:%p%:v1,v2` (раньше то значение, что указано раньше), `case-sensitive`.
+- `placeholder-refresh` — сколько миллисекунд живёт значение PlaceholderAPI: `default` и отдельные плейсхолдеры, например `'%player_ping%': 1000`.
+- `placeholder-output-replacements` — замена вывода: точное значение, диапазон `0-10` или `else`.
+- `animations` — кадры с `change-interval` (мс, от 50 до 60000), используются как `<animation:имя>`.
+- `conditions` — именованные условия: `type: and|or`, `checks` (`%a% == b`, `%a% >= 100`, `permission:node`, `engine:id`), тексты `yes` и `no` для тега `<condition:имя>`. Имя условия также указывается в `display-condition` у табло, полосок и слоёв групп.
+- `engine-conditions` — JSON-условия `ConditionEngine` по id, доступны как `engine:<id>`.
+- `nametag` — `enabled`, `collision`, `refresh-ticks`, `invisible-nametags` (ники, UUID или группы, над которыми имя не показывается никому).
+- `bossbars` — полоски с `color`, `overlay`, `progress` и `text`; значения из плейсхолдеров проверяются при обновлении, а неверный цвет или стиль отклоняется при загрузке.
+- `per-world-playerlist` — `enabled`, `groups` (мир → группа миров). Игроки видят только тех, кто в их группе миров. Право `loveessential.tab.worldlist.bypass` видит всех.
+- `overrides` — лимиты временных свойств и полосок других плагинов (`TabService`).
+- Интервалы: `refresh-ticks` (список и порядок), `header-footer.refresh-ticks`, `nametag.refresh-ticks`, `bossbar-refresh-ticks`, `per-world-playerlist.refresh-ticks`.
+
+Команды: `/le tab group <группа> <свойство> [значение]`, `/le tab player <ник> <свойство> [значение]` (без значения свойство удаляется), `/le tab reload`, `/le tab debug <ник>`, `/le tab parse <ник> <текст>`, `/le tab cpu`, `/le tab export`. Полный список — в [COMMANDS.md](COMMANDS.md).
+
+Не сделано в этом выпуске (требуют пакетов, а новых зависимостей не добавляем):
+
+- spectator-fix — видимость и список игроков наблюдателей;
+- ping-spoof — пинг, который показывает список, всё ещё берётся через `Player#getPing()`;
+- pet-name-fix — имена питомцев над головой.
+
+Старые ключи (`header-footer.header`, `sidebar`, `name-enabled`, `players`, `worlds`, `priority` у групп) при первом запуске переносятся; исходный файл сохраняется как `tab.yml.pre-properties.bak`. Списки игроков и миров, а также TAB-сайдбар переносу не подлежат: сайдбар теперь ведёт модуль scoreboard.
 
 ## Scoreboard
 
-После первого запуска или миграции scoreboard.yml содержит непосредственно header, separator, placeholders, footer, presets и ограничения. Промежуточной секции catalog нет. Тексты и варианты существующих плейсхолдеров сохраняются дословно.
+`modules/scoreboard/scoreboard.yml` содержит общие параметры и список именованных табло `scoreboards`. Показывается первое табло по порядку, чьё `display-condition` выполнено. Временные табло других плагинов (`ScoreboardService`) важнее всех именованных. Подробнее — в [SCOREBOARD.md](SCOREBOARD.md).
 
 ```yaml
-header: '<gold>Мой сервер'
-separator: ''
-placeholders:
-  player:
-    name: '<gold>Игрок'
-    category: general
-    variants:
-      - name: '<gold>Никнейм'
-        template: '<white><nickname>'
-    lore: []
-    requirement:
-      placeholder: ''
-      equals: ''
-      reason: ''
-footer: '<gray>example.org'
+scoreboards:
+  kingdom:
+    title: <gold>Королевство
+    display-condition: ''
+    lines:
+    - '<gray>Путник: <white><player>'
+    - '<gray>Клан: <white><clan>'
 ```
 
-Это пример структуры, а не новое оформление пользовательского каталога. Полные параметры и управление — в [руководстве scoreboard](SCOREBOARD.md).
-
-В `gui.yml → menus.sidebar-slots-title` находятся `rows.free`, `rows.occupied`, `rows.locked` (заголовок, лор, текстура), `presets` (предупреждение, доступность, текстура) и позиции строк `rows.slots`. Подписи каталога находятся в `menus.sidebar-picker-title.labels`. Общие навигационные текстуры остаются в `navigation`, материал рамки — в `frame`.
+Старый `scoreboard.yml` с персональным каталогом копируется в `scoreboard.yml.pre-named.bak`, после чего включаются табло по умолчанию.
 
 Статистика, включая подкатегории и их оформление: `modules/profile/gui.yml → menus.profile-menu-statistics.categories`. Переключатели настроек: `menus.profile-menu-settings.controls`. Текстуры профиля: `menus.profile-menu-title.textures`; карточки досье: `menus.players-title.cards`. Старые пути настроек поддерживаются внутренним адаптером, но при сохранении данные не дублируются.
-
-Порядок scoreboard.yml закреплён при загрузке и сохранении: правила → header → separator → categories/placeholders → footer → presets. Произвольные дополнительные поля и комментарии сохраняются. Удаление пресета не сбрасывает маркер однократной инициализации `presets-version`; пресет остаётся удалённым. Идентификаторы каталога с окончаниями `-key`/`-keys` считаются данными, а не ссылками на локализацию.

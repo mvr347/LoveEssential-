@@ -6,55 +6,32 @@ import dev.lovelace.loveessential.dialog.NativeDialogs;
 import dev.lovelace.loveessential.gui.*;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
+import net.kyori.adventure.text.Component;
 import java.util.*;
 import java.util.function.Consumer;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
-import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.*;
 
 /**
- * Configuration edits keep snapshots so stale dialogs cannot replace another staff member's work.
+ * Editor for tab.yml and for lists of text lines in any module. Configuration edits keep snapshots,
+ * so a stale dialog cannot replace another staff member's work.
  */
-public final class TabSettings implements Listener {
+public final class TabSettings {
+  private static final String TAB = "tab.";
+
   private final LoveEssentialPlugin plugin;
   private final NativeDialogs ui;
   private final Lang lang;
   private final LoveBridge love;
   public Consumer<Player> advanced = p -> {};
 
-  private static final class Menu implements GuiLayout {
-    Inventory inventory;
-    final Map<Integer, Runnable> actions = new HashMap<>();
-
-    public String guiId() {
-      return "tab-editor.title";
-    }
-
-    public Map<Integer, ?> guiActions() {
-      return actions;
-    }
-
-    public void guiPut(int slot, Runnable action) {
-      actions.put(slot, action);
-    }
-
-    public Inventory getInventory() {
-      return inventory;
-    }
-
-    public void guiInventory(Inventory value) {
-      inventory = value;
-    }
-  }
-
   public TabSettings(LoveEssentialPlugin plugin, NativeDialogs ui, Lang lang, LoveBridge love) {
     this.plugin = plugin;
     this.ui = ui;
     this.lang = lang;
     this.love = love;
-    Bukkit.getPluginManager().registerEvents(this, plugin);
   }
 
   private boolean admin(Player p) {
@@ -70,16 +47,22 @@ public final class TabSettings implements Listener {
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> map(String path) {
-    Object value = ModuleConfigs.snapshot(plugin.getConfig().get("tab." + path));
+    Object value = ModuleConfigs.snapshot(plugin.getConfig().get(path));
     return value instanceof Map<?, ?>
         ? new LinkedHashMap<>((Map<String, Object>) value)
         : new LinkedHashMap<>();
   }
 
+  /**
+   * Writes {@code value} at {@code path}, a full runtime path such as {@code tab.groups}. The first
+   * segment names the module file; the rest is the path inside it.
+   */
   private void save(Player p, String path, Object expected, Object value, Runnable next) {
     require(p);
+    String module = path.substring(0, path.indexOf('.'));
+    String local = path.substring(module.length() + 1);
     plugin
-        .editSetting("tab", path, expected, value)
+        .editSetting(module, local, expected, value)
         .whenComplete(
             (ignored, error) ->
                 Bukkit.getScheduler()
@@ -92,189 +75,154 @@ public final class TabSettings implements Listener {
                         }));
   }
 
-  private void put(Menu menu, int slot, String key, Runnable action) {
-    menu.inventory.setItem(
-        slot, MenuStyle.button(lang, Material.BOOK, key, "gui.separator", "gui.click.open"));
-    menu.actions.put(slot, action);
+  /** Lists show plain text; raw MiniMessage tags in a lore line would read as broken text. */
+  private static String plain(String miniMessage) {
+    try {
+      return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+          .serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(miniMessage));
+    } catch (RuntimeException e) {
+      return "";
+    }
   }
 
+  private static ListMenu.Item item(Material icon, Component title, List<Component> lore, Runnable action) {
+    return new ListMenu.Item(ListMenu.entry(icon, title, lore), action);
+  }
+
+  private Component text(String key, Map<String, String> vars) {
+    return lang.render(key, vars);
+  }
+
+  /** Root of {@code /le tab}: groups, users, sorting, nametag, and the generic settings editor. */
   public void open(Player p) {
     require(p);
-    var m = new Menu();
-    m.inventory = Bukkit.createInventory(m, 54, MenuStyle.title(lang, m.guiId(), Map.of()));
-    MenuStyle.frame(m.inventory);
-    String[] labels = {
-      "header", "footer", "groups", "placeholders", "sorting", "nametag", "sidebar", "advanced"
-    };
-    Runnable[] actions = {
-      () -> lines(p, "header-footer.header", 0),
-      () -> lines(p, "header-footer.footer", 0),
-      () -> groups(p, 0),
-      () -> aliases(p, 0),
-      () -> lines(p, "sorting", 0),
-      () -> nametag(p),
-      () -> lines(p, "sidebar.lines", 0),
-      () -> advanced.accept(p)
-    };
-    for (int i = 0; i < labels.length; i++)
-      put(m, MenuStyle.slot(i, labels.length), "tab-editor." + labels[i], actions[i]);
-    put(m, 51, "common.back", () -> p.performCommand("loveessential:loveessential"));
-    put(m, 52, "gui.close", p::closeInventory);
-    MenuStyle.open(p, m.inventory);
-  }
-
-  public void lines(Player p, String path, int page) {
-    require(p);
-    var old = List.copyOf(plugin.getConfig().getStringList("tab." + path));
-    int actual = Math.clamp(page, 0, Math.max(0, (old.size() - 1) / 12));
-    var buttons = new ArrayList<NativeDialogs.Button>();
-    for (int i = actual * 12; i < Math.min(old.size(), (actual + 1) * 12); i++) {
-      int index = i;
-      buttons.add(
-          new NativeDialogs.Button(
-              "line" + i,
-              lang.render("tab-editor.line", Map.of("index", "" + (i + 1))),
-              values -> line(p, path, old, index, actual)));
-    }
-    buttons.add(ui.button("add", "tab-editor.add-line", v -> line(p, path, old, -1, actual)));
-    if (actual > 0) buttons.add(ui.button("prev", "gui.previous", v -> lines(p, path, actual - 1)));
-    if ((actual + 1) * 12 < old.size())
-      buttons.add(ui.button("next", "common.next", v -> lines(p, path, actual + 1)));
-    buttons.add(ui.button("back", "common.back", v -> open(p)));
-    ui.show(
-        p,
-        "tab-editor.lines-title",
-        path.equals("sorting") ? "tab-editor.sorting-help" : "tab-editor.lines-help",
-        List.of(),
-        buttons,
-        this::admin);
-  }
-
-  private void line(Player p, String path, List<String> expected, int index, int page) {
-    var buttons = new ArrayList<NativeDialogs.Button>();
-    buttons.add(
-        ui.button(
-            "save",
-            "content.save",
-            v -> {
-              var next = new ArrayList<>(expected);
-              if (index < 0) next.add(v.get("text"));
-              else next.set(index, v.get("text"));
-              save(p, path, expected, next, () -> lines(p, path, page));
-            }));
-    if (index >= 0) {
-      if (index > 0)
-        buttons.add(
-            ui.button(
-                "up",
-                "tab-editor.up",
-                v -> {
-                  var next = new ArrayList<>(expected);
-                  Collections.swap(next, index, index - 1);
-                  save(p, path, expected, next, () -> lines(p, path, page));
-                }));
-      if (index + 1 < expected.size())
-        buttons.add(
-            ui.button(
-                "down",
-                "tab-editor.down",
-                v -> {
-                  var next = new ArrayList<>(expected);
-                  Collections.swap(next, index, index + 1);
-                  save(p, path, expected, next, () -> lines(p, path, page));
-                }));
-      buttons.add(
-          ui.button(
-              "delete",
-              "gui.remove",
-              v -> {
-                var next = new ArrayList<>(expected);
-                next.remove(index);
-                save(p, path, expected, next, () -> lines(p, path, page));
-              }));
-    }
-    buttons.add(ui.button("back", "common.back", v -> lines(p, path, page)));
-    ui.show(
-        p,
-        "tab-editor.line-title",
-        path.equals("sorting") ? "tab-editor.sorting-help" : "tab-editor.lines-help",
+    var controls =
         List.of(
-            ui.text(
-                "text",
-                path.equals("sorting") ? "tab-editor.sort-rule" : "tab-editor.text",
-                index < 0 ? "" : expected.get(index),
-                2048)),
-        buttons,
-        this::admin);
+            item(
+                Material.BOOK,
+                text("tab-editor.groups", Map.of()),
+                List.of(text("tab-editor.groups-help", Map.of())),
+                () -> groups(p, 0)),
+            item(
+                Material.PLAYER_HEAD,
+                text("tab-editor.users", Map.of()),
+                List.of(text("tab-editor.users-help", Map.of())),
+                () -> users(p, 0)),
+            item(
+                Material.COMPARATOR,
+                text("tab-editor.sorting", Map.of()),
+                List.of(text("tab-editor.sorting-help", Map.of())),
+                () -> lines(p, TAB + "sorting", 0, () -> open(p))),
+            item(
+                Material.NAME_TAG,
+                text("tab-editor.nametag", Map.of()),
+                List.of(text("tab-editor.nametag-help", Map.of())),
+                () -> nametag(p)),
+            item(
+                Material.REPEATER,
+                text("tab-editor.advanced", Map.of()),
+                List.of(text("tab-editor.advanced-help", Map.of())),
+                () -> advanced.accept(p)));
+    ListMenu.open(lang, p, "tab-editor.title", controls, List.of(), 0, null);
   }
 
+  // ---------------------------------------------------------------- lists
+
+  /** A page of groups or users; each entry opens its editor. */
   public void groups(Player p, int page) {
-    entries(p, "groups", page, false);
+    entries(p, "groups", page);
   }
 
-  public void aliases(Player p, int page) {
-    entries(p, "placeholders", page, true);
+  public void users(Player p, int page) {
+    entries(p, "users", page);
   }
 
-  private void entries(Player p, String path, int page, boolean aliases) {
+  private void entries(Player p, String section, int page) {
     require(p);
-    var values = map(path);
-    var ids = values.keySet().stream().sorted().toList();
-    int actual = Math.clamp(page, 0, Math.max(0, (ids.size() - 1) / 12));
-    var buttons = new ArrayList<NativeDialogs.Button>();
-    for (int i = actual * 12; i < Math.min(ids.size(), (actual + 1) * 12); i++) {
-      String id = ids.get(i);
-      buttons.add(
-          new NativeDialogs.Button(
-              "entry" + i,
+    boolean groups = section.equals("groups");
+    var ids = map(TAB + section).keySet().stream().sorted().toList();
+    var items = new ArrayList<ListMenu.Item>();
+    for (String id : ids) {
+      var value = map(TAB + section + "." + id);
+      items.add(
+          item(
+              groups ? Material.BOOK : Material.PLAYER_HEAD,
               lang.render("gui.label", Map.of("name", id)),
-              v -> {
-                if (aliases) alias(p, id, values);
-                else group(p, id, values);
-              }));
+              List.of(
+                  lang.render(
+                      "tab-editor.entry-help",
+                      Map.of("prefix", plain(Objects.toString(value.getOrDefault("tabprefix", "")))))),
+              () -> editor(p, section, id)));
     }
-    buttons.add(
-        ui.button(
-            "add",
-            aliases ? "tab-editor.add-placeholder" : "tab-editor.add-group",
-            v -> {
-              if (aliases) alias(p, null, values);
-              else group(p, null, values);
-            }));
-    if (actual > 0)
-      buttons.add(ui.button("prev", "gui.previous", v -> entries(p, path, actual - 1, aliases)));
-    if ((actual + 1) * 12 < ids.size())
-      buttons.add(ui.button("next", "common.next", v -> entries(p, path, actual + 1, aliases)));
-    buttons.add(ui.button("back", "common.back", v -> open(p)));
-    ui.show(
+    var controls =
+        List.of(
+            item(
+                Material.LIME_DYE,
+                text(groups ? "tab-editor.add-group" : "tab-editor.add-user", Map.of()),
+                List.of(),
+                () -> editor(p, section, null)));
+    ListMenu.open(
+        lang,
         p,
-        aliases ? "tab-editor.placeholders" : "tab-editor.groups",
-        "tab-editor.groups-help",
-        List.of(),
-        buttons,
-        this::admin);
+        groups ? "tab-groups.title" : "tab-users.title",
+        controls,
+        items,
+        page,
+        () -> open(p));
   }
 
-  private static List<String> csv(String value) {
-    return value.isBlank()
-        ? List.of()
-        : Arrays.stream(value.split(","))
-            .map(String::strip)
-            .filter(s -> !s.isBlank())
-            .distinct()
-            .toList();
+  private void editor(Player p, String section, String id) {
+    if (section.equals("groups")) group(p, id);
+    else user(p, id);
   }
 
-  private String id(Map<String, String> values, String old, Map<String, Object> expected) {
-    String id = values.get("id").strip();
-    if (!id.matches("[a-zA-Z0-9_-]{1,48}") || !id.equals(old) && expected.containsKey(id))
-      throw new IllegalArgumentException("errors.input");
-    return id;
+  /** Editor for one group; the header and footer are line lists edited separately. */
+  @SuppressWarnings("unchecked")
+  private void group(Player p, String old) {
+    require(p);
+    String section = "groups";
+    var expected = map(TAB + section);
+    var value = old == null ? Map.<String, Object>of() : (Map<String, Object>) expected.get(old);
+    showProperties(p, section, old, value, expected, "tab-editor.group-title", "groups");
   }
 
   @SuppressWarnings("unchecked")
-  private void group(Player p, String old, Map<String, Object> expected) {
+  private void user(Player p, String old) {
+    require(p);
+    var expected = map(TAB + "users");
     var value = old == null ? Map.<String, Object>of() : (Map<String, Object>) expected.get(old);
+    showProperties(p, "users", old, value, expected, "tab-editor.user-title", "users");
+  }
+
+  private void showProperties(
+      Player p,
+      String section,
+      String old,
+      Map<String, Object> value,
+      Map<String, Object> expected,
+      String title,
+      String back) {
+    var fields = new ArrayList<NativeDialogs.Field>();
+    fields.add(ui.text("id", "tab-editor.id", old == null ? "" : old, 48));
+    for (String key : List.of("tabprefix", "tabsuffix", "customtabname", "tagprefix", "tagsuffix"))
+      fields.add(
+          ui.text(
+              key,
+              "tab-editor." + key,
+              Objects.toString(value.getOrDefault(key, "")),
+              1024));
+    fields.add(
+        ui.text(
+            "display-condition",
+            "tab-editor.display-condition",
+            Objects.toString(value.getOrDefault("display-condition", "")),
+            48));
+    fields.add(
+        ui.text(
+            "permission",
+            "tab-editor.permission",
+            Objects.toString(value.getOrDefault("permission", "")),
+            128));
     var buttons = new ArrayList<NativeDialogs.Button>();
     buttons.add(
         ui.button(
@@ -282,31 +230,28 @@ public final class TabSettings implements Listener {
             "content.save",
             v -> {
               String id = id(v, old, expected);
-              int priority = Integer.parseInt(v.get("priority"));
-              if (priority < 0 || priority > 100000)
-                throw new IllegalArgumentException("errors.input");
               var next = new LinkedHashMap<>(expected);
               if (old != null) next.remove(old);
-              next.put(
-                  id,
-                  Map.of(
-                      "permission",
-                      v.get("permission").strip(),
-                      "priority",
-                      priority,
-                      "name",
-                      v.get("name"),
-                      "prefix",
-                      v.get("prefix"),
-                      "suffix",
-                      v.get("suffix"),
-                      "players",
-                      csv(v.get("players")),
-                      "worlds",
-                      csv(v.get("worlds"))));
-              save(p, "groups", expected, next, () -> groups(p, 0));
+              var entry = new LinkedHashMap<String, Object>(value);
+              for (String key : List.of("tabprefix", "tabsuffix", "customtabname", "tagprefix", "tagsuffix", "display-condition", "permission")) {
+                String text = v.get(key).strip();
+                if (text.isEmpty()) entry.remove(key);
+                else entry.put(key, text);
+              }
+              next.put(id, entry);
+              save(p, TAB + section, expected, next, () -> entries(p, section, 0));
             }));
-    if (old != null)
+    if (old != null) {
+      buttons.add(
+          ui.button(
+              "header",
+              "tab-editor.header-lines",
+              v -> lines(p, TAB + section + "." + old + ".header", 0, () -> editor(p, section, old))));
+      buttons.add(
+          ui.button(
+              "footer",
+              "tab-editor.footer-lines",
+              v -> lines(p, TAB + section + "." + old + ".footer", 0, () -> editor(p, section, old))));
       buttons.add(
           ui.button(
               "delete",
@@ -318,104 +263,118 @@ public final class TabSettings implements Listener {
                       () -> {
                         var next = new LinkedHashMap<>(expected);
                         next.remove(old);
-                        save(p, "groups", expected, next, () -> groups(p, 0));
+                        save(p, TAB + section, expected, next, () -> entries(p, section, 0));
                       },
-                      () -> group(p, old, expected),
+                      () -> editor(p, section, old),
                       this::admin)));
-    buttons.add(ui.button("back", "common.back", v -> groups(p, 0)));
+    }
+    buttons.add(ui.button("back", "common.back", v -> entries(p, section, 0)));
+    ui.show(p, title, "tab-editor.groups-help", fields, buttons, this::admin);
+  }
+
+  private String id(Map<String, String> values, String old, Map<String, Object> expected) {
+    String id = values.get("id").strip();
+    if (!id.matches("[a-zA-Z0-9_-]{1,48}") || !id.equals(old) && expected.containsKey(id))
+      throw new IllegalArgumentException("errors.input");
+    return id;
+  }
+
+  /**
+   * Line-list editor for any text list: {@code path} is a full runtime path such as
+   * {@code tab.sorting} or {@code scoreboard.scoreboards.main.lines}. {@code back} returns to the
+   * caller's editor.
+   */
+  public void lines(Player p, String path, int page, Runnable back) {
+    require(p);
+    var old = List.copyOf(plugin.getConfig().getStringList(path));
+    int actual = Math.clamp(page, 0, Math.max(0, (old.size() - 1) / 12));
+    var buttons = new ArrayList<NativeDialogs.Button>();
+    for (int i = actual * 12; i < Math.min(old.size(), (actual + 1) * 12); i++) {
+      int index = i;
+      buttons.add(
+          new NativeDialogs.Button(
+              "line" + i,
+              lang.render("tab-editor.line", Map.of("index", "" + (i + 1))),
+              values -> line(p, path, old, index, actual, back)));
+    }
+    buttons.add(
+        ui.button("add", "tab-editor.add-line", v -> line(p, path, old, -1, actual, back)));
+    if (actual > 0)
+      buttons.add(ui.button("prev", "gui.previous", v -> lines(p, path, actual - 1, back)));
+    if ((actual + 1) * 12 < old.size())
+      buttons.add(ui.button("next", "common.next", v -> lines(p, path, actual + 1, back)));
+    buttons.add(ui.button("back", "common.back", v -> back.run()));
     ui.show(
         p,
-        "tab-editor.group-title",
-        "tab-editor.groups-help",
-        List.of(
-            ui.text("id", "tab-editor.id", old == null ? "" : old, 48),
-            ui.text(
-                "permission",
-                "tab-editor.permission",
-                Objects.toString(value.getOrDefault("permission", "")),
-                128),
-            ui.text(
-                "priority",
-                "tab-editor.priority",
-                Objects.toString(value.getOrDefault("priority", 100)),
-                6),
-            ui.text(
-                "name",
-                "tab-editor.name",
-                Objects.toString(value.getOrDefault("name", "<player>")),
-                1024),
-            ui.text(
-                "prefix",
-                "tab-editor.prefix",
-                Objects.toString(value.getOrDefault("prefix", "")),
-                1024),
-            ui.text(
-                "suffix",
-                "tab-editor.suffix",
-                Objects.toString(value.getOrDefault("suffix", "")),
-                1024),
-            ui.text(
-                "players",
-                "tab-editor.players",
-                String.join(",", (List<String>) value.getOrDefault("players", List.of())),
-                2048),
-            ui.text(
-                "worlds",
-                "tab-editor.worlds",
-                String.join(",", (List<String>) value.getOrDefault("worlds", List.of())),
-                1024)),
+        "tab-editor.lines-title",
+        path.endsWith(".sorting") ? "tab-editor.sorting-help" : "tab-editor.lines-help",
+        List.of(),
         buttons,
         this::admin);
   }
 
-  private void alias(Player p, String old, Map<String, Object> expected) {
+  private void line(Player p, String path, List<String> expected, int index, int page, Runnable back) {
     var buttons = new ArrayList<NativeDialogs.Button>();
     buttons.add(
         ui.button(
             "save",
             "content.save",
             v -> {
-              String id = id(v, old, expected);
-              var next = new LinkedHashMap<>(expected);
-              if (old != null) next.remove(old);
-              next.put(id, v.get("text"));
-              save(
-                  p,
-                  "placeholders",
-                  expected.isEmpty() && !plugin.getConfig().contains("tab.placeholders")
-                      ? null
-                      : expected,
-                  next,
-                  () -> aliases(p, 0));
+              var next = new ArrayList<>(expected);
+              if (index < 0) next.add(v.get("text"));
+              else next.set(index, v.get("text"));
+              save(p, path, expected, next, () -> lines(p, path, page, back));
             }));
-    if (old != null)
+    if (index >= 0) {
+      if (index > 0)
+        buttons.add(
+            ui.button(
+                "up",
+                "tab-editor.up",
+                v -> {
+                  var next = new ArrayList<>(expected);
+                  Collections.swap(next, index, index - 1);
+                  save(p, path, expected, next, () -> lines(p, path, page, back));
+                }));
+      if (index + 1 < expected.size())
+        buttons.add(
+            ui.button(
+                "down",
+                "tab-editor.down",
+                v -> {
+                  var next = new ArrayList<>(expected);
+                  Collections.swap(next, index, index + 1);
+                  save(p, path, expected, next, () -> lines(p, path, page, back));
+                }));
       buttons.add(
           ui.button(
               "delete",
               "gui.remove",
               v -> {
-                var next = new LinkedHashMap<>(expected);
-                next.remove(old);
-                save(p, "placeholders", expected, next, () -> aliases(p, 0));
+                var next = new ArrayList<>(expected);
+                next.remove(index);
+                save(p, path, expected, next, () -> lines(p, path, page, back));
               }));
-    buttons.add(ui.button("back", "common.back", v -> aliases(p, 0)));
+    }
+    buttons.add(ui.button("back", "common.back", v -> lines(p, path, page, back)));
     ui.show(
         p,
-        "tab-editor.placeholder-title",
-        "tab-editor.placeholder-help",
+        "tab-editor.line-title",
+        path.endsWith(".sorting") ? "tab-editor.sorting-help" : "tab-editor.lines-help",
         List.of(
-            ui.text("id", "tab-editor.id", old == null ? "" : old, 48),
             ui.text(
                 "text",
-                "tab-editor.text",
-                old == null ? "" : Objects.toString(expected.get(old)),
+                path.endsWith(".sorting") ? "tab-editor.sort-rule" : "tab-editor.text",
+                index < 0 ? "" : expected.get(index),
                 2048)),
         buttons,
         this::admin);
   }
 
   private void nametag(Player p) {
-    var expected = map("nametag");
+    require(p);
+    var expected = map(TAB + "nametag");
+    String invisible = String.join(",", plugin.getConfig().getStringList(TAB + "nametag.invisible-nametags"));
     ui.show(
         p,
         "tab-editor.nametag",
@@ -430,68 +389,37 @@ public final class TabSettings implements Listener {
                         : "players.no"),
                 List.of(lang.text("players.yes"), lang.text("players.no"))),
             NativeDialogs.Field.select(
-                "visible",
-                lang.render("tab-editor.visible"),
-                lang.text(
-                    Boolean.TRUE.equals(expected.getOrDefault("visible", true))
-                        ? "players.yes"
-                        : "players.no"),
-                List.of(lang.text("players.yes"), lang.text("players.no"))),
-            NativeDialogs.Field.select(
                 "collision",
                 lang.render("tab-editor.collision"),
                 lang.text(
                     Boolean.TRUE.equals(expected.getOrDefault("collision", false))
                         ? "players.yes"
                         : "players.no"),
-                List.of(lang.text("players.yes"), lang.text("players.no")))),
+                List.of(lang.text("players.yes"), lang.text("players.no"))),
+            ui.text("invisible", "tab-editor.invisible", invisible, 1024)),
         List.of(
             ui.button(
                 "save",
                 "content.save",
                 v -> {
                   var next = new LinkedHashMap<>(expected);
-                  for (String key : List.of("enabled", "visible", "collision")) {
+                  for (String key : List.of("enabled", "collision")) {
                     String flag = v.get(key);
                     if (!List.of(lang.text("players.yes"), lang.text("players.no")).contains(flag))
                       throw new IllegalArgumentException("errors.input");
                     next.put(key, flag.equals(lang.text("players.yes")));
                   }
-                  save(p, "nametag", expected, next, () -> open(p));
+                  var names = new ArrayList<String>();
+                  for (String part : v.get("invisible").split(",")) {
+                    if (!part.isBlank()) names.add(part.strip());
+                  }
+                  next.put("invisible-nametags", names);
+                  save(p, TAB + "nametag", expected, next, () -> open(p));
                 }),
             ui.button("back", "common.back", v -> open(p))),
         this::admin);
   }
 
-  @EventHandler
-  public void click(InventoryClickEvent event) {
-    if (!(event.getInventory().getHolder() instanceof Menu menu)) return;
-    event.setCancelled(true);
-    if (!(event.getWhoClicked() instanceof Player p)
-        || !event.getClick().isLeftClick()
-        || event.getRawSlot() < 0
-        || event.getRawSlot() >= menu.inventory.getSize()) return;
-    var action = menu.actions.get(event.getRawSlot());
-    if (action != null)
-      Bukkit.getScheduler()
-          .runTask(
-              plugin,
-              () -> {
-                if (admin(p) && p.getOpenInventory().getTopInventory() == menu.inventory)
-                  try {
-                    MenuStyle.action(p, action);
-                  } catch (RuntimeException error) {
-                    ui.error(p, error);
-                  }
-              });
-  }
-
-  @EventHandler
-  public void drag(InventoryDragEvent event) {
-    if (event.getInventory().getHolder() instanceof Menu) event.setCancelled(true);
-  }
-
-  public void close() {
-    HandlerList.unregisterAll(this);
-  }
+  /** Kept for the plugin's shutdown order; the editor registers no listeners of its own. */
+  public void close() {}
 }

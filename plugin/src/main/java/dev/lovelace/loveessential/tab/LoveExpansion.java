@@ -48,6 +48,7 @@ public final class LoveExpansion extends PlaceholderExpansion {
     return switch (params) {
       case "afk" -> Boolean.toString(afk.test(p));
       case "vanished" -> Boolean.toString(vanish.test(p));
+      case "combat" -> Boolean.toString(love.combat(p));
       case "authenticated" -> Boolean.toString(love.authenticated(p));
       case "clan" -> love.clan(p).orElse("");
       case "reputation" ->

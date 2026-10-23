@@ -251,18 +251,26 @@ public final class Gameplay implements Listener, AutoCloseable {
     return result;
   }
 
+  /** Vanish and the loading guard only state their own reasons; {@link Visibility} does the rest. */
   public void applyVanish() {
     for (var viewer : Bukkit.getOnlinePlayers())
       for (var target : Bukkit.getOnlinePlayers()) {
         if (viewer.equals(target)) continue;
-        boolean hide =
-            loading.contains(target.getUniqueId())
-                || enabled.test("vanish")
-                    && vanished(target)
-                    && !viewer.hasPermission("loveessential.vanish.see");
-        if (hide) viewer.hidePlayer(plugin, target);
-        else viewer.showPlayer(plugin, target);
+        visibility.set(
+            "loading", viewer.getUniqueId(), target.getUniqueId(), loading.contains(target.getUniqueId()));
+        boolean hidden =
+            enabled.test("vanish")
+                && vanished(target)
+                && !viewer.hasPermission("loveessential.vanish.see");
+        visibility.set("vanish", viewer.getUniqueId(), target.getUniqueId(), hidden);
       }
+  }
+
+  /** Shared arbiter for every hidePlayer/showPlayer decision; set once by the plugin at startup. */
+  private Visibility visibility;
+
+  public void visibility(Visibility value) {
+    visibility = value;
   }
 
   public List<String> names(Player p, String kind) {
@@ -633,7 +641,9 @@ public final class Gameplay implements Listener, AutoCloseable {
     hologramService.close();
     portals.close();
     randomTeleport.close();
-    for (var viewer : Bukkit.getOnlinePlayers())
-      for (var target : Bukkit.getOnlinePlayers()) viewer.showPlayer(plugin, target);
+    if (visibility != null) {
+      visibility.release("vanish");
+      visibility.release("loading");
+    }
   }
 }

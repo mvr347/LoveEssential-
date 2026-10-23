@@ -1,73 +1,144 @@
 # Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
+# TAB: имена, порядок, шапка и подвал, имена над головами, полоски здоровья, битбар.
+# Свойства игрока задаются группами (groups), именами (users) и мирами (per-world) по приоритету:
+# users.<ник>.per-world.<мир> > users.<ник> > groups.<группа>.per-world.<мир> > groups.<группа>.
+# Группа игрока — первая в этом списке, право которой у него есть: group.имя (или поле permission).
+# Если ни одна группа не подошла, используется _DEFAULT_.
 enabled: true
+# 2026-10-22: базовый цикл обновления списка TAB — 10 тиков (0,5 с). Быстрее — больше пакетов на
+# каждом игроке; медленнее — смена префикса заметна с задержкой.
 refresh-ticks: 10
+# 2026-10-22: если табло уже принадлежит другому плагину, TAB его не перехватывает: иначе два
+# табло по очереди перетирали бы друг друга.
 respect-other-scoreboards: true
 sorting-enabled: true
+# Критерии сортировки проверяются по порядку: group (порядок групп в этом файле), name (a-z),
+# z-a, number:%p%, number-desc:%p%, permissions:p1,p2, placeholder:%p%:v1,v2, case-sensitive.
 sorting:
 - group
 - name
-name-enabled: true
-groups:
-  admin:
-    permission: loveessential.group.admin
-    priority: 0
-    name: <red><player>
-    prefix: '<red>[Страж] '
-    suffix: ' <suffix><afk>'
-    players: []
-    worlds: []
-  knight:
-    permission: loveessential.group.knight
-    priority: 20
-    name: <gold><player>
-    prefix: '<gold>[Рыцарь] '
-    suffix: ' <suffix><afk>'
-    players: []
-    worlds: []
-  default:
-    permission: ''
-    priority: 10000
-    name: <player>
-    prefix: ''
-    suffix: ' <suffix><afk>'
-    players: []
-    worlds: []
-nametag:
-  enabled: true
-  collision: false
-  visible: true
+placeholder-refresh:
+  # 2026-10-22: 200 мс — значения PlaceholderAPI читаются не чаще пяти раз в секунду. Дешёвые
+  # плейсхолдеры можно оставить здесь, дорогие — вынести ниже с большим интервалом.
+  default: 200
+  # 2026-10-22: пинг меняется быстро, но секунды хватает для списка; чаще — лишние запросы
+  # к PlaceholderAPI на каждого игрока и тика.
+  '%player_ping%': 1000
+# Замена вывода плейсхолдера: точное значение, диапазон 0-10 или else. Пример:
+# '%player_health%':
+#   '0-10': '<red>мало'
+#   '11-20': '<yellow>средне'
+#   else: '<green>норма'
+placeholder-output-replacements: {}
+animations:
+  kingdom:
+    # 2026-10-22: 500 мс — кадр меняется раз в 10 тиков: заметно глазу, но без мерцания.
+    # Допустимо от 50 мс до 60 с.
+    change-interval: 500
+    texts:
+    - <gold>Королевство Love
+    - <yellow>Королевство Love
+# Именованные условия. Проверка — «левая часть ОП правая» (==, !=, >=, <=, >, <, contains,
+# starts-with, ends-with), permission:<право>, engine:<id>. type: and или or. Тег <condition:имя>
+# выводит yes или no; то же имя указывается в display-condition у табло, бossbar и групп.
+conditions:
+  kingdom-afk:
+    type: and
+    checks:
+    - '%loveessential_afk% == true'
+    yes: ' <gray>[Отошёл]'
+    no: ''
+# Условия, которые проверяются через ConditionEngine (JSON); имя используется как engine:<id>.
+engine-conditions: {}
 header-footer:
   enabled: true
-  profiles: {}
-  header:
-  - <gold><animation:kingdom>
-  - '<gray>Игроков: <white><visible_online>'
-  footer:
-  - '<gray>Клан: <clan> · Репутация: <reputation>'
-  - '<gray>Территория: <territory> · Ping: <ping>'
+  # 2026-10-22: шапка и подвал меняются редко — секунды достаточно, и текст не пересылается
+  # каждый тик.
+  refresh-ticks: 20
+nametag:
+  enabled: true
+  # 2026-10-22: столкновения выключены: иначе толпа в спавне начинает толкать друг друга.
+  collision: false
+  # 2026-10-22: 10 тиков — как у списка; ник меняется вместе с префиксом.
+  refresh-ticks: 10
+  # Имена игроков, группы или UUID, над которыми ник не показывается никому.
+  invisible-nametags: []
+# 2026-10-22: 20 тиков (1 с) для битбара: проценты и цвета из плейсхолдеров меняются медленно.
+bossbar-refresh-ticks: 20
+bossbars:
+  kingdom:
+    enabled: false
+    # Доля 0–1; может быть плейсхолдером, например %player_health_percent%.
+    progress: 1.0
+    # Цвет и стиль проверяются при загрузке; неверное значение отклоняется, а не ломает обновление.
+    color: YELLOW
+    overlay: PROGRESS
+    # display-condition: kingdom-afk
+    text: <gold>Добро пожаловать в королевство, <player>
+# Список игроков по мирам: игроки видят только тех, кто в их группе миров. Право обхода видит всех.
+per-world-playerlist:
+  enabled: false
+  # 2026-10-22: 20 тиков — пересчёт пар «зритель-цель» дорогой, а видимость меняется редко.
+  refresh-ticks: 20
+  bypass-permission: loveessential.tab.worldlist.bypass
+  groups:
+    survival:
+    - world
+    - world_nether
+    - world_the_end
+# Лимиты временных свойств и битбаров других плагинов (TabService).
+overrides:
+  # 2026-10-22: 600 с — больше десяти минут временный текст уже не временный.
+  max-seconds: 600
+  # 2026-10-22: 8 на игрока — с запасом для двух-трёх плагинов, но без накопления.
+  per-player-limit: 8
+groups:
+  admin:
+    tabprefix: '<red>[Страж] '
+    tabsuffix: ' <suffix><afk>'
+    customtabname: <red><player>
+    tagprefix: '<red>[Страж] '
+    tagsuffix: ''
+    # 2026-10-22: права nametag по группе: collision и visibility (always|never).
+    # collision: true
+    # visibility: always
+    per-world: {}
+  knight:
+    tabprefix: '<gold>[Рыцарь] '
+    tabsuffix: ' <suffix><afk>'
+    customtabname: <gold><player>
+    tagprefix: '<gold>[Рыцарь] '
+    tagsuffix: ''
+    per-world: {}
+  _DEFAULT_:
+    tabprefix: ''
+    tabsuffix: ' <suffix><afk>'
+    customtabname: <player>
+    tagprefix: ''
+    tagsuffix: ''
+    header:
+    - <gold><animation:kingdom>
+    - '<gray>Игроков: <white><visible_online>'
+    footer:
+    - '<gray>Клан: <clan> · Репутация: <reputation>'
+    - '<gray>Территория: <territory> · Ping: <ping>'
+    per-world: {}
+users: {}
 playerlist-objective:
   enabled: true
+  # ping, health или плейсхолдер вида %...%.
   value: ping
   title: <gold>Связь
+  # integer или hearts.
+  render-type: integer
+  # Текст вместо числа (пусто — показывать число). Пример: <red>❤
+  fancy-value: ''
 below-name:
   enabled: false
   value: health
   title: <red>Здоровье
-sidebar:
-  enabled: false
-  title: <gold>Королевство
-  lines:
-  - '<gray>Путник: <white><player>'
-  - '<gray>Клан: <white><clan>'
-  - '<gray>Репутация: <white><reputation>'
-  - '<gray>Игроков: <white><visible_online>'
-bossbars:
-  kingdom:
-    enabled: false
-    progress: 1.0
-    color: YELLOW
-    overlay: PROGRESS
-    text: <gold>Добро пожаловать в королевство, <player>
+  render-type: hearts
+  fancy-value: ''
 access:
   allowed-worlds: []
   denied-worlds: []
@@ -81,39 +152,55 @@ placeholders:
   clan: <clan>
 messages:
   tab:
-    header:
-    - <gold><animation:kingdom>
-    - '<gray>Игроков: <white><visible_online>'
-    footer:
-    - '<gray>Клан: <clan> · Репутация: <reputation>'
-    - '<gray>Территория: <territory> · Ping: <ping>'
+    # Template for the tab list name when no customtabname is set; used by %loveessential_text_tab.name%.
     name: <player>
-    prefix: ''
-    suffix: ' <suffix><afk>'
-    objective: <gold>Связь
-    health: <red>Здоровье
-    ping: '<gray>Ping: <ping>'
-    bossbar: <gold>Добро пожаловать в королевство, <player>
-    exported: '<green>Настройки TAB экспортированы. Резервные копии: *.loveessential.bak.'
     status:
       afk: ' <gray>[Отошёл]'
-    animations:
-      kingdom:
-      - <gold>Королевство Love
-      - <yellow>Королевство Love
-    groups:
-      admin:
-        name: <red><player>
-        prefix: '<red>[Страж] '
-      knight:
-        name: <gold><player>
-        prefix: '<gold>[Рыцарь] '
-    sidebar:
-      title: <gold>Королевство
-      player: '<gray>Путник: <white><player>'
-      clan: '<gray>Клан: <white><clan>'
-      reputation: '<gray>Репутация: <white><reputation>'
-      online: '<gray>Игроков: <white><visible_online>'
-    layout:
-      title: <gold>Королевство Love
-      remaining: <gray>Ещё %s игроков
+    exported: '<green>Настройки TAB экспортированы в файл <white><file>.'
+    nametag-hidden: '<gray>Имена над игроками скрыты для вас.'
+    nametag-shown: '<gray>Имена над игроками снова видны.'
+    bossbar-hidden: '<gray>Полоски TAB скрыты для вас.'
+    bossbar-shown: '<gray>Полоски TAB снова видны.'
+    announced: '<green>Полоска «<name>» показана всем игрокам.'
+    cpu-empty: '<gray>Данных пока нет: подождите 10 секунд после запуска.'
+    cpu-line: '<gray><name>: <white><ms> мс за цикл'
+    debug-group: '<gray>Группа: <white><group>'
+    debug-property: '<gray><key>: <white><value> <dark_gray>(<source>)'
+  tab-editor:
+    groups: <gold>Группы
+    groups-help: <gray>Группа — первая, право group.имя которой есть у игрока. Порядок в файле — порядок групп. Пустое поле не переопределяет значение ниже по приоритету.
+    users: <gold>Игроки
+    users-help: <gray>Свойства конкретного игрока по нику или UUID. Имеют приоритет над группой.
+    sorting: <gold>Порядок в списке
+    sorting-help: '<gray>Критерии проверяются по порядку: group, name, a-z, z-a, number:%p%, permissions:p1,p2, placeholder:%p%:v1,v2, case-sensitive. Цвета здесь не используются.'
+    nametag: <gold>Имена над головами
+    nametag-help: <gray>Показ имён и столкновения игроков. Префиксы и суффиксы задаются у групп и игроков.
+    advanced: <gold>Все параметры
+    advanced-help: '<gray>Полный редактор модуля: обновление, условия, анимации, полоски и лимиты.'
+    add-group: <green>Создать группу
+    add-user: <green>Добавить игрока
+    entry-help: '<gray>Префикс: <prefix>'
+    group-title: <gold>Настройка группы
+    user-title: <gold>Настройка игрока
+    id: <gold>Идентификатор
+    tabprefix: <gold>Префикс в списке
+    tabsuffix: <gold>Суффикс в списке
+    customtabname: <gold>Имя в списке (пусто — ник)
+    tagprefix: <gold>Префикс над головой
+    tagsuffix: <gold>Суффикс над головой
+    display-condition: <gold>Условие показа (имя из conditions)
+    permission: <gold>Право группы (пусто — group.имя)
+    header-lines: <gold>Строки шапки
+    footer-lines: <gold>Строки подвала
+    enabled: <gold>Включено
+    collision: <gold>Столкновения
+    invisible: <gold>Скрытые ники (через запятую)
+    lines-title: <gold>Строки TAB
+    lines-help: <gray>Каждая строка редактируется отдельно. Доступны MiniMessage, %PAPI%, <placeholder:id>, <condition:имя> и <animation:имя>. Пустая строка создаёт отступ.
+    line: <gold>Строка <white><index>
+    add-line: <gold>Добавить строку
+    line-title: <gold>Редактирование строки
+    text: <gold>Текст с цветами и плейсхолдерами
+    up: <gold>Поднять
+    down: <gold>Опустить
+    sort-rule: <gold>Критерий сортировки
