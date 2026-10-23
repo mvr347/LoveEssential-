@@ -5,7 +5,9 @@ import dev.lovelace.loveessential.api.TabService;
 import dev.lovelace.loveessential.MainThread;
 import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.storage.SqliteStore;
+import dev.lovelace.loveessential.module.DisplayPreferences;
 import dev.lovelace.loveessential.module.Visibility;
+import dev.lovelace.lovecore.api.display.DisplayPrefs;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -85,7 +87,41 @@ public final class TabModule implements Listener, AutoCloseable {
       Component tagSuffix,
       NamedTextColor color,
       boolean collision,
-      boolean nametagVisible) {}
+      boolean nametagVisible,
+      NameTagTexts tags) {}
+
+  /** The nametag prefix, suffix and team color for one set of hidden elements. */
+  record NameTagText(Component prefix, Component suffix, NamedTextColor color) {}
+
+  /**
+   * Nametag text for each combination of left-out elements (clan tag, suffix), rendered when a viewer
+   * first needs it and kept for the rest of the cycle; most players only ever need one.
+   */
+  static final class NameTagTexts {
+    private final java.util.function.Function<Set<DisplayPrefs.Element>, NameTagText> render;
+    private final Map<Set<DisplayPrefs.Element>, NameTagText> cache = new HashMap<>();
+
+    NameTagTexts(java.util.function.Function<Set<DisplayPrefs.Element>, NameTagText> render) {
+      this.render = render;
+    }
+
+    NameTagText get(Set<DisplayPrefs.Element> hidden) {
+      return cache.computeIfAbsent(Set.copyOf(hidden), render);
+    }
+  }
+
+  private DisplayPreferences display;
+
+  /** Personal show/hide choices for clan tags and suffixes; null leaves everything shown. */
+  public void display(DisplayPreferences value) {
+    this.display = value;
+  }
+
+  private Set<DisplayPrefs.Element> hiddenOwn(Player p, DisplayPrefs.Surface surface) {
+    return display == null
+        ? Set.of()
+        : display.hiddenFor(p.getUniqueId(), p.getUniqueId(), surface);
+  }
 
   public TabModule(
       LoveEssentialPlugin plugin,
@@ -274,13 +310,23 @@ public final class TabModule implements Listener, AutoCloseable {
   }
 
   private Target build(Player p, TabProperties.Resolved props, String group) {
-    var tagPrefix = render(props.value(TabProperties.TAG_PREFIX).orElse(""), p);
-    var tagSuffix = render(props.value(TabProperties.TAG_SUFFIX).orElse(""), p);
+    String tagPrefixText = props.value(TabProperties.TAG_PREFIX).orElse("");
+    String tagSuffixText = props.value(TabProperties.TAG_SUFFIX).orElse("");
+    var tags =
+        new NameTagTexts(
+            hidden -> {
+              var prefix = render(tagPrefixText, p, hidden);
+              return new NameTagText(prefix, render(tagSuffixText, p, hidden), lastColor(prefix));
+            });
+    var own = tags.get(hiddenOwn(p, DisplayPrefs.Surface.NAMETAG));
+    var tagPrefix = own.prefix();
+    var tagSuffix = own.suffix();
     String name = props.value(TabProperties.CUSTOM_TAB_NAME).orElse("<player>");
+    var hiddenInTab = hiddenOwn(p, DisplayPrefs.Surface.TAB);
     var tabName =
-        render(props.value(TabProperties.TAB_PREFIX).orElse(""), p)
-            .append(placeholders.renderTabName(name, p, p))
-            .append(render(props.value(TabProperties.TAB_SUFFIX).orElse(""), p));
+        render(props.value(TabProperties.TAB_PREFIX).orElse(""), p, hiddenInTab)
+            .append(placeholders.renderTabName(name, p, p, hiddenInTab))
+            .append(render(props.value(TabProperties.TAB_SUFFIX).orElse(""), p, hiddenInTab));
     var nametag = section("nametag");
     boolean collision =
         props.value(TabProperties.COLLISION)
@@ -297,9 +343,10 @@ public final class TabModule implements Listener, AutoCloseable {
         tabName,
         tagPrefix,
         tagSuffix,
-        lastColor(tagPrefix),
+        own.color(),
         collision,
-        visible);
+        visible,
+        tags);
   }
 
   private boolean invisible(Player p, String group, ConfigurationSection nametag) {
@@ -314,6 +361,10 @@ public final class TabModule implements Listener, AutoCloseable {
 
   private Component render(String template, Player p) {
     return placeholders.renderRaw(expand(template == null ? "" : template), p, p);
+  }
+
+  private Component render(String template, Player p, Set<DisplayPrefs.Element> hidden) {
+    return placeholders.renderRaw(expand(template == null ? "" : template), p, p, hidden);
   }
 
   /** Expands {@code <placeholder:id>} references from the tab.placeholders aliases. */
@@ -544,9 +595,16 @@ public final class TabModule implements Listener, AutoCloseable {
           for (String old : new HashSet<>(team.getEntries())) team.removeEntry(old);
           team.addEntry(target.getName());
         }
-        setSent(view, id + ".prefix", t.tagPrefix(), () -> team.prefix(t.tagPrefix()));
-        setSent(view, id + ".suffix", t.tagSuffix(), () -> team.suffix(t.tagSuffix()));
-        setSent(view, id + ".color", t.color(), () -> team.color(t.color()));
+        // The target's own choice already shaped the base text; the viewer may also leave tags out.
+        var hidden =
+            display == null
+                ? Set.<DisplayPrefs.Element>of()
+                : display.hiddenFor(
+                    target.getUniqueId(), viewer.getUniqueId(), DisplayPrefs.Surface.NAMETAG);
+        var text = t.tags().get(hidden);
+        setSent(view, id + ".prefix", text.prefix(), () -> team.prefix(text.prefix()));
+        setSent(view, id + ".suffix", text.suffix(), () -> team.suffix(text.suffix()));
+        setSent(view, id + ".color", text.color(), () -> team.color(text.color()));
         boolean collision = t.collision();
         setSent(
             view,
