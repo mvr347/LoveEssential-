@@ -206,39 +206,45 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
   public record Choice(Scope scope, Element element, Surface surface, Boolean value) {}
 
   /**
-   * Parses {@code <own|others> <clan|suffix> <chat|tab|nametag> [on|off]}; Russian words work too.
-   * Anything else is a usage error.
+   * Parses {@code [own|others] <clan|suffix> <chat|tab|nametag> [on|off]}; Russian words work too.
+   * Without a scope word the choice is {@link Scope#OTHERS}: what the player sees. Anything else is a
+   * usage error.
    */
   public static Choice parse(String[] args) {
-    if (args.length < 3 || args.length > 4) throw new IllegalArgumentException("display.usage");
-    Scope scope =
-        switch (args[0].toLowerCase(Locale.ROOT)) {
-          case "own", "my", "mine", "мои", "мой", "моё" -> Scope.OWN;
-          case "others", "other", "чужие", "чужой" -> Scope.OTHERS;
-          default -> throw new IllegalArgumentException("display.usage");
-        };
+    Scope scope = args.length == 0 ? null : scopeOf(args[0]);
+    int first = scope == null ? 0 : 1;
+    if (args.length - first < 2 || args.length - first > 3)
+      throw new IllegalArgumentException("display.usage");
     Element element =
-        switch (args[1].toLowerCase(Locale.ROOT)) {
+        switch (args[first].toLowerCase(Locale.ROOT)) {
           case "clan", "tag", "клан", "тег" -> Element.CLAN_TAG;
           case "suffix", "суффикс" -> Element.SUFFIX;
           default -> throw new IllegalArgumentException("display.usage");
         };
     Surface surface =
-        switch (args[2].toLowerCase(Locale.ROOT)) {
+        switch (args[first + 1].toLowerCase(Locale.ROOT)) {
           case "chat", "чат" -> Surface.CHAT;
           case "tab", "таб" -> Surface.TAB;
           case "nametag", "name", "ник" -> Surface.NAMETAG;
           default -> throw new IllegalArgumentException("display.usage");
         };
     Boolean value = null;
-    if (args.length == 4)
+    if (args.length - first == 3)
       value =
-          switch (args[3].toLowerCase(Locale.ROOT)) {
+          switch (args[first + 2].toLowerCase(Locale.ROOT)) {
             case "on", "show", "вкл", "да" -> Boolean.TRUE;
             case "off", "hide", "выкл", "нет" -> Boolean.FALSE;
             default -> throw new IllegalArgumentException("display.usage");
           };
-    return new Choice(scope, element, surface, value);
+    return new Choice(scope == null ? Scope.OTHERS : scope, element, surface, value);
+  }
+
+  private static Scope scopeOf(String word) {
+    return switch (word.toLowerCase(Locale.ROOT)) {
+      case "own", "my", "mine", "мои", "мой", "моё" -> Scope.OWN;
+      case "others", "other", "чужие", "чужой" -> Scope.OTHERS;
+      default -> null;
+    };
   }
 
   public static String key(Surface surface, Element element, Scope scope) {
@@ -248,6 +254,26 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
         + (element == Element.CLAN_TAG ? "clan" : "suffix")
         + "_"
         + scope.name().toLowerCase(Locale.ROOT);
+  }
+
+  /**
+   * Whether {@code owner}'s own choice to hide their signature from everybody counts. A player only
+   * changes what they see; hiding their own tag from the whole server needs
+   * {@code loveessential.display.own}. A stored choice of someone without it stays on disk but is
+   * ignored, so nobody is left with a hidden tag and no menu to bring it back.
+   */
+  private boolean ownChoiceCounts(UUID owner) {
+    var player = Bukkit.getPlayer(owner);
+    return player != null && player.hasPermission(OWN_PERMISSION);
+  }
+
+  /** Permission to hide one's own signature from other players. */
+  public static final String OWN_PERMISSION = "loveessential.display.own";
+
+  @Override
+  public boolean visible(UUID owner, UUID viewer, Surface surface, Element element) {
+    if (ownChoiceCounts(owner) && !shown(owner, surface, element, Scope.OWN)) return false;
+    return owner.equals(viewer) || shown(viewer, surface, element, Scope.OTHERS);
   }
 
   /** The viewer's setting for one player on one surface: which elements to leave out. */

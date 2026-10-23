@@ -208,6 +208,7 @@ permissions:
       loveessential.hat: true
       loveessential.traces: true
       loveessential.heal: true
+      loveessential.display.own: true
       loveessential.feed: true
       loveessential.fly: true
       loveessential.speed: true
@@ -258,6 +259,8 @@ permissions:
   loveessential.traces:
     default: true
   loveessential.heal:
+    default: op
+  loveessential.display.own:
     default: op
   loveessential.feed:
     default: op

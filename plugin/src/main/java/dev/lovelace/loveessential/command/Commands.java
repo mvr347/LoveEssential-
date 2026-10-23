@@ -529,7 +529,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
     return e;
   }
 
-  /** {@code /display}: the menu, or {@code <own|others> <clan|suffix> <chat|tab|nametag> [on|off]}. */
+  /**
+   * {@code /display}: the menu, or {@code [others] <clan|suffix> <chat|tab|nametag> [on|off]}. A player
+   * changes only what they see; the {@code own} scope needs {@code loveessential.display.own}.
+   */
   private void display(Player p, String[] args) {
     if (!plugin.module("display") || !love.authenticated(p))
       throw new IllegalArgumentException("errors.permission");
@@ -539,6 +542,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
       return;
     }
     var choice = dev.lovelace.loveessential.module.DisplayPreferences.parse(args);
+    if (choice.scope() == dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OWN
+        && !p.hasPermission(dev.lovelace.loveessential.module.DisplayPreferences.OWN_PERMISSION))
+      throw new IllegalArgumentException("errors.permission");
     boolean value =
         choice.value() != null
             ? choice.value()

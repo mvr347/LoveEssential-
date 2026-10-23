@@ -26,6 +26,15 @@ class DisplayPreferencesParseTest {
   }
 
   @Test
+  void withoutAScopeWordTheChoiceIsWhatThePlayerSees() {
+    var choice = DisplayPreferences.parse(new String[] {"clan", "chat", "off"});
+    assertEquals(Scope.OTHERS, choice.scope());
+    assertEquals(Element.CLAN_TAG, choice.element());
+    assertEquals(Boolean.FALSE, choice.value());
+    assertEquals(Scope.OTHERS, DisplayPreferences.parse(new String[] {"суффикс", "таб"}).scope());
+  }
+
+  @Test
   void withoutOnOffTheChoiceOnlyToggles() {
     assertNull(DisplayPreferences.parse(new String[] {"others", "suffix", "tab"}).value());
   }
