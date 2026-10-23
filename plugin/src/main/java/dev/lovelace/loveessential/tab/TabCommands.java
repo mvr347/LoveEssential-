@@ -197,6 +197,9 @@ public final class TabCommands {
               "value", value.get(),
               "source", target0.properties().sources().getOrDefault(key, "-")));
     }
+    // Tokens that no PlaceholderAPI expansion answered since the last reload: they render as empty text.
+    for (String token : new TreeSet<>(tab.placeholders().unresolvedTokens()))
+      lang.send(sender, "tab.debug-unresolved", Map.of("token", token));
   }
 
   private void export(CommandSender sender) {

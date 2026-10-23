@@ -151,9 +151,19 @@ access:
   allowed-states: []
   denied-states: []
   required-states: []
+# 2026-10-23: формат текста как в оригинальном TAB. Цвета &c, &#rrggbb и встроенные %player%, %ping%,
+# %health%, %world%, %online%, %group%, %time%, %date% читаются без PlaceholderAPI. Если нужен чистый
+# MiniMessage, где «&» — просто символ, выключите.
+legacy-colors: true
 placeholders:
   online: <visible_online>
   clan: <clan>
+  # 2026-10-23: форматы %time% и %date% (шаблоны Java DateTimeFormatter) и сдвиг времени в часах.
+  # Значения по умолчанию совпадают с оригинальным TAB; сдвиг нужен, когда часовой пояс сервера
+  # отличается от часового пояса игроков.
+  time-format: HH:mm:ss
+  date-format: dd.MM.yyyy
+  time-offset: 0
 messages:
   tab:
     # Template for the tab list name when no customtabname is set; used by %loveessential_text_tab.name%.
@@ -170,6 +180,7 @@ messages:
     cpu-line: '<gray><name>: <white><ms> мс за цикл'
     debug-group: '<gray>Группа: <white><group>'
     debug-property: '<gray><key>: <white><value> <dark_gray>(<source>)'
+    debug-unresolved: '<red>Не раскрыт: <white><token> <dark_gray>— установите расширение PlaceholderAPI для него'
   tab-editor:
     groups: <gold>Группы
     groups-help: <gray>Группа — первая, право group.имя которой есть у игрока. Порядок в файле — порядок групп. Пустое поле не переопределяет значение ниже по приоритету.

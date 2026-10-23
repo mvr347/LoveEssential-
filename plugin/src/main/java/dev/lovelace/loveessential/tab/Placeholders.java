@@ -65,6 +65,24 @@ public final class Placeholders {
   private volatile PlaceholderRefresh refresh = new PlaceholderRefresh(200, Map.of());
   private volatile Map<String, PlaceholderOutput.Table> replacements = Map.of();
   private java.util.function.Function<UUID, Map<String, String>> playerValues = id -> Map.of();
+  private java.util.function.Function<Player, String> groupOf = p -> "";
+  private java.util.function.Consumer<String> unresolvedWarning = text -> {};
+  private final Set<String> unresolved = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+  /** The TAB group of a player, for the built-in {@code %group%}. */
+  public void groups(java.util.function.Function<Player, String> provider) {
+    groupOf = provider;
+  }
+
+  /** Called once when PlaceholderAPI is missing, with a ready-to-log message. */
+  public void onUnresolved(java.util.function.Consumer<String> warning) {
+    unresolvedWarning = warning;
+  }
+
+  /** Tokens that stayed unresolved since the last {@link #clear()}, for {@code /le tab debug}. */
+  public Set<String> unresolvedTokens() {
+    return Set.copyOf(unresolved);
+  }
 
   public void playerValues(java.util.function.Function<UUID, Map<String, String>> provider) {
     playerValues = provider;
@@ -143,17 +161,79 @@ public final class Placeholders {
       if (key.equals("combat")) return Boolean.toString(love.combat(target));
       return playerValues.apply(target.getUniqueId()).getOrDefault(key, "");
     }
+    if (placeholder.startsWith("%") && placeholder.endsWith("%") && placeholder.length() > 2) {
+      String name = placeholder.substring(1, placeholder.length() - 1);
+      if (TabSyntax.builtin(name)) return builtin(name.toLowerCase(Locale.ROOT), viewer, target);
+    }
     if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")
-        || placeholder.contains("%loveessential_")) return "";
+        || placeholder.contains("%loveessential_")) {
+      noteUnresolved(placeholder, "PlaceholderAPI is not enabled");
+      return "";
+    }
     String key = viewer.getUniqueId() + ":" + target.getUniqueId() + ":" + placeholder;
     Timed cached = cache.getIfPresent(key);
     if (cached != null) return cached.value();
     String value =
         PlaceholderAPI.setRelationalPlaceholders(
             viewer, target, PlaceholderAPI.setPlaceholders(target, placeholder));
+    if (value == null || value.equals(placeholder)) {
+      noteUnresolved(placeholder, "no PlaceholderAPI expansion answered it");
+      value = "";
+    }
     long ttlNanos = java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(refresh.ttl(placeholder));
     cache.put(key, new Timed(value, ttlNanos));
     return value;
+  }
+
+  private boolean missingPapiReported;
+
+  /**
+   * Remembers a token that produced nothing, for {@code /le tab debug}. Absent plugins make many
+   * tokens legitimately empty, so only a missing PlaceholderAPI itself is logged, and only once.
+   */
+  private void noteUnresolved(String token, String reason) {
+    unresolved.add(token);
+    if (!missingPapiReported && !Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+      missingPapiReported = true;
+      unresolvedWarning.accept("PlaceholderAPI is not enabled: %...% placeholders render as empty text");
+    }
+  }
+
+  private static final java.time.format.DateTimeFormatter TIME_FALLBACK =
+      java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss");
+  private static final java.time.format.DateTimeFormatter DATE_FALLBACK =
+      java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+  /** TAB's own placeholders ({@code %player%}, {@code %ping%}, ...), resolved without PlaceholderAPI. */
+  private String builtin(String name, Player viewer, Player target) {
+    return switch (name) {
+      case "player" -> target.getName();
+      case "displayname" -> net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+          .serialize(nickname.apply(target));
+      case "ping" -> Integer.toString(target.getPing());
+      case "health" -> Integer.toString((int) Math.ceil(target.getHealth()));
+      case "world" -> target.getWorld().getName();
+      case "online" ->
+          Long.toString(Bukkit.getOnlinePlayers().stream().filter(viewer::canSee).count());
+      case "group" -> groupOf.apply(target);
+      case "time" -> now("time-format", "HH:mm:ss", TIME_FALLBACK);
+      case "date" -> now("date-format", "dd.MM.yyyy", DATE_FALLBACK);
+      default -> "";
+    };
+  }
+
+  /** Server time shifted by {@code placeholders.time-offset} hours; a bad format falls back to the default. */
+  private String now(String key, String pattern, java.time.format.DateTimeFormatter fallback) {
+    var tabSection = tab.get();
+    var s = tabSection == null ? null : tabSection.getConfigurationSection("placeholders");
+    var moment =
+        java.time.ZonedDateTime.now().plusHours(s == null ? 0 : (long) s.getDouble("time-offset", 0));
+    try {
+      return java.time.format.DateTimeFormatter.ofPattern(s == null ? pattern : s.getString(key, pattern))
+          .format(moment);
+    } catch (IllegalArgumentException | java.time.DateTimeException e) {
+      return fallback.format(moment);
+    }
   }
 
   /** The raw PlaceholderAPI value after the configured output replacement, if there is one. */
@@ -272,6 +352,12 @@ public final class Placeholders {
 
   private static final Set<DisplayPrefs.Element> NONE = Set.of();
 
+  /** {@code tab.legacy-colors}: read the {@code &c} color codes of the original TAB; on by default. */
+  private boolean legacyColors() {
+    var section = tab.get();
+    return section == null || section.getBoolean("legacy-colors", true);
+  }
+
   private Component renderText(String template, Player viewer, Player target, int depth) {
     return renderText(template, viewer, target, depth, NONE);
   }
@@ -279,7 +365,7 @@ public final class Placeholders {
   private Component renderText(
       String template, Player viewer, Player target, int depth, Set<DisplayPrefs.Element> hidden) {
     if (depth > 4) return Component.empty();
-    template = template.replaceAll("%([a-zA-Z0-9_:.]+)%", "<papi:'$1'>");
+    template = TabSyntax.tokens(legacyColors() ? TabSyntax.legacy(template) : template);
     var b = TagResolver.builder();
     Map<String, java.util.function.Supplier<String>> variables =
         Map.ofEntries(
@@ -413,5 +499,6 @@ public final class Placeholders {
 
   public void clear() {
     cache.invalidateAll();
+    unresolved.clear();
   }
 }

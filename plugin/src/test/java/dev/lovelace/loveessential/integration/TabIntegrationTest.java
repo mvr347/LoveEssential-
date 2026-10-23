@@ -144,4 +144,29 @@ class TabIntegrationTest {
     settle(20);
     assertFalse(plain.serialize(bob.playerListName()).contains("Босс"));
   }
+
+  @Test
+  void tabStyleTextRendersLegacyColorsAndBuiltInPlaceholders() throws Exception {
+    var alice = player("Alice", "world");
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    plugin.getConfig().set("tab.placeholders.date-format", "yyyy");
+    var text =
+        placeholders.renderRaw(
+            "&7ДОБРО ПОЖАЛОВАТЬ &c▐%player%▐ %world% %online% 100% hp &#ff8800%date%", alice, alice);
+    assertEquals(
+        "ДОБРО ПОЖАЛОВАТЬ ▐Alice▐ world 1 100% hp " + java.time.Year.now(),
+        PlainTextComponentSerializer.plainText().serialize(text));
+    assertEquals("0", placeholders.papi(alice, alice, "%ping%"));
+    assertEquals("20", placeholders.papi(alice, alice, "%health%"));
+  }
+
+  @Test
+  void legacyColorsCanBeSwitchedOff() throws Exception {
+    var alice = player("Alice", "world");
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    plugin.getConfig().set("tab.legacy-colors", false);
+    assertEquals(
+        "&7text",
+        PlainTextComponentSerializer.plainText().serialize(placeholders.renderRaw("&7text", alice, alice)));
+  }
 }
