@@ -603,6 +603,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "scenarios.max-starts-per-minute", 1, 10000);
     bounded(config, "dialogs.max-definitions", 1, 10000);
     bounded(config, "scoreboard.refresh-ticks", 2, 1200);
+    bounded(config, "scoreboard.update-interval", 2, 1200);
     bounded(config, "scoreboard.delay-on-join-ms", 0, 60000);
     bounded(config, "scoreboard.show-seconds", 1, 3600);
     bounded(config, "scoreboard.overrides.max-seconds", 1, 86400);

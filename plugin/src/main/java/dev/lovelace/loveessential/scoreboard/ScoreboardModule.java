@@ -35,7 +35,8 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
   /** A parsed named board; {@code lines} are MiniMessage templates. */
   public record Named(String id, String title, List<String> lines, String displayCondition) {}
 
-  private record Content(Component title, List<Component> lines) {}
+  /** The title and lines to draw. */
+  record Content(Component title, List<Component> lines) {}
 
   private record View(Scoreboard board, Scoreboard previous) {}
 
@@ -47,6 +48,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
   private final Placeholders placeholders;
   private final TabModule tab;
   private final SidebarOverrides overrides;
+  private final PersonalSidebar personal;
   private final Map<UUID, SqliteStore.Document<Boolean>> visibility = new HashMap<>();
   private final Set<UUID> loading = new HashSet<>();
   private final Map<UUID, Long> joinedAt = new HashMap<>();
@@ -83,7 +85,13 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
             () -> plugin.getConfig().getInt("scoreboard.overrides.max-seconds", 600),
             () -> plugin.getConfig().getInt("scoreboard.overrides.per-player-limit", 8));
     bridge = new TweaksScoreboardBridge(plugin);
+    personal = new PersonalSidebar(plugin, main, store, lang, placeholders, this);
     Bukkit.getPluginManager().registerEvents(this, plugin);
+  }
+
+  /** The personal board, for tests in this package. */
+  PersonalSidebar personal() {
+    return personal;
   }
 
   public void nativeDialogs(dev.lovelace.loveessential.dialog.NativeDialogs ui) {
@@ -114,6 +122,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
 
   /** Rejects boards that cannot be drawn, so a bad edit never reaches a running server. */
   public static void validate(ConfigurationSection config) {
+    PersonalCatalog.validate(config);
     var ids = new HashSet<String>();
     for (var board : boards(config)) {
       if (!board.id().matches("[A-Za-z0-9_-]{1,48}") || !ids.add(board.id()))
@@ -128,14 +137,14 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
   public void start() {
     Bukkit.getServicesManager()
         .register(ScoreboardService.class, overrides, plugin, org.bukkit.plugin.ServicePriority.Normal);
+    personal.reload();
     ownership =
         bridge.take(
             (sender, command, label, args) -> {
               if (sender instanceof Player p)
                 try {
-                  if (args.length == 1 && (args[0].equals("edit") || args[0].equals("settings")))
-                    settings(p);
-                  else toggle(p);
+                  // LoveTweaks called its settings "settings"; here that is the administrator's editor.
+                  command(p, args.length == 1 && args[0].equals("settings") ? new String[] {"edit"} : args);
                 } catch (RuntimeException e) {
                   lang.error(p, e);
                 }
@@ -150,8 +159,11 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
     for (var p : Bukkit.getOnlinePlayers()) load(p);
   }
 
+  /** {@code update-interval} (the LoveTweaks name) wins over {@code refresh-ticks}. */
   private long refreshTicks() {
-    return plugin.getConfig().getLong("scoreboard.refresh-ticks", 20);
+    return plugin
+        .getConfig()
+        .getLong("scoreboard.update-interval", plugin.getConfig().getLong("scoreboard.refresh-ticks", 20));
   }
 
   public boolean owns(Scoreboard board) {
@@ -162,6 +174,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
 
   private void load(Player p) {
     UUID id = p.getUniqueId();
+    personal.load(p);
     joinedAt.putIfAbsent(id, System.nanoTime());
     if (visibility.containsKey(id) || !loading.add(id)) return;
     store
@@ -247,16 +260,20 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
     if (!eligible(p)) return Optional.empty();
     var leased = lease(p);
     var boards = boards(plugin.getConfig());
+    boolean on = enabledFor(p.getUniqueId());
+    // The player's own board is drawn at most once per call; it is also the answer to "is there one".
+    Optional<Content> own = on && !leased.isPresent() ? personal.content(p) : Optional.empty();
     var choice =
         ScoreboardChoice.choose(
             leased.isPresent(),
+            own.isPresent(),
             boards.stream().map(b -> new ScoreboardChoice.Named(b.id(), b.displayCondition())).toList(),
             name -> placeholders.condition(name, p, p));
     return switch (choice.kind()) {
-      case LEASE ->
-          leased.map(board -> new Content(board.title(), board.lines()));
+      case LEASE -> leased.map(board -> new Content(board.title(), board.lines()));
+      case PERSONAL -> own;
       case NAMED -> {
-        if (!enabledFor(p.getUniqueId())) yield Optional.empty();
+        if (!on) yield Optional.empty();
         var board = boards.stream().filter(b -> b.id().equals(choice.id())).findFirst().orElseThrow();
         yield Optional.of(draw(p, board));
       }
@@ -382,6 +399,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
     visibility.remove(id);
     loading.remove(id);
     joinedAt.remove(id);
+    personal.unload(id);
   }
 
   @EventHandler
@@ -391,9 +409,17 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
 
   // ----------------------------------------------------------------- commands
 
-  /** {@code /le scoreboard [toggle | edit | show <board> [player]]}. */
+  /**
+   * {@code /scoreboard}: with no argument the player's own menu. {@code toggle} switches the board
+   * on or off, {@code edit} opens the administrator's editor of named boards, {@code show <board>
+   * [player]} displays a named board for a while.
+   */
   public void command(Player p, String[] args) {
-    if (args.length == 0 || args.length == 1 && args[0].equals("toggle")) {
+    if (args.length == 0) {
+      menu(p);
+      return;
+    }
+    if (args.length == 1 && args[0].equals("toggle")) {
       toggle(p);
       return;
     }
@@ -425,6 +451,18 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
     return List.of();
   }
 
+  /** The player's own menu. */
+  public void menu(Player p) {
+    plugin.requireAccess("scoreboard", p);
+    if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
+    if (personal.catalog().isEmpty()) {
+      // No personal catalog configured: only named boards exist, so the command switches the board.
+      toggle(p);
+      return;
+    }
+    personal.open(p);
+  }
+
   private void requireAdmin(Player p) {
     if (!plugin.ready()) throw new IllegalArgumentException("errors.starting");
     if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
@@ -440,6 +478,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
 
   /** Reloaded on every configuration change; the boards are read from the runtime config. */
   public void refresh() {
+    personal.reload();
     if (task != null) {
       task.cancel();
       task =
@@ -462,6 +501,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
     rendered.clear();
     drawn.clear();
     bridge.close();
+    personal.close();
     HandlerList.unregisterAll(this);
   }
 }

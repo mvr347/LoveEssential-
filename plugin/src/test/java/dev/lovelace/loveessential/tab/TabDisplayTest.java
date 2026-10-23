@@ -98,6 +98,7 @@ class TabDisplayTest {
   @Test
   void theTabEntryDropsTheTagWhenItsOwnerHidesItThere() throws Exception {
     var p = server.addPlayer("Alice");
+    p.addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
     waitFor(() -> prefs.loaded(p.getUniqueId()));
     assertEquals("[ABC] Alice", text(tab.target(p).tabName()));
     prefs.set(p.getUniqueId(), Surface.TAB, Element.CLAN_TAG, Scope.OWN, false);
@@ -112,6 +113,7 @@ class TabDisplayTest {
   @Test
   void theNametagFollowsTheOwnersChoiceForEveryViewer() throws Exception {
     var p = server.addPlayer("Alice");
+    p.addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
     waitFor(() -> prefs.loaded(p.getUniqueId()));
     var target = tab.target(p);
     assertEquals("[ABC] ", text(target.tagPrefix()));

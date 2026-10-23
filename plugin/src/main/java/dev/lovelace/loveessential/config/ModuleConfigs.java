@@ -236,13 +236,18 @@ public final class ModuleConfigs {
     }
   }
 
-  /** Keys of the retired personal-sidebar document; a file holding any of them is replaced. */
+  /**
+   * Keys of the second personal-sidebar document (a catalog kept in SQLite and exported under
+   * {@code catalog}); a file holding any of them is replaced. 2026-10-23: {@code placeholders},
+   * {@code presets} and {@code categories} no longer count, because the personal scoreboard is back
+   * and its catalog lives at exactly those keys.
+   */
   private static final List<String> LEGACY_SCOREBOARD =
-      List.of("placeholders", "presets", "categories", "catalog", "header", "max-selected-lines");
+      List.of("catalog", "header", "max-selected-lines");
 
   /**
-   * The personal sidebar catalog is gone. A scoreboard.yml that still has its keys is backed up to
-   * {@code scoreboard.yml.pre-named.bak} and replaced by the named-board defaults.
+   * A scoreboard.yml written by the second personal sidebar (before named boards) is backed up to
+   * {@code scoreboard.yml.pre-named.bak} and replaced by the defaults.
    */
   private void migrateScoreboard(YamlConfiguration module) throws IOException {
     if (module.contains("scoreboards")

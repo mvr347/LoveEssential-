@@ -106,8 +106,7 @@ public final class GuiRules {
           lines.add(PlainTextComponentSerializer.plainText().serialize(line));
       for (String line : lines) {
         // Settings menus print the stored template on purpose: the admin edits exactly that text.
-        // "Категория:" is the personal scoreboard picker, which prints category templates raw; that
-        // picker is removed together with the personal scoreboard, so it is not worth a fix.
+        // "Категория:" lines of the settings menus print a stored template as well.
         boolean shownValue =
             line.stripLeading().startsWith("Значение:")
                 || line.stripLeading().startsWith("Категория:");

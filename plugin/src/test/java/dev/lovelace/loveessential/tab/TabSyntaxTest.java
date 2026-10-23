@@ -20,6 +20,13 @@ class TabSyntaxTest {
   }
 
   @Test
+  void uppercaseCodesAndChainedCodesWork() {
+    assertEquals("<reset><white>VOIDCORE", TabSyntax.legacy("&FVOIDCORE"));
+    assertEquals("<reset><gray><bold>x", TabSyntax.legacy("&7&lx"));
+    assertEquals("▸ <reset><white>name", TabSyntax.legacy("▸ &fname"));
+  }
+
+  @Test
   void colorCodeResetsDecorationsLikeLegacyFormatting() {
     assertEquals("<bold>a<reset><red>b", TabSyntax.legacy("&la&cb"));
   }
@@ -29,6 +36,8 @@ class TabSyntaxTest {
     String url = "<click:open_url:https://a.b/?x=1&c=2>go</click>";
     assertEquals(url, TabSyntax.legacy(url));
     assertEquals("R&D and A&B", TabSyntax.legacy("R&D and A&B"));
+    assertEquals("a<reset><red>b", TabSyntax.legacy("a&cb"));
+    assertEquals("AT&T and Q&A", TabSyntax.legacy("AT&T and Q&A"));
     assertEquals("price & more &", TabSyntax.legacy("price & more &"));
   }
 
