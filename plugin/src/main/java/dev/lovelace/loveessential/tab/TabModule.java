@@ -140,7 +140,15 @@ public final class TabModule implements Listener, AutoCloseable {
             () -> plugin.getConfig().getInt("tab.overrides.max-seconds", 600),
             () -> plugin.getConfig().getInt("tab.overrides.per-player-limit", 8));
     this.preferences = new TabPreferences(main, store);
+    placeholders.groups(this::groupOf);
+    placeholders.onUnresolved(message -> plugin.getLogger().warning("[tab] " + message));
     Bukkit.getPluginManager().registerEvents(this, plugin);
+  }
+
+  /** Group name for the built-in {@code %group%}; empty when only the default group applies. */
+  private String groupOf(Player p) {
+    String group = matchGroup(section("groups"), p);
+    return group == null || group.equals(DEFAULT_GROUP) ? "" : group;
   }
 
   public Placeholders placeholders() {

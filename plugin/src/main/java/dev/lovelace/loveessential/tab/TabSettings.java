@@ -75,11 +75,12 @@ public final class TabSettings {
                         }));
   }
 
-  /** Lists show plain text; raw MiniMessage tags in a lore line would read as broken text. */
+  /** Lists show plain text; raw MiniMessage tags or &-codes in a lore line would read as broken text. */
   private static String plain(String miniMessage) {
     try {
       return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-          .serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(miniMessage));
+          .serialize(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                  .deserialize(dev.lovelace.loveessential.tab.TabSyntax.legacy(miniMessage)));
     } catch (RuntimeException e) {
       return "";
     }
@@ -151,7 +152,7 @@ public final class TabSettings {
               List.of(
                   lang.render(
                       "tab-editor.entry-help",
-                      Map.of("prefix", plain(Objects.toString(value.getOrDefault("tabprefix", "")))))),
+                      Map.of("prefix", plain(Objects.toString(value.get("tabprefix"), ""))))),
               () -> editor(p, section, id)));
     }
     var controls =
@@ -209,19 +210,19 @@ public final class TabSettings {
           ui.text(
               key,
               "tab-editor." + key,
-              Objects.toString(value.getOrDefault(key, "")),
+              Objects.toString(value.get(key), ""),
               1024));
     fields.add(
         ui.text(
             "display-condition",
             "tab-editor.display-condition",
-            Objects.toString(value.getOrDefault("display-condition", "")),
+            Objects.toString(value.get("display-condition"), ""),
             48));
     fields.add(
         ui.text(
             "permission",
             "tab-editor.permission",
-            Objects.toString(value.getOrDefault("permission", "")),
+            Objects.toString(value.get("permission"), ""),
             128));
     var buttons = new ArrayList<NativeDialogs.Button>();
     buttons.add(

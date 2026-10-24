@@ -40,4 +40,17 @@ class RetiredTextsTest {
     ModuleConfigs.refreshRetiredTexts("sitride", empty, with("new text"));
     assertNull(empty.getString(PATH));
   }
+
+  @Test
+  void theOldDisplayTextsAreReplacedButAnEditedOneIsNot() {
+    var installed = new YamlConfiguration();
+    installed.set("messages.display.all-on", "<gold>Показать всё <dark_gray>| <white>12 настроек");
+    installed.set("messages.display.scope-own", "Моё оформление");
+    var defaults = new YamlConfiguration();
+    defaults.set("messages.display.all-on", "new all");
+    defaults.set("messages.display.scope-own", "new own");
+    ModuleConfigs.refreshRetiredTexts("display", installed, defaults);
+    assertEquals("new all", installed.getString("messages.display.all-on"));
+    assertEquals("Моё оформление", installed.getString("messages.display.scope-own"));
+  }
 }

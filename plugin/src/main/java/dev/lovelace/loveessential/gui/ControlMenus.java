@@ -268,44 +268,24 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
-  /** Players whose display menu currently shows the "others" half instead of "own". */
-  private final Set<UUID> displayOthers = new HashSet<>();
 
   public void display(dev.lovelace.loveessential.module.DisplayPreferences prefs) {
     this.displayPrefs = prefs;
   }
 
   /**
-   * Personal menu for clan tags and suffixes. One half at a time (mine / other people's), six tiles:
-   * the clan tag and the suffix, each on chat, TAB and nametag. The TAB entry is shared by every
-   * viewer, so "other people's" cannot hide it for one viewer and that tile says why.
+   * Personal menu for clan tags and suffixes. Everything here changes only what the player sees:
+   * six tiles, the clan tag and the suffix, each on chat, TAB and nametag. The TAB entry is shared by
+   * every viewer, so it cannot be hidden for one viewer and that tile says why.
    */
   public void displayMenu(Player p) {
     var m = menu(p, "display.gui-title", Map.of(), player -> plugin.module("display"));
     m.root = true;
     var id = p.getUniqueId();
-    var scope =
-        displayOthers.contains(id)
-            ? dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OTHERS
-            : dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OWN;
-    String scopeName = scope.name().toLowerCase(Locale.ROOT);
+    var scope = dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OTHERS;
     tile(
         m,
-        3,
-        Material.COMPASS,
-        "display.mode",
-        "display.mode-lore",
-        Map.of(
-            "scope", lang.text("display.scope-" + scopeName),
-            "help", lang.text("display.scope-help-" + scopeName)),
-        Map.of(),
-        c -> {
-          if (!displayOthers.remove(id)) displayOthers.add(id);
-          displayMenu(p);
-        });
-    tile(
-        m,
-        5,
+        4,
         Material.LIME_DYE,
         "display.all-on",
         "display.all-on-lore",
@@ -325,9 +305,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
             Map.of(
                 "element", lang.text("display.element-" + element.name().toLowerCase(Locale.ROOT)),
                 "surface", lang.text("display.surface-" + surface.name().toLowerCase(Locale.ROOT)),
-                "scope", lang.text("display.scope-short-" + scopeName));
-        if (scope == dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OTHERS
-            && surface == dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.TAB) {
+                // Texts saved by the previous version still read <scope>; keep it filled.
+                "scope", lang.text("display.scope-others"));
+        if (surface == dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.TAB) {
           entry(
               m,
               slot,
@@ -340,7 +320,6 @@ public final class ControlMenus implements Listener, AutoCloseable {
           continue;
         }
         boolean shown = displayPrefs.shown(id, surface, element, scope);
-        var finalScope = scope;
         tile(
             m,
             slot,
@@ -350,7 +329,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             vars,
             toggleParts(shown, Map.of()),
             c -> {
-              displayPrefs.set(id, surface, element, finalScope, !shown);
+              displayPrefs.set(id, surface, element, scope, !shown);
               displayMenu(p);
             });
       }
@@ -656,7 +635,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
                         ? lang.text("gui.list-count") + " " + values.size()
                         : value instanceof Boolean flag
                             ? lang.text(flag ? "players.yes" : "players.no")
-                            : String.valueOf(value)))));
+                            : value == null || String.valueOf(value).isEmpty()
+                                ? lang.text("gui.value-empty")
+                                : String.valueOf(value)))));
       lore.add(lang.render("gui.separator"));
       lore.add(
           lang.render(
@@ -726,8 +707,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
                           () -> settings(p, id, path, page)),
                   () -> settings(p, id, path, page),
                   title,
-                  String.valueOf(value),
-                  String.valueOf(value));
+                  text(value),
+                  text(value));
           });
     }
     if (keys.isEmpty())
@@ -878,6 +859,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
     MenuStyle.open(p, menu.inventory);
   }
 
+  /** Text of a stored value for display and as the prefilled input; a missing value is empty, never "null". */
+  private static String text(Object value) {
+    return value == null ? "" : String.valueOf(value);
+  }
+
   private void list(Player p, String module, String path, List<?> values, int page, Runnable back) {
     var m = menu(p, "gui.list-title", Map.of("path", settingName(path)), this::admin);
     for (int i = page * 21; i < Math.min(values.size(), (page + 1) * 21); i++) {
@@ -886,7 +872,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
           m,
           MenuStyle.slot(i % 21, Math.min(21, values.size() - page * 21)),
           Material.PAPER,
-          accessLabel(path, String.valueOf(values.get(i))),
+          accessLabel(path, text(values.get(i))),
           List.of(
               lang.render("gui.separator"),
               lang.render("gui.click.edit"),
@@ -918,8 +904,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   },
                   () -> list(p, module, path, values, page, back),
                   lang.render("gui.path", Map.of("path", path + "[" + (index + 1) + "]")),
-                  String.valueOf(values.get(index)),
-                  String.valueOf(values.get(index)));
+                  text(values.get(index)),
+                  text(values.get(index)));
           });
     }
     navigation(m, p, page, values.size(), n -> list(p, module, path, values, n, back), back);
@@ -946,7 +932,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               },
               () -> list(p, module, path, values, page, back),
               lang.render("gui.path", Map.of("path", path)),
-              values.isEmpty() ? "" : String.valueOf(values.getFirst()),
+              values.isEmpty() ? "" : text(values.getFirst()),
               "");
         });
     MenuStyle.open(p, m.inventory);
@@ -2109,7 +2095,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             Material.COMPARATOR,
             lang.render("gui.label", Map.of("name", path)),
             List.of(
-                lang.render("gui.value", Map.of("value", value.toString())),
+                lang.render("gui.value", Map.of("value", text(value))),
                 lang.render("settings-help.number"))));
     double step = value instanceof Double || value instanceof Float ? .1 : 1;
     int[] changes = {-10, -5, -1, 1, 5, 10};
@@ -2165,8 +2151,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 input -> saveSetting(p, module, path, value, parse(value, input), back),
                 () -> number(p, module, path, value, back),
                 lang.render("gui.path", Map.of("path", path)),
-                value.toString(),
-                value.toString()));
+                text(value),
+                text(value)));
     navigation(m, p, 0, 0, n -> {}, back);
     MenuStyle.open(p, m.inventory);
   }
@@ -2247,7 +2233,6 @@ public final class ControlMenus implements Listener, AutoCloseable {
   public void quit(PlayerQuitEvent e) {
     prompts.remove(e.getPlayer().getUniqueId());
     roots.remove(e.getPlayer().getUniqueId());
-    displayOthers.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {

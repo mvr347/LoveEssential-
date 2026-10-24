@@ -2,6 +2,12 @@ menus:
   sidebar-editor-title:
     size: 54
     title: <gold>Табло сервера
+  sidebar-menu-title:
+    size: 54
+    title: <gold>Моё табло
+  sidebar-category-title:
+    size: 54
+    title: '<gold>Моё табло <dark_gray>| <white><category>'
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -9,3 +15,66 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+messages:
+  sidebar:
+    view-categories: По категориям
+    view-all: Все
+    view-title: <gold>Вид меню
+    view-lore:
+    - <dark_gray>Как показаны строки
+    - ''
+    - '<dark_gray>▪ <gray>Сейчас: <white><current>'
+    - '<dark_gray>▪ <gray>Другой вид: <white><other>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>переключить
+    toggle-on: <green>Табло включено
+    toggle-on-lore:
+    - <dark_gray>Табло на экране
+    - ''
+    - <dark_gray>▪ <gray>Сейчас показано
+    - <dark_gray><st>─────────────────────</st>
+    - <red>ЛКМ <dark_gray>— <gray>выключить
+    toggle-off: <red>Табло выключено
+    toggle-off-lore:
+    - <dark_gray>Табло скрыто
+    - ''
+    - <dark_gray>▪ <gray>Сейчас не показано
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>включить
+    toggle-empty: <gray>Табло пусто
+    toggle-empty-lore:
+    - <dark_gray>Нет строк
+    - ''
+    - <dark_gray>▪ <gray>Выберите строки ниже
+    - <dark_gray>или примените раскладку сверху
+    preset-header: '<dark_gray>▪ <gray>Заменяет текущий набор строками:'
+    preset-line: '  <gray>▸ <white><name>'
+    preset-line-skipped: '  <dark_gray>▸ <name> <red>✘'
+    preset-active: <green>Активна
+    preset-click: <green>ЛКМ <dark_gray>— <gray>применить
+    preset-unavailable: <red>Недоступно сейчас
+    preset-unavailable-reason: <gray>Ни одна строка раскладки сейчас недоступна
+    slot-empty-name: '<gray>Слот <n> <dark_gray>• <gray>пусто'
+    slot-empty-lore:
+    - <dark_gray>Свободный слот
+    - ''
+    - <dark_gray>▪ <gray>Выберите строку в категории ниже
+    slot-label: '<dark_gray>▪ <gray>Слот <n>'
+    slot-up: <green>ЛКМ <dark_gray>— <gray>выше
+    slot-down: <gold>ПКМ <dark_gray>— <gray>ниже
+    slot-remove: <red>СКМ <gray>или <yellow>Shift + ПКМ <dark_gray>— <gray>убрать
+    slot-variant: '<yellow>Shift + ЛКМ <dark_gray>— <gray>формат: <white><variant>'
+    category-enabled: '<dark_gray>▪ <gray>Включено: <white><on> <gray>из <white><total>'
+    category-open: <green>ЛКМ <dark_gray>— <gray>открыть
+    flat-position: '<dark_gray>▪ <gray>Позиция: <white>#<pos> <gray>из <white><total>'
+    flat-enable: <green>СКМ <gray>или <yellow>Shift + ПКМ <dark_gray>— <gray>включить
+    flat-disable: <red>СКМ <gray>или <yellow>Shift + ПКМ <dark_gray>— <gray>выключить
+    flat-up: <green>ЛКМ <dark_gray>— <gray>выше
+    flat-down: <gold>ПКМ <dark_gray>— <gray>ниже
+    sub-enable: <green>ЛКМ <dark_gray>— <gray>включить
+    sub-disable: <red>ЛКМ <dark_gray>— <gray>выключить
+    sub-variant: '<yellow>Shift + ЛКМ <dark_gray>— <gray>формат: <white><variant>'
+    sub-slot: '<dark_gray>▪ <gray>Слот табло: <white>#<n>'
+    unavailable: '<dark_gray>▪ <red>Недоступно:'
+    reason-plugin: '  <gray>Плагин не установлен'
+    reason-full: '  <gray>Все <max> слотов заняты'

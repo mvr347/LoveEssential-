@@ -31,4 +31,23 @@ class ScoreboardChoiceTest {
     var choice = ScoreboardChoice.choose(false, List.of(new ScoreboardChoice.Named("x", "never")), name -> false);
     assertEquals(ScoreboardChoice.Kind.NONE, choice.kind());
   }
+
+  @Test
+  void aPersonalBoardComesAfterConditionalNamedBoardsAndBeforeUnconditionalOnes() {
+    // Not in combat: pvp is skipped, kingdom (no condition) must not hide the personal board.
+    var calm = ScoreboardChoice.choose(false, true, boards, name -> false);
+    assertEquals(ScoreboardChoice.Kind.PERSONAL, calm.kind());
+    // In combat the conditional board wins over the personal one.
+    var fight = ScoreboardChoice.choose(false, true, boards, Set.of("in-combat")::contains);
+    assertEquals(ScoreboardChoice.Kind.NAMED, fight.kind());
+    assertEquals("pvp", fight.id());
+    // The conditional board "late" also wins once its condition holds.
+    assertEquals("late", ScoreboardChoice.choose(false, true, boards, Set.of("always")::contains).id());
+  }
+
+  @Test
+  void aLeaseBeatsThePersonalBoardAndNoPersonalBoardKeepsTheOldOrder() {
+    assertEquals(ScoreboardChoice.Kind.LEASE, ScoreboardChoice.choose(true, true, boards, n -> true).kind());
+    assertEquals("kingdom", ScoreboardChoice.choose(false, false, boards, n -> false).id());
+  }
 }

@@ -97,7 +97,7 @@ users:
 
 ## Scoreboard
 
-`modules/scoreboard/scoreboard.yml` содержит общие параметры и список именованных табло `scoreboards`. Показывается первое табло по порядку, чьё `display-condition` выполнено. Временные табло других плагинов (`ScoreboardService`) важнее всех именованных. Подробнее — в [SCOREBOARD.md](SCOREBOARD.md).
+`modules/scoreboard/scoreboard.yml` содержит общие параметры, каталог личного табло (`title`, `categories`, `presets`, `placeholders`) и список именованных табло `scoreboards`. Порядок показа: временное табло плагина, именованное табло с выполненным `display-condition`, личное табло игрока, запасное именованное табло без условия. Подробнее — в [SCOREBOARD.md](SCOREBOARD.md).
 
 ```yaml
 scoreboards:
@@ -109,6 +109,6 @@ scoreboards:
     - '<gray>Клан: <white><clan>'
 ```
 
-Старый `scoreboard.yml` с персональным каталогом копируется в `scoreboard.yml.pre-named.bak`, после чего включаются табло по умолчанию.
+Файл, сохранённый версией с каталогом в SQLite (`catalog`), копируется в `scoreboard.yml.pre-named.bak`, после чего включаются значения по умолчанию.
 
 Статистика, включая подкатегории и их оформление: `modules/profile/gui.yml → menus.profile-menu-statistics.categories`. Переключатели настроек: `menus.profile-menu-settings.controls`. Текстуры профиля: `menus.profile-menu-title.textures`; карточки досье: `menus.players-title.cards`. Старые пути настроек поддерживаются внутренним адаптером, но при сохранении данные не дублируются.

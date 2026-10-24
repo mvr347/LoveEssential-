@@ -122,6 +122,7 @@ public final class ModuleConfigs {
                   && !gui.contains("texts." + key)) gui.set("texts." + key, oldLang.get(key));
         }
         fill(gui, guiDefaults);
+        repairMappedLines(gui);
         refreshRetiredTexts(id, gui, guiDefaults);
         if (id.equals("tab")) {
           module.set("engine", null);
@@ -139,6 +140,7 @@ public final class ModuleConfigs {
                 && oldLang.contains(key)
                 && !module.contains("texts." + key)) module.set("texts." + key, oldLang.get(key));
         fill(module, moduleDefaults);
+        repairMappedLines(module);
         if (!(module.get("enabled") instanceof Boolean))
           throw new IllegalArgumentException("errors.config");
         guis.put(id, gui);
@@ -190,6 +192,18 @@ public final class ModuleConfigs {
    */
   private static final Map<String, Map<String, List<String>>> RETIRED_TEXTS =
       Map.of(
+          // 2026-10-23: /display changes only what the player sees; "my signatures" is gone from the menu.
+          "display",
+          Map.of(
+              "messages.display.usage",
+              List.of(
+                  "<yellow>/display <gray>[own|others] [clan|suffix] [chat|tab|nametag] [on|off] — без аргументов открывается меню"),
+              "messages.display.scope-own",
+              List.of("Мои подписи"),
+              "messages.display.scope-others",
+              List.of("Чужие подписи"),
+              "messages.display.all-on",
+              List.of("<gold>Показать всё <dark_gray>| <white>12 настроек")),
           "sitride",
           Map.of(
               "messages.comfort.ride-consent",
@@ -198,6 +212,37 @@ public final class ModuleConfigs {
                       + " находиться вне боя.",
                   "<yellow>Сесть на этого игрока сейчас нельзя: он не виден вам, не авторизован,"
                       + " находится в бою, либо посадка на игроков отключена.")));
+
+  /**
+   * A lore line written as {@code - <gray>Text:} is read by YAML as the map {@code {<gray>Text: null}},
+   * and the menu then shows {@code {Text=null}}. Such lines in an installed file are turned back into
+   * the text they were meant to be.
+   *
+   * @return whether anything was repaired
+   */
+  static boolean repairMappedLines(YamlConfiguration y) {
+    boolean changed = false;
+    for (String key : List.copyOf(y.getKeys(true))) {
+      if (!y.isList(key)) continue;
+      var fixed = new ArrayList<Object>();
+      boolean broken = false;
+      for (Object item : y.getList(key)) {
+        if (item instanceof Map<?, ?> map
+            && map.size() == 1
+            && map.keySet().iterator().next() instanceof String text
+            && text.startsWith("<")) {
+          Object rest = map.values().iterator().next();
+          fixed.add(rest == null ? text + ":" : text + ": " + rest);
+          broken = true;
+        } else fixed.add(item);
+      }
+      if (broken) {
+        y.set(key, fixed);
+        changed = true;
+      }
+    }
+    return changed;
+  }
 
   static void refreshRetiredTexts(
       String id, YamlConfiguration gui, ConfigurationSection defaults) {
@@ -236,13 +281,18 @@ public final class ModuleConfigs {
     }
   }
 
-  /** Keys of the retired personal-sidebar document; a file holding any of them is replaced. */
+  /**
+   * Keys of the second personal-sidebar document (a catalog kept in SQLite and exported under
+   * {@code catalog}); a file holding any of them is replaced. 2026-10-23: {@code placeholders},
+   * {@code presets} and {@code categories} no longer count, because the personal scoreboard is back
+   * and its catalog lives at exactly those keys.
+   */
   private static final List<String> LEGACY_SCOREBOARD =
-      List.of("placeholders", "presets", "categories", "catalog", "header", "max-selected-lines");
+      List.of("catalog", "header", "max-selected-lines");
 
   /**
-   * The personal sidebar catalog is gone. A scoreboard.yml that still has its keys is backed up to
-   * {@code scoreboard.yml.pre-named.bak} and replaced by the named-board defaults.
+   * A scoreboard.yml written by the second personal sidebar (before named boards) is backed up to
+   * {@code scoreboard.yml.pre-named.bak} and replaced by the defaults.
    */
   private void migrateScoreboard(YamlConfiguration module) throws IOException {
     if (module.contains("scoreboards")

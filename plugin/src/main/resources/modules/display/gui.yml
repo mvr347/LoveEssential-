@@ -11,49 +11,38 @@ navigation:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
 messages:
   display:
-    usage: '<yellow>/display <gray>[own|others] [clan|suffix] [chat|tab|nametag] [on|off] — без аргументов открывается меню'
+    usage: '<yellow>/display <gray>[others] <clan|suffix> <chat|tab|nametag> [on|off] — без аргументов открывается меню'
     changed-on: '<gray><scope>: <white><element> <gray>— <white><surface>: <green>показано'
     changed-off: '<gray><scope>: <white><element> <gray>— <white><surface>: <red>скрыто'
-    scope-own: Мои подписи
-    scope-others: Чужие подписи
-    scope-short-own: Ваш выбор для других игроков
-    scope-short-others: Ваш выбор для чужих подписей
-    scope-help-own: Скрывает ваши тег и суффикс у всех, включая вас.
-    scope-help-others: Скрывает чужие тег и суффикс только у вас.
+    scope-own: Ваши подписи у всех игроков
+    scope-others: Подписи других игроков у вас
     element-clan_tag: Тег клана
     element-suffix: Суффикс
     surface-chat: Чат
     surface-tab: Список игроков
     surface-nametag: Ник над головой
-    mode: '<gold>Раздел <dark_gray>| <white><scope>'
-    mode-lore:
-    - <dark_gray>Чьи подписи настраиваете
-    - ''
-    - <dark_gray>▪ <gray>Сейчас:
-    - '  <gray><help>'
-    - <dark_gray><st>─────────────────────</st>
-    - <green>ЛКМ <dark_gray>— <gray>сменить раздел
-    all-on: '<gold>Показать всё <dark_gray>| <white>12 настроек'
+    all-on: '<gold>Показать всё <dark_gray>| <white>6 настроек'
     all-on-lore:
     - <dark_gray>Сброс выбора
     - ''
-    - <dark_gray>▪ <gray>После клика:
-    - '  <gray>Все теги и суффиксы показаны снова.'
+    - '<dark_gray>▪ <gray>После клика:'
+    - '  <gray>Все теги и суффиксы других игроков снова видны вам.'
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>показать всё
     tile-on: '<gold><element>: <surface> <dark_gray>| <green>Вкл'
     tile-off: '<gold><element>: <surface> <dark_gray>| <red>Выкл'
     tile-lore:
-    - <dark_gray><scope>
+    - <dark_gray>Только у вас
     - ''
-    - <dark_gray>▪ <gray>После клика:
+    - '<dark_gray>▪ <gray>После клика:'
     - '  <gray>Состояние: <now> <dark_gray>→ <next>'
+    - '  <gray>Другие игроки ничего не заметят.'
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>переключить
     tile-locked: '<gray><element>: <surface> <dark_gray>| <red>Недоступно'
     tile-locked-lore:
     - <dark_gray>Недоступно
     - ''
-    - <dark_gray>▪ <red>Причина:
+    - '<dark_gray>▪ <red>Причина:'
     - '  <gray>Список игроков общий для всех,'
     - '  <gray>его нельзя изменить только для вас.'

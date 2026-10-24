@@ -119,13 +119,17 @@ class DisplayPreferencesTest {
   }
 
   @Test
-  void theContractIsRegisteredForLoveChatAndCombinesBothDirections() throws Exception {
+  void theContractIsRegisteredForLoveChatAndHidesOwnTagsOnlyWithThePermission() throws Exception {
     var owner = join("Owner").getUniqueId();
     var viewer = join("Viewer").getUniqueId();
     var contract = server.getServicesManager().load(DisplayPrefs.class);
     assertNotNull(contract, "LoveChat reads the choice through this service");
     assertTrue(LoveCore.displayVisible(owner, viewer, Surface.CHAT, Element.CLAN_TAG));
     contract.set(owner, Surface.CHAT, Element.CLAN_TAG, Scope.OWN, false);
+    assertTrue(
+        LoveCore.displayVisible(owner, viewer, Surface.CHAT, Element.CLAN_TAG),
+        "a player without loveessential.display.own cannot hide their tag from everybody");
+    server.getPlayer("Owner").addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
     assertFalse(LoveCore.displayVisible(owner, viewer, Surface.CHAT, Element.CLAN_TAG));
     contract.set(owner, Surface.CHAT, Element.CLAN_TAG, Scope.OWN, true);
     contract.set(viewer, Surface.CHAT, Element.CLAN_TAG, Scope.OTHERS, false);
@@ -159,11 +163,21 @@ class DisplayPreferencesTest {
   void theCommandSetsAndTogglesAFlag() throws Exception {
     var a = join("Alice");
     server.dispatchCommand(a, "display own clan chat off");
+    assertTrue(
+        prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN),
+        "the own scope needs loveessential.display.own");
+    a.addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
+    server.dispatchCommand(a, "display own clan chat off");
     assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
     server.dispatchCommand(a, "display own clan chat");
     assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
     server.dispatchCommand(a, "оформление чужие суффикс таб выкл");
     assertFalse(prefs.shown(a.getUniqueId(), Surface.TAB, Element.SUFFIX, Scope.OTHERS));
+    server.dispatchCommand(a, "display suffix chat off");
+    assertFalse(
+        prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OTHERS),
+        "without a scope word the command changes what the player sees");
+    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OWN));
     server.dispatchCommand(a, "display own nonsense chat");
     assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OWN), "bad input changes nothing");
   }
@@ -183,18 +197,19 @@ class DisplayPreferencesTest {
     int tile = firstTile(top);
     assertTrue(tile >= 0, "six tiles are expected in the work zone");
     click(a, tile);
-    assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
+    assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OTHERS));
+    assertTrue(
+        prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN),
+        "the menu never hides the player's own tag from other people");
     click(a, firstTile(a.getOpenInventory().getTopInventory()));
-    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
+    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OTHERS));
   }
 
   @Test
-  void theOthersHalfLocksTheTabTiles() throws Exception {
+  void theTabTilesAreLocked() throws Exception {
     var a = join("Alice");
     server.dispatchCommand(a, "display");
     server.getScheduler().performTicks(2);
-    // Control button in header slot 3 switches the half.
-    click(a, 3);
     var top = a.getOpenInventory().getTopInventory();
     assertEquals(List.of(), GuiRules.violations(top, false));
     int locked = 0;
