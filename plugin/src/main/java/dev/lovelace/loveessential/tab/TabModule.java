@@ -243,7 +243,41 @@ public final class TabModule implements Listener, AutoCloseable {
   }
 
   public boolean managesBoards() {
-    return enabled && task != null && !task.isCancelled();
+    return enabled && task != null && !task.isCancelled() && !deferred();
+  }
+
+  private boolean wasDeferred;
+
+  /**
+   * True while another plugin (TAB, CMI, ...) owns the player list, name tags and sidebar; then this
+   * module and the scoreboard stay passive. {@code tab.mode}: auto (default), on, off.
+   */
+  public boolean deferred() {
+    var names = plugin.getConfig().getStringList("tab.external-plugins");
+    return ExternalTab.deferred(
+        ExternalTab.Mode.parse(plugin.getConfig().getString("tab.mode", "auto")),
+        names.isEmpty() ? ExternalTab.DEFAULTS : names,
+        name -> Bukkit.getPluginManager().isPluginEnabled(name));
+  }
+
+  /** Hands everything back once when an external plugin appears, and takes it again when it is gone. */
+  private boolean passive() {
+    boolean now = deferred();
+    if (now && !wasDeferred) {
+      var names = plugin.getConfig().getStringList("tab.external-plugins");
+      String who =
+          ExternalTab.found(
+              names.isEmpty() ? ExternalTab.DEFAULTS : names,
+              name -> Bukkit.getPluginManager().isPluginEnabled(name));
+      plugin
+          .getLogger()
+          .info("[tab] " + (who == null ? "tab.mode: off" : who + " is installed") + ": the TAB and scoreboard modules stay passive.");
+      for (var p : Bukkit.getOnlinePlayers()) release(p);
+      views.clear();
+      listState.clear();
+    }
+    wasDeferred = now;
+    return now;
   }
 
   public boolean owns(Player p) {
@@ -443,7 +477,7 @@ public final class TabModule implements Listener, AutoCloseable {
   // -------------------------------------------------------------- update cycle
 
   private void update() {
-    if (!enabled) return;
+    if (!enabled || passive()) return;
     long started = System.nanoTime();
     List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
     var targets = new HashMap<UUID, Target>();

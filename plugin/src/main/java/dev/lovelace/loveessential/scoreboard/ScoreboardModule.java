@@ -248,7 +248,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
   }
 
   private boolean eligible(Player p) {
-    if (!plugin.module("scoreboard") || !ownership) return false;
+    if (!plugin.module("scoreboard") || !ownership || tab.deferred()) return false;
     if (!plugin.allows("scoreboard", p) || !love.authenticated(p)) return false;
     var joined = joinedAt.get(p.getUniqueId());
     long delay = plugin.getConfig().getLong("scoreboard.delay-on-join-ms", 1000);
