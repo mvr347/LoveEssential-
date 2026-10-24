@@ -59,13 +59,35 @@ class PersonalStateTest {
     state.enable("a", 8);
     state.enable("b", 8);
     state.cycleVariant("b", 2);
-    state.viewAll(true);
     var copy = new PersonalState(state.stored());
     assertEquals(state.entries(), copy.entries());
-    assertTrue(copy.viewAll());
     var messy = new PersonalState(new PersonalState.Stored(false, List.of(new Entry("a", 0), new Entry("a", 1), new Entry("b", 2))));
     assertEquals(List.of("a", "b"), messy.ids());
     assertEquals(0, messy.variant("a"));
+  }
+
+  @Test
+  void replacingAndSwappingSlotsKeepsTheOthersInPlace() {
+    var state = new PersonalState();
+    for (String id : List.of("a", "b", "c")) state.enable(id, 8);
+    state.cycleVariant("b", 2);
+    assertTrue(state.replaceAt(1, "x"));
+    assertEquals(List.of("a", "x", "c"), state.ids());
+    assertEquals(0, state.variant("b"), "the replaced line forgets its format");
+    assertFalse(state.replaceAt(0, "c"), "a line already on the board cannot be put twice");
+    assertTrue(state.swap(0, 2));
+    assertEquals(List.of("c", "x", "a"), state.ids());
+    assertFalse(state.swap(0, 5));
+  }
+
+  @Test
+  void removingFromTheMiddleMovesTheNextLinesUp() {
+    var state = new PersonalState();
+    for (String id : List.of("1", "2", "3", "4", "5", "6", "7", "8")) state.enable(id, 8);
+    state.disable("3");
+    assertEquals(List.of("1", "2", "4", "5", "6", "7", "8"), state.ids());
+    state.moveUp("7");
+    assertEquals(List.of("1", "2", "4", "5", "7", "6", "8"), state.ids());
   }
 
   @Test

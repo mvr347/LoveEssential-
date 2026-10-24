@@ -14,9 +14,6 @@ public final class PersonalLayout {
   /** Numbered line cards of the "by category" view: two pairs per row, like pairs on the board. */
   public static final int[] CARD_SLOTS = {20, 21, 23, 24, 29, 30, 32, 33};
 
-  /** Category buttons of the main menu. */
-  public static final int[] CATEGORY_SLOTS = {37, 38, 39, 40, 41, 42, 43};
-
   /** The flat "all" view: the work zone without side walls. */
   public static final int[] FLAT_SLOTS = {
     19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43
@@ -50,20 +47,6 @@ public final class PersonalLayout {
       case 6 -> new int[] {2, 3, 4, 5, 6, 7};
       default -> throw new IllegalArgumentException("Header fits 0-6 control buttons, got " + count);
     };
-  }
-
-  /** Index (in header order) of the view toggle: the middle of the controls. */
-  public static int toggleIndex(int controls) {
-    return controls / 2 - (controls % 2 == 0 ? 1 : 0);
-  }
-
-  /** Category buttons are centered in the 37-43 row. */
-  public static int[] categorySlots(int count) {
-    int n = Math.min(count, CATEGORY_SLOTS.length);
-    int[] columns = centeredColumns(n);
-    int[] out = new int[n];
-    for (int i = 0; i < n; i++) out[i] = 36 + columns[i];
-    return out;
   }
 
   public static int pageCount(int total) {

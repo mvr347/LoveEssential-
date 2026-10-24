@@ -5,9 +5,12 @@ menus:
   sidebar-menu-title:
     size: 54
     title: <gold>Моё табло
-  sidebar-category-title:
+  sidebar-catalog-title:
     size: 54
-    title: '<gold>Моё табло <dark_gray>| <white><category>'
+    title: <gold>Каталог строк
+  sidebar-presets-title:
+    size: 27
+    title: <gold>Раскладки
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -17,16 +20,6 @@ navigation:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
 messages:
   sidebar:
-    view-categories: По категориям
-    view-all: Все
-    view-title: <gold>Вид меню
-    view-lore:
-    - <dark_gray>Как показаны строки
-    - ''
-    - '<dark_gray>▪ <gray>Сейчас: <white><current>'
-    - '<dark_gray>▪ <gray>Другой вид: <white><other>'
-    - <dark_gray><st>─────────────────────</st>
-    - <green>ЛКМ <dark_gray>— <gray>переключить
     toggle-on: <green>Табло включено
     toggle-on-lore:
     - <dark_gray>Табло на экране
@@ -55,26 +48,46 @@ messages:
     preset-unavailable: <red>Недоступно сейчас
     preset-unavailable-reason: <gray>Ни одна строка раскладки сейчас недоступна
     slot-empty-name: '<gray>Слот <n> <dark_gray>• <gray>пусто'
-    slot-empty-lore:
-    - <dark_gray>Свободный слот
-    - ''
-    - <dark_gray>▪ <gray>Выберите строку в категории ниже
     slot-label: '<dark_gray>▪ <gray>Слот <n>'
     slot-up: <green>ЛКМ <dark_gray>— <gray>выше
     slot-down: <gold>ПКМ <dark_gray>— <gray>ниже
     slot-remove: <red>СКМ <gray>или <yellow>Shift + ПКМ <dark_gray>— <gray>убрать
     slot-variant: '<yellow>Shift + ЛКМ <dark_gray>— <gray>формат: <white><variant>'
-    category-enabled: '<dark_gray>▪ <gray>Включено: <white><on> <gray>из <white><total>'
-    category-open: <green>ЛКМ <dark_gray>— <gray>открыть
-    flat-position: '<dark_gray>▪ <gray>Позиция: <white>#<pos> <gray>из <white><total>'
-    flat-enable: <green>СКМ <gray>или <yellow>Shift + ПКМ <dark_gray>— <gray>включить
-    flat-disable: <red>СКМ <gray>или <yellow>Shift + ПКМ <dark_gray>— <gray>выключить
-    flat-up: <green>ЛКМ <dark_gray>— <gray>выше
-    flat-down: <gold>ПКМ <dark_gray>— <gray>ниже
-    sub-enable: <green>ЛКМ <dark_gray>— <gray>включить
-    sub-disable: <red>ЛКМ <dark_gray>— <gray>выключить
-    sub-variant: '<yellow>Shift + ЛКМ <dark_gray>— <gray>формат: <white><variant>'
-    sub-slot: '<dark_gray>▪ <gray>Слот табло: <white>#<n>'
     unavailable: '<dark_gray>▪ <red>Недоступно:'
     reason-plugin: '  <gray>Плагин не установлен'
     reason-full: '  <gray>Все <max> слотов заняты'
+    slot-empty-lore:
+    - <dark_gray>Свободный слот
+    - ''
+    - <dark_gray>▪ <gray>Выберите строку в каталоге
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <gray>или <yellow>СКМ <dark_gray>— <gray>открыть каталог
+    slot-catalog: <yellow>СКМ <dark_gray>— <gray>каталог строк
+    presets-title-button: <gold>Раскладки
+    presets-lore:
+    - <dark_gray>Быстрые наборы строк
+    - ''
+    - '<dark_gray>▪ <gray>Доступно раскладок: <white><count>'
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>открыть
+    filter-title: Фильтр
+    filter-all: Все
+    sort-title: Сортировка
+    sort-name: По названию
+    sort-available: Сначала доступные
+    sort-category: По категориям
+    sort-enabled: Сначала включённые
+    cycle-name: '<gold><name> <dark_gray>| <yellow><current>'
+    cycle-subtitle: <dark_gray>Переключатель
+    cycle-options: '<dark_gray>▪ <gray>Варианты:'
+    cycle-current: '  <green>▶ <name>'
+    cycle-other: '    <gray><name>'
+    cycle-next: <green>ЛКМ <dark_gray>— <gray>следующий вариант
+    cycle-previous: <gold>ПКМ <dark_gray>— <gray>предыдущий вариант
+    catalog-category: '<dark_gray>▪ <gray>Категория: <white><category>'
+    catalog-slot: '<dark_gray>▪ <gray>Сейчас в слоте: <white>#<n>'
+    catalog-add: <green>ЛКМ <dark_gray>— <gray>добавить в табло
+    catalog-remove: <red>ЛКМ <dark_gray>— <gray>убрать из табло
+    catalog-replace: '<green>ЛКМ <dark_gray>— <gray>поставить в слот <n>'
+    catalog-swap: '<green>ЛКМ <dark_gray>— <gray>поменять местами со слотом <n>'
+    catalog-here: <dark_gray>Эта строка уже в выбранном слоте

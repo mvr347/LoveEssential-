@@ -218,7 +218,7 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
     Element element =
         switch (args[first].toLowerCase(Locale.ROOT)) {
           case "clan", "tag", "клан", "тег" -> Element.CLAN_TAG;
-          case "suffix", "суффикс" -> Element.SUFFIX;
+          case "suffix", "суффикс", "пометки", "пометка" -> Element.SUFFIX;
           default -> throw new IllegalArgumentException("display.usage");
         };
     Surface surface =

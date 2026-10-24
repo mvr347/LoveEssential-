@@ -10,30 +10,20 @@ public final class PersonalState {
   /** A chosen line: the placeholder id and the index of its format variant. */
   public record Entry(String id, int variant) {}
 
-  /** The stored form; the on/off switch is kept separately by the scoreboard module. */
+  /** The stored form; {@code viewAll} belongs to the retired flat view and is ignored. The on/off switch is kept by the module. */
   public record Stored(boolean viewAll, List<Entry> entries) {}
 
-  private boolean viewAll;
   private final List<String> active = new ArrayList<>();
   private final Map<String, Integer> variants = new HashMap<>();
 
   public PersonalState() {}
 
   public PersonalState(Stored stored) {
-    viewAll = stored.viewAll();
     replaceWith(stored.entries() == null ? List.of() : stored.entries());
   }
 
   public Stored stored() {
-    return new Stored(viewAll, entries());
-  }
-
-  public boolean viewAll() {
-    return viewAll;
-  }
-
-  public void viewAll(boolean value) {
-    viewAll = value;
+    return new Stored(false, entries());
   }
 
   public List<String> ids() {
@@ -88,6 +78,21 @@ public final class PersonalState {
   public boolean disable(String id) {
     variants.remove(id);
     return active.remove(id);
+  }
+
+  /** Puts {@code id} into slot {@code index}, dropping the line that was there; its format is forgotten. */
+  public boolean replaceAt(int index, String id) {
+    if (index < 0 || index >= active.size() || active.contains(id)) return false;
+    variants.remove(active.get(index));
+    active.set(index, id);
+    return true;
+  }
+
+  /** Exchanges two slots. */
+  public boolean swap(int a, int b) {
+    if (a == b || a < 0 || b < 0 || a >= active.size() || b >= active.size()) return false;
+    Collections.swap(active, a, b);
+    return true;
   }
 
   public boolean moveUp(String id) {

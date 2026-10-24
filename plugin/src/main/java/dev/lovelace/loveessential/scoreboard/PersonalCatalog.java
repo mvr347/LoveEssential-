@@ -1,7 +1,6 @@
 package dev.lovelace.loveessential.scoreboard;
 
 import dev.lovelace.loveessential.scoreboard.PersonalState.Entry;
-import java.text.Collator;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
@@ -219,28 +218,6 @@ public record PersonalCatalog(
   /** True when both lists hold the same id and variant pairs; the order is the player's business. */
   public static boolean sameSet(List<Entry> a, List<Entry> b) {
     return a.size() == b.size() && new HashSet<>(a).equals(new HashSet<>(b));
-  }
-
-  /** One row of the flat view: enabled first (board order), then available A-Z, then locked A-Z. */
-  public record Row(String id, String sortName, int activeIndex, boolean available) {}
-
-  public static List<String> sortRows(List<Row> rows) {
-    Collator collator = Collator.getInstance(Locale.forLanguageTag("ru"));
-    Comparator<Row> byName = Comparator.comparing(Row::sortName, collator).thenComparing(Row::id);
-    var active = new ArrayList<Row>();
-    var available = new ArrayList<Row>();
-    var locked = new ArrayList<Row>();
-    for (Row row : rows) {
-      if (row.activeIndex() >= 0) active.add(row);
-      else if (row.available()) available.add(row);
-      else locked.add(row);
-    }
-    active.sort(Comparator.comparingInt(Row::activeIndex));
-    available.sort(byName);
-    locked.sort(byName);
-    var out = new ArrayList<String>(rows.size());
-    for (var group : List.of(active, available, locked)) for (Row row : group) out.add(row.id());
-    return out;
   }
 
   /** Rejects a catalog that cannot be read; presets naming unknown lines are skipped when applied. */

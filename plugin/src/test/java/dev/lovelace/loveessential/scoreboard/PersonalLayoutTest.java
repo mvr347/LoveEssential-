@@ -17,32 +17,15 @@ class PersonalLayoutTest {
   }
 
   @Test
-  void theViewToggleSitsInTheMiddleOfTheControls() {
-    // 5 controls: slots 2,3,4,6,7 -> the toggle is the third one, slot 4.
-    assertEquals(2, PersonalLayout.toggleIndex(5));
-    assertEquals(4, PersonalLayout.controlSlots(5)[PersonalLayout.toggleIndex(5)]);
-    assertEquals(0, PersonalLayout.toggleIndex(1));
-    assertEquals(1, PersonalLayout.toggleIndex(4));
-  }
-
-  @Test
   void cardsAndCategoriesLiveInTheWorkZoneWithoutTheSideWalls() {
     for (int slot : PersonalLayout.CARD_SLOTS) {
       assertTrue(slot >= 18 && slot < 45, "slot " + slot);
       assertTrue(slot % 9 != 0 && slot % 9 != 8, "side wall " + slot);
     }
-    for (int slot : PersonalLayout.CATEGORY_SLOTS) assertTrue(slot % 9 != 0 && slot % 9 != 8);
     for (int slot : PersonalLayout.FLAT_SLOTS) assertTrue(slot % 9 != 0 && slot % 9 != 8);
     assertEquals(21, PersonalLayout.PAGE_SIZE);
     assertEquals(36, PersonalLayout.PAGE_PREV);
     assertEquals(44, PersonalLayout.PAGE_NEXT);
-  }
-
-  @Test
-  void categorySlotsAreCenteredAndNeverMoreThanSeven() {
-    assertArrayEquals(new int[] {40}, PersonalLayout.categorySlots(1));
-    assertArrayEquals(new int[] {39, 41}, PersonalLayout.categorySlots(2));
-    assertEquals(7, PersonalLayout.categorySlots(20).length);
   }
 
   @Test
