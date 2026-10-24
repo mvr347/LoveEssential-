@@ -39,9 +39,23 @@ import org.bukkit.inventory.ItemStack;
  */
 final class PersonalSidebar implements Listener, AutoCloseable {
   static final String KIND = "scoreboard-personal";
-  static final String MENU = "sidebar.menu-title", CATEGORY_MENU = "sidebar.category-title";
+  static final String MENU = "sidebar.menu-title", CATALOG_MENU = "sidebar.catalog-title",
+      PRESETS_MENU = "sidebar.presets-title";
   private static final String HEAD =
       "d0d5a4eba140cbb34d45e40d62dd3f7e6584b2ab0b4155a0bcc603d5d750f793";
+
+  /** The three screens of the personal scoreboard. */
+  enum Kind {
+    MAIN,
+    CATALOG,
+    PRESETS
+  }
+
+  /** What a player last chose in the catalog: category filter (blank is all) and sort. */
+  private static final class View {
+    String filter = "";
+    CatalogView.Sort sort = CatalogView.Sort.NAME;
+  }
 
   /** Why a line cannot be used right now. */
   enum Status {
@@ -64,17 +78,20 @@ final class PersonalSidebar implements Listener, AutoCloseable {
   private final class Menu implements GuiLayout {
     final String id;
     final Map<String, String> variables;
-    final String category;
+    final Kind kind;
+    /** Catalog only: the slot being replaced, or -1 when a line is added. */
+    final int target;
     final Player player;
     final Map<Integer, Consumer<ClickType>> clicks = new HashMap<>();
     Inventory inventory;
     int page;
 
-    Menu(Player player, String id, Map<String, String> variables, String category) {
+    Menu(Player player, Kind kind, String id, int target) {
       this.player = player;
+      this.kind = kind;
       this.id = id;
-      this.variables = variables;
-      this.category = category;
+      this.variables = Map.of();
+      this.target = target;
     }
 
     @Override
@@ -133,6 +150,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
   private final MiniMessage mini = MiniMessage.miniMessage();
   private final Map<UUID, Slot> slots = new HashMap<>();
   private final Set<UUID> loading = new HashSet<>();
+  private final Map<UUID, View> views = new HashMap<>();
   private volatile PersonalCatalog catalog = PersonalCatalog.EMPTY;
   private boolean closed;
 
@@ -198,6 +216,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
   void unload(UUID id) {
     slots.remove(id);
     loading.remove(id);
+    views.remove(id);
   }
 
   /** A new player starts with the default preset, minus the lines that are unusable for them. */
@@ -314,22 +333,24 @@ final class PersonalSidebar implements Listener, AutoCloseable {
   void open(Player p) {
     if (catalog.isEmpty()) throw new IllegalArgumentException("errors.input");
     if (!slots.containsKey(p.getUniqueId())) throw new IllegalArgumentException("errors.starting");
-    var menu = new Menu(p, MENU, Map.of(), null);
-    menu.inventory = Bukkit.createInventory(menu, PersonalLayout.SIZE, MenuStyle.title(lang, MENU, Map.of()));
-    draw(menu);
-    MenuStyle.open(p, menu.inventory);
+    show(new Menu(p, Kind.MAIN, MENU, -1), PersonalLayout.SIZE);
   }
 
-  private void openCategory(Player p, String categoryId) {
-    var category = catalog.categories().get(categoryId);
-    if (category == null) return;
-    var items = catalog.itemsOf(categoryId);
-    int size = PersonalLayout.submenuSize(items.size());
-    var vars = Map.of("category", plain(category.name()));
-    var menu = new Menu(p, CATEGORY_MENU, vars, categoryId);
-    menu.inventory = Bukkit.createInventory(menu, size, MenuStyle.title(lang, CATEGORY_MENU, vars));
+  /** The line catalog; {@code target} is the slot to replace, or -1 to add a line. */
+  private void openCatalog(Player p, int target) {
+    views.computeIfAbsent(p.getUniqueId(), id -> new View());
+    show(new Menu(p, Kind.CATALOG, CATALOG_MENU, target), PersonalLayout.SIZE);
+  }
+
+  private void openPresets(Player p) {
+    int count = catalog.presets().size();
+    show(new Menu(p, Kind.PRESETS, PRESETS_MENU, -1), PersonalLayout.submenuSize(Math.max(1, count)));
+  }
+
+  private void show(Menu menu, int size) {
+    menu.inventory = Bukkit.createInventory(menu, size, MenuStyle.title(lang, menu.id, Map.of()));
     draw(menu);
-    MenuStyle.open(p, menu.inventory);
+    MenuStyle.open(menu.player, menu.inventory);
   }
 
   /** Fills the inventory of a menu from the current state; used for opening and for every refresh. */
@@ -339,8 +360,12 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     menu.clicks.clear();
     MenuStyle.frame(menu.inventory);
     if (slot == null) return;
-    if (menu.category == null) drawMain(menu, p, slot.state);
-    else drawCategory(menu, p, slot);
+    menu.inventory.setItem(0, MenuStyle.head(HEAD, MenuStyle.title(lang, menu.id, Map.of()), List.of()));
+    switch (menu.kind) {
+      case MAIN -> drawMain(menu, p, slot.state);
+      case CATALOG -> drawCatalog(menu, p, slot.state);
+      case PRESETS -> drawPresets(menu, p, slot.state);
+    }
   }
 
   private void refresh(Menu menu) {
@@ -355,41 +380,51 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   private void drawMain(Menu menu, Player p, PersonalState state) {
     var c = catalog;
-    menu.inventory.setItem(
-        0, MenuStyle.head(HEAD, MenuStyle.title(lang, MENU, Map.of()), List.of()));
-    // Header controls go in as a row; the menu style centers them in slots 2-7.
-    var presets = new ArrayList<>(c.presets().values());
-    int controls = presets.size() + 1, toggleAt = PersonalLayout.toggleIndex(controls), next = 0;
-    for (int i = 0; i < controls; i++) {
-      int slot = 1 + i;
-      if (i == toggleAt) set(menu, slot, viewToggle(state), click -> {
-        if (!simple(click)) return;
-        state.viewAll(!state.viewAll());
-        menu.page = 0;
-        saved(p);
+    if (!c.presets().isEmpty())
+      set(menu, 1, presetsButton(), click -> {
+        if (click != ClickType.LEFT) return;
         feedback(p, true);
-        refresh(menu);
+        openPresets(p);
       });
-      else {
-        var preset = presets.get(next++);
-        var resolved = resolve(preset, p);
-        set(menu, slot, presetButton(preset, resolved, state), click -> {
-          if (click != ClickType.LEFT) return;
-          boolean changed = !resolved.isEmpty() && !PersonalCatalog.sameSet(state.entries(), resolved);
-          if (changed) {
-            state.replaceWith(resolved);
-            saved(p);
-          }
-          feedback(p, changed);
-          if (changed) refresh(menu);
-        });
+    // The on/off switch sits in the footer's extra slot (size - 4 is moved to size - 3 by the menu style).
+    set(menu, menu.inventory.getSize() - 4, switchButton(p, state), click -> toggleBoard(menu, p, state, click));
+    int cards = PersonalLayout.cardCount(c.max());
+    for (int i = 0; i < cards; i++) {
+      int index = i, slot = PersonalLayout.CARD_SLOTS[i];
+      Item item = i < state.ids().size() ? c.item(state.ids().get(i)) : null;
+      if (item == null) {
+        set(
+            menu,
+            slot,
+            MenuStyle.item(
+                Material.GRAY_DYE,
+                lang.render("sidebar.slot-empty-name", Map.of("n", Integer.toString(i + 1))),
+                lines("sidebar.slot-empty-lore", Map.of())),
+            click -> {
+              // Left click opens the catalog too, for clients without a middle button.
+              if (click != ClickType.MIDDLE && click != ClickType.LEFT) return;
+              feedback(p, true);
+              openCatalog(p, -1);
+            });
+        continue;
       }
+      set(menu, slot, card(p, item, index, state), click -> {
+        if (click == ClickType.MIDDLE) {
+          feedback(p, true);
+          openCatalog(p, index);
+          return;
+        }
+        boolean changed =
+            switch (click) {
+              case LEFT -> state.moveUp(item.id());
+              case RIGHT -> state.moveDown(item.id());
+              case SHIFT_RIGHT -> state.disable(item.id());
+              case SHIFT_LEFT -> cycle(state, item);
+              default -> false;
+            };
+        changed(menu, p, changed);
+      });
     }
-    // The on/off switch sits in the footer's extra slot (50 is moved to 51 by the menu style).
-    int size = menu.inventory.getSize();
-    set(menu, size - 4, switchButton(p, state), click -> toggleBoard(menu, p, state, click));
-    if (state.viewAll()) drawFlat(menu, p, state);
-    else drawCards(menu, p, state);
   }
 
   private void toggleBoard(Menu menu, Player p, PersonalState state, ClickType click) {
@@ -412,79 +447,86 @@ final class PersonalSidebar implements Listener, AutoCloseable {
                     }));
   }
 
-  /** The numbered cards of the by-category view and the row of category buttons. */
-  private void drawCards(Menu menu, Player p, PersonalState state) {
-    var c = catalog;
-    int cards = PersonalLayout.cardCount(c.max());
-    for (int i = 0; i < cards; i++) {
-      int slot = PersonalLayout.CARD_SLOTS[i];
-      Item item = i < state.ids().size() ? c.item(state.ids().get(i)) : null;
-      if (item == null) {
-        set(
-            menu,
-            slot,
-            MenuStyle.item(
-                Material.GRAY_DYE,
-                lang.render("sidebar.slot-empty-name", Map.of("n", Integer.toString(i + 1))),
-                lang.lines("sidebar.slot-empty-lore").stream()
-                    .map(text -> lang.renderText(text, Map.of()))
-                    .toList()),
-            null);
-        continue;
-      }
-      int index = i;
-      set(menu, slot, card(p, item, index, state), click -> {
-        boolean changed =
-            switch (click) {
-              case LEFT -> state.moveUp(item.id());
-              case RIGHT -> state.moveDown(item.id());
-              case MIDDLE, SHIFT_RIGHT -> state.disable(item.id());
-              case SHIFT_LEFT -> cycle(state, item);
-              default -> false;
-            };
-        changed(menu, p, changed);
-      });
-    }
-    var categories = new ArrayList<>(c.categories().values());
-    int[] positions = PersonalLayout.categorySlots(categories.size());
+  /** The quick layouts as small buttons in one centered row. */
+  private void drawPresets(Menu menu, Player p, PersonalState state) {
+    var presets = new ArrayList<>(catalog.presets().values());
+    int[] positions = PersonalLayout.submenuSlots(menu.inventory.getSize(), presets.size());
     for (int i = 0; i < positions.length; i++) {
-      var category = categories.get(i);
-      set(menu, positions[i], categoryButton(category, state), click -> {
+      var preset = presets.get(i);
+      var resolved = resolve(preset, p);
+      set(menu, positions[i], presetButton(preset, resolved, state), click -> {
         if (click != ClickType.LEFT) return;
-        feedback(p, true);
-        openCategory(p, category.id());
+        boolean changed = !resolved.isEmpty() && !PersonalCatalog.sameSet(state.entries(), resolved);
+        if (changed) {
+          state.replaceWith(resolved);
+          saved(p);
+        }
+        feedback(p, changed);
+        if (changed) open(p);
       });
     }
   }
 
-  /** The flat view: every line in one list of 21 per page, enabled first. */
-  private void drawFlat(Menu menu, Player p, PersonalState state) {
+  /** The catalog: filter and sort in the header, the lines in the work zone, 21 per page. */
+  private void drawCatalog(Menu menu, Player p, PersonalState state) {
     var c = catalog;
-    var rows = new ArrayList<PersonalCatalog.Row>();
+    var view = views.computeIfAbsent(p.getUniqueId(), id -> new View());
+    var categoryIds = new ArrayList<String>();
+    categoryIds.add("");
+    categoryIds.addAll(c.categories().keySet());
+    if (!categoryIds.contains(view.filter)) view.filter = "";
+    var labels = new ArrayList<String>();
+    for (String id : categoryIds)
+      labels.add(id.isEmpty() ? lang.text("sidebar.filter-all") : plain(c.categories().get(id).name()));
+    int filterIndex = categoryIds.indexOf(view.filter);
+    set(menu, 1, cycleButton("filter", Material.HOPPER, labels, filterIndex), click -> {
+      if (!simple(click)) return;
+      view.filter = categoryIds.get(CatalogView.step(filterIndex, categoryIds.size(), click == ClickType.LEFT));
+      menu.page = 0;
+      feedback(p, true);
+      refresh(menu);
+    });
+    var sorts = CatalogView.Sort.values();
+    var sortLabels = new ArrayList<String>();
+    for (var sort : sorts) sortLabels.add(lang.text("sidebar.sort-" + sort.name().toLowerCase(Locale.ROOT)));
+    set(menu, 2, cycleButton("sort", Material.COMPARATOR, sortLabels, view.sort.ordinal()), click -> {
+      if (!simple(click)) return;
+      view.sort = CatalogView.step(view.sort, sorts, click == ClickType.LEFT);
+      menu.page = 0;
+      feedback(p, true);
+      refresh(menu);
+    });
+
+    var categoryOrder = new ArrayList<>(c.categories().keySet());
+    var rows = new ArrayList<CatalogView.Row>();
     for (Item item : c.items().values())
       rows.add(
-          new PersonalCatalog.Row(
+          new CatalogView.Row(
               item.id(),
               plain(item.name()),
+              item.category(),
+              categoryOrder.indexOf(item.category()),
               state.ids().indexOf(item.id()),
               status(p, item) == Status.AVAILABLE));
-    var sorted = PersonalCatalog.sortRows(rows);
+    var sorted = CatalogView.apply(rows, view.filter, view.sort);
     menu.page = PersonalLayout.clampPage(menu.page, sorted.size());
     int pages = PersonalLayout.pageCount(sorted.size());
     int[] range = PersonalLayout.pageRange(sorted.size(), menu.page);
     for (int i = range[0]; i < range[1]; i++) {
       Item item = c.item(sorted.get(i));
       if (item == null) continue;
-      set(menu, PersonalLayout.FLAT_SLOTS[i - range[0]], flat(p, item, state), click -> {
-        boolean changed =
-            switch (click) {
-              case MIDDLE, SHIFT_RIGHT ->
-                  state.has(item.id()) ? state.disable(item.id()) : enable(p, state, item);
-              case LEFT -> state.moveUp(item.id());
-              case RIGHT -> state.moveDown(item.id());
-              case SHIFT_LEFT -> cycle(state, item);
-              default -> false;
-            };
+      set(menu, PersonalLayout.FLAT_SLOTS[i - range[0]], catalogItem(p, item, state, menu.target), click -> {
+        boolean changed;
+        if (click == ClickType.SHIFT_LEFT) changed = cycle(state, item);
+        else if (click == ClickType.LEFT) {
+          changed = choose(p, state, item, menu.target);
+          if (changed) {
+            feedback(p, true);
+            saved(p);
+            open(p);
+            return;
+          }
+        } else changed = false;
         changed(menu, p, changed);
       });
     }
@@ -502,34 +544,26 @@ final class PersonalSidebar implements Listener, AutoCloseable {
           click -> page(menu, p, click, 1));
   }
 
+  /**
+   * Applies a pick from the catalog. Replacing a slot puts the line there (a line that already stands
+   * in another slot swaps places with it); adding appends, and picking a line that is already on the
+   * board removes it.
+   */
+  private boolean choose(Player p, PersonalState state, Item item, int target) {
+    if (target >= 0 && target < state.ids().size()) {
+      int at = state.ids().indexOf(item.id());
+      if (at == target) return false;
+      if (status(p, item) != Status.AVAILABLE) return false;
+      return at >= 0 ? state.swap(at, target) : state.replaceAt(target, item.id());
+    }
+    return state.has(item.id()) ? state.disable(item.id()) : enable(p, state, item);
+  }
+
   private void page(Menu menu, Player p, ClickType click, int delta) {
     if (!simple(click)) return;
     menu.page += delta;
     feedback(p, true);
     refresh(menu);
-  }
-
-  private void drawCategory(Menu menu, Player p, Slot slot) {
-    var c = catalog;
-    var state = slot.state;
-    var category = c.categories().get(menu.category);
-    if (category != null)
-      menu.inventory.setItem(
-          0, MenuStyle.head(HEAD, legacy(category.name()), category.lore().stream().map(this::legacy).toList()));
-    var items = c.itemsOf(menu.category);
-    int[] positions = PersonalLayout.submenuSlots(menu.inventory.getSize(), items.size());
-    for (int i = 0; i < positions.length; i++) {
-      Item item = items.get(i);
-      set(menu, positions[i], submenuItem(p, item, state), click -> {
-        boolean changed =
-            switch (click) {
-              case LEFT -> state.has(item.id()) ? state.disable(item.id()) : enable(p, state, item);
-              case SHIFT_LEFT -> cycle(state, item);
-              default -> false;
-            };
-        changed(menu, p, changed);
-      });
-    }
   }
 
   private boolean enable(Player p, PersonalState state, Item item) {
@@ -586,15 +620,6 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   private List<Component> lines(String key, Map<String, String> vars) {
     return lang.lines(key).stream().map(text -> lang.renderText(text, vars)).toList();
-  }
-
-  private ItemStack viewToggle(PersonalState state) {
-    String current = lang.text(state.viewAll() ? "sidebar.view-all" : "sidebar.view-categories");
-    String other = lang.text(state.viewAll() ? "sidebar.view-categories" : "sidebar.view-all");
-    return MenuStyle.item(
-        Material.COMPASS,
-        line("sidebar.view-title", Map.of()),
-        lines("sidebar.view-lore", Map.of("current", current, "other", other)));
   }
 
   private ItemStack switchButton(Player p, PersonalState state) {
@@ -656,48 +681,67 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     return MenuStyle.item(Material.BARRIER, Component.text(plain(item.name()), NamedTextColor.DARK_GRAY), lore);
   }
 
-  private ItemStack card(Player p, Item item, int index, PersonalState state) {
-    var actions = new ArrayList<Component>();
-    if (index > 0) actions.add(line("sidebar.slot-up", Map.of()));
-    if (index < state.ids().size() - 1) actions.add(line("sidebar.slot-down", Map.of()));
-    if (item.variants().size() > 1)
-      actions.add(
-          line("sidebar.slot-variant", Map.of("variant", plain(item.variantName(state.variant(item.id()))))));
-    actions.add(line("sidebar.slot-remove", Map.of()));
-    var status = status(p, item);
-    if (status != Status.AVAILABLE) return locked(item, status, actions);
-    var lore = description(item);
-    lore.add(lang.render("gui.separator"));
-    lore.add(line("sidebar.slot-label", Map.of("n", Integer.toString(index + 1))));
-    lore.addAll(actions);
-    return MenuStyle.item(Material.LIME_DYE, Component.text(plain(item.name()), NamedTextColor.GREEN), lore);
+
+  private ItemStack presetsButton() {
+    return MenuStyle.item(
+        Material.BOOK,
+        line("sidebar.presets-title-button", Map.of()),
+        lines("sidebar.presets-lore", Map.of("count", Integer.toString(catalog.presets().size()))));
   }
 
-  private ItemStack flat(Player p, Item item, PersonalState state) {
-    boolean active = state.has(item.id()), full = state.ids().size() >= catalog.max();
+  /** A filter or sort switch: the current option rides in the name, all options are listed in the lore. */
+  private ItemStack cycleButton(String kind, Material icon, List<String> labels, int current) {
+    var lore = new ArrayList<Component>();
+    lore.add(line("sidebar.cycle-subtitle", Map.of()));
+    lore.add(Component.empty());
+    lore.add(line("sidebar.cycle-options", Map.of()));
+    for (int i = 0; i < labels.size(); i++)
+      lore.add(line(i == current ? "sidebar.cycle-current" : "sidebar.cycle-other", Map.of("name", labels.get(i))));
+    lore.add(lang.render("gui.separator"));
+    lore.add(line("sidebar.cycle-next", Map.of()));
+    lore.add(line("sidebar.cycle-previous", Map.of()));
+    return MenuStyle.item(
+        icon,
+        line("sidebar.cycle-name", Map.of("name", lang.text("sidebar." + kind + "-title"), "current", labels.get(current))),
+        lore);
+  }
+
+  /** A line of the catalog: its state, where it stands on the board and what a click does. */
+  private ItemStack catalogItem(Player p, Item item, PersonalState state, int target) {
+    var category = catalog.categories().get(item.category());
+    boolean active = state.has(item.id());
     var status = status(p, item);
+    var info = new ArrayList<Component>();
+    if (category != null)
+      info.add(line("sidebar.catalog-category", Map.of("category", plain(category.name()))));
+    if (active)
+      info.add(line("sidebar.catalog-slot", Map.of("n", Integer.toString(state.ids().indexOf(item.id()) + 1))));
     var actions = new ArrayList<Component>();
-    if (active) {
-      int pos = state.ids().indexOf(item.id()) + 1;
-      actions.add(
-          line(
-              "sidebar.flat-position",
-              Map.of("pos", Integer.toString(pos), "total", Integer.toString(state.ids().size()))));
-      if (pos > 1) actions.add(line("sidebar.flat-up", Map.of()));
-      if (pos < state.ids().size()) actions.add(line("sidebar.flat-down", Map.of()));
-      if (item.variants().size() > 1)
+    boolean replacing = target >= 0 && target < state.ids().size();
+    boolean full = !active && !replacing && state.ids().size() >= catalog.max();
+    if (status == Status.AVAILABLE && !full) {
+      int at = state.ids().indexOf(item.id());
+      if (replacing && at == target) actions.add(line("sidebar.catalog-here", Map.of()));
+      else if (replacing && at >= 0)
+        actions.add(line("sidebar.catalog-swap", Map.of("n", Integer.toString(at + 1))));
+      else if (replacing) actions.add(line("sidebar.catalog-replace", Map.of("n", Integer.toString(target + 1))));
+      else actions.add(line(active ? "sidebar.catalog-remove" : "sidebar.catalog-add", Map.of()));
+      if (active && item.variants().size() > 1)
         actions.add(
             line("sidebar.slot-variant", Map.of("variant", plain(item.variantName(state.variant(item.id()))))));
-      actions.add(line("sidebar.flat-disable", Map.of()));
-    } else if (status == Status.AVAILABLE) {
-      actions.add(
-          full
-              ? line("sidebar.reason-full", Map.of("max", Integer.toString(catalog.max())))
-              : line("sidebar.flat-enable", Map.of()));
     }
-    if (status != Status.AVAILABLE) return locked(item, status, actions);
+    if (status != Status.AVAILABLE) {
+      var locked = new ArrayList<Component>(info);
+      locked.addAll(actions);
+      return locked(item, status, locked);
+    }
     var lore = description(item);
     lore.add(lang.render("gui.separator"));
+    lore.addAll(info);
+    if (full) {
+      lore.add(line("sidebar.unavailable", Map.of()));
+      lore.add(line("sidebar.reason-full", Map.of("max", Integer.toString(catalog.max()))));
+    }
     lore.addAll(actions);
     return MenuStyle.item(
         active ? Material.LIME_DYE : full ? Material.BARRIER : Material.GRAY_DYE,
@@ -706,46 +750,22 @@ final class PersonalSidebar implements Listener, AutoCloseable {
         lore);
   }
 
-  private ItemStack submenuItem(Player p, Item item, PersonalState state) {
-    boolean active = state.has(item.id()), full = state.ids().size() >= catalog.max();
-    var status = status(p, item);
+  private ItemStack card(Player p, Item item, int index, PersonalState state) {
     var actions = new ArrayList<Component>();
-    if (active) {
+    if (index > 0) actions.add(line("sidebar.slot-up", Map.of()));
+    if (index < state.ids().size() - 1) actions.add(line("sidebar.slot-down", Map.of()));
+    if (item.variants().size() > 1)
       actions.add(
-          line("sidebar.sub-slot", Map.of("n", Integer.toString(state.ids().indexOf(item.id()) + 1))));
-      if (item.variants().size() > 1)
-        actions.add(
-            line("sidebar.sub-variant", Map.of("variant", plain(item.variantName(state.variant(item.id()))))));
-      actions.add(line("sidebar.sub-disable", Map.of()));
-    }
+          line("sidebar.slot-variant", Map.of("variant", plain(item.variantName(state.variant(item.id()))))));
+    actions.add(line("sidebar.slot-catalog", Map.of()));
+    actions.add(line("sidebar.slot-remove", Map.of()));
+    var status = status(p, item);
     if (status != Status.AVAILABLE) return locked(item, status, actions);
     var lore = description(item);
     lore.add(lang.render("gui.separator"));
-    if (!active && full) {
-      lore.add(line("sidebar.unavailable", Map.of()));
-      lore.add(line("sidebar.reason-full", Map.of("max", Integer.toString(catalog.max()))));
-      return MenuStyle.item(Material.BARRIER, Component.text(plain(item.name()), NamedTextColor.DARK_GRAY), lore);
-    }
-    if (active) lore.addAll(actions);
-    else lore.add(line("sidebar.sub-enable", Map.of()));
-    return MenuStyle.item(
-        active ? Material.LIME_DYE : Material.GRAY_DYE,
-        Component.text(plain(item.name()), active ? NamedTextColor.GREEN : NamedTextColor.GRAY),
-        lore);
-  }
-
-  private ItemStack categoryButton(PersonalCatalog.Category category, PersonalState state) {
-    var items = catalog.itemsOf(category.id());
-    long on = items.stream().filter(item -> state.has(item.id())).count();
-    var lore = new ArrayList<Component>();
-    for (String text : category.lore()) lore.add(legacy(text));
-    lore.add(lang.render("gui.separator"));
-    lore.add(
-        line(
-            "sidebar.category-enabled",
-            Map.of("on", Long.toString(on), "total", Integer.toString(items.size()))));
-    lore.add(line("sidebar.category-open", Map.of()));
-    return MenuStyle.item(Material.CHEST, legacy(category.name()), lore);
+    lore.add(line("sidebar.slot-label", Map.of("n", Integer.toString(index + 1))));
+    lore.addAll(actions);
+    return MenuStyle.item(Material.LIME_DYE, Component.text(plain(item.name()), NamedTextColor.GREEN), lore);
   }
 
   // ---------------------------------------------------------------- events

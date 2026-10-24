@@ -171,8 +171,10 @@ class DisplayPreferencesTest {
     assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
     server.dispatchCommand(a, "display own clan chat");
     assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
-    server.dispatchCommand(a, "оформление чужие суффикс таб выкл");
-    assertFalse(prefs.shown(a.getUniqueId(), Surface.TAB, Element.SUFFIX, Scope.OTHERS));
+    server.dispatchCommand(a, "оформление чужие пометки ник выкл");
+    assertFalse(prefs.shown(a.getUniqueId(), Surface.NAMETAG, Element.SUFFIX, Scope.OTHERS));
+    server.dispatchCommand(a, "display clan tab off");
+    assertTrue(prefs.shown(a.getUniqueId(), Surface.TAB, Element.CLAN_TAG, Scope.OTHERS), "the shared player list cannot be changed for one viewer");
     server.dispatchCommand(a, "display suffix chat off");
     assertFalse(
         prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OTHERS),
@@ -206,24 +208,23 @@ class DisplayPreferencesTest {
   }
 
   @Test
-  void theTabTilesAreLocked() throws Exception {
+  void onlyTheTilesThatCanBeChangedAreShown() throws Exception {
     var a = join("Alice");
     server.dispatchCommand(a, "display");
     server.getScheduler().performTicks(2);
     var top = a.getOpenInventory().getTopInventory();
     assertEquals(List.of(), GuiRules.violations(top, false));
-    int locked = 0;
+    int tiles = 0;
     for (int slot = 9; slot < top.getSize() - 9; slot++) {
       var item = top.getItem(slot);
-      // MenuStyle turns the barrier icon into a texture head, so the tile is found by its name.
-      if (item != null
-          && item.hasItemMeta()
-          && item.getItemMeta().hasDisplayName()
-          && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
-              .serialize(item.getItemMeta().displayName())
-              .contains("Недоступно")) locked++;
+      if (item == null || GuiRules.glass(item)) continue;
+      String name = GuiRules.name(item);
+      tiles++;
+      assertFalse(name.contains("Список игроков"), "no tile for the shared player list: " + name);
+      assertFalse(name.contains("Недоступно"), name);
+      assertFalse(name.contains("Суффикс"), name);
     }
-    assertEquals(2, locked, "the TAB entry is shared, so both TAB tiles are locked");
+    assertEquals(4, tiles, "clan tag and marks, each in chat and on the nametag");
   }
 
   int firstTile(org.bukkit.inventory.Inventory top) {

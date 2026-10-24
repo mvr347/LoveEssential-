@@ -275,8 +275,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   /**
    * Personal menu for clan tags and suffixes. Everything here changes only what the player sees:
-   * six tiles, the clan tag and the suffix, each on chat, TAB and nametag. The TAB entry is shared by
-   * every viewer, so it cannot be hidden for one viewer and that tile says why.
+   * four tiles, the clan tag and the marks, each in chat and on the nametag.
    */
   public void displayMenu(Player p) {
     var m = menu(p, "display.gui-title", Map.of(), player -> plugin.module("display"));
@@ -296,29 +295,21 @@ public final class ControlMenus implements Listener, AutoCloseable {
           displayMenu(p);
         });
     var elements = dev.lovelace.lovecore.api.display.DisplayPrefs.Element.values();
-    var surfaces = dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.values();
+    // The player list is shared by every viewer and cannot be changed for one of them, so it is not offered.
+    var surfaces =
+        List.of(
+            dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.CHAT,
+            dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.NAMETAG);
     int index = 0;
     for (var element : elements)
       for (var surface : surfaces) {
-        int slot = MenuStyle.slot(index++, elements.length * surfaces.length);
+        int slot = MenuStyle.slot(index++, elements.length * surfaces.size());
         var vars =
             Map.of(
                 "element", lang.text("display.element-" + element.name().toLowerCase(Locale.ROOT)),
                 "surface", lang.text("display.surface-" + surface.name().toLowerCase(Locale.ROOT)),
                 // Texts saved by the previous version still read <scope>; keep it filled.
                 "scope", lang.text("display.scope-others"));
-        if (surface == dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.TAB) {
-          entry(
-              m,
-              slot,
-              Material.BARRIER,
-              lang.renderText(lang.text("display.tile-locked"), vars, Map.of()),
-              lang.lines("display.tile-locked-lore").stream()
-                  .map(text -> lang.renderText(text, vars, Map.of()))
-                  .toList(),
-              c -> {});
-          continue;
-        }
         boolean shown = displayPrefs.shown(id, surface, element, scope);
         tile(
             m,

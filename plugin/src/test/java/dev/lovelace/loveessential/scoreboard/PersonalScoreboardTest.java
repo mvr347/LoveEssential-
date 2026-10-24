@@ -107,13 +107,26 @@ class PersonalScoreboardTest {
     assertEquals(List.of("name", "world"), personal.state(a.getUniqueId()).ids());
   }
 
+  static int slotNamed(org.bukkit.inventory.Inventory inventory, int from, int to, String text) {
+    for (int slot = from; slot < to; slot++) if (name(inventory.getItem(slot)).contains(text)) return slot;
+    return -1;
+  }
+
+  void openMenu(PlayerMock a) {
+    server.dispatchCommand(a, "scoreboard");
+    tick(2);
+  }
+
+  static String idOf(org.bukkit.inventory.Inventory inventory) {
+    return inventory == null || !(inventory.getHolder() instanceof GuiLayout layout) ? "" : layout.guiId();
+  }
+
   @Test
   void theCommandOpensTheMenuAndItFollowsTheLayoutStandard() throws Exception {
     var a = join("Alice");
-    server.dispatchCommand(a, "scoreboard");
-    tick(2);
+    openMenu(a);
     var top = a.getOpenInventory().getTopInventory();
-    assertInstanceOf(GuiLayout.class, top.getHolder(), "the command must open the player's menu");
+    assertEquals("sidebar.menu-title", idOf(top));
     assertEquals(54, top.getSize());
     assertEquals(List.of(), GuiRules.violations(top, false));
     assertEquals(List.of(), GuiRules.unresolvedText(top));
@@ -121,28 +134,39 @@ class PersonalScoreboardTest {
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[0])).contains("Имя"));
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[1])).contains("Мир"));
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[2])).contains("Слот 3"));
+    // One button for the layouts, no row of categories or presets on the main screen.
+    int controls = 0;
+    for (int slot = 1; slot <= 8; slot++) if (!GuiRules.glass(top.getItem(slot))) controls++;
+    assertEquals(1, controls);
+    assertTrue(slotNamed(top, 2, 8, "Раскладки") >= 0);
+    for (int slot = 36; slot <= 44; slot++) assertNull(top.getItem(slot), "slot " + slot);
   }
 
   @Test
-  void cardClicksMoveAndRemoveLinesAndTheChoiceIsStored() throws Exception {
+  void cardClicksMoveLinesAndRemovingOneInTheMiddleMovesTheNextUp() throws Exception {
     var a = join("Alice");
-    server.dispatchCommand(a, "scoreboard");
-    tick(2);
+    var id = a.getUniqueId();
+    personal.state(id).replaceWith(List.of(new PersonalState.Entry("name", 0), new PersonalState.Entry("world", 0), new PersonalState.Entry("online", 0)));
+    openMenu(a);
     click(a, PersonalLayout.CARD_SLOTS[1], ClickType.LEFT);
-    assertEquals(List.of("world", "name"), personal.state(a.getUniqueId()).ids(), "LMB moves a card up");
+    assertEquals(List.of("world", "name", "online"), personal.state(id).ids(), "LMB moves a card up");
+    assertTrue(name(a.getOpenInventory().getTopInventory().getItem(PersonalLayout.CARD_SLOTS[0])).contains("Мир"));
     click(a, PersonalLayout.CARD_SLOTS[0], ClickType.RIGHT);
-    assertEquals(List.of("name", "world"), personal.state(a.getUniqueId()).ids(), "RMB moves a card down");
-    click(a, PersonalLayout.CARD_SLOTS[0], ClickType.MIDDLE);
-    assertEquals(List.of("world"), personal.state(a.getUniqueId()).ids(), "MMB removes a line");
-    assertEquals(List.of(), GuiRules.violations(a.getOpenInventory().getTopInventory(), false));
+    assertEquals(List.of("name", "world", "online"), personal.state(id).ids(), "RMB moves a card down");
+    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.SHIFT_RIGHT);
+    assertEquals(List.of("name", "online"), personal.state(id).ids(), "removing the middle one moves the next up");
+    var top = a.getOpenInventory().getTopInventory();
+    assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[1])).contains("Онлайн"));
+    assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[2])).contains("Слот 3"));
+    assertEquals(List.of(), GuiRules.violations(top, false));
 
     var store = store();
     waitFor(
         () ->
             store
-                .get(PersonalSidebar.KIND, a.getUniqueId().toString(), PersonalState.Stored.class)
+                .get(PersonalSidebar.KIND, id.toString(), PersonalState.Stored.class)
                 .join()
-                .map(d -> d.value().entries().size() == 1)
+                .map(d -> d.value().entries().size() == 2)
                 .orElse(false));
   }
 
@@ -153,38 +177,72 @@ class PersonalScoreboardTest {
   }
 
   @Test
-  void aCategoryOpensASubmenuWithBackAndTogglesLines() throws Exception {
+  void middleClickOnAnEmptySlotOpensTheCatalogAndPickingAddsTheLine() throws Exception {
     var a = join("Alice");
-    server.dispatchCommand(a, "scoreboard");
-    tick(2);
-    // Two categories sit in the middle of the row.
-    int[] positions = PersonalLayout.categorySlots(2);
-    click(a, positions[1], ClickType.LEFT);
-    var sub = a.getOpenInventory().getTopInventory();
-    assertInstanceOf(GuiLayout.class, sub.getHolder());
-    assertEquals(List.of(), GuiRules.violations(sub, true));
-    assertEquals(List.of(), GuiRules.unresolvedText(sub));
-    // The "world" category holds world and online; enable "online" with LMB.
-    int target = -1;
-    for (int slot = 9; slot < sub.getSize() - 9; slot++)
-      if (name(sub.getItem(slot)).contains("Онлайн")) target = slot;
-    assertTrue(target >= 0, "the online line is in the submenu");
-    click(a, target, ClickType.LEFT);
+    openMenu(a);
+    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.MIDDLE);
+    var catalog = a.getOpenInventory().getTopInventory();
+    assertEquals("sidebar.catalog-title", idOf(catalog));
+    assertEquals(54, catalog.getSize());
+    assertEquals(List.of(), GuiRules.violations(catalog, true));
+    assertEquals(List.of(), GuiRules.unresolvedText(catalog));
+    int online = slotNamed(catalog, 9, 45, "Онлайн");
+    assertTrue(online >= 0, "the online line is in the catalog");
+    click(a, online, ClickType.LEFT);
     assertEquals(List.of("name", "world", "online"), personal.state(a.getUniqueId()).ids());
+    assertEquals("sidebar.menu-title", idOf(a.getOpenInventory().getTopInventory()), "back on the main screen");
   }
 
   @Test
-  void aPresetReplacesTheCurrentSet() throws Exception {
+  void middleClickOnACardReplacesThatSlotAndPickingAPlacedLineSwaps() throws Exception {
     var a = join("Alice");
-    personal.state(a.getUniqueId()).replaceWith(List.of(new PersonalState.Entry("online", 0)));
-    server.dispatchCommand(a, "scoreboard");
-    tick(2);
-    var top = a.getOpenInventory().getTopInventory();
-    int preset = -1;
-    for (int slot = 2; slot <= 7; slot++) if (name(top.getItem(slot)).contains("Пара")) preset = slot;
-    assertTrue(preset >= 0, "the preset button is in the header");
-    click(a, preset, ClickType.LEFT);
-    assertEquals(List.of("name", "world"), personal.state(a.getUniqueId()).ids());
+    var id = a.getUniqueId();
+    openMenu(a);
+    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.MIDDLE);
+    click(a, slotNamed(a.getOpenInventory().getTopInventory(), 9, 45, "Онлайн"), ClickType.LEFT);
+    assertEquals(List.of("name", "online"), personal.state(id).ids(), "the world line is replaced");
+    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.MIDDLE);
+    click(a, slotNamed(a.getOpenInventory().getTopInventory(), 9, 45, "Имя"), ClickType.LEFT);
+    assertEquals(List.of("online", "name"), personal.state(id).ids(), "a line that is already placed swaps");
+  }
+
+  @Test
+  void theCatalogFiltersByCategoryAndSortsWithLeftAndRightClicks() throws Exception {
+    var a = join("Alice");
+    openMenu(a);
+    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.MIDDLE);
+    var catalog = a.getOpenInventory().getTopInventory();
+    int filter = slotNamed(catalog, 1, 8, "Фильтр");
+    int sort = slotNamed(catalog, 1, 8, "Сортировка");
+    assertTrue(filter >= 0 && sort >= 0 && filter != sort);
+    assertTrue(name(catalog.getItem(filter)).contains("Все"));
+    click(a, filter, ClickType.LEFT);
+    catalog = a.getOpenInventory().getTopInventory();
+    assertTrue(name(catalog.getItem(filter)).contains("Общее"), name(catalog.getItem(filter)));
+    assertTrue(slotNamed(catalog, 9, 45, "Имя") >= 0);
+    assertEquals(-1, slotNamed(catalog, 9, 45, "Онлайн"), "other categories are hidden by the filter");
+    click(a, filter, ClickType.RIGHT);
+    assertTrue(name(a.getOpenInventory().getTopInventory().getItem(filter)).contains("Все"));
+    click(a, sort, ClickType.LEFT);
+    assertTrue(name(a.getOpenInventory().getTopInventory().getItem(sort)).contains("доступные"));
+    assertEquals(List.of(), GuiRules.violations(a.getOpenInventory().getTopInventory(), true));
+  }
+
+  @Test
+  void theLayoutsOpenInASmallMenuAndApplyingOneReturnsToTheMainScreen() throws Exception {
+    var a = join("Alice");
+    var id = a.getUniqueId();
+    personal.state(id).replaceWith(List.of(new PersonalState.Entry("online", 0)));
+    openMenu(a);
+    click(a, slotNamed(a.getOpenInventory().getTopInventory(), 2, 8, "Раскладки"), ClickType.LEFT);
+    var small = a.getOpenInventory().getTopInventory();
+    assertEquals("sidebar.presets-title", idOf(small));
+    assertTrue(small.getSize() <= 36, "size " + small.getSize());
+    assertEquals(List.of(), GuiRules.violations(small, true));
+    assertEquals(List.of(), GuiRules.unresolvedText(small));
+    click(a, slotNamed(small, 9, small.getSize() - 9, "Пара"), ClickType.LEFT);
+    assertEquals(List.of("name", "world"), personal.state(id).ids());
+    assertEquals("sidebar.menu-title", idOf(a.getOpenInventory().getTopInventory()));
   }
 
   @Test

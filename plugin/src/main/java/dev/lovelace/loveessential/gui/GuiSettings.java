@@ -299,8 +299,9 @@ public final class GuiSettings {
     if (inventory.getSize() != 54
         || module(layout.guiId()).equals("crafting")
         || module(layout.guiId()).equals("starter")
-        // The personal scoreboard menu places its cards and categories by slot, so it keeps its size.
-        || layout.guiId().equals("sidebar.menu-title")) return inventory;
+        // The personal scoreboard menu places its cards and categories by slot, and the catalog fills pages by slot, so they keep their size.
+        || layout.guiId().equals("sidebar.menu-title")
+        || layout.guiId().equals("sidebar.catalog-title")) return inventory;
     @SuppressWarnings("unchecked")
     var actions = (Map<Integer, Object>) (Map<?, ?>) layout.guiActions();
     // Previous/next pages require the full list layout.

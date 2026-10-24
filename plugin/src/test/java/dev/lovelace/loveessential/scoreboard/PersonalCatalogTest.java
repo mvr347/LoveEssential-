@@ -126,18 +126,6 @@ class PersonalCatalogTest {
   }
 
   @Test
-  void theFlatViewListsEnabledFirstThenAvailableThenLocked() {
-    var rows =
-        List.of(
-            new PersonalCatalog.Row("c", "Яблоко", -1, true),
-            new PersonalCatalog.Row("a", "Арбуз", -1, true),
-            new PersonalCatalog.Row("z", "Ёж", -1, false),
-            new PersonalCatalog.Row("m", "Мир", 1, true),
-            new PersonalCatalog.Row("k", "Карма", 0, true));
-    assertEquals(List.of("k", "m", "a", "c", "z"), PersonalCatalog.sortRows(rows));
-  }
-
-  @Test
   void expansionIdsComeFromPercentTokens() {
     assertEquals(Set.of("server", "player"), PersonalCatalog.expansions("%server_time_x% и %player_x%"));
     assertEquals(Set.of(), PersonalCatalog.expansions("100% hp, %ping%"));

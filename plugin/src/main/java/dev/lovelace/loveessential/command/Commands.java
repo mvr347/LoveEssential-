@@ -542,6 +542,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
       return;
     }
     var choice = dev.lovelace.loveessential.module.DisplayPreferences.parse(args);
+    // The player list is one entry for every viewer: it cannot be changed for a single one.
+    if (choice.surface() == dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.TAB
+        && choice.scope() == dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OTHERS)
+      throw new IllegalArgumentException("display.tab-shared");
     if (choice.scope() == dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OWN
         && !p.hasPermission(dev.lovelace.loveessential.module.DisplayPreferences.OWN_PERMISSION))
       throw new IllegalArgumentException("errors.permission");

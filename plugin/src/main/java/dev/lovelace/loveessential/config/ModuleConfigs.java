@@ -203,7 +203,11 @@ public final class ModuleConfigs {
               "messages.display.scope-others",
               List.of("Чужие подписи"),
               "messages.display.all-on",
-              List.of("<gold>Показать всё <dark_gray>| <white>12 настроек")),
+              List.of(
+                  "<gold>Показать всё <dark_gray>| <white>12 настроек",
+                  "<gold>Показать всё <dark_gray>| <white>6 настроек"),
+              "messages.display.element-suffix",
+              List.of("Суффикс")),
           "sitride",
           Map.of(
               "messages.comfort.ride-consent",

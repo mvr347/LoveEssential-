@@ -143,7 +143,7 @@
 | `<online>` | Число онлайн-игроков, видимых зрителю |
 | `<visible_online>` | То же с явным названием |
 | `<max_players>` | Лимит игроков сервера |
-| `<suffix>` | Оформленный `%lovesubnames_current%` через PlaceholderAPI. Исчезает, если игрок скрыл суффикс (`/display`) |
+| `<suffix>` | Оформленный `%lovesubnames_current%` через PlaceholderAPI. Исчезает, если игрок скрыл пометки (`/display`) |
 | `<afk>` | `tab.status.afk` для AFK-игрока, иначе пустой компонент |
 | `<animation:имя>` | Кадры `animations.<имя>` из `modules/tab/tab.yml`; смена каждые `change-interval` мс (по умолчанию 500) |
 | `<condition:имя>` | Текст `yes` или `no` из именованного условия `conditions.<имя>` |

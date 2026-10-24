@@ -357,7 +357,7 @@ menus:
           rtp:
           - <gray>Случайный перенос в безопасную точку своего мира. /rtp.
           display:
-          - '<gray>Личный выбор: показывать ли тег клана и суффикс в чате, TAB и над головой. /display.'
+          - '<gray>Личный выбор: показывать ли теги кланов и пометки других игроков в чате и над головой. /display.'
           crafting:
           - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
           starter:
@@ -586,7 +586,7 @@ messages:
       scoreboard: Табло
       revive: Раненые игроки
       rtp: Случайный телепорт
-      display: Теги и суффиксы
+      display: Теги и пометки
       crafting: Рецепты крафта
       starter: Стартовые предметы
       nickname: Никнеймы
@@ -615,7 +615,7 @@ messages:
       scoreboard: <gold>Табло
       revive: <gold>Раненые игроки
       rtp: <gold>Случайный телепорт
-      display: <gold>Теги и суффиксы
+      display: <gold>Теги и пометки
       crafting: <gold>Рецепты крафта
       starter: <gold>Стартовые предметы
       nickname: <gold>Никнеймы
