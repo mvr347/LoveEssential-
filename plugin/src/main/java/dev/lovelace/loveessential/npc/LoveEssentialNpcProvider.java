@@ -47,18 +47,36 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   private final JavaPlugin plugin;
   private final MainThread main;
-  private final NpcService npcs;
-  private final HologramService holograms;
+  /** Set by {@link #bind} once the plugin has loaded its data; the provider is registered earlier. */
+  private volatile NpcService npcs;
+
+  private volatile HologramService holograms;
   private final Map<String, CompletableFuture<?>> tails = new ConcurrentHashMap<>();
   /** Latest requested definition per id, so reads right after a write see the write. */
   private final Map<String, NpcDefinition> optimistic = new ConcurrentHashMap<>();
 
-  public LoveEssentialNpcProvider(
-      JavaPlugin plugin, MainThread main, NpcService npcs, HologramService holograms) {
+  public LoveEssentialNpcProvider(JavaPlugin plugin, MainThread main) {
     this.plugin = plugin;
     this.main = main;
-    this.npcs = npcs;
+  }
+
+  public LoveEssentialNpcProvider(
+      JavaPlugin plugin, MainThread main, NpcService npcs, HologramService holograms) {
+    this(plugin, main);
+    bind(npcs, holograms);
+  }
+
+  /**
+   * Plugins look the provider up while the server finishes starting, before LoveEssential has read
+   * its database. It is therefore registered at once and answers "nothing found" until bound.
+   */
+  public void bind(NpcService npcs, HologramService holograms) {
     this.holograms = holograms;
+    this.npcs = npcs;
+  }
+
+  public boolean bound() {
+    return npcs != null;
   }
 
   public void start() {
@@ -74,7 +92,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   @Override
   public void close() {
     HandlerList.unregisterAll(this);
-    npcs.spawnGate(definition -> true);
+    if (npcs != null) npcs.spawnGate(definition -> true);
   }
 
   @Override
@@ -84,7 +102,9 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   private Optional<NpcDefinition> view(String id) {
     var pending = optimistic.get(id);
-    return pending != null ? Optional.of(pending) : npcs.get(id);
+    if (pending != null) return Optional.of(pending);
+    var service = npcs;
+    return service == null ? Optional.empty() : service.get(id);
   }
 
   @Override
@@ -94,9 +114,10 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   @Override
   public Optional<NpcHandle> byEntity(Entity entity) {
-    return entity == null
+    var service = npcs;
+    return entity == null || service == null
         ? Optional.empty()
-        : npcs.identify(entity).filter(id -> view(id).isPresent()).map(Handle::new);
+        : service.identify(entity).filter(id -> view(id).isPresent()).map(Handle::new);
   }
 
   @Override
@@ -107,6 +128,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   @Override
   public NpcHandle create(NpcSpec spec) {
     MainThread.require();
+    if (npcs == null) throw new IllegalStateException("LoveEssential is still starting");
     var type = spec.type() == EntityType.PLAYER ? EntityType.MANNEQUIN : spec.type();
     String id = "ext-" + UUID.randomUUID().toString().substring(0, 8);
     var definition =
@@ -160,7 +182,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   @Override
   public Collection<NpcHandle> all() {
     var ids = new TreeSet<>(optimistic.keySet());
-    npcs.all().forEach(n -> ids.add(n.id()));
+    if (npcs != null) npcs.all().forEach(n -> ids.add(n.id()));
     var result = new ArrayList<NpcHandle>();
     for (var id : ids) result.add(new Handle(id));
     return result;
