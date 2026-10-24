@@ -13,7 +13,7 @@
 | `/le worlds create` | Окно создания: имя, измерение, тип генерации, числовой сид |
 | `/le worlds create NAME [NORMAL/NETHER/THE_END] [NORMAL/FLAT/AMPLIFIED/LARGE_BIOMES] [SEED]` | Создать и загрузить мир |
 | `/le worlds import` | Окно импорта существующей папки мира |
-| `/le worlds import NAME [ENVIRONMENT] [TYPE] [SEED]` | Импортировать существующую папку с `level.dat` |
+| `/le worlds import NAME [ENVIRONMENT] [TYPE] [SEED]` | Импортировать существующую папку с `level.dat` или измерение из `<главный мир>/dimensions/minecraft/<имя>` (так хранятся миры на 26.1+) |
 | `/le worlds edit NAME` | Изменить параметры мира |
 | `/le worlds info NAME` | Открыть ту же карточку настроек |
 | `/le worlds load NAME` | Загрузить зарегистрированный мир |

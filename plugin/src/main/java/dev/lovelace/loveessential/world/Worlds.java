@@ -231,16 +231,20 @@ public final class Worlds implements Listener, AutoCloseable {
       throw new IllegalArgumentException("worlds.limit");
     }
     Path container = Bukkit.getWorldContainer().toPath().toAbsolutePath().normalize();
+    // Read here: Bukkit's world list is main-thread only.
+    Path mainWorld =
+        Bukkit.getWorlds().isEmpty()
+            ? null
+            : Bukkit.getWorlds().get(0).getWorldFolder().toPath().toAbsolutePath().normalize();
     return CompletableFuture.runAsync(
             () -> {
               try {
                 Path root = container.toRealPath();
-                Path path = root.resolve(name);
                 if (imported) {
-                  if (!Files.isRegularFile(path.resolve("level.dat"))
-                      || !path.toRealPath().getParent().equals(root))
+                  if (!WorldFolders.importable(container, mainWorld, name))
                     throw new IllegalArgumentException("worlds.import-missing");
-                } else if (Files.exists(path)) throw new IllegalArgumentException("worlds.exists");
+                } else if (Files.exists(root.resolve(name)))
+                  throw new IllegalArgumentException("worlds.exists");
               } catch (java.io.IOException e) {
                 throw new CompletionException(e);
               }
