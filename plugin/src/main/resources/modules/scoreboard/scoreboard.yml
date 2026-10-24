@@ -54,6 +54,8 @@ max-placeholders: 8
 # Миры, в которых скорборд не отображается
 disabled-worlds: []
 
+# Стиль строк (2026-10-25): каждая строка читается как короткая фраза о герое — «служит в …», «одолел N чужих бойцов»,
+# «куёт влияние для союза». Серый &7 — связки слов, белый &f — значения, цвет и значок — тема строки.
 # Категории скорборда (2026-10-14): меню /scoreboard теперь делится на категории вместо одного
 # длинного списка из ~40 строк — иначе игрок тонул бы в кнопках. Порядок здесь = порядок кнопок
 # в ряду категорий (слоты 37-43, влезает максимум 7). icon (необязательно) — своя голова вместо
@@ -142,23 +144,31 @@ placeholders:
   coords:
     display-name: '&bКоординаты'
     # Свой %lovetweaks_*%, а не %player_x%: не зависит от расширения Player
-    template: '&6x &b%lovetweaks_x%&r, &6y &b%lovetweaks_y%&r, &6z &b%lovetweaks_z%'
+    template: '&6x &b%lovetweaks_x%&7, &6y &b%lovetweaks_y%&7, &6z &b%lovetweaks_z%'
     lore:
       - '&7Текущие координаты игрока'
     category: general
 
   world:
     display-name: '&bМир'
-    template: '&b▸ &f%lovetweaks_world% &7мир'
+    template: '&7бродит по миру &b%lovetweaks_world%'
     lore:
       - '&7Мир, в котором вы находитесь'
     category: general
 
   ping:
     display-name: '&7Пинг'
-    template: '&7⚡ &f%lovetweaks_ping% &7мс пинга'
+    template: '&7отклик &a⚡ &f%lovetweaks_ping% &7мс'
     lore:
       - '&7Соединение с сервером'
+    category: general
+
+  # 2026-10-25: строка в духе остальных — «странствует N ч. на север». Нужны расширения Statistic и Player.
+  wander:
+    display-name: '&bСтранствия'
+    template: '&7странствует &b%statistic_hours_played% &7ч. &6⏳ &8на &e%player_direction%'
+    lore:
+      - '&7Сколько часов вы в игре и куда смотрите'
     category: general
 
   # Дата и время слиты в одну строку (2026-10-14): раньше были три отдельные кнопки
@@ -173,11 +183,11 @@ placeholders:
     category: general
     variants:
       - name: 'Дата'
-        template: '&7▸ &f%server_time_dd.MM.yyyy% &7дата'
+        template: '&7сегодня &6☀ &f%server_time_dd.MM.yyyy%'
       - name: 'Время'
-        template: '&7▸ &f%server_time_HH:mm% &7время'
+        template: '&7на часах &6⏳ &f%server_time_HH:mm%'
       - name: 'Дата и время'
-        template: '&7▸ &f%server_time_dd.MM.yyyy HH:mm%'
+        template: '&7на часах &6⏳ &f%server_time_dd.MM.yyyy HH:mm%'
 
   # %playtime_formatted% вместо %playtime_since_join% (2026-10-14): since_join отдавал ВСЕ
   # часы целиком, поэтому у новичков строка «0 часов на сервере» висела первые 59 минут.
@@ -189,13 +199,13 @@ placeholders:
     category: general
     variants:
       - name: 'Всего'
-        template: '&b⏱ &f%playtime_formatted% &7в игре'
+        template: '&7странствует &b%playtime_formatted% &6⏳'
       - name: 'Эта сессия'
-        template: '&b⏱ &f%playtime_session_formatted% &7текущая сессия'
+        template: '&7в этой вылазке &b%playtime_session_formatted% &6⏳'
 
   first_join:
     display-name: '&7Первый вход'
-    template: '&7▸ &f%playtime_first_join% &7первый вход'
+    template: '&7пришёл в королевство &f%playtime_first_join%'
     lore:
       - '&7Дата вашего первого входа на сервер'
     category: general
@@ -209,22 +219,22 @@ placeholders:
     category: reputation
     variants:
       - name: 'Очки'
-        template: '&e⚖ &f%lovebehavior_politeness_points% &7очков кармы'
+        template: '&7слава за вежливость &e⚖ &f%lovebehavior_politeness_points%'
       - name: 'Ранг'
-        template: '&e⚖ &f%lovebehavior_politeness_name% &7ранг кармы'
+        template: '&7слывёт &e⚖ &f%lovebehavior_politeness_name%'
 
   # Требование убрано (2026-10-14): оно проверяло, что плейсхолдер вообще что-то возвращает,
   # а LoveBehavior возвращает значение всегда — то есть условие никогда не блокировало.
   behavior:
     display-name: '&8Стиль игры'
-    template: '&8☯ &f%lovebehavior_playstyle_name% &7стиль игры'
+    template: '&7нравом &8☯ &f%lovebehavior_playstyle_name%'
     lore:
       - '&7Ваш текущий стиль игры'
     category: reputation
 
   suffix:
     display-name: '&dПометка'
-    template: '&d✦ &f%lovesubnames_current% &7пометка'
+    template: '&d✦ &dносит титул &f%lovesubnames_current%'
     lore:
       - '&7Текущая пометка (суффикс) игрока'
     category: reputation
@@ -234,7 +244,7 @@ placeholders:
 
   suffix_collected:
     display-name: '&dСобрано пометок'
-    template: '&d✦ &f%lovesubnames_unlocked_count%&7/&f%lovesubnames_total_count% &7пометок собрано'
+    template: '&d✦ &7собрал пометок &f%lovesubnames_unlocked_count%&7/&f%lovesubnames_total_count%'
     lore:
       - '&7Сколько пометок открыто из всех'
     category: reputation
@@ -242,21 +252,21 @@ placeholders:
   # ── Бой ──
   kills:
     display-name: '&cУбийства'
-    template: '&c⚔ &f%lovetweaks_kills% &7убийств'
+    template: '&aодолел &f%statistic_player_kills% &a⚔ &7чужих бойцов'
     lore:
       - '&7Количество убийств игроков'
     category: combat
 
   deaths:
     display-name: '&7Смерти'
-    template: '&c☠ &f%lovetweaks_deaths% &7смертей'
+    template: '&7потерпел &c💀 &f%statistic_deaths% &cпоражений'
     lore:
       - '&7Количество смертей'
     category: combat
 
   mob_kills:
     display-name: '&aУбийства мобов'
-    template: '&a⚔ &f%lovetweaks_mob_kills% &7мобов'
+    template: '&7сразил &a⚔ &f%lovetweaks_mob_kills% &7чудовищ'
     lore:
       - '&7Количество убитых мобов'
     category: combat
@@ -265,14 +275,14 @@ placeholders:
   # потому что расширения kd_ratio на сервере не существовало и строка оставалась сырой.
   kd_ratio:
     display-name: '&eК/Д'
-    template: '&e⚔ &f%lovetweaks_kd% &7соотношение К/Д'
+    template: '&7счёт побед и поражений &e⚔ &f%lovetweaks_kd%'
     lore:
       - '&7Соотношение убийств игроков к смертям'
     category: combat
 
   duel_honor:
     display-name: '&cЧесть дуэлей'
-    template: '&c⚔ &f%loveduels_honor% &7чести дуэлей'
+    template: '&7честь на дуэлях &c⚔ &f%loveduels_honor%'
     lore:
       - '&7Ваш рейтинг чести в дуэлях'
     category: combat
@@ -285,15 +295,15 @@ placeholders:
     category: combat
     variants:
       - name: 'Победы'
-        template: '&c⚔ &f%loveduels_wins% &7побед в дуэлях'
+        template: '&7выиграл &c⚔ &f%loveduels_wins% &7дуэлей'
       - name: 'Винрейт'
-        template: '&c⚔ &f%loveduels_winrate% &7винрейт дуэлей'
+        template: '&7берёт верх в &c⚔ &f%loveduels_winrate% &7дуэлей'
       - name: 'Серия'
-        template: '&c⚔ &f%loveduels_streak% &7побед подряд'
+        template: '&7не знает поражений &c⚔ &f%loveduels_streak% &7дуэлей подряд'
 
   duel_royal:
     display-name: '&cКоролевские дуэли'
-    template: '&c⚔ &f%loveduels_royal_wins% &7побед в королевских'
+    template: '&7вышел победителем &c⚔ &f%loveduels_royal_wins% &7раз в королевских'
     lore:
       - '&7Победы в королевских дуэлях'
     category: combat
@@ -301,7 +311,7 @@ placeholders:
   # ── Кланы ──
   clan_tag:
     display-name: '&6Тег клана'
-    template: '&6⚑ &f%clans_colored_tag% &7тег клана'
+    template: '&7знамя союза &6⚑ &f%clans_colored_tag%'
     lore:
       - '&7Тег вашего клана'
     category: clans
@@ -312,7 +322,7 @@ placeholders:
 
   clan_name:
     display-name: '&6Клан'
-    template: '&6⚑ &f%clans_name% &7название клана'
+    template: '&7служит в &6%clans_name% &8[ранг &e%clans_rank_display%&e◆&8]'
     lore:
       - '&7Полное название вашего клана'
     category: clans
@@ -323,7 +333,7 @@ placeholders:
 
   clan_level:
     display-name: '&6Уровень клана'
-    template: '&6◆ &f%clans_level% &7уровень клана'
+    template: '&7союз достиг &6◆ &f%clans_level% &7уровня'
     lore:
       - '&7Уровень вашего клана'
     category: clans
@@ -334,7 +344,7 @@ placeholders:
 
   clan_role:
     display-name: '&6Роль в клане'
-    template: '&6⚑ &f%clans_rank_display% &7роль в клане'
+    template: '&7ранг в союзе &e%clans_rank_display% &e◆'
     lore:
       - '&7Ваша должность в клане'
     category: clans
@@ -345,7 +355,7 @@ placeholders:
 
   clan_influence:
     display-name: '&6Влияние клана'
-    template: '&6◆ &f%clans_influence% &7влияния клана'
+    template: '&eкуёт влияние &6★ &f%clans_influence% &7для союза'
     lore:
       - '&7Очки влияния вашего клана'
     category: clans
@@ -356,7 +366,7 @@ placeholders:
 
   clan_territories:
     display-name: '&6Территории клана'
-    template: '&6⚑ &f%clans_territories% &7территорий клана'
+    template: '&7союз держит &6⚑ &f%clans_territories% &7земель'
     lore:
       - '&7Сколько территорий занимает клан'
     category: clans
@@ -367,7 +377,7 @@ placeholders:
 
   clan_members:
     display-name: '&6Участники клана'
-    template: '&6⚑ &f%clans_members% &7участников клана'
+    template: '&7в союзе &6⚑ &f%clans_members% &7бойцов'
     lore:
       - '&7Размер вашего клана'
     category: clans
@@ -378,7 +388,7 @@ placeholders:
 
   clan_spirit:
     display-name: '&6Дух клана'
-    template: '&6◆ &f%clans_spirit_level% &7уровень духа клана'
+    template: '&7дух союза &6◆ &f%clans_spirit_level% &7ур.'
     lore:
       - '&7Уровень духа вашего клана'
     category: clans
@@ -390,35 +400,35 @@ placeholders:
   # ── Охота ──
   hunt_rank:
     display-name: '&2Ранг охотника'
-    template: '&2◆ &f%lovehunt_rank_stars% %lovehunt_rank% &7ранг охотника'
+    template: '&7охотник ранга &2◆ &f%lovehunt_rank_stars% %lovehunt_rank%'
     lore:
       - '&7Ваш ранг в охоте за головами'
     category: hunt
 
   hunt_rating:
     display-name: '&2Рейтинг охотника'
-    template: '&2◆ &f%lovehunt_rating% &7рейтинг охотника'
+    template: '&7слава охотника &2◆ &f%lovehunt_rating%'
     lore:
       - '&7Ваш рейтинг в охоте'
     category: hunt
 
   hunt_results:
     display-name: '&2Выполнено / провалено'
-    template: '&2◆ &a%lovehunt_completed%&7/&c%lovehunt_failed% &7заказов'
+    template: '&7исполнил &a%lovehunt_completed% &7заказов, провалил &c%lovehunt_failed%'
     lore:
       - '&7Выполненные и проваленные заказы охоты'
     category: hunt
 
   hunt_mine:
     display-name: '&2Мои заказы'
-    template: '&2◆ &f%lovehunt_mine_count% &7моих заказов'
+    template: '&7выдал заказов &2◆ &f%lovehunt_mine_count%'
     lore:
       - '&7Заказы, которые создали вы'
     category: hunt
 
   hunt_active:
     display-name: '&2Активные заказы'
-    template: '&2◆ &f%lovehunt_active_count% &7активных заказов'
+    template: '&7ждут охотников &2◆ &f%lovehunt_active_count% &7заказов'
     lore:
       - '&7Всего активных заказов на сервере'
     category: hunt
@@ -432,9 +442,9 @@ placeholders:
     category: craft
     variants:
       - name: 'Уровень'
-        template: '&e◆ &f%lovebrew_level% &7уровень пивовара'
+        template: '&7мастер пивоварни &e◆ &f%lovebrew_level% &7уровня'
       - name: 'Опыт'
-        template: '&e◆ &f%lovebrew_exp%&7/&f%lovebrew_req_exp% &7опыта пивовара'
+        template: '&7опыт пивовара &e◆ &f%lovebrew_exp%&7/&f%lovebrew_req_exp%'
 
   brew_stats:
     display-name: '&eСварено и продано'
@@ -444,20 +454,20 @@ placeholders:
     category: craft
     variants:
       - name: 'Сварено'
-        template: '&e◆ &f%lovebrew_total_brewed% &7сварено'
+        template: '&7сварил &e◆ &f%lovebrew_total_brewed% &7напитков'
       - name: 'Продано'
-        template: '&e◆ &f%lovebrew_total_sold% &7продано'
+        template: '&7продал &e◆ &f%lovebrew_total_sold% &7напитков'
 
   adaptation:
     display-name: '&bАдаптация'
-    template: '&b✦ &f%loveadaptation_current_name% &7%loveadaptation_current_progress%'
+    template: '&b✦ &7осваивает &f%loveadaptation_current_name% &7%loveadaptation_current_progress%'
     lore:
       - '&7Текущая адаптация и её прогресс'
     category: craft
 
   adaptation_next:
     display-name: '&bСледующая адаптация'
-    template: '&b✦ &f%loveadaptation_progress_next_adaptation% &7следующая'
+    template: '&b✦ &7до следующей адаптации &f%loveadaptation_progress_next_adaptation%'
     lore:
       - '&7Адаптация, ближе всего к открытию'
     category: craft
@@ -465,7 +475,7 @@ placeholders:
   # ── Активности ──
   contract_active:
     display-name: '&aАктивный контракт'
-    template: '&a▸ &f%lovecontracts_active_name% &7%lovecontracts_active_progress%'
+    template: '&a▸ &7исполняет &f%lovecontracts_active_name% &7%lovecontracts_active_progress%'
     lore:
       - '&7Контракт, который вы выполняете, и его прогресс'
     category: activities
@@ -476,14 +486,14 @@ placeholders:
 
   contracts_done:
     display-name: '&aВыполнено контрактов'
-    template: '&a▸ &f%lovecontracts_total_completed% &7контрактов выполнено'
+    template: '&7исполнил &a▸ &f%lovecontracts_total_completed% &7контрактов'
     lore:
       - '&7Сколько контрактов вы завершили'
     category: activities
 
   contracts_fine:
     display-name: '&cШтраф по контрактам'
-    template: '&c▸ &f%lovecontracts_pending_fine% &7штраф по контрактам'
+    template: '&7должен по контрактам &c▸ &f%lovecontracts_pending_fine%'
     lore:
       - '&7Неоплаченный штраф за проваленные контракты'
     category: activities
@@ -496,14 +506,14 @@ placeholders:
     category: activities
     variants:
       - name: 'Победы'
-        template: '&a⚔ &f%loveactivities_wins_total% &7побед в мини-играх'
+        template: '&7победил в &a⚔ &f%loveactivities_wins_total% &7играх'
       - name: 'Винрейт'
-        template: '&a⚔ &f%loveactivities_winrate_total% &7винрейт мини-игр'
+        template: '&7берёт верх в &a⚔ &f%loveactivities_winrate_total% &7игр'
 
   # Идентификатор расширения LoveClaims исторически advancedclaims (см. его PAPIExpansion)
   claims:
     display-name: '&aПриваты'
-    template: '&a⚑ &f%advancedclaims_claims%&7/&f%advancedclaims_claims_max% &7приватов'
+    template: '&7владеет &a⚑ &f%advancedclaims_claims%&7/&f%advancedclaims_claims_max% &7наделов'
     lore:
       - '&7Количество ваших приватов и лимит'
     category: activities

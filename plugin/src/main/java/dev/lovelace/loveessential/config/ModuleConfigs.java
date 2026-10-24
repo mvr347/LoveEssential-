@@ -140,6 +140,8 @@ public final class ModuleConfigs {
                 && oldLang.contains(key)
                 && !module.contains("texts." + key)) module.set("texts." + key, oldLang.get(key));
         fill(module, moduleDefaults);
+        if (id.equals("scoreboard"))
+          restyleScoreboard(module, moduleDefaults, resource("legacy/scoreboard-2026-10-23.yml"));
         repairMappedLines(module);
         if (!(module.get("enabled") instanceof Boolean))
           throw new IllegalArgumentException("errors.config");
@@ -216,6 +218,41 @@ public final class ModuleConfigs {
                       + " находиться вне боя.",
                   "<yellow>Сесть на этого игрока сейчас нельзя: он не виден вам, не авторизован,"
                       + " находится в бою, либо посадка на игроков отключена.")));
+
+  /**
+   * 2026-10-25: the shipped scoreboard lines were rewritten as short phrases. A line whose installed
+   * text is still exactly the one shipped before is replaced by the new one; anything an admin edited,
+   * or a line the admin added, is left alone.
+   */
+  static void restyleScoreboard(
+      YamlConfiguration module, ConfigurationSection defaults, ConfigurationSection previous) {
+    var lines = defaults.getConfigurationSection("placeholders");
+    var old = previous.getConfigurationSection("placeholders");
+    var installed = module.getConfigurationSection("placeholders");
+    if (lines == null || old == null || installed == null) return;
+    for (String id : lines.getKeys(false)) {
+      var now = installed.getConfigurationSection(id);
+      var before = old.getConfigurationSection(id);
+      var fresh = lines.getConfigurationSection(id);
+      if (now == null || before == null) continue;
+      if (now.isString("template") && now.getString("template").equals(before.getString("template")))
+        now.set("template", fresh.getString("template"));
+      var variants = now.getMapList("variants");
+      var oldVariants = before.getMapList("variants");
+      var newVariants = fresh.getMapList("variants");
+      if (variants.isEmpty() || variants.size() != oldVariants.size() || variants.size() != newVariants.size())
+        continue;
+      var result = new ArrayList<Map<String, Object>>();
+      for (int i = 0; i < variants.size(); i++) {
+        var copy = new LinkedHashMap<String, Object>();
+        variants.get(i).forEach((k, v) -> copy.put(String.valueOf(k), v));
+        if (Objects.equals(copy.get("template"), oldVariants.get(i).get("template")))
+          copy.put("template", newVariants.get(i).get("template"));
+        result.add(copy);
+      }
+      now.set("variants", result);
+    }
+  }
 
   /**
    * A lore line written as {@code - <gray>Text:} is read by YAML as the map {@code {<gray>Text: null}},

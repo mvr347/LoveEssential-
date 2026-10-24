@@ -1,0 +1,545 @@
+# Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
+# 2026-10-23: у каждого игрока есть личное табло: он сам выбирает до 8 строк каталога (title, top,
+# separator, bottom, categories, presets, placeholders ниже) командой /scoreboard. Порядок показа:
+# 1) временное табло другого плагина (ScoreboardService) — важнее всех;
+# 2) именованное табло из scoreboards с НЕПУСТЫМ display-condition, если условие выполнено (бой, событие);
+# 3) личное табло игрока;
+# 4) именованное табло без условия — запасное, когда у игрока нет ни одной доступной строки.
+# Правила «скрывать в мирах, режимах, при AFK и в бою» задаются условиями из modules/tab/tab.yml.
+enabled: true
+# 2026-10-22: табло включено всем по умолчанию; игрок выключает его в меню /scoreboard или через /scoreboard toggle.
+default-enabled: true
+# 2026-10-22: 1 с после входа — клиент успевает завершить вход; иначе табло может пропасть на первом кадре.
+delay-on-join-ms: 1000
+# 2026-10-22: /le scoreboard show показывает табло на минуту: этого хватает, чтобы прочитать его.
+show-seconds: 60
+overrides:
+  # 2026-10-22: временные табло других плагинов разрешено показывать даже при выключенном личном
+  # табло (как важные объявления). Выключите, если такие объявления нужно скрывать.
+  allow-forced: true
+  # 2026-10-22: 600 с — больше десяти минут временное табло уже не временное.
+  max-seconds: 600
+  # 2026-10-22: 8 временных табло на игрока — с запасом для нескольких плагинов.
+  per-player-limit: 8
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+# ─── Личное табло (формат LoveTweaks) ───────────────────────────────────────────
+# 2026-10-23: update-interval — 20 тиков (1 с): значения не отстают, но табло не перерисовывается
+# каждый тик (прежний ключ refresh-ticks читается, если update-interval не задан).
+# Название личного скорборда (§-коды или &-коды, всегда отображается как заголовок)
+title: '&FVOIDCORE'
+# Строка-разделитель между парами плейсхолдеров (по умолчанию пустая строка)
+separator: ''
+# 2026-10-23: верхняя строка (первая строка тела, сразу под заголовком). Центрируется так же, как
+# нижняя. Если пустая, на её месте стоит строка-разделитель.
+top: ''
+# Нижняя строка (последняя строка тела). Автоматически центрируется и расширяет скорборд
+# с безопасными отступами по бокам, чтобы крайние символы никогда не съедались.
+bottom: '&c✌ &7V O I D C O R E &c✌'
+# Интервал обновления в тиках (20 = 1 секунда)
+update-interval: 20
+# Максимальное кол-во плейсхолдеров, которые игрок может включить одновременно.
+# Плейсхолдеры отображаются на скорборде парами (по 2 в ряд), каждая пара
+# завершается строкой-разделителем — при 8 плейсхолдерах получится ровно
+# 8 строк + 4 разделителя = 12 строк тела скорборда.
+# Потолок 8 жёсткий (2026-10-14): ровно столько нумерованных карточек-слотов помещается в меню
+# (2x4), а клиентский скорборд не вмещает больше 15 строк. Значение больше 8 будет урезано до 8.
+max-placeholders: 8
+# Миры, в которых скорборд не отображается
+disabled-worlds: []
+
+# Категории скорборда (2026-10-14): меню /scoreboard теперь делится на категории вместо одного
+# длинного списка из ~40 строк — иначе игрок тонул бы в кнопках. Порядок здесь = порядок кнопок
+# в ряду категорий (слоты 37-43, влезает максимум 7). icon (необязательно) — своя голова вместо
+# общей из gui.category-button.
+categories:
+  general:
+    display-name: '&bОбщее'
+    lore:
+      - '&7Координаты, мир, пинг, дата и время'
+  reputation:
+    display-name: '&dРепутация'
+    lore:
+      - '&7Карма, стиль игры и пометки'
+  combat:
+    display-name: '&cБой'
+    lore:
+      - '&7Убийства, смерти и дуэли'
+  clans:
+    display-name: '&6Кланы'
+    lore:
+      - '&7Данные вашего клана'
+  hunt:
+    display-name: '&2Охота'
+    lore:
+      - '&7Ранг охотника и заказы'
+  craft:
+    display-name: '&eРемесло'
+    lore:
+      - '&7Пивоварение и адаптации'
+  activities:
+    display-name: '&aАктивности'
+    lore:
+      - '&7Контракты, мини-игры и приваты'
+
+# Быстрые раскладки (2026-10-14): одна кнопка в шапке меню заменяет весь текущий набор.
+# Раскладка нужна, потому что собирать табло по одной строке из 40 долго, а большинству
+# игроков нужен один из 3-4 типовых наборов. В шапке 6 слотов управления, один занят
+# переключателем вида — поэтому раскладок максимум 5 (лишние игнорируются).
+# placeholders: id строки или id:номер_варианта (с нуля). Строки, которые игроку сейчас
+# недоступны (нет клана, не установлен плагин), при применении пропускаются, а в лоре кнопки
+# помечены заранее. Лимит строк (max-placeholders) тоже соблюдается.
+default-preset: standard
+presets:
+  standard:
+    name: '&6Стандартная'
+    lore:
+      - '&7Базовый набор для повседневной игры'
+    placeholders: [coords, datetime:2, playtime, karma, clan_tag, ping]
+  small:
+    name: '&6Маленькая'
+    lore:
+      - '&7Только координаты и время'
+    placeholders: [coords, datetime:1]
+  combat:
+    name: '&6Боевая'
+    lore:
+      - '&7Статистика боёв и охоты'
+    placeholders: [kills, deaths, kd_ratio, duel_honor, duels:1, hunt_rank]
+  clan:
+    name: '&6Клановая'
+    lore:
+      - '&7Данные вашего клана'
+    placeholders: [clan_tag, clan_role, clan_level, clan_influence, clan_territories]
+
+# Плейсхолдеры скорборда — каждый плейсхолдер это одна строка.
+# Используются ТОЛЬКО кешированные параметры PAPI (2026-10-14): скорборд обновляется каждую
+# секунду для каждого игрока на главном потоке, поэтому параметры с запросами в БД
+# (например, часть lovecontracts и wanderer_deal_* в loveshop) сюда не подключаем.
+# category: id категории из блока categories выше.
+# variants (необязательно): несколько форматов одной строки, переключаются Shift+ЛКМ.
+#   Вместо variants можно написать один template — это один безымянный формат.
+# Если расширение PAPI, которое использует шаблон (%id_...%), не зарегистрировано
+#   (плагин не установлен) — строка в меню серая с причиной «Плагин не установлен»
+#   и на табло не показывается. Так не получается сырого «%id_param%» на экране.
+# requirement (необязательно): плейсхолдер блокируется в GUI и пропускается на
+#   скорборде, пока не выполнено условие.
+#     placeholder: PAPI-выражение для проверки, например '%clans_in_clan%'
+#     equals (необязательно): требуемое значение; если не указано — условие
+#       считается выполненным, если PAPI вернул непустой результат
+#     reason: причина блокировки, показывается в лоре кнопки
+# Старое поле sort-group больше не нужно: оно заменено на category (при его наличии без
+#   category строка попадёт в категорию по таблице 0→general, 5/20→reputation, 10→clans,
+#   30→combat, 35→general).
+placeholders:
+  # ── Общее ──
+  coords:
+    display-name: '&bКоординаты'
+    # Свой %lovetweaks_*%, а не %player_x%: не зависит от расширения Player
+    template: '&6x &b%lovetweaks_x%&r, &6y &b%lovetweaks_y%&r, &6z &b%lovetweaks_z%'
+    lore:
+      - '&7Текущие координаты игрока'
+    category: general
+
+  world:
+    display-name: '&bМир'
+    template: '&b▸ &f%lovetweaks_world% &7мир'
+    lore:
+      - '&7Мир, в котором вы находитесь'
+    category: general
+
+  ping:
+    display-name: '&7Пинг'
+    template: '&7⚡ &f%lovetweaks_ping% &7мс пинга'
+    lore:
+      - '&7Соединение с сервером'
+    category: general
+
+  # Дата и время слиты в одну строку (2026-10-14): раньше были три отдельные кнопки
+  # (date/time/server_time), которые занимали три слота ради одного и того же.
+  # Время 24-часовое (HH:mm), а не «hh:mm a»: 12-часовой формат с AM/PM читался плохо,
+  # а месяц текстом (MMM) мог выйти по-английски — поэтому дата числовая dd.MM.yyyy.
+  datetime:
+    display-name: '&7Дата и время'
+    lore:
+      - '&7Дата и время сервера'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: general
+    variants:
+      - name: 'Дата'
+        template: '&7▸ &f%server_time_dd.MM.yyyy% &7дата'
+      - name: 'Время'
+        template: '&7▸ &f%server_time_HH:mm% &7время'
+      - name: 'Дата и время'
+        template: '&7▸ &f%server_time_dd.MM.yyyy HH:mm%'
+
+  # %playtime_formatted% вместо %playtime_since_join% (2026-10-14): since_join отдавал ВСЕ
+  # часы целиком, поэтому у новичков строка «0 часов на сервере» висела первые 59 минут.
+  playtime:
+    display-name: '&bВремя в игре'
+    lore:
+      - '&7Всё время, проведённое на сервере'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: general
+    variants:
+      - name: 'Всего'
+        template: '&b⏱ &f%playtime_formatted% &7в игре'
+      - name: 'Эта сессия'
+        template: '&b⏱ &f%playtime_session_formatted% &7текущая сессия'
+
+  first_join:
+    display-name: '&7Первый вход'
+    template: '&7▸ &f%playtime_first_join% &7первый вход'
+    lore:
+      - '&7Дата вашего первого входа на сервер'
+    category: general
+
+  # ── Репутация ──
+  karma:
+    display-name: '&eКарма'
+    lore:
+      - '&7Очки кармы (вежливости) на сервере'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: reputation
+    variants:
+      - name: 'Очки'
+        template: '&e⚖ &f%lovebehavior_politeness_points% &7очков кармы'
+      - name: 'Ранг'
+        template: '&e⚖ &f%lovebehavior_politeness_name% &7ранг кармы'
+
+  # Требование убрано (2026-10-14): оно проверяло, что плейсхолдер вообще что-то возвращает,
+  # а LoveBehavior возвращает значение всегда — то есть условие никогда не блокировало.
+  behavior:
+    display-name: '&8Стиль игры'
+    template: '&8☯ &f%lovebehavior_playstyle_name% &7стиль игры'
+    lore:
+      - '&7Ваш текущий стиль игры'
+    category: reputation
+
+  suffix:
+    display-name: '&dПометка'
+    template: '&d✦ &f%lovesubnames_current% &7пометка'
+    lore:
+      - '&7Текущая пометка (суффикс) игрока'
+    category: reputation
+    requirement:
+      placeholder: '%lovesubnames_current%'
+      reason: '&7Нужна активная пометка'
+
+  suffix_collected:
+    display-name: '&dСобрано пометок'
+    template: '&d✦ &f%lovesubnames_unlocked_count%&7/&f%lovesubnames_total_count% &7пометок собрано'
+    lore:
+      - '&7Сколько пометок открыто из всех'
+    category: reputation
+
+  # ── Бой ──
+  kills:
+    display-name: '&cУбийства'
+    template: '&c⚔ &f%lovetweaks_kills% &7убийств'
+    lore:
+      - '&7Количество убийств игроков'
+    category: combat
+
+  deaths:
+    display-name: '&7Смерти'
+    template: '&c☠ &f%lovetweaks_deaths% &7смертей'
+    lore:
+      - '&7Количество смертей'
+    category: combat
+
+  mob_kills:
+    display-name: '&aУбийства мобов'
+    template: '&a⚔ &f%lovetweaks_mob_kills% &7мобов'
+    lore:
+      - '&7Количество убитых мобов'
+    category: combat
+
+  # id остался kd_ratio ради сохранённых настроек игроков; шаблон переведён на %lovetweaks_kd%,
+  # потому что расширения kd_ratio на сервере не существовало и строка оставалась сырой.
+  kd_ratio:
+    display-name: '&eК/Д'
+    template: '&e⚔ &f%lovetweaks_kd% &7соотношение К/Д'
+    lore:
+      - '&7Соотношение убийств игроков к смертям'
+    category: combat
+
+  duel_honor:
+    display-name: '&cЧесть дуэлей'
+    template: '&c⚔ &f%loveduels_honor% &7чести дуэлей'
+    lore:
+      - '&7Ваш рейтинг чести в дуэлях'
+    category: combat
+
+  duels:
+    display-name: '&cДуэли'
+    lore:
+      - '&7Ваши результаты в дуэлях'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: combat
+    variants:
+      - name: 'Победы'
+        template: '&c⚔ &f%loveduels_wins% &7побед в дуэлях'
+      - name: 'Винрейт'
+        template: '&c⚔ &f%loveduels_winrate% &7винрейт дуэлей'
+      - name: 'Серия'
+        template: '&c⚔ &f%loveduels_streak% &7побед подряд'
+
+  duel_royal:
+    display-name: '&cКоролевские дуэли'
+    template: '&c⚔ &f%loveduels_royal_wins% &7побед в королевских'
+    lore:
+      - '&7Победы в королевских дуэлях'
+    category: combat
+
+  # ── Кланы ──
+  clan_tag:
+    display-name: '&6Тег клана'
+    template: '&6⚑ &f%clans_colored_tag% &7тег клана'
+    lore:
+      - '&7Тег вашего клана'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  clan_name:
+    display-name: '&6Клан'
+    template: '&6⚑ &f%clans_name% &7название клана'
+    lore:
+      - '&7Полное название вашего клана'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  clan_level:
+    display-name: '&6Уровень клана'
+    template: '&6◆ &f%clans_level% &7уровень клана'
+    lore:
+      - '&7Уровень вашего клана'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  clan_role:
+    display-name: '&6Роль в клане'
+    template: '&6⚑ &f%clans_rank_display% &7роль в клане'
+    lore:
+      - '&7Ваша должность в клане'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  clan_influence:
+    display-name: '&6Влияние клана'
+    template: '&6◆ &f%clans_influence% &7влияния клана'
+    lore:
+      - '&7Очки влияния вашего клана'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  clan_territories:
+    display-name: '&6Территории клана'
+    template: '&6⚑ &f%clans_territories% &7территорий клана'
+    lore:
+      - '&7Сколько территорий занимает клан'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  clan_members:
+    display-name: '&6Участники клана'
+    template: '&6⚑ &f%clans_members% &7участников клана'
+    lore:
+      - '&7Размер вашего клана'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  clan_spirit:
+    display-name: '&6Дух клана'
+    template: '&6◆ &f%clans_spirit_level% &7уровень духа клана'
+    lore:
+      - '&7Уровень духа вашего клана'
+    category: clans
+    requirement:
+      placeholder: '%clans_in_clan%'
+      equals: 'true'
+      reason: '&7Нужно состоять в клане'
+
+  # ── Охота ──
+  hunt_rank:
+    display-name: '&2Ранг охотника'
+    template: '&2◆ &f%lovehunt_rank_stars% %lovehunt_rank% &7ранг охотника'
+    lore:
+      - '&7Ваш ранг в охоте за головами'
+    category: hunt
+
+  hunt_rating:
+    display-name: '&2Рейтинг охотника'
+    template: '&2◆ &f%lovehunt_rating% &7рейтинг охотника'
+    lore:
+      - '&7Ваш рейтинг в охоте'
+    category: hunt
+
+  hunt_results:
+    display-name: '&2Выполнено / провалено'
+    template: '&2◆ &a%lovehunt_completed%&7/&c%lovehunt_failed% &7заказов'
+    lore:
+      - '&7Выполненные и проваленные заказы охоты'
+    category: hunt
+
+  hunt_mine:
+    display-name: '&2Мои заказы'
+    template: '&2◆ &f%lovehunt_mine_count% &7моих заказов'
+    lore:
+      - '&7Заказы, которые создали вы'
+    category: hunt
+
+  hunt_active:
+    display-name: '&2Активные заказы'
+    template: '&2◆ &f%lovehunt_active_count% &7активных заказов'
+    lore:
+      - '&7Всего активных заказов на сервере'
+    category: hunt
+
+  # ── Ремесло ──
+  brew_level:
+    display-name: '&eУровень пивовара'
+    lore:
+      - '&7Ваш навык пивоварения'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: craft
+    variants:
+      - name: 'Уровень'
+        template: '&e◆ &f%lovebrew_level% &7уровень пивовара'
+      - name: 'Опыт'
+        template: '&e◆ &f%lovebrew_exp%&7/&f%lovebrew_req_exp% &7опыта пивовара'
+
+  brew_stats:
+    display-name: '&eСварено и продано'
+    lore:
+      - '&7Ваши результаты в пивоварении'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: craft
+    variants:
+      - name: 'Сварено'
+        template: '&e◆ &f%lovebrew_total_brewed% &7сварено'
+      - name: 'Продано'
+        template: '&e◆ &f%lovebrew_total_sold% &7продано'
+
+  adaptation:
+    display-name: '&bАдаптация'
+    template: '&b✦ &f%loveadaptation_current_name% &7%loveadaptation_current_progress%'
+    lore:
+      - '&7Текущая адаптация и её прогресс'
+    category: craft
+
+  adaptation_next:
+    display-name: '&bСледующая адаптация'
+    template: '&b✦ &f%loveadaptation_progress_next_adaptation% &7следующая'
+    lore:
+      - '&7Адаптация, ближе всего к открытию'
+    category: craft
+
+  # ── Активности ──
+  contract_active:
+    display-name: '&aАктивный контракт'
+    template: '&a▸ &f%lovecontracts_active_name% &7%lovecontracts_active_progress%'
+    lore:
+      - '&7Контракт, который вы выполняете, и его прогресс'
+    category: activities
+    requirement:
+      placeholder: '%lovecontracts_has_active%'
+      equals: 'true'
+      reason: '&7Нужен активный контракт'
+
+  contracts_done:
+    display-name: '&aВыполнено контрактов'
+    template: '&a▸ &f%lovecontracts_total_completed% &7контрактов выполнено'
+    lore:
+      - '&7Сколько контрактов вы завершили'
+    category: activities
+
+  contracts_fine:
+    display-name: '&cШтраф по контрактам'
+    template: '&c▸ &f%lovecontracts_pending_fine% &7штраф по контрактам'
+    lore:
+      - '&7Неоплаченный штраф за проваленные контракты'
+    category: activities
+
+  minigames:
+    display-name: '&aМини-игры'
+    lore:
+      - '&7Ваши результаты в мини-играх'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: activities
+    variants:
+      - name: 'Победы'
+        template: '&a⚔ &f%loveactivities_wins_total% &7побед в мини-играх'
+      - name: 'Винрейт'
+        template: '&a⚔ &f%loveactivities_winrate_total% &7винрейт мини-игр'
+
+  # Идентификатор расширения LoveClaims исторически advancedclaims (см. его PAPIExpansion)
+  claims:
+    display-name: '&aПриваты'
+    template: '&a⚑ &f%advancedclaims_claims%&7/&f%advancedclaims_claims_max% &7приватов'
+    lore:
+      - '&7Количество ваших приватов и лимит'
+    category: activities
+
+# ─── Именованные табло ──────────────────────────────────────────────────────────
+scoreboards:
+  kingdom:
+    title: <gold>Королевство
+    display-condition: ''
+    # До 15 строк; длина строки не ограничена. Пустая строка даёт отступ.
+    lines:
+    - '<gray>Путник: <white><player>'
+    - '<gray>Клан: <white><clan>'
+    - '<gray>Репутация: <white><reputation>'
+    - '<gray>Игроков: <white><visible_online>'
+messages:
+  scoreboard:
+    enabled: '<green>Табло включено.'
+    disabled: '<gray>Табло выключено.'
+    shown: '<green>Табло показано.'
+  sidebar:
+    module-enabled: <green>Модуль scoreboard включён
+    module-disabled: <gray>Модуль scoreboard выключен
+    module-toggle-help: <gray>ЛКМ — включить или выключить модуль. Список табло доступен в обоих состояниях.
+    module-settings: <gold>Правила обновления и доступа
+    module-settings-help: <gray>Интервал, задержка после входа, временные табло и доступ.
+    admin-menu: <gold>Табло сервера
+    edit-help: <gray>Именованные табло, условия показа и строки. Личное включение — /le scoreboard toggle.
+    add-board: <green>Добавить табло
+    add-board-help: <gray>Новое табло с одной строкой. Условие показа и строки меняются в редакторе.
+    board-help: '<gray>Заголовок: <title> · Строк: <lines>'
+    board-new-title: <gold>Новое табло
+    board-title: <gold>Настройка табло
+    board-help-text: <gray>Первое табло из списка, чьё условие выполнено, показывается игроку. Временные табло других плагинов важнее.
+    id: <gold>Идентификатор
+    title: <gold>Заголовок
+    display-condition: <gold>Условие показа (имя из conditions, пусто — всегда)
+    lines: <gold>Строки (до 15)
+    legacy-conflict: <red>Другой плагин держит табло LoveTweaks; модуль scoreboard не может его перехватить.
