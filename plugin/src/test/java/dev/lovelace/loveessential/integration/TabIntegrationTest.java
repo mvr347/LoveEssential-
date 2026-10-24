@@ -169,4 +169,25 @@ class TabIntegrationTest {
         "&7text",
         PlainTextComponentSerializer.plainText().serialize(placeholders.renderRaw("&7text", alice, alice)));
   }
+
+  @Test
+  void headTagGetsThePlayerNameAndKeepsTheSurroundingText() throws Exception {
+    var alice = player("Alice", "world");
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    var text = placeholders.renderRaw("<head:name:%player%> %player%", alice, alice);
+    var heads =
+        text.children().stream()
+            .filter(
+                c ->
+                    c instanceof net.kyori.adventure.text.ObjectComponent o
+                        && o.contents() instanceof net.kyori.adventure.text.object.PlayerHeadObjectContents)
+            .count();
+    assertEquals(1, heads, text.toString());
+    assertTrue(
+        ((net.kyori.adventure.text.object.PlayerHeadObjectContents)
+                ((net.kyori.adventure.text.ObjectComponent) text.children().get(0)).contents())
+            .name()
+            .equals("Alice"), text.toString());
+    assertTrue(PlainTextComponentSerializer.plainText().serialize(text).endsWith("Alice"));
+  }
 }

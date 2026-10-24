@@ -65,4 +65,35 @@ class TabSyntaxTest {
     assertFalse(TabSyntax.builtin("player_name"));
     assertFalse(TabSyntax.builtin(null));
   }
+
+  private static String heads(String template) {
+    return TabSyntax.heads(
+        template,
+        name ->
+            switch (name) {
+              case "player" -> "Steve";
+              case "tag" -> "<red>x y";
+              default -> "";
+            });
+  }
+
+  @Test
+  void headArgumentsGetTheirTokensAsText() {
+    assertEquals("<head:Steve>", heads("<head:name:%player%>"));
+    assertEquals("<head:Steve:true> %player%", heads("<head:name:<player>:true> %player%"));
+    assertEquals("a <head:Steve> b", heads("a <head:%player%> b"));
+    assertEquals("<head:Steve>", heads("<head:player:%player%>"));
+  }
+
+  @Test
+  void headValueCannotAddTagsAndEmptyValueDropsTheHead() {
+    assertEquals("<head:redxy>", heads("<head:name:%tag%>"));
+    assertEquals("x  y", heads("x <head:name:%missing%> y"));
+  }
+
+  @Test
+  void textWithoutHeadsIsUntouched() {
+    assertEquals("<red>%player% <head", heads("<red>%player% <head"));
+    assertEquals("plain", heads("plain"));
+  }
 }

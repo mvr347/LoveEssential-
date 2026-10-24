@@ -170,6 +170,10 @@ access:
 # %health%, %world%, %online%, %group%, %time%, %date% читаются без PlaceholderAPI. Если нужен чистый
 # MiniMessage, где «&» — просто символ, выключите.
 legacy-colors: true
+# 2026-10-24: голова игрока 8x8 в тексте - <head:%player%> или <head:name:%player%> (то же самое; по UUID - <head:%player_uuid%>,
+# добавьте :false в конце, чтобы убрать второй слой). Токены внутри тега подставляются текстом до разбора MiniMessage: сам MiniMessage
+# не раскрывает один тег внутри аргументов другого. Скин голова берёт у клиента по нику, поэтому при
+# online-mode=false она будет Стивом; Bedrock через Geyser такие объекты может не показывать.
 placeholders:
   online: <visible_online>
   clan: <clan>

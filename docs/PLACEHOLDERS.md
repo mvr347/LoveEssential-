@@ -218,3 +218,11 @@ identity:
 `%loveessential_profile_visible%`, `%loveessential_profile_hidden%`, `%loveessential_activity_enabled%`, `%loveessential_activity_visible%`, `%loveessential_profile_loaded%` возвращают `true`/`false`. `%loveessential_profile_command%` содержит команду открытия цели; `%loveessential_profile_toggle_command%` и `%loveessential_activity_toggle_command%` — команды переключения собственных настроек. Также есть локализованные `profile_visibility_label` и `activity_visibility_label`. [Полная таблица и примеры внешнего меню](PLAYER_PROFILE.md).
 
 Необязательный запасной текст для PAPI: `<papi:loveadaptation_current_name:"—">`. Профиль отображает адаптации и поведение через реальные `loveadaptation_*`, `lovebehavior_*`, `lovesubnames_*`; авторизацию получает через LoveCore. В чужом профиле PAPI вычисляется для цели.
+
+## Голова игрока в тексте TAB и табло
+
+`<head:%player%>` (записи `<head:name:%player%>` и `<head:uuid:%player_uuid%>` понимаются так же: MiniMessage
+сам различает ник, UUID и текстуру по виду значения) рисует голову игрока размером в символ;
+`:false` в конце убирает второй слой. `%токены%`, `<player>` и `<real_name>` внутри тега подставляются
+текстом до разбора; лишние символы значения (двоеточие, скобки, кавычки, пробелы) отбрасываются, а
+пустое значение убирает голову. Скин клиент берёт по нику или UUID: при `online-mode=false` будет Стив.
