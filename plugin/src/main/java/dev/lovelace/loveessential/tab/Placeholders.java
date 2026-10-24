@@ -365,6 +365,19 @@ public final class Placeholders {
   private Component renderText(
       String template, Player viewer, Player target, int depth, Set<DisplayPrefs.Element> hidden) {
     if (depth > 4) return Component.empty();
+    final Player headViewer = viewer, headTarget = target;
+    template =
+        TabSyntax.heads(
+            template,
+            name ->
+                switch (name) {
+                  case "player", "real_name" -> headTarget.getName();
+                  default -> {
+                    String token = "%" + name + "%";
+                    String text = replaced(token, papi(headViewer, headTarget, token));
+                    yield token.equals(text) ? "" : text;
+                  }
+                });
     template = TabSyntax.tokens(legacyColors() ? TabSyntax.legacy(template) : template);
     var b = TagResolver.builder();
     Map<String, java.util.function.Supplier<String>> variables =

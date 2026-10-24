@@ -2,6 +2,7 @@ package dev.lovelace.loveessential.tab;
 
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,68 @@ public final class TabSyntax {
   };
 
   private TabSyntax() {}
+
+  /**
+   * Fills the arguments of {@code <head:...>} before the rest of the template is converted.
+   * MiniMessage does not expand a tag inside the arguments of another one, so
+   * {@code <head:name:%player%>} would reach it as {@code <head:name:<papi:'player'>>}. Here
+   * {@code %token%}, {@code <player>} and {@code <real_name>} are replaced by their text; the
+   * value never keeps a colon, bracket, quote or space, so a player cannot add tags through it.
+   * A leading {@code name:}, {@code player:}, {@code uuid:} or {@code texture:} is removed, since
+   * MiniMessage reads the first argument itself. A head whose value comes out empty is dropped.
+   *
+   * @param value text for a token name without percent signs ({@code player}, {@code luckperms_prefix}),
+   *     or for {@code player} / {@code real_name}; null counts as empty
+   */
+  public static String heads(String template, UnaryOperator<String> value) {
+    int open = template.indexOf("<head:");
+    if (open < 0) return template;
+    var out = new StringBuilder(template.length());
+    int from = 0;
+    while (open >= 0) {
+      int close = tagEnd(template, open);
+      if (close < 0) break;
+      out.append(template, from, open);
+      String args = template.substring(open + "<head:".length(), close);
+      // MiniMessage takes the value first and tells name, UUID and texture apart by its shape; a
+      // leading "name:" / "player:" / "uuid:" / "texture:" would be read as the player called "name".
+      String filled = fill(args.replaceFirst("(?i)^(name|player|uuid|texture):", ""), value);
+      if (!filled.isEmpty()) out.append("<head:").append(filled).append('>');
+      from = close + 1;
+      open = template.indexOf("<head:", from);
+    }
+    return out.append(template, from, template.length()).toString();
+  }
+
+  /** Index of the {@code >} closing the tag opened at {@code open}; nested tags are skipped. */
+  private static int tagEnd(String text, int open) {
+    int depth = 0;
+    for (int i = open; i < text.length(); i++) {
+      char c = text.charAt(i);
+      if (c == '<') depth++;
+      else if (c == '>' && --depth == 0) return i;
+    }
+    return -1;
+  }
+
+  private static String fill(String args, UnaryOperator<String> value) {
+    var out = new StringBuilder();
+    Matcher m = Pattern.compile("%([^%<>\\s]+)%|<(player|real_name)>").matcher(args);
+    int from = 0;
+    boolean replaced = false, empty = false;
+    while (m.find()) {
+      out.append(args, from, m.start());
+      String name = m.group(1) != null ? m.group(1) : m.group(2);
+      String text = value.apply(name);
+      text = text == null ? "" : text.replaceAll("[:<>'\"\\s]", "");
+      if (text.isEmpty()) empty = true;
+      out.append(text);
+      replaced = true;
+      from = m.end();
+    }
+    out.append(args, from, args.length());
+    return replaced && empty ? "" : out.toString();
+  }
 
   public static boolean builtin(String name) {
     return name != null && BUILTINS.contains(name.toLowerCase(Locale.ROOT));
