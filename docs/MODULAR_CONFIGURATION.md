@@ -112,3 +112,10 @@ scoreboards:
 Файл, сохранённый версией с каталогом в SQLite (`catalog`), копируется в `scoreboard.yml.pre-named.bak`, после чего включаются значения по умолчанию.
 
 Статистика, включая подкатегории и их оформление: `modules/profile/gui.yml → menus.profile-menu-statistics.categories`. Переключатели настроек: `menus.profile-menu-settings.controls`. Текстуры профиля: `menus.profile-menu-title.textures`; карточки досье: `menus.players-title.cards`. Старые пути настроек поддерживаются внутренним адаптером, но при сохранении данные не дублируются.
+
+## TAB и табло рядом с другими плагинами
+
+`tab.mode` (по умолчанию `auto`): LoveEssential ведёт список игроков, ники над головой и табло, только если не включён ни один плагин
+из `tab.external-plugins` (TAB, CMI, TabList, TabPlus, NametagEdit и др.). Если такой плагин найден, модули `tab` и `scoreboard`
+остаются пассивными, в логе одна строка с именем плагина. `on` — вести всегда, `off` — никогда. Проверка идёт каждый цикл, поэтому
+удаление внешнего плагина (с перезапуском) возвращает управление LoveEssential.
