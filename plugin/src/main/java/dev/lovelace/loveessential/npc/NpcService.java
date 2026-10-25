@@ -373,6 +373,43 @@ public final class NpcService implements Listener, AutoCloseable {
     return entity(id, null);
   }
 
+  /** Distance along the view ray to a body widened by 0.3 blocks, or infinity when it is missed. */
+  static double sightDistance(
+      org.bukkit.util.BoundingBox body,
+      org.bukkit.util.Vector from,
+      org.bukkit.util.Vector direction,
+      double range) {
+    var hit = body.clone().expand(0.3).rayTrace(from, direction, range);
+    return hit == null ? Double.POSITIVE_INFINITY : hit.getHitPosition().distance(from);
+  }
+
+  /**
+   * The NPC the player is looking at. The nearest NPC whose body (a little widened) crosses the
+   * view ray, so an invisible entity of a hologram or a hitbox in front cannot hide it the way it
+   * hides it from {@code Player#getTargetEntity}; falls back to that call for NPCs of other plugins.
+   */
+  public Optional<String> lookedAt(Player player, double range) {
+    var eye = player.getEyeLocation();
+    var from = eye.toVector();
+    var direction = eye.getDirection();
+    String best = null;
+    double bestDistance = Double.POSITIVE_INFINITY;
+    for (var l : live.values()) {
+      if (l.preview
+          || l.viewer != null && !l.viewer.equals(player.getUniqueId())
+          || !l.entity.isValid()
+          || !l.entity.getWorld().equals(player.getWorld())) continue;
+      double distance = sightDistance(l.entity.getBoundingBox(), from, direction, range);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = l.id;
+      }
+    }
+    if (best != null) return Optional.of(best);
+    var target = player.getTargetEntity((int) range);
+    return target == null ? Optional.empty() : identify(target);
+  }
+
   public Optional<Entity> entity(String id, Player viewer) {
     return live.values().stream()
         .filter(
