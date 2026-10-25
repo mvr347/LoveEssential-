@@ -74,6 +74,34 @@ queue:
   # Тиков между добавлениями одной точки. 20 тиков (1 с) — одна загрузка чанка в секунду, без
   # заметной просадки TPS; когда запас полон, поиск не идёт вовсе.
   interval-ticks: 20
+# 2026-10-25: мир, которого нет в worlds ниже, но он обычный (не Незер и не Энд), берёт эти значения: /rtp в
+# любом таком мире (например, spawn) переносит внутри него самого. Незер и Энд без своей записи отказывают:
+# у них другая высота. Чтобы в мире /rtp не работал, добавьте его в worlds с enabled: false.
+default-world:
+  enabled: true
+  center-on-border: true
+  center-x: 0
+  center-z: 0
+  min-radius: 200
+  max-radius: 2000
+  shape: circle
+  max-attempts: 20
+  min-y: 60
+  max-y: 220
+# 2026-10-25: эффекты переноса. Без них перенос выглядит как обрыв: затемнение скрывает подгрузку чанков,
+# звук и заголовок показывают, что происходит. enabled: false отключает всё сразу.
+effects:
+  enabled: true
+  # Заголовок при начале разогрева и при прибытии (одна строка в actionbar остаётся всегда).
+  title: true
+  start-sound: BLOCK_BEACON_ACTIVATE
+  arrive-sound: ENTITY_ENDERMAN_TELEPORT
+  arrive-particles: PORTAL
+  # BLINDNESS — полное затемнение, DARKNESS — пульсирующее. 40 тиков (2 с) до переноса и 40 после: хватает,
+  # чтобы не видеть подгрузку, и не раздражает. 0 — без затемнения.
+  fade-effect: BLINDNESS
+  fade-ticks: 40
+  arrive-fade-ticks: 40
 # Миры, в которых работает /rtp. Мир без enabled: true не переносит никого. Для каждого мира:
 worlds:
   world:

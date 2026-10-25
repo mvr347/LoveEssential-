@@ -190,4 +190,18 @@ class TabIntegrationTest {
             .equals("Alice"), text.toString());
     assertTrue(PlainTextComponentSerializer.plainText().serialize(text).endsWith("Alice"));
   }
+
+  @Test
+  void aTabPrefixWithAHeadAndLegacyColorsRendersAsConfigured() throws Exception {
+    var alice = player("Alice", "world");
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    var text = placeholders.renderTabName("<head:name:%player%> &7# <suffix> ", alice, alice);
+    String plain = PlainTextComponentSerializer.plainText().serialize(text);
+    assertFalse(plain.contains("&"), plain);
+    assertTrue(plain.contains("# "), plain);
+    assertTrue(
+        text.children().stream()
+            .anyMatch(c -> c instanceof net.kyori.adventure.text.ObjectComponent),
+        text.toString());
+  }
 }

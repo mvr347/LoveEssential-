@@ -142,7 +142,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
           }
           case "reload", "перезагрузить" -> {
             admin(sender);
-            complete(sender, plugin.reloadSettings(), "common.reloaded");
+            reload(sender);
           }
           case "module", "модуль" -> {
             admin(sender);
@@ -176,7 +176,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
             switch (args[2]) {
               case "enable" -> complete(sender, plugin.module(name, true), "common.done");
               case "disable" -> complete(sender, plugin.module(name, false), "common.done");
-              case "reload" -> complete(sender, plugin.reloadSettings(), "common.reloaded");
+              case "reload" -> reload(sender);
               default -> throw new IllegalArgumentException("errors.input");
             }
           }
@@ -680,6 +680,23 @@ public final class Commands implements CommandExecutor, TabCompleter {
           Map.of("plugin", target.plugin(), "path", target.path(), "old", String.valueOf(current), "new", replacement.get()));
     }
     lang.send(p, "npc.import-manual", Map.of("reload", changed.isEmpty() ? "-" : String.join(", ", changed)));
+  }
+
+  /** {@code /le reload}: failures are logged in full and named in the chat instead of "could not save". */
+  private void reload(CommandSender sender) {
+    plugin
+        .reloadSettings()
+        .whenComplete(
+            (v, error) ->
+                main.execute(
+                    () -> {
+                      if (error == null) {
+                        lang.send(sender, "common.reloaded");
+                        return;
+                      }
+                      plugin.getLogger().log(java.util.logging.Level.WARNING, "Reload failed; the previous settings stay active", error);
+                      lang.error(sender, error);
+                    }));
   }
 
   private void complete(CommandSender sender, CompletableFuture<?> future, String success) {

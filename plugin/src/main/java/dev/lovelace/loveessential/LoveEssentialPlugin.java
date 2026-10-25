@@ -169,13 +169,6 @@ public class LoveEssentialPlugin extends JavaPlugin {
   @Override
   public void onEnable() {
     main = new MainThread(this);
-    // Registered before the database is read: plugins check for their NPC provider while the
-    // server finishes starting, long before LoveEssential is ready (see LoveEssentialNpcProvider#bind).
-    npcProvider = new dev.lovelace.loveessential.npc.LoveEssentialNpcProvider(this, main);
-    getServer()
-        .getServicesManager()
-        .register(
-            dev.lovelace.lovecore.api.npc.NpcProvider.class, npcProvider, this, ServicePriority.Normal);
     configFiles = new dev.lovelace.loveessential.config.ModuleConfigs(this);
     CompletableFuture.supplyAsync(
             () -> {
@@ -232,6 +225,11 @@ public class LoveEssentialPlugin extends JavaPlugin {
               main.execute(
                   () -> {
                     if (error != null) {
+                      Throwable cause = error;
+                      while (cause.getCause() != null && !(cause instanceof dev.lovelace.loveessential.config.ConfigError))
+                        cause = cause.getCause();
+                      if (cause instanceof dev.lovelace.loveessential.config.ConfigError config)
+                        getLogger().severe("Ошибка в настройках: " + config.detail() + ". Исправьте файл или удалите этот ключ.");
                       getLogger()
                           .log(
                               java.util.logging.Level.SEVERE,
@@ -470,8 +468,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
     extensions.start();
     displayPrefs.start();
     // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
-    npcProvider.bind(npcs, gameplay.holograms());
+    // Registered only now: a plugin that asks earlier gets "no such provider" (a warning at worst), not a
+    // provider that answers "no such NPC" while the data is still loading.
+    npcProvider = new dev.lovelace.loveessential.npc.LoveEssentialNpcProvider(this, main, npcs, gameplay.holograms());
     npcProvider.start();
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.npc.NpcProvider.class, npcProvider, this, ServicePriority.Normal);
     getServer()
         .getServicesManager()
         .register(
@@ -734,7 +738,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
         || n.doubleValue() > max
         || (!path.equals("night-skip.max-multiplier")
             && n.doubleValue() != Math.rint(n.doubleValue())))
-      throw new IllegalArgumentException("errors.config");
+      throw dev.lovelace.loveessential.config.ConfigError.range(path, value, min, max);
   }
 
   @Override

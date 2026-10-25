@@ -5,25 +5,37 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class NightSkipTest {
+  private static long step(long sleeping, long eligible, boolean started, long time) {
+    return Gameplay.nightStep(sleeping, eligible, 50, 30, started, time);
+  }
+
   @Test
-  void nothingHappensBelowTheRequiredShare() {
-    assertEquals(0, Gameplay.nightExtra(0, 4, 50, 30));
-    assertEquals(0, Gameplay.nightExtra(1, 4, 50, 30));
+  void nothingHappensByDayOrBelowTheRequiredShare() {
+    assertEquals(0, step(4, 4, false, 6000));
+    assertEquals(0, step(0, 4, false, 13000));
+    assertEquals(0, step(1, 4, false, 13000));
   }
 
   @Test
   void halfOfThePlayersAsleepStartsTheSkip() {
-    assertEquals(116, Gameplay.nightExtra(2, 4, 50, 30));
-    assertEquals(116, Gameplay.nightExtra(4, 4, 50, 30));
+    assertEquals(29, step(2, 4, false, 13000));
+    assertEquals(29, step(1, 1, false, 13000));
   }
 
   @Test
-  void aLoneSleeperCountsWhenEveryoneElseIsAway() {
-    assertEquals(116, Gameplay.nightExtra(1, 1, 50, 30));
+  void aStartedSkipGoesOnWhileAnyoneSleeps() {
+    assertEquals(29, step(1, 4, true, 13000));
+    assertEquals(0, step(0, 4, true, 13000));
+  }
+
+  @Test
+  void theLastStepEndsExactlyAtTheMorning() {
+    assertEquals(10, step(2, 2, true, 23990));
+    assertEquals(0, step(2, 2, true, 0));
   }
 
   @Test
   void aSpeedOfOneChangesNothing() {
-    assertEquals(0, Gameplay.nightExtra(2, 2, 50, 1));
+    assertEquals(0, Gameplay.nightStep(2, 2, 50, 1, false, 13000));
   }
 }

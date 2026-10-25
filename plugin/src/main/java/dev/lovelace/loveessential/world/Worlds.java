@@ -459,7 +459,12 @@ public final class Worlds implements Listener, AutoCloseable {
                     v.options()),
                 d.revision(),
                 p.getUniqueId().toString()),
-            () -> edit(p, v.name()));
+            () -> {
+              // The new point applies at once; a command should not open a window for this.
+              var world = Bukkit.getWorld(v.name());
+              if (world != null) world.setSpawnLocation(p.getLocation());
+              lang.send(p, "worlds.spawn-set", Map.of("world", v.name()));
+            });
       }
       default -> throw new IllegalArgumentException("worlds.usage");
     }

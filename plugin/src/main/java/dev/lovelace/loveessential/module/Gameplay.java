@@ -119,7 +119,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     Bukkit.getPluginManager().registerEvents(this, plugin);
     for (var p : Bukkit.getOnlinePlayers()) loadPlayer(p, false);
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20, 20);
-    nightTask = Bukkit.getScheduler().runTaskTimer(plugin, this::nightSkip, 4, 4);
+    nightTask = Bukkit.getScheduler().runTaskTimer(plugin, this::nightSkip, 1, 1);
     comfort.start();
     vanishFx.start();
     portals.start();
@@ -389,24 +389,47 @@ public final class Gameplay implements Listener, AutoCloseable {
     portals.command(p, id.isBlank() ? new String[] {op} : new String[] {op, id});
   }
 
+  /** The night begins at this time of day; 24000 is the next morning. */
+  static final long NIGHT_START = 12542, DAY_LENGTH = 24000;
+
+  private final Set<UUID> skipping = ConcurrentHashMap.newKeySet();
+
   /**
-   * While at least {@code night-skip.required-percent} of the players who count are asleep, the night
-   * runs {@code night-skip.max-multiplier} times faster. It runs every 4 ticks, so the sky moves
-   * smoothly instead of jumping once a second. A sleeping player never counts as away: lying in bed
-   * is exactly what makes the idle timer run out.
+   * Ticks to add to the clock right now. Nothing until {@code requiredPercent} of the players who count
+   * are asleep; once the skip has started it goes on while anybody still sleeps, so a player turning
+   * over in bed does not stop it half way. Each tick adds {@code speed - 1} (the clock already moves
+   * by one) and the last step ends exactly at the morning, which wakes the sleepers the vanilla way.
    */
-  /** Ticks to add every 4 ticks: none until enough players sleep, then (speed - 1) * 4. */
-  static long nightExtra(long sleeping, long eligible, double requiredPercent, double speed) {
-    if (sleeping <= 0 || sleeping * 100.0 < requiredPercent * eligible) return 0;
-    return Math.max(0, Math.round((speed - 1) * 4));
+  static long nightStep(
+      long sleeping,
+      long eligible,
+      double requiredPercent,
+      double speed,
+      boolean started,
+      long timeOfDay) {
+    if (timeOfDay < NIGHT_START || sleeping <= 0) return 0;
+    if (!started && sleeping * 100.0 < requiredPercent * eligible) return 0;
+    long step = Math.max(0, Math.round(speed - 1));
+    return Math.min(step, DAY_LENGTH - timeOfDay);
   }
 
+  /**
+   * Runs every tick, so the sky moves in small steps (a step every few ticks makes it jump). A sleeping
+   * player never counts as away: lying in bed is exactly what makes the idle timer run out.
+   */
   private void nightSkip() {
-    if (!enabled.test("nightskip")) return;
-    double required = plugin.getConfig().getDouble("night-skip.required-percent", 50) / 100.0;
+    if (!enabled.test("nightskip")) {
+      skipping.clear();
+      return;
+    }
+    double required = plugin.getConfig().getDouble("night-skip.required-percent", 50);
     double speed = plugin.getConfig().getDouble("night-skip.max-multiplier", 30);
     for (World w : Bukkit.getWorlds()) {
-      if (w.getTime() <= 12500 || w.getTime() >= 23500) continue;
+      long timeOfDay = w.getTime();
+      if (timeOfDay < NIGHT_START) {
+        skipping.remove(w.getUID());
+        continue;
+      }
       long eligible = 0, sleeping = 0;
       for (var p : w.getPlayers()) {
         if (!((LoveEssentialPlugin) plugin).allows("nightskip", p) || vanished(p)) continue;
@@ -415,8 +438,13 @@ public final class Gameplay implements Listener, AutoCloseable {
           eligible++;
         } else if (!afk(p)) eligible++;
       }
-      long extra = nightExtra(sleeping, eligible, required * 100, speed);
-      if (extra > 0) w.setTime(Math.min(23500, w.getTime() + extra));
+      long step = nightStep(sleeping, eligible, required, speed, skipping.contains(w.getUID()), timeOfDay);
+      if (step <= 0) {
+        skipping.remove(w.getUID());
+        continue;
+      }
+      skipping.add(w.getUID());
+      w.setFullTime(w.getFullTime() + step);
     }
   }
 
