@@ -75,6 +75,20 @@ class CombatBridgeTest {
     b.publish(old); // A genuinely new fight may start afterwards.
     assertTrue(b.inCombat(id));
   }
+  @Test void aRetainedReferenceCannotReactivateAnUnloadedBridgeOrChangeTheCore() {
+    var upstream = new State();
+    var untagged = new ArrayList<UUID>();
+    var bridge = new CombatBridge(upstream, Clock.fixed(NOW, ZoneOffset.UTC), untagged::add);
+    UUID id = UUID.randomUUID();
+    upstream.mark(id, Duration.ofSeconds(30), "siege");
+    bridge.close();
+    bridge.mark(id, Duration.ofSeconds(300), "raid");
+    bridge.clear(id);
+    bridge.publish(Map.of(id, new CombatBridge.Entry(NOW.plusSeconds(50), "deluxecombat")));
+    assertFalse(bridge.inCombat(id));
+    assertEquals(NOW.plusSeconds(30), upstream.combatEndsAt(id).orElseThrow());
+    assertTrue(untagged.isEmpty());
+  }
   @Test void ignoresInvalidMarksAndStaleFallbackSources() {
     var b = new CombatBridge(new State(), Clock.fixed(NOW, ZoneOffset.UTC), id -> {});
     UUID id = UUID.randomUUID();

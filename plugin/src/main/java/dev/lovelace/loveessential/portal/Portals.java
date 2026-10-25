@@ -867,11 +867,13 @@ public final class Portals implements Listener, AutoCloseable {
   private void actionMenu(Player p) {
     var d = draft(p).value().value();
     var m = menu(p, 54, "portal-ui.actions", () -> wizard(p));
-    button(m, 4, "portal-ui.add-command", "portal-ui.command-help", () -> commandForm(p, -1));
-    for (int i = 0; i < d.actions().size(); i++) {
+    int count = d.actions().size();
+    int total = count + (count < 16 ? 1 : 0);
+    if (count < 16) button(m, MenuStyle.slot(count, total), "portal-ui.add-command", "portal-ui.command-help", () -> commandForm(p, -1));
+    for (int i = 0; i < count; i++) {
       int index = i;
       var a = d.actions().get(i);
-      int slot = MenuStyle.slot(i, d.actions().size());
+      int slot = MenuStyle.slot(i, total);
       m.inventory.setItem(
           slot,
           MenuStyle.head(

@@ -313,7 +313,10 @@ class ComfortHologramTest {
     waitFor(() -> holograms.get(id).orElseThrow().value().pages().size() == 2);
     command(p, "hologram edit " + id);
     var withPage = holograms.get(id).orElseThrow();
-    click(p, 3, ClickType.LEFT);
+    click(p, named(p, "Оформление"), ClickType.LEFT);
+    int shadow = named(p, "Тень");
+    assertTrue(shadow >= 9 && shadow < p.getOpenInventory().getTopInventory().getSize() - 9);
+    click(p, shadow, ClickType.LEFT);
     waitFor(() -> holograms.get(id).orElseThrow().revision() > withPage.revision());
     assertFalse(holograms.get(id).orElseThrow().value().shadow());
   }
@@ -415,6 +418,8 @@ class ComfortHologramTest {
     // This test asserts command silence; an async join announcement is unrelated to permissions.
     await(plugin.module("joinquit", false));
     var visitor = server.addPlayer("Mortal");
+    // MockBukkit emits the vanilla join message synchronously when joinquit is disabled.
+    while (visitor.nextMessage() != null) {}
     command(visitor, "god");
     assertNull(visitor.nextMessage());
     command(visitor, "vanish");
