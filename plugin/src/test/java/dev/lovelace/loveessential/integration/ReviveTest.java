@@ -32,6 +32,10 @@ class ReviveTest implements Listener {
   LoveEssentialPlugin plugin;
   PlayerMock victim, helper;
   final List<Object> seen = new ArrayList<>();
+  int serverDeaths;
+  @EventHandler
+  public void actualDeath(org.bukkit.event.entity.PlayerDeathEvent e) { serverDeaths++; }
+
 
   @EventHandler
   public void downed(DownedEvent e) {
@@ -114,6 +118,21 @@ class ReviveTest implements Listener {
   void fall() {
     hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
     assertTrue(oracle().downed(victim.getUniqueId()), "the lethal blow must put the player down");
+  }
+
+  @Test
+  void nativeCorpseHandlersSeeOnlyFinalDeathAndFallingDoesNotConsumeLoot() {
+    plugin.getConfig().set("revive.death-delay", 1);
+    plugin.getConfig().set("revive.keep-inventory", false);
+    victim.getInventory().setItem(0, new ItemStack(Material.DIAMOND, 7));
+    fall();
+    assertEquals(0, serverDeaths, "falling is not a Bukkit death for a corpse handler");
+    assertEquals(7, victim.getInventory().getItem(0).getAmount());
+    server.getScheduler().performTicks(40);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(1, serverDeaths, "the timer must produce exactly one real death");
+    server.getScheduler().performTicks(40);
+    assertEquals(1, serverDeaths);
   }
 
   @Test
