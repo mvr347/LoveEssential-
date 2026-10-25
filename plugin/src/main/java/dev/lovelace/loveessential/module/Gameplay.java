@@ -49,6 +49,7 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final Holograms hologramService;
   private final dev.lovelace.loveessential.portal.Portals portals;
   private final RandomTeleport randomTeleport;
+  private final dev.lovelace.loveessential.travel.Waystones waystones;
 
   private BukkitTask task;
   private BukkitTask nightTask;
@@ -73,12 +74,15 @@ public final class Gameplay implements Listener, AutoCloseable {
     portals =
         new dev.lovelace.loveessential.portal.Portals(
             (LoveEssentialPlugin) plugin, main, store, lang, love, teleport, actions);
+    waystones = new dev.lovelace.loveessential.travel.Waystones((LoveEssentialPlugin) plugin, main, store, lang, love);
     comfort = new Comfort((LoveEssentialPlugin) plugin, main, store, lang, love, this);
     vanishFx = new Vanish((LoveEssentialPlugin) plugin, this, lang);
     hologramService = new Holograms((LoveEssentialPlugin) plugin, main, store, lang, love);
     randomTeleport =
         new RandomTeleport((LoveEssentialPlugin) plugin, main, store, lang, love, teleport);
   }
+
+  public dev.lovelace.loveessential.travel.Waystones waystones() { return waystones; }
 
   public RandomTeleport randomTeleport() {
     return randomTeleport;
@@ -112,7 +116,8 @@ public final class Gameplay implements Listener, AutoCloseable {
                       return null;
                     }))
         .thenCompose(v -> hologramService.load())
-        .thenCompose(v -> portals.load());
+        .thenCompose(v -> portals.load())
+        .thenCompose(v -> waystones.load());
   }
 
   public void start() {
@@ -123,6 +128,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     comfort.start();
     vanishFx.start();
     portals.start();
+    waystones.start();
     hologramService.start();
     randomTeleport.start();
   }
@@ -701,6 +707,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     vanishFx.close();
     hologramService.close();
     portals.close();
+    waystones.close();
     randomTeleport.close();
     if (visibility != null) {
       visibility.release("vanish");

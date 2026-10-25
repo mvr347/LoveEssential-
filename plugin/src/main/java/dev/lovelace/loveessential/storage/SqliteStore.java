@@ -231,6 +231,24 @@ public final class SqliteStore implements AutoCloseable {
         });
   }
 
+  /** Monotone IDs are never reused: old routes must not point at a newly created destination. */
+  public CompletableFuture<Integer> nextSequence(String name, int limit) {
+    if (name == null || !name.matches("[a-z0-9_-]{1,64}") || limit < 1)
+      return CompletableFuture.failedFuture(new IllegalArgumentException("invalid-sequence"));
+    return write(c -> {
+      try (var schema = c.createStatement()) {
+        schema.execute("CREATE TABLE IF NOT EXISTS sequences(name TEXT PRIMARY KEY,value INTEGER NOT NULL)");
+      }
+      try (var statement = c.prepareStatement("INSERT INTO sequences VALUES(?,1) ON CONFLICT(name) DO UPDATE SET value=value+1 WHERE value<? RETURNING value")) {
+        statement.setString(1, name); statement.setInt(2, limit);
+        try (var result = statement.executeQuery()) {
+          if (!result.next()) throw new IllegalArgumentException("waystones.limit");
+          return result.getInt(1);
+        }
+      }
+    });
+  }
+
   public CompletableFuture<Void> delete(String kind, String id, long expected, String actor) {
     return write(
         c -> {

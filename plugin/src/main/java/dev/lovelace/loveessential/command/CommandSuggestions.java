@@ -112,6 +112,7 @@ public final class CommandSuggestions {
               && !name.equals("npc")
               && (sender.hasPermission("loveessential.admin")
                   || Set.of(
+                          "waystone",
                           "home",
                           "sethome",
                           "delhome",
@@ -322,6 +323,7 @@ public final class CommandSuggestions {
     }
     if (Set.of("spawn", "setspawn").contains(command) && args.length == 1 && plugin.module("spawn"))
       return gameplay.names(p, "spawn");
+    if (command.equals("waystone")) return gameplay.waystones().suggestions(p, args);
     if (command.equals("portal")) return gameplay.portals().suggestions(p, args);
     if (Set.of("hologram", "portal").contains(command)
         && sender.hasPermission("loveessential.admin")

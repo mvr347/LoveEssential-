@@ -1,0 +1,59 @@
+enabled: true
+max-stones: 100
+interact-radius: 5
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes:
+  - SPECTATOR
+  allowed-states: []
+  denied-states: []
+  required-states: []
+messages:
+  waystones:
+    create: <gold>Создание путевого столба
+    create-help: <gray>Столб появится на вашем месте. Выберите оформление и поворот.
+      Прибытие — в двух блоках перед ним; его можно изменить в редакторе.
+    name: <gold>Название
+    style: <gold>Вариант оформления
+    direction: <gold>Куда смотрит столб
+    model: <gold>Предмет ItemsAdder namespace:id (только для этого варианта)
+    place: <green>Установить столб
+    delete: <red>Удаление столба
+    delete-help: <gray>Столб исчезнет. Ссылки на него перестанут работать. Это действие
+      нельзя отменить.
+    route-title: <gold><from> → <to>
+    route-help: <gray>Маршрут действует только из выбранного столба. Цена 0 — бесплатно.
+      Время задаётся в секундах; обратный путь настраивается отдельно.
+    cost: <gold>Цена в монетах LoveEconomy (0 — бесплатно)
+    warmup: <gold>Подготовка перед переходом, 0–300 секунд
+    cooldown: <gold>Перерыв после успешного перехода, 0–86400 секунд
+    permission: <gold>Право доступа (пусто — всем)
+    unlink: <red>Отключить направление
+    usage: '<yellow>/waystone <gray>— открыть ближайший столб; для администратора:
+      create или edit [номер]'
+    invalid: <red>Проверьте название, цену и время. Максимум 32 направления.
+    blocked: '<red>Сейчас путешествовать нельзя: проверьте бой, авторизацию, раненое
+      состояние или пассажиров.'
+    destination-unavailable: "<red>Мир назначения сейчас не загружен."
+    not-found: <red>Столб или маршрут больше не существует.
+    nearby: <gray>Подойдите к путевому столбу и нажмите ПКМ.
+    busy: <gray>Дождитесь текущего перехода или загрузки данных.
+    limit: <red>Достигнут лимит путевых столбов.
+    overlap: '<red>Слишком близко к другому столбу: отступите хотя бы на два блока.'
+    model-unavailable: <red>Предмет ItemsAdder не найден или ItemsAdder не установлен.
+    changed: <yellow>Настройки изменились. Откройте редактор заново.
+    cooling: <gray>После предыдущего перехода ещё действует задержка.
+    no-funds: <red>Не хватает монет или служба экономики недоступна.
+    cancel-button: <red>[Отменить]
+    countdown: <gold>Переход через <seconds> сек.
+    preparing: <gold>Подготовка к переходу… <gray>Стойте на месте. Движение или урон
+      отменит переход.
+    arrived: <gold>Вы прибыли к месту назначения.
+    cancelled: <gray>Переход отменён. Плата за неудачный переход возвращается.
+    appearance: <gold>Оформление столба
+    appearance-help: <gray>Измените название или вид. Положение и маршруты сохранятся.
+max-concurrent: 8
+render:
+  enabled: true

@@ -300,6 +300,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         menus.hologramCommand(p, args);
         return true;
       }
+      if (cmd.equals("waystone")) { gameplay.waystones().command(p, args); return true; }
       if (cmd.equals("portal")) {
         gameplay.portals().command(p, args);
         return true;

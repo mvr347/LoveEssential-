@@ -46,7 +46,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "scoreboard",
           "revive",
           "rtp",
-          "display");
+          "display",
+          "waystones");
   private final ExecutorService io =
       new ThreadPoolExecutor(
           8,
@@ -367,6 +368,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     menus.scoreboardEditor(extensions.scoreboard::settings);
     extensions.tabSettings.advanced = p -> menus.settings(p, "tab", "", 0);
     dialogs.nativeDialogs(extensions.ui);
+    gameplay.waystones().ui(extensions.ui);
     gameplay.portals().ui(extensions.ui, content, p -> menus.modules(p));
     gameplay.motd(extensions.windows::motd);
     var commands =
@@ -598,6 +600,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   }
 
   public static void validateConfig(org.bukkit.configuration.ConfigurationSection config) {
+    dev.lovelace.loveessential.travel.Waystones.validate(config);
     dev.lovelace.loveessential.scoreboard.ScoreboardModule.validate(config);
     dev.lovelace.loveessential.tab.TabModule.validate(config);
     for (String module : MODULES)

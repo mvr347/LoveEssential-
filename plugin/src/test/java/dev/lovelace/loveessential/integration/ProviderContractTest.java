@@ -208,11 +208,15 @@ class ProviderContractTest implements Listener {
     var plain = provider().create(NpcSpec.at(Component.text("Plain"), here()).withType(EntityType.VILLAGER));
     assertEquals(java.util.Optional.of("Notch"), named.skinName());
     assertTrue(plain.skinName().isEmpty());
-    named.setSkin(new SkinTexture("texture-value", "signature"));
+    // A valid base64 fixture must reach storage; the optimistic view alone can hide a rejected save.
+    String texture = java.util.Base64.getEncoder().encodeToString("{\"textures\":{}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    named.setSkin(new SkinTexture(texture, "c2lnbmF0dXJl"));
+    var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
+    waitFor(() -> api.npc(named.key()).map(n -> texture.equals(n.settings().get("skin-value"))).orElse(false));
     waitFor(() -> named.skinName().isEmpty());
     assertTrue(named.skinName().isEmpty(), "a texture skin has no nickname");
     named.setSkin("Dinnerbone");
-    waitFor(() -> "Dinnerbone".equals(named.skinName().orElse(null)));
+    waitFor(() -> api.npc(named.key()).map(n -> "Dinnerbone".equals(n.settings().get("skin"))).orElse(false));
     assertEquals(java.util.Optional.of("Dinnerbone"), named.skinName());
   }
 }
