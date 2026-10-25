@@ -531,7 +531,12 @@ public final class TabModule implements Listener, AutoCloseable {
       sentValues++;
     }
     Component name = names ? target.tabName() : null;
-    if (names && (previous == null || !Objects.equals(previous.name(), name))) {
+    // Another writer may have changed the Bukkit name since our last update.
+    // A matching cache entry alone does not mean the configured name is still applied.
+    if (names
+        && (previous == null
+            || !Objects.equals(previous.name(), name)
+            || !Objects.equals(p.playerListName(), name))) {
       p.playerListName(name);
       sentValues++;
     }
