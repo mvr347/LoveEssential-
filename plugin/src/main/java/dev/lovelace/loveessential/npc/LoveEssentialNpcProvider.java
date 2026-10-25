@@ -122,7 +122,10 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   @Override
   public Optional<NpcHandle> targeted(Player player) {
-    return byEntity(player.getTargetEntity(10));
+    var service = npcs;
+    return service == null
+        ? Optional.empty()
+        : service.lookedAt(player, 10).filter(id -> view(id).isPresent()).map(Handle::new);
   }
 
   @Override

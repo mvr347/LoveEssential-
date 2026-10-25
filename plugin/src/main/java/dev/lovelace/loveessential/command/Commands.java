@@ -478,8 +478,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         String id = null;
         if (args.length > 1) id = npcs.resolve(args[1]);
         else {
-          var target = p.getTargetEntity(8);
-          if (target != null) id = npcs.identify(target).orElse(null);
+          id = npcs.lookedAt(p, 8).orElse(null);
         }
         if (id == null || npcs.get(id).isEmpty()) throw new IllegalArgumentException("npc.none-targeted");
         npcSelection.put(p.getUniqueId(), id);
@@ -490,8 +489,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         if (args.length < 2) throw new IllegalArgumentException("npc.rename-usage");
         String id = npcSelection.get(p.getUniqueId());
         if (id == null) {
-          var target = p.getTargetEntity(8);
-          if (target != null) id = npcs.identify(target).orElse(null);
+          id = npcs.lookedAt(p, 8).orElse(null);
         }
         if (id == null) throw new IllegalArgumentException("npc.none-targeted");
         var n = npcs.get(id).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
