@@ -11,7 +11,7 @@ navigation:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
 messages:
   display:
-    usage: '<yellow>/display <gray>[others] <clan|suffix> <chat|tab|nametag> [on|off] — без аргументов открывается меню'
+    usage: '<yellow>/display <gray>[others] <clan|suffix> <chat|tab|nametag> [on|off] — без слова others меняется ваша подпись у всех, с others — чужие подписи у вас; без аргументов открывается меню'
     changed-on: '<gray><scope>: <white><element> <gray>— <white><surface>: <green>показано'
     changed-off: '<gray><scope>: <white><element> <gray>— <white><surface>: <red>скрыто'
     scope-own: Ваши подписи у всех игроков
@@ -39,4 +39,5 @@ messages:
     - '  <gray>Другие игроки ничего не заметят.'
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>переключить
+    own-denied: '<red>Скрыть свою подпись у всех игроков можно только с правом loveessential.display.own. Чужие подписи у вас: /display others …'
     tab-shared: '<red>Список игроков общий для всех, его нельзя изменить только для вас.'

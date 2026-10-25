@@ -20,6 +20,8 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.junit.jupiter.api.*;
 import org.mockbukkit.mockbukkit.*;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -352,22 +354,105 @@ class ReviveTest implements Listener {
     assertFalse(click.isCancelled());
   }
 
-  @Test
-  void hittingADownedPlayerPicksThemUpAndSneakingPutsThemDown() {
-    fall();
-    helper.teleport(victim.getLocation());
+  PlayerInteractEntityEvent rightClick(PlayerMock who, PlayerMock target) {
+    var click = new PlayerInteractEntityEvent(who, target, org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(click);
+    return click;
+  }
+
+  EntityDamageByEntityEvent strike(PlayerMock attacker, PlayerMock target) {
     var hit =
-        new org.bukkit.event.entity.EntityDamageByEntityEvent(
-            helper,
-            victim,
+        new EntityDamageByEntityEvent(
+            attacker,
+            target,
             EntityDamageEvent.DamageCause.ENTITY_ATTACK,
-            DamageSource.builder(DamageType.PLAYER_ATTACK).withDirectEntity(helper).withCausingEntity(helper).build(),
+            DamageSource.builder(DamageType.PLAYER_ATTACK).withDirectEntity(attacker).withCausingEntity(attacker).build(),
             1);
     server.getPluginManager().callEvent(hit);
-    assertTrue(hit.isCancelled());
+    return hit;
+  }
+
+  @Test
+  void rightClickPicksADownedPlayerUpAndSneakingPutsThemDown() {
+    fall();
+    helper.teleport(victim.getLocation());
+    assertTrue(rightClick(helper, victim).isCancelled());
     assertTrue(helper.getPassengers().contains(victim));
     server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
     assertFalse(helper.getPassengers().contains(victim));
     assertTrue(oracle().downed(victim.getUniqueId()));
+  }
+
+  @Test
+  void hittingADownedPlayerDoesNotPickThemUp() {
+    fall();
+    helper.teleport(victim.getLocation());
+    strike(helper, victim);
+    assertFalse(helper.getPassengers().contains(victim));
+  }
+
+  @Test
+  void damageToTheCarriedPlayerDropsBoth() {
+    plugin.getConfig().set("revive.invulnerability-delay", 0);
+    fall();
+    server.getScheduler().performTicks(4);
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    assertTrue(helper.getPassengers().contains(victim));
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 0.1);
+    assertFalse(helper.getPassengers().contains(victim));
+    assertTrue(oracle().downed(victim.getUniqueId()));
+  }
+
+  @Test
+  void damageToTheCarrierDropsBoth() {
+    fall();
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    hit(helper, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 0.1);
+    assertFalse(helper.getPassengers().contains(victim));
+  }
+
+  @Test
+  void theDeathTimerStandsWhileSomebodyIsReviving() {
+    plugin.getConfig().set("revive.death-delay", 3);
+    plugin.getConfig().set("revive.reliving-count", 5);
+    plugin.getConfig().set("revive.invulnerability-delay", 0);
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(90);
+    assertTrue(oracle().downed(victim.getUniqueId()), "the timer must stand while the revive runs");
+    assertTrue(oracle().reviving(victim.getUniqueId()));
+    server.getScheduler().performTicks(60);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertTrue(seen.stream().anyMatch(ReviveEvent.class::isInstance));
+  }
+
+  @Test
+  void theDeathTimerRunsWhenSwitchedOffForReviving() {
+    plugin.getConfig().set("revive.revive-pause-timer", false);
+    plugin.getConfig().set("revive.death-delay", 3);
+    plugin.getConfig().set("revive.reliving-count", 5);
+    plugin.getConfig().set("revive.invulnerability-delay", 0);
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(90);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+  }
+
+  @Test
+  void aSearchWindowHasOnlyItemsAndACloseButton() {
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    rightClick(helper, victim);
+    var top = helper.getOpenInventory().getTopInventory();
+    assertEquals(54, top.getSize());
+    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(51).getType(), "no mode switch");
+    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(52).getType(), "no back button");
+    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(53).getType(), "no corner close button");
+    assertNotEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(49).getType(), "close button");
   }
 }

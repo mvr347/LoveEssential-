@@ -207,8 +207,9 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
 
   /**
    * Parses {@code [own|others] <clan|suffix> <chat|tab|nametag> [on|off]}; Russian words work too.
-   * Without a scope word the choice is {@link Scope#OTHERS}: what the player sees. Anything else is a
-   * usage error.
+   * Without a scope word the choice is {@link Scope#OWN}: the player's own tag, hidden from everybody
+   * (the only scope that works for the player list, which is one entry for all viewers); what the
+   * player sees of others needs the word {@code others}. Anything else is a usage error.
    */
   public static Choice parse(String[] args) {
     Scope scope = args.length == 0 ? null : scopeOf(args[0]);
@@ -236,7 +237,7 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
             case "off", "hide", "выкл", "нет" -> Boolean.FALSE;
             default -> throw new IllegalArgumentException("display.usage");
           };
-    return new Choice(scope == null ? Scope.OTHERS : scope, element, surface, value);
+    return new Choice(scope == null ? Scope.OWN : scope, element, surface, value);
   }
 
   private static Scope scopeOf(String word) {

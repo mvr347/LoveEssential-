@@ -33,6 +33,7 @@ public final class Comfort implements Listener, AutoCloseable {
           "heal",
           "feed",
           "fly",
+          "god",
           "speed",
           "gamemode",
           "repair");
@@ -55,6 +56,8 @@ public final class Comfort implements Listener, AutoCloseable {
   private final NamespacedKey npcKey;
   private final Map<UUID, Step> steps = new HashMap<>();
   private final Map<UUID, Boolean> traces = new HashMap<>();
+  /** Players in god mode until they quit; never persisted, so nobody comes back invulnerable. */
+  private final Set<UUID> god = new HashSet<>();
   private org.bukkit.scheduler.BukkitTask task;
 
   public Comfort(
@@ -184,6 +187,16 @@ public final class Comfort implements Listener, AutoCloseable {
         if (!on) p.setFlying(false);
         lang.send(p, on ? "comfort.fly-on" : "comfort.fly-off");
       }
+      case "god" -> {
+        if (args.length > 1) throw new IllegalArgumentException("comfort.usage");
+        boolean on =
+            args.length == 0 ? !god.contains(p.getUniqueId()) : switchWord(args[0]);
+        if (on) {
+          god.add(p.getUniqueId());
+          p.setFireTicks(0);
+        } else god.remove(p.getUniqueId());
+        lang.send(p, on ? "comfort.god-on" : "comfort.god-off");
+      }
       case "speed" -> {
         if (args.length != 1) throw new IllegalArgumentException("comfort.usage");
         int value = Integer.parseInt(args[0]);
@@ -215,6 +228,43 @@ public final class Comfort implements Listener, AutoCloseable {
       }
       default -> throw new IllegalArgumentException("errors.input");
     }
+  }
+
+  /** {@code on|off} in English or Russian; anything else is a usage error. */
+  static boolean switchWord(String word) {
+    return switch (word.toLowerCase(Locale.ROOT)) {
+      case "on", "true", "1", "вкл", "да" -> true;
+      case "off", "false", "0", "выкл", "нет" -> false;
+      default -> throw new IllegalArgumentException("comfort.usage");
+    };
+  }
+
+  /** Damage causes that god mode does not stop, so a player can always be removed or sent home. */
+  static boolean godIgnores(EntityDamageEvent.DamageCause cause) {
+    return switch (cause) {
+      case VOID, KILL, SUICIDE, WORLD_BORDER -> true;
+      default -> false;
+    };
+  }
+
+  public boolean god(UUID id) {
+    return god.contains(id);
+  }
+
+  // Lowest: later handlers that skip cancelled events (the downed state of revive) never see the blow.
+  @EventHandler(priority = EventPriority.LOWEST)
+  public void godDamage(EntityDamageEvent e) {
+    if (e.getEntity() instanceof Player p && god.contains(p.getUniqueId()) && !godIgnores(e.getCause())) {
+      e.setCancelled(true);
+      p.setFireTicks(0);
+    }
+  }
+
+  @EventHandler(priority = EventPriority.LOWEST)
+  public void godHunger(org.bukkit.event.entity.FoodLevelChangeEvent e) {
+    if (e.getEntity() instanceof Player p
+        && god.contains(p.getUniqueId())
+        && e.getFoodLevel() < p.getFoodLevel()) e.setCancelled(true);
   }
 
   private void hat(Player p) {
@@ -641,6 +691,7 @@ public final class Comfort implements Listener, AutoCloseable {
     rides.remove(e.getPlayer().getUniqueId());
     steps.remove(e.getPlayer().getUniqueId());
     traces.remove(e.getPlayer().getUniqueId());
+    god.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {

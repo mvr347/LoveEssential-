@@ -376,4 +376,44 @@ class ComfortHologramTest {
     command(visitor, "feed");
     assertEquals(1, visitor.getFoodLevel());
   }
+
+  private org.bukkit.event.entity.EntityDamageEvent damage(
+      PlayerMock p, org.bukkit.event.entity.EntityDamageEvent.DamageCause cause) {
+    var event =
+        new org.bukkit.event.entity.EntityDamageEvent(
+            p,
+            cause,
+            org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.GENERIC).build(),
+            5);
+    server.getPluginManager().callEvent(event);
+    return event;
+  }
+
+  @Test
+  void godModeStopsDamageAndHungerExceptTheKillCauses() throws Exception {
+    var p = admin();
+    await(plugin.module("utilities", true));
+    command(p, "god");
+    assertTrue(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.VOID).isCancelled());
+    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.KILL).isCancelled());
+    p.setFoodLevel(20);
+    var hunger = new org.bukkit.event.entity.FoodLevelChangeEvent(p, 10);
+    server.getPluginManager().callEvent(hunger);
+    assertTrue(hunger.isCancelled());
+    command(p, "god off");
+    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+    command(p, "god вкл");
+    assertTrue(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+    command(p, "god");
+    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+  }
+
+  @Test
+  void godModeNeedsItsOwnPermission() throws Exception {
+    await(plugin.module("utilities", true));
+    var visitor = server.addPlayer("Mortal");
+    command(visitor, "god");
+    assertFalse(damage(visitor, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+  }
 }

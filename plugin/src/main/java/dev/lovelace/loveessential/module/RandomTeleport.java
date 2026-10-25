@@ -712,10 +712,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
 
   /** A sound by its Minecraft name (BLOCK_BEACON_ACTIVATE or minecraft:block.beacon.activate), or null. */
   static Sound sound(String name) {
-    if (name == null || name.isBlank()) return null;
-    String key = name.trim().toLowerCase(Locale.ROOT).replace('_', '.');
-    if (key.contains(":")) key = key.substring(key.indexOf(':') + 1);
-    return Registry.SOUNDS.get(NamespacedKey.minecraft(key));
+    return SoundNames.find(name);
   }
 
   private boolean effectsOn() {
