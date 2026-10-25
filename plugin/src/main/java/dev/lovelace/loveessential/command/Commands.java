@@ -30,6 +30,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private final dev.lovelace.loveessential.module.PlayerProfiles profiles;
   private final LoveBridge love;
   private final dev.lovelace.loveessential.gui.ControlMenus menus;
+  private final NpcCommandSelection npcSelection;
 
   private final dev.lovelace.loveessential.content.ContentMenus contentMenus;
 
@@ -55,6 +56,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.lang = lang;
     this.store = store;
     this.npcs = npcs;
+    this.npcSelection = new NpcCommandSelection(plugin, npcs);
     this.wizard = wizard;
     this.dialogs = dialogs;
     this.gameplay = gameplay;
@@ -327,9 +329,6 @@ public final class Commands implements CommandExecutor, TabCompleter {
     return true;
   }
 
-  /** The NPC each player picked with {@code /npc sel}; later commands use it when no id is given. */
-  private final Map<UUID, String> npcSelection = new ConcurrentHashMap<>();
-
   private void npc(Player p, String[] args) {
     if (!plugin.module("npc")) throw new IllegalArgumentException("errors.module-disabled");
     if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
@@ -338,24 +337,6 @@ public final class Commands implements CommandExecutor, TabCompleter {
       return;
     }
     String op = args[0].toLowerCase(Locale.ROOT);
-    if (args.length == 1 && Set.of("edit", "изменить", "info", "инфо").contains(op)) {
-      String chosen = npcSelection.get(p.getUniqueId());
-      if (chosen != null) args = new String[] {args[0], chosen};
-    }
-    if (args.length > 1
-        && Set.of(
-                "edit",
-                "изменить",
-                "delete",
-                "удалить",
-                "info",
-                "инфо",
-                "export",
-                "экспорт",
-                "clone",
-                "копия",
-                "копировать")
-            .contains(op)) args[1] = npcs.resolve(args[1]);
     switch (op) {
       case "menu", "меню" -> menus.direct(p, () -> menus.npcList(p, 0));
       case "help", "помощь" -> lang.send(p, "help.npc-commands");
@@ -364,7 +345,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         if (args.length > 1) wizard.create(p, args[1]);
         else wizard.open(p);
       }
-      case "edit", "изменить" -> wizard.edit(p, args[1]);
+      case "edit", "изменить" -> wizard.edit(p, npcSelection.target(p, args.length > 1 ? args[1] : null).id());
       case "set", "настроить" -> wizard.set(p, args[1], String.join(" ", slice(args, 2)));
       case "here", "сюда" -> wizard.spawnHere(p);
       case "page", "шаг" -> wizard.page(p, Integer.parseInt(args[1]) - 1);
@@ -374,14 +355,16 @@ public final class Commands implements CommandExecutor, TabCompleter {
       case "preview", "просмотр" -> wizard.preview(p);
       case "path", "путь" -> {
         if (args.length == 1 || args[1].equals("wizard") || args[1].equals("мастер")) {
-          if (args.length > 2) wizard.edit(p, args[2], 4);
-          else wizard.page(p, 4);
+          if (args.length > 2) wizard.edit(p, npcSelection.target(p, args[2]).id(), 4);
+          else if (wizard.editing(p)) wizard.page(p, 4);
+          else wizard.edit(p, npcSelection.target(p, null).id(), 4);
         } else wizard.path(p, args[1], slice(args, 2));
       }
       case "dialog", "диалог" -> {
         if (args.length == 1 || args[1].equals("wizard") || args[1].equals("мастер")) {
-          if (args.length > 2) wizard.edit(p, args[2], 5);
-          else wizard.page(p, 5);
+          if (args.length > 2) wizard.edit(p, npcSelection.target(p, args[2]).id(), 5);
+          else if (wizard.editing(p)) wizard.page(p, 5);
+          else wizard.edit(p, npcSelection.target(p, null).id(), 5);
         } else
           wizard.dialog(
               p,
@@ -391,15 +374,16 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       case "clone", "копия", "копировать" -> {
         permission(p, "create");
-        var original =
-            npcs.get(args[1]).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
-        if (npcs.get(args[2]).isPresent()) throw new IllegalArgumentException("errors.conflict");
-        wizard.imported(p, NpcBundle.export(original, lang).draft(args[2], p.getUniqueId()));
+        if (args.length > 3) throw new IllegalArgumentException("errors.input");
+        var original = npcSelection.target(p, args.length > 1 ? args[1] : null);
+        String newId = args.length > 2 ? args[2]
+            : dev.lovelace.loveessential.wizard.NpcDraft.create(p.getUniqueId(), Position.of(p.getLocation())).npc().id();
+        if (npcs.get(newId).isPresent()) throw new IllegalArgumentException("errors.conflict");
+        wizard.imported(p, NpcBundle.export(original, lang).draft(newId, p.getUniqueId()));
       }
       case "export", "экспорт" -> {
         permission(p, "export");
-        var n =
-            npcs.get(args[1]).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+        var n = npcSelection.target(p, args.length > 1 ? args[1] : null);
         String json =
             new com.google.gson.GsonBuilder()
                 .setPrettyPrinting()
@@ -457,72 +441,74 @@ public final class Commands implements CommandExecutor, TabCompleter {
                           }
                         }));
       }
-      case "schedule", "расписание" -> wizard.edit(p, args[1], 6);
-      case "skin", "скин" -> wizard.edit(p, args[1], 1);
+      case "schedule", "расписание" -> wizard.edit(p, npcSelection.target(p, args.length > 1 ? args[1] : null).id(), 6);
+      case "skin", "скин" -> wizard.edit(p, npcSelection.target(p, args.length > 1 ? args[1] : null).id(), 1);
       case "list", "список" -> {
         permission(p, "view");
         menus.direct(p, () -> menus.npcList(p, 0));
-        for (var n : npcs.all())
-          lang.send(
-              p,
-              "npc.entry",
-              Map.of(
-                  "id", n.id(), "type", n.entityType(), "revision", Long.toString(n.revision())));
       }
       case "debug", "отладка" -> {
         permission(p, "debug");
-        lang.send(p, "npc.debug", Map.of("state", npcs.debug(args[1])));
+        lang.send(p, "npc.debug", Map.of("state", npcs.debug(npcSelection.target(p, args.length > 1 ? args[1] : null).id())));
       }
       case "sel", "select", "выбрать" -> {
         permission(p, "view");
         String id = null;
-        if (args.length > 1) id = npcs.resolve(args[1]);
+        if (args.length > 1) id = args[1];
         else {
           id = npcs.lookedAt(p, 8).orElse(null);
         }
-        if (id == null || npcs.get(id).isEmpty()) throw new IllegalArgumentException("npc.none-targeted");
-        npcSelection.put(p.getUniqueId(), id);
-        lang.send(p, "npc.selected", Map.of("id", id));
+        if (id == null) throw new IllegalArgumentException("npc.none-targeted");
+        final String reference = id;
+        var npc = args.length > 1 ? npcSelection.target(p, reference)
+            : npcs.get(reference).filter(n -> n.id().equals(reference))
+                .orElseThrow(() -> new IllegalArgumentException("npc.none-targeted"));
+        npcSelection.select(p, npc);
+        npcSummary(p, npc, "npc.selected");
+      }
+      case "info", "инфо" -> {
+        permission(p, "view");
+        npcSummary(p, npcSelection.target(p, args.length > 1 ? args[1] : null), "npc.info");
+      }
+      case "deselect", "unselect", "снять", "сбросить" -> {
+        permission(p, "view");
+        npcSelection.clear(p);
+        lang.send(p, "npc.deselected");
       }
       case "rename", "переименовать" -> {
         permission(p, "edit");
         if (args.length < 2) throw new IllegalArgumentException("npc.rename-usage");
-        String id = npcSelection.get(p.getUniqueId());
-        if (id == null) {
-          id = npcs.lookedAt(p, 8).orElse(null);
-        }
-        if (id == null) throw new IllegalArgumentException("npc.none-targeted");
-        var n = npcs.get(id).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+        var n = npcSelection.target(p, null);
         String text = String.join(" ", slice(args, 1)).strip();
         if (text.isEmpty() || text.length() > 256) throw new IllegalArgumentException("npc.rename-usage");
         // "&eБанкир" is read like "<yellow>Банкир"; the name is kept inline, so it shows at once.
         String named = dev.lovelace.loveessential.tab.TabSyntax.legacy(text);
-        npcSelection.put(p.getUniqueId(), id);
-        npcs.save(n.withNameKey("@inline:" + named), n.revision(), p.getUniqueId().toString())
-            .whenComplete(
-                (saved, error) ->
-                    main.execute(
-                        () -> {
-                          if (error != null) lang.send(p, "errors.storage");
-                          else lang.send(p, "npc.renamed", Map.of("name", text));
-                        }));
+        npcUpdated(p, npcs.save(n.withNameKey("@inline:" + named), n.revision(), p.getUniqueId().toString()));
       }
       case "delete", "удалить" -> {
         permission(p, "delete");
-        var n =
-            npcs.get(args[1]).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
-        if (args.length < 3 || !args[2].equals("confirm")) {
-          lang.send(p, "npc.confirm-delete", Map.of("id", "" + npcs.number(n.id())));
-          break;
+        if (args.length > 3) throw new IllegalArgumentException("errors.input");
+        if (args.length > 1 && Set.of("cancel", "отмена").contains(args[1].toLowerCase(Locale.ROOT))) {
+          npcSelection.cancel(p, args.length > 2 ? args[2] : null);
+          lang.send(p, "npc.delete-cancelled");
+        } else if (args.length > 1 && Set.of("confirm", "подтвердить").contains(args[1].toLowerCase(Locale.ROOT))) {
+          var confirmation = npcSelection.confirm(p, args.length > 2 ? args[2] : null);
+          complete(p, npcs.delete(confirmation.id(), confirmation.revision(), p.getUniqueId().toString()), "npc.deleted");
+        } else {
+          var n = npcSelection.target(p, args.length > 1 ? args[1] : null);
+          if (args.length > 2 && Set.of("confirm", "подтвердить").contains(args[2].toLowerCase(Locale.ROOT))) {
+            complete(p, npcs.delete(n.id(), n.revision(), p.getUniqueId().toString()), "npc.deleted");
+          } else {
+            var confirmation = npcSelection.request(p, n);
+            npcDeletePrompt(p, n, confirmation.token());
+          }
         }
-        complete(p, npcs.delete(n.id(), n.revision(), p.getUniqueId().toString()), "common.done");
       }
       case "enable", "disable", "включить", "выключить" -> {
         permission(p, "publish");
-        var n =
-            npcs.get(args[1]).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+        var n = npcSelection.target(p, args.length > 1 ? args[1] : null);
         boolean value = Set.of("enable", "включить").contains(op);
-        complete(
+        npcUpdated(
             p,
             npcs.save(
                 new NpcDefinition(
@@ -540,11 +526,63 @@ public final class Commands implements CommandExecutor, TabCompleter {
                     n.actions(),
                     value),
                 n.revision(),
-                p.getUniqueId().toString()),
-            "common.done");
+                p.getUniqueId().toString()));
       }
       default -> lang.send(p, "help.npc-commands");
     }
+  }
+
+  private Map<String, String> npcVariables(NpcDefinition npc) {
+    return Map.of(
+        "id", Integer.toString(npcs.number(npc.id())),
+        "state", lang.text(npc.enabled() ? "npc.state-enabled" : "npc.state-disabled"));
+  }
+
+  private void npcUpdated(Player player, CompletableFuture<NpcDefinition> change) {
+    change.whenComplete((saved, error) -> main.execute(() -> {
+      if (!player.isOnline()) return;
+      if (error != null) lang.error(player, error);
+      else npcSummary(player, saved, "npc.info");
+    }));
+  }
+
+  private void npcSummary(Player player, NpcDefinition npc, String title) {
+    var variables = npcVariables(npc);
+    player.sendMessage(lang.renderText(lang.text(title), variables, Map.of("name", lang.render(npc.nameKey()))));
+    var buttons = net.kyori.adventure.text.Component.empty();
+    String number = variables.get("id");
+    if (player.hasPermission("loveessential.npc.edit")) {
+      buttons = buttons.append(npcButton("npc.buttons.edit", "/npc edit " + number, false));
+      if (npcSelection.selected(player, npc.id()))
+        buttons = buttons.append(npcButton("npc.buttons.rename", "/npc rename ", true));
+      buttons = buttons.append(npcButton("npc.buttons.skin", "/npc skin " + number, false));
+    }
+    if (player.hasPermission("loveessential.npc.path") && player.hasPermission("loveessential.npc.edit"))
+      buttons = buttons.append(npcButton("npc.buttons.path", "/npc path wizard " + number, false));
+    if (player.hasPermission("loveessential.npc.publish"))
+      buttons = buttons.append(npcButton(npc.enabled() ? "npc.buttons.disable" : "npc.buttons.enable",
+          "/npc " + (npc.enabled() ? "disable " : "enable ") + number, false));
+    if (player.hasPermission("loveessential.npc.delete"))
+      buttons = buttons.append(npcButton("npc.buttons.delete", "/npc delete " + number, false));
+    // Rename works on the selection, so the summary offers selection when queried by explicit ID.
+    buttons = buttons.append(npcButton(npcSelection.selected(player, npc.id()) ? "npc.buttons.deselect" : "npc.buttons.select",
+        npcSelection.selected(player, npc.id()) ? "/npc deselect" : "/npc sel " + number, false));
+    player.sendMessage(buttons);
+  }
+
+  private net.kyori.adventure.text.Component npcButton(String key, String command, boolean suggest) {
+    return lang.render(key)
+        .clickEvent(suggest
+            ? net.kyori.adventure.text.event.ClickEvent.suggestCommand(command)
+            : net.kyori.adventure.text.event.ClickEvent.runCommand(command))
+        .hoverEvent(lang.render(key + "-hover"));
+  }
+
+  private void npcDeletePrompt(Player player, NpcDefinition npc, String token) {
+    player.sendMessage(lang.renderText(lang.text("npc.confirm-delete-selected"), npcVariables(npc),
+        Map.of("name", lang.render(npc.nameKey()))));
+    player.sendMessage(npcButton("npc.buttons.confirm-delete", "/npc delete confirm " + token, false)
+        .append(npcButton("npc.buttons.cancel-delete", "/npc delete cancel " + token, false)));
   }
 
 

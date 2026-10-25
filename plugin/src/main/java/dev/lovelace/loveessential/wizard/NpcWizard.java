@@ -393,6 +393,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
     edit(p, id, 0);
   }
 
+  public boolean editing(Player p) {
+    return sessions.containsKey(p.getUniqueId());
+  }
+
   public void edit(Player p, String id, int page) {
     if (!permitted(p)) return;
     var n = npcs.get(id).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));

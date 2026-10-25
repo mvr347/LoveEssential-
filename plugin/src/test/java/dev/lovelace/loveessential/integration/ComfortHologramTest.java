@@ -412,6 +412,8 @@ class ComfortHologramTest {
   @Test
   void godModeNeedsItsOwnPermission() throws Exception {
     await(plugin.module("utilities", true));
+    // This test asserts command silence; an async join announcement is unrelated to permissions.
+    await(plugin.module("joinquit", false));
     var visitor = server.addPlayer("Mortal");
     command(visitor, "god");
     assertNull(visitor.nextMessage());

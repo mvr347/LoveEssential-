@@ -476,15 +476,18 @@ messages:
     overview: <gold>LoveEssential <dark_gray>· <gray>/le help — доступные команды
     npc-commands:
     - <gold>Редактор NPC
-    - <gray>/le npc create <id>; /le npc delete <id> confirm
+    - <gray>/npc create — создать NPC через мастер
     - <gray>/npc import citizens [номер|all] — перенести NPC из plugins/Citizens/saves.yml
-    - <gray>/npc sel [id] — выбрать NPC (смотря на него); /npc rename <имя> — переименовать, &-цвета работают
-    - <gray>/npc wizard; /npc edit <id>
+    - <gray>/npc sel [номер] — выбрать по взгляду или номеру; /npc deselect — снять выбор
+    - <gray>/npc info [номер] — информация и кнопки действий
+    - <gray>/npc edit|skin|schedule|enable|disable|debug|export [номер] — выбранный NPC или явный номер
+    - <gray>/npc rename <имя> — переименовать выбранного; &-цвета работают
+    - <gray>/npc clone [номер] — копия выбранного или указанного NPC с новым автоматическим ID
+    - <gray>/npc delete [номер] — запрос удаления; подтвердите или отмените кнопкой в чате
     - <gray>/npc set <параметр> <значение>; /npc here
     - <gray>/npc path add|mode|point|remove|move|record|tool|show|undo|redo
     - <gray>/npc dialog node|answer|start|answer-condition|answer-actions
     - <gray>/npc save; /npc publish; /npc preview
-    - <gray>/npc delete <id> confirm
     - <gray>/le npc — список, создание и удаление через меню
     tab-settings: '<gray>Настройки собственного TAB: modules/tab/tab.yml; /le tab — меню настройки.'
     player: <gold>LoveEssential <dark_gray>· <gray>/профиль · /спавн · /дом · /msg <имя> <текст>
@@ -498,7 +501,12 @@ messages:
     default-name: <gold>Персонаж
     entry: <gold><id> <gray>· <type> · ревизия <revision>
     debug: '<gray>Состояние: <state>'
-    selected: '<gray>Выбран: <id>'
+    selected: '<gray>Выбран NPC <name> <dark_gray>· <gray>№<id> · <state>'
+    info: '<gray>NPC <name> <dark_gray>· <gray>№<id> · <state>'
+    state-enabled: Включён
+    state-disabled: Выключен
+    deselected: '<gray>Выбор NPC снят.'
+    none-selected: "<yellow>Сначала выберите NPC: посмотрите на него и нажмите <click:run_command:'/npc sel'>[Выбрать]</click> <gray>или откройте <click:run_command:'/npc list'>[Список]</click>."
     none-targeted: '<red>Посмотрите на NPC или укажите его: /npc sel <id>'
     rename-usage: '<yellow>Выберите NPC (/npc sel) и введите: /npc rename <имя>, например /npc rename &eБанкир'
     renamed: '<green>NPC переименован: <name>'
@@ -509,6 +517,33 @@ messages:
     import-rebound: '<gray><plugin> <path>: <old> → <new>'
     import-manual: '<yellow>Перезагрузите плагины, чьи привязки изменены: <reload>. Привязки LoveShops, стендов LoveLeaderboards и npc_quests.yml LoveContracts переставьте вручную по таблице выше (она записана в plugins/LoveEssential/citizens-import.yml); в конфигах плагинов integrations.npc-provider должен быть loveessential (/lovecore provider love).'
     confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
+    confirm-delete-selected: '<yellow>Удалить NPC <name> <gray>№<id><yellow>? Отменить удаление после подтверждения нельзя. Кнопка действует 60 секунд.'
+    confirm-expired: '<yellow>Подтверждение недействительно: срок истёк, выбор изменён или NPC уже удалён. Повторите /npc delete.'
+    delete-cancelled: '<gray>Удаление NPC отменено.'
+    deleted: '<green>NPC удалён. Его выбор сброшен.'
+    buttons:
+      edit: '<gold>[Изменить] '
+      edit-hover: '<gray>Открыть редактор этого NPC.'
+      rename: '<yellow>[Переименовать] '
+      rename-hover: '<gray>Вставить команду. Допишите новое имя выбранного NPC.'
+      skin: '<aqua>[Скин] '
+      skin-hover: '<gray>Открыть настройки внешнего вида этого NPC.'
+      path: '<aqua>[Путь] '
+      path-hover: '<gray>Открыть редактор маршрута этого NPC.'
+      enable: '<green>[Включить] '
+      enable-hover: '<gray>Включить появление этого NPC.'
+      disable: '<yellow>[Выключить] '
+      disable-hover: '<gray>Отключить появление этого NPC, сохранив настройки.'
+      delete: '<red>[Удалить] '
+      delete-hover: '<gray>Показать подтверждение удаления этого NPC.'
+      deselect: '<gray>[Снять выбор]'
+      deselect-hover: '<gray>Забыть выбранного NPC и отменить запрос удаления.'
+      select: '<yellow>[Выбрать]'
+      select-hover: '<gray>Использовать этого NPC в командах без номера.'
+      confirm-delete: '<red>[Подтвердить удаление] '
+      confirm-delete-hover: '<gray>Удалить только NPC из этого запроса. Действие необратимо.'
+      cancel-delete: '<gray>[Отмена]'
+      cancel-delete-hover: '<gray>Отменить этот запрос удаления. NPC сохранится.'
   dialog:
     finished: <gray>Разговор завершён.
   gui:

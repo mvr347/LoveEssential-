@@ -124,9 +124,12 @@ public final class ModuleConfigs {
         fillIn("modules/" + id + "/gui.yml", gui, guiDefaults);
         repairMappedLines(gui);
         String beforeDisplay = id.equals("display") ? gui.saveToString() : null;
+        String beforeNpcCommands = id.equals("npc") ? gui.saveToString() : null;
         refreshRetiredTexts(id, gui, guiDefaults);
         if (beforeDisplay != null && !beforeDisplay.equals(gui.saveToString())
             && Files.exists(guiFile(id))) backup(guiFile(id), ".pre-own-display.bak");
+        if (beforeNpcCommands != null && !beforeNpcCommands.equals(gui.saveToString())
+            && Files.exists(guiFile(id))) backup(guiFile(id), ".pre-npc-commands.bak");
         if (id.equals("tab")) {
           module.set("engine", null);
           module.set("external", null);
@@ -220,7 +223,8 @@ public final class ModuleConfigs {
           // 2026-10-25: the message prefix reads "Сервер" instead of "Love".
           "npc",
           Map.of(
-              "messages.chat.prefix", List.of("<dark_gray>[<gold>Love<dark_gray>] <reset>")),
+              "messages.chat.prefix", List.of("<dark_gray>[<gold>Love<dark_gray>] <reset>"),
+              "messages.npc.selected", List.of("<gray>Выбран: <id>")),
           "sitride",
           Map.of(
               "messages.comfort.ride-consent",
@@ -306,6 +310,23 @@ public final class ModuleConfigs {
           String fresh = defaults.getString(path);
           if (current != null && fresh != null && olds.contains(current)) gui.set(path, fresh);
         });
+    if (id.equals("npc")) {
+      String path = "messages.help.npc-commands";
+      var oldHelp = List.of(
+          "<gold>Редактор NPC",
+          "<gray>/le npc create <id>; /le npc delete <id> confirm",
+          "<gray>/npc import citizens [номер|all] — перенести NPC из plugins/Citizens/saves.yml",
+          "<gray>/npc sel [id] — выбрать NPC (смотря на него); /npc rename <имя> — переименовать, &-цвета работают",
+          "<gray>/npc wizard; /npc edit <id>",
+          "<gray>/npc set <параметр> <значение>; /npc here",
+          "<gray>/npc path add|mode|point|remove|move|record|tool|show|undo|redo",
+          "<gray>/npc dialog node|answer|start|answer-condition|answer-actions",
+          "<gray>/npc save; /npc publish; /npc preview",
+          "<gray>/npc delete <id> confirm",
+          "<gray>/le npc — список, создание и удаление через меню");
+      if (gui.getStringList(path).equals(oldHelp) && defaults.isList(path))
+        gui.set(path, defaults.getStringList(path));
+    }
     if (id.equals("display")) {
       var oldLores = Map.of(
           "messages.display.all-on-lore", List.of(

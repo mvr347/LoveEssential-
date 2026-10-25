@@ -41,6 +41,9 @@ public final class CommandSuggestions {
           Map.entry("debug", "debug"),
           Map.entry("select", "view"),
           Map.entry("sel", "view"),
+          Map.entry("info", "view"),
+          Map.entry("deselect", "view"),
+          Map.entry("unselect", "view"),
           Map.entry("rename", "edit"),
           Map.entry("delete", "delete"),
           Map.entry("enable", "publish"),
@@ -48,6 +51,15 @@ public final class CommandSuggestions {
   private static final Map<String, String> ALIASES =
       Map.ofEntries(
           Map.entry("создать", "create"),
+          Map.entry("выбрать", "select"),
+          Map.entry("инфо", "info"),
+          Map.entry("снять", "deselect"),
+          Map.entry("сбросить", "deselect"),
+          Map.entry("меню", "menu"),
+          Map.entry("помощь", "help"),
+          Map.entry("мастер", "wizard"),
+          Map.entry("список", "list"),
+          Map.entry("отладка", "debug"),
           Map.entry("удалить", "delete"),
           Map.entry("изменить", "edit"),
           Map.entry("настроить", "set"),
@@ -166,11 +178,17 @@ public final class CommandSuggestions {
     }
     if (command.equals("npc")) {
       if (!plugin.module("npc")) return List.of();
-      if (args.length <= 1)
-        return NPC_PERMISSIONS.entrySet().stream()
+      if (args.length <= 1) {
+        var result = new TreeSet<String>();
+        NPC_PERMISSIONS.entrySet().stream()
             .filter(e -> sender.hasPermission("loveessential.npc." + e.getValue()))
             .map(Map.Entry::getKey)
-            .toList();
+            .forEach(result::add);
+        ALIASES.forEach((alias, canonical) -> {
+          if (result.contains(canonical)) result.add(alias);
+        });
+        return List.copyOf(result);
+      }
       String op = args[0].toLowerCase(Locale.ROOT);
       op = ALIASES.getOrDefault(op, op);
       if (!sender.hasPermission("loveessential.npc." + NPC_PERMISSIONS.getOrDefault(op, "admin")))
@@ -178,6 +196,9 @@ public final class CommandSuggestions {
       if (args.length == 2
           && Set.of(
                   "edit",
+                  "info",
+                  "sel",
+                  "select",
                   "debug",
                   "delete",
                   "enable",
@@ -186,7 +207,11 @@ public final class CommandSuggestions {
                   "export",
                   "schedule",
                   "skin")
-              .contains(op)) return ids();
+              .contains(op)) {
+        var result = new ArrayList<>(ids());
+        if (op.equals("delete")) result.addAll(List.of("confirm", "cancel"));
+        return result;
+      }
       if (op.equals("set")) {
         if (args.length == 2) return NpcOptions.fields();
         if (args.length == 3) {
@@ -194,7 +219,7 @@ public final class CommandSuggestions {
           return NpcOptions.choices(args[1], plugin.getConfig());
         }
       }
-      if (op.equals("delete") && args.length == 3 && npcs.get(args[1]).isPresent())
+      if (op.equals("delete") && args.length == 3 && npcs.get(npcs.resolve(args[1])).isPresent())
         return List.of("confirm");
       if (op.equals("page") && args.length == 2) return List.of("1", "2", "3", "4", "5", "6", "7");
       if (op.equals("path")) {
@@ -323,7 +348,8 @@ public final class CommandSuggestions {
   }
 
   private List<String> ids() {
-    return npcs.all().stream().map(n -> "" + npcs.number(n.id())).toList();
+    return npcs.all().stream().mapToInt(n -> npcs.number(n.id())).filter(id -> id > 0)
+        .sorted().mapToObj(Integer::toString).toList();
   }
 
   private List<String> players(CommandSender sender) {
