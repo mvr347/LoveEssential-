@@ -203,7 +203,7 @@ class ComfortHologramTest {
     command(p, "spawn");
     assertFalse(p.nextMessage().contains("Недостаточно прав"));
     command(p, "setspawn");
-    assertTrue(p.nextMessage().toLowerCase(Locale.ROOT).contains("недостаточно прав"));
+    assertNull(p.nextMessage(), "a refusal for missing rights prints nothing");
     assertTrue(await(store.get("place", "spawn:default", Gameplay.Place.class)).isEmpty());
     plugin.getConfig().set("home.access.denied-worlds", List.of("world"));
     command(p, "home");
@@ -414,6 +414,9 @@ class ComfortHologramTest {
     await(plugin.module("utilities", true));
     var visitor = server.addPlayer("Mortal");
     command(visitor, "god");
+    assertNull(visitor.nextMessage());
+    command(visitor, "vanish");
+    assertNull(visitor.nextMessage());
     assertFalse(damage(visitor, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
   }
 }

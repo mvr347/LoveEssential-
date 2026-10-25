@@ -195,6 +195,9 @@ public final class Lang {
     return mm.deserialize(text(key), b.build());
   }
 
+  /** Key of the permission refusal; sending it prints nothing. */
+  static final String SILENT = "errors.permission";
+
   public void error(CommandSender to, Throwable error) {
     while ((error instanceof java.util.concurrent.CompletionException
             || error instanceof java.util.concurrent.ExecutionException)
@@ -233,6 +236,8 @@ public final class Lang {
   }
 
   public void send(CommandSender to, String key, Map<String, String> vars) {
+    // A player without the right gets silence: no "not enough rights" reply for any command or menu.
+    if (key.equals(SILENT)) return;
     Component message = render("chat.prefix").append(render(key, vars));
     if (key.equals("errors.input") || key.endsWith(".usage"))
       message =
