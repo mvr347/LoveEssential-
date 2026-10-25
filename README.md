@@ -171,3 +171,10 @@ plugins/LoveEssential/
 `/npc debug` и `/npc export` не требуют повторного номера. `/npc deselect` снимает выбор.
 В сообщении о выборе и информации доступны кнопки действий с учётом прав. Удаление подтверждается
 кнопкой в чате; запрос действует 60 секунд и не переносится на другого NPC после смены выбора.
+
+## Аддон DeluxeCombat для Love-плагинов
+
+[Love Integration](addons/deluxecombat/README.md) — отдельный нативный аддон:
+единое CombatState через API DeluxeCombat, подтверждённое падение Revive/ReviveMe,
+исключение активных дуэлей, защита авторизации/vanish и атрибуция смерти по таймеру
+встроенного Revive. Устанавливается в `plugins/DeluxeCombat/addons/`.
