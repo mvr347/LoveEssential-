@@ -9,25 +9,6 @@ depend:
 softdepend:
 - ItemsAdder
 - PlaceholderAPI
-- LoveAuth
-- LoveBehavior
-- LoveSubnames
-- LoveClans
-- LoveClaims
-- LoveChat
-- LoveChatFilter
-- LoveContracts
-- LoveShop
-- LoveShops
-- LoveTrades
-- LoveActivities
-- LoveDuels
-- LoveHunt
-- LoveLeaderboards
-- LoveBrew
-- LoveAdaptation
-- LoveTweaks
-- LoveWebAdmin
 commands:
   waystone:
     aliases: [столб, столбы, fasttravel, путешествие]
