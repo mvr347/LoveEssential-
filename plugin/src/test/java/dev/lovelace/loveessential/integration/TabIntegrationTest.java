@@ -146,6 +146,21 @@ class TabIntegrationTest {
   }
 
   @Test
+  void aTabNameOverwrittenAfterAnUpdateIsRestoredWithoutRepeatedSends() throws Exception {
+    var alice = player("Alice", "world");
+    settle(40);
+    var tab = internal("tab", TabModule.class);
+    var expected = alice.playerListName();
+    // Simulate a one-time write after TAB has cached its last successful update.
+    alice.playerListName(net.kyori.adventure.text.Component.text("&a#1 &fAlice"));
+    settle(40);
+    assertEquals(expected, alice.playerListName(), "TAB must restore its configured player name");
+    long restored = tab.sentValues();
+    settle(120);
+    assertEquals(restored, tab.sentValues(), "A stable restored name must not be resent");
+  }
+
+  @Test
   void tabStyleTextRendersLegacyColorsAndBuiltInPlaceholders() throws Exception {
     var alice = player("Alice", "world");
     var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
