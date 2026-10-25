@@ -40,6 +40,8 @@ public final class CommandSuggestions {
           Map.entry("list", "view"),
           Map.entry("debug", "debug"),
           Map.entry("select", "view"),
+          Map.entry("sel", "view"),
+          Map.entry("rename", "edit"),
           Map.entry("delete", "delete"),
           Map.entry("enable", "publish"),
           Map.entry("disable", "publish"));
@@ -56,6 +58,7 @@ public final class CommandSuggestions {
           Map.entry("копия", "clone"),
           Map.entry("экспорт", "export"),
           Map.entry("импорт", "import"),
+          Map.entry("переименовать", "rename"),
           Map.entry("включить", "enable"),
           Map.entry("выключить", "disable"));
 

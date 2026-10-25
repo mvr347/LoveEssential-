@@ -476,6 +476,7 @@ messages:
     npc-commands:
     - <gold>Редактор NPC
     - <gray>/le npc create <id>; /le npc delete <id> confirm
+    - <gray>/npc sel [id] — выбрать NPC (смотря на него); /npc rename <имя> — переименовать, &-цвета работают
     - <gray>/npc wizard; /npc edit <id>
     - <gray>/npc set <параметр> <значение>; /npc here
     - <gray>/npc path add|mode|point|remove|move|record|tool|show|undo|redo
@@ -496,6 +497,9 @@ messages:
     entry: <gold><id> <gray>· <type> · ревизия <revision>
     debug: '<gray>Состояние: <state>'
     selected: '<gray>Выбран: <id>'
+    none-targeted: '<red>Посмотрите на NPC или укажите его: /npc sel <id>'
+    rename-usage: '<yellow>Выберите NPC (/npc sel) и введите: /npc rename <имя>, например /npc rename &eБанкир'
+    renamed: '<green>NPC переименован: <name>'
     confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
   dialog:
     finished: <gray>Разговор завершён.
@@ -1593,7 +1597,7 @@ messages:
     back: <aqua>[Назад]
     edit: <aqua>[Редактировать]
     saved: <green>Изменения сохранены.
-    prefix: <dark_gray>[<gold>Love<dark_gray>] <reset>
+    prefix: <dark_gray>[<gold>Сервер<dark_gray>] <reset>
     commands: <aqua>[Команды]
     reply: <aqua>[Ответить]
   input-extra:

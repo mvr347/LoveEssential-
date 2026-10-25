@@ -51,6 +51,7 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final RandomTeleport randomTeleport;
 
   private BukkitTask task;
+  private BukkitTask nightTask;
   private Placeholders placeholders;
   private long ticks;
 
@@ -118,6 +119,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     Bukkit.getPluginManager().registerEvents(this, plugin);
     for (var p : Bukkit.getOnlinePlayers()) loadPlayer(p, false);
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20, 20);
+    nightTask = Bukkit.getScheduler().runTaskTimer(plugin, this::nightSkip, 4, 4);
     comfort.start();
     vanishFx.start();
     portals.start();
@@ -358,7 +360,7 @@ public final class Gameplay implements Listener, AutoCloseable {
         lastSkin.put(p.getUniqueId(), now);
         var profile = Bukkit.createProfile(skin);
         java.util.concurrent.CompletableFuture.supplyAsync(
-                () -> new SkinLookup(profile, profile.complete()),
+                () -> lookupSkin(profile, skin),
                 ((LoveEssentialPlugin) plugin).io())
             .whenComplete(
                 (lookup, failure) ->
@@ -387,40 +389,40 @@ public final class Gameplay implements Listener, AutoCloseable {
     portals.command(p, id.isBlank() ? new String[] {op} : new String[] {op, id});
   }
 
+  /**
+   * While at least {@code night-skip.required-percent} of the players who count are asleep, the night
+   * runs {@code night-skip.max-multiplier} times faster. It runs every 4 ticks, so the sky moves
+   * smoothly instead of jumping once a second. A sleeping player never counts as away: lying in bed
+   * is exactly what makes the idle timer run out.
+   */
+  /** Ticks to add every 4 ticks: none until enough players sleep, then (speed - 1) * 4. */
+  static long nightExtra(long sleeping, long eligible, double requiredPercent, double speed) {
+    if (sleeping <= 0 || sleeping * 100.0 < requiredPercent * eligible) return 0;
+    return Math.max(0, Math.round((speed - 1) * 4));
+  }
+
+  private void nightSkip() {
+    if (!enabled.test("nightskip")) return;
+    double required = plugin.getConfig().getDouble("night-skip.required-percent", 50) / 100.0;
+    double speed = plugin.getConfig().getDouble("night-skip.max-multiplier", 30);
+    for (World w : Bukkit.getWorlds()) {
+      if (w.getTime() <= 12500 || w.getTime() >= 23500) continue;
+      long eligible = 0, sleeping = 0;
+      for (var p : w.getPlayers()) {
+        if (!((LoveEssentialPlugin) plugin).allows("nightskip", p) || vanished(p)) continue;
+        if (p.isSleeping()) {
+          sleeping++;
+          eligible++;
+        } else if (!afk(p)) eligible++;
+      }
+      long extra = nightExtra(sleeping, eligible, required * 100, speed);
+      if (extra > 0) w.setTime(Math.min(23500, w.getTime() + extra));
+    }
+  }
+
   private void tick() {
     ticks += 20;
     reportAfk();
-    if (enabled.test("nightskip"))
-      for (World w : Bukkit.getWorlds())
-        if (w.getTime() > 12500 && w.getTime() < 23500) {
-          long
-              eligible =
-                  w.getPlayers().stream()
-                      .filter(
-                          p ->
-                              ((LoveEssentialPlugin) plugin).allows("nightskip", p)
-                                  && !vanished(p)
-                                  && !afk(p))
-                      .count(),
-              sleeping =
-                  w.getPlayers().stream()
-                      .filter(
-                          p ->
-                              ((LoveEssentialPlugin) plugin).allows("nightskip", p)
-                                  && !vanished(p)
-                                  && !afk(p)
-                                  && p.isSleeping())
-                      .count();
-          if (sleeping > 0 && eligible > 0) {
-            long extra =
-                (long)
-                    (plugin.getConfig().getDouble("night-skip.max-multiplier", 30)
-                        * sleeping
-                        / eligible
-                        * 20);
-            w.setTime(Math.min(23500, w.getTime() + extra));
-          }
-        }
     if (enabled.test("afk")) {
       long kick = plugin.getConfig().getLong("afk.kick-after-seconds", 0);
       if (kick > 0)
@@ -495,6 +497,36 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final Map<UUID, Long> lastSkin = new ConcurrentHashMap<>();
 
   private record SkinLookup(com.destroystokyo.paper.profile.PlayerProfile profile, boolean ok) {}
+
+  private final java.net.http.HttpClient mojang = java.net.http.HttpClient.newHttpClient();
+
+  /**
+   * Paper's lookup first; with {@code online-mode=false} it knows only accounts the server has seen,
+   * so a profile without textures is asked from Mojang directly.
+   */
+  private SkinLookup lookupSkin(com.destroystokyo.paper.profile.PlayerProfile profile, String name) {
+    boolean ok = false;
+    try {
+      ok = profile.complete();
+    } catch (RuntimeException ignored) {
+      // The direct lookup below decides.
+    }
+    if (ok && profile.getProperties().stream().anyMatch(property -> property.getName().equals("textures")))
+      return new SkinLookup(profile, true);
+    try {
+      var textures = MojangSkins.fetch(mojang, name);
+      if (textures.isPresent()) {
+        profile.setProperty(new ProfileProperty("textures", textures.get().value(), textures.get().signature()));
+        return new SkinLookup(profile, true);
+      }
+      return new SkinLookup(profile, ok);
+    } catch (java.io.IOException e) {
+      return new SkinLookup(profile, ok);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new SkinLookup(profile, ok);
+    }
+  }
 
   private void applyLookup(
       Player p, String skin, boolean reset, SkinLookup lookup, Throwable failure) {
@@ -635,6 +667,7 @@ public final class Gameplay implements Listener, AutoCloseable {
 
   public void close() {
     if (task != null) task.cancel();
+    if (nightTask != null) nightTask.cancel();
     HandlerList.unregisterAll(this);
     comfort.close();
     vanishFx.close();

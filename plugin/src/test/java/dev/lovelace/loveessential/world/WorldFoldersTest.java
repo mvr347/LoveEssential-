@@ -31,14 +31,17 @@ class WorldFoldersTest {
   }
 
   @Test
-  void noMainWorldMeansLegacyOnly() throws Exception {
-    Files.createDirectories(root.resolve("world/dimensions/minecraft/spawn/region"));
-    assertFalse(WorldFolders.importable(root, null, "spawn"));
-  }
-
-  @Test
   void traversalIsRefused() throws Exception {
     Files.createDirectories(root.resolve("world/dimensions/minecraft/x/region"));
     assertFalse(WorldFolders.importable(root, root.resolve("world"), "../x"));
+  }
+
+  @Test
+  void mainWorldFolderPointingAtItsOverworldDimension() throws Exception {
+    Files.createDirectories(root.resolve("world/dimensions/minecraft/overworld/region"));
+    Files.createDirectories(root.resolve("world/dimensions/minecraft/spawn/region"));
+    assertTrue(
+        WorldFolders.importable(root, root.resolve("world/dimensions/minecraft/overworld"), "spawn"));
+    assertTrue(WorldFolders.importable(root, null, "spawn"));
   }
 }
