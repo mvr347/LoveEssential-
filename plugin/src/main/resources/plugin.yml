@@ -7,6 +7,7 @@ authors:
 depend:
 - LoveCore
 softdepend:
+- ItemsAdder
 - PlaceholderAPI
 - LoveAuth
 - LoveBehavior
@@ -28,6 +29,9 @@ softdepend:
 - LoveTweaks
 - LoveWebAdmin
 commands:
+  waystone:
+    aliases: [столб, столбы, fasttravel, путешествие]
+    description: Путевые столбы и быстрое перемещение
   loveessential:
     aliases:
     - le
@@ -142,6 +146,9 @@ commands:
   display:
     aliases: [оформление]
 permissions:
+  loveessential.waystones.admin:
+    description: Создание и настройка путевых столбов
+    default: op
   loveessential.rtp:
     default: true
   loveessential.rtp.bypass.cooldown:

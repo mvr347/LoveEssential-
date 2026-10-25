@@ -18,6 +18,7 @@ public final class GuiSettings {
   }
 
   public static String module(String id) {
+    if (id.startsWith("waystones.")) return "waystones";
     if (id.startsWith("tab-") || id.startsWith("tab.")) return "tab";
     if (id.startsWith("portal-")) return "portal";
     if (id.startsWith("sidebar")) return "scoreboard";

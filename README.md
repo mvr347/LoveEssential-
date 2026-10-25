@@ -6,6 +6,13 @@
 
 **Документация:** [новые папки, GUI и редакторы TAB/scoreboard](docs/MODULAR_CONFIGURATION.md) · [миры, состояния и оформление меню](docs/MODULE_ACCESS_AND_GUI.md) · [порталы](docs/PORTALS.md) · [миры, сценарии, диалоги и scoreboard](docs/WORLDS_AND_AUTOMATION.md) · [крафты и стартовый набор](docs/CUSTOM_CONTENT.md) · [все команды и алиасы](docs/COMMANDS.md) · [все плейсхолдеры](docs/PLACEHOLDERS.md) · [права доступа](docs/PERMISSIONS.md) · [руководство администратора](docs/ADMIN_GUIDE.md)
 
+## Путевые столбы
+
+Модуль `waystones`: деревянные указатели, каменные столбы, рунические обелиски и
+предметы-модели ItemsAdder. ПКМ открывает выбор направлений с ценой, подготовкой
+и задержкой. Создание: `/le waystone create`, редактор: `/le waystone edit`.
+[Настройка, права, экономика и ограничения](docs/WAYSTONES.md).
+
 ## Возможности
 
 | Раздел | Что доступно |

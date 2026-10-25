@@ -1,0 +1,109 @@
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+menus:
+  waystones-list:
+    size: 54
+    title: <gold>Путевые столбы
+    entry-title: <gold><name> · №<id>
+    entry-lore:
+    - <gray>Настроить вид, прибытие и направления
+    - <dark_gray>────────────────
+    - <green>ЛКМ — открыть
+  waystones-editor:
+    size: 27
+    title: '<gold>Столб: <name>'
+  waystones-routes:
+    size: 54
+    title: '<gold>Из <name>: направления'
+    entry-title: <gold><name>
+    linked-lore:
+    - <green>Направление включено
+    - <gray>ЛКМ — настроить цену, время и доступ
+    unlinked-lore:
+    - <gray>Направление не подключено
+    - <gray>ЛКМ — добавить маршрут
+  waystones-travel:
+    size: 54
+    title: <gold><name> · Направления
+    route-title: <gold><name>
+    route-lore:
+    - '<gray>Стоимость: <white><cost>'
+    - '<gray>Подготовка: <white><warmup> сек.'
+    - '<gray>Повторное использование: <white><cooldown> сек.'
+    - '<gray>Доступ: <white><status>'
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— отправиться
+    empty-title: <gray>Направлений пока нет
+    empty-lore:
+    - <gray>Администратор ещё не настроил маршруты.
+messages:
+  gui:
+    module-names:
+      waystones: Путевые столбы
+  module-menu:
+    descriptions:
+      waystones:
+      - <gray>Столбы быстрого перемещения и выбор направлений.
+      - '<gray>Настройка: /le waystone edit'
+buttons:
+  back:
+    title: <yellow>Назад
+    lore:
+    - <gray>Вернуться к предыдущему экрану
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  previous:
+    title: <yellow>Предыдущая страница
+    lore:
+    - <gray>Перелистать список
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  next:
+    title: <yellow>Следующая страница
+    lore:
+    - <gray>Перелистать список
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  create:
+    title: <green>Создать столб
+    lore:
+    - <gray>Выбрать оформление и поставить здесь
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  directions:
+    title: <gold>Направления
+    lore:
+    - <gray>Выбрать места, цены и время ожидания
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  arrival:
+    title: <gold>Точка прибытия
+    lore:
+    - <gray>Установить здесь; сохраняется направление взгляда
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  rotate:
+    title: <gold>Повернуть на 90°
+    lore:
+    - <gray>Повернуть модель, не меняя место прибытия
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  delete:
+    title: <red>Удалить столб
+    lore:
+    - <gray>Удаление требует подтверждения
+    - <dark_gray>────────────────
+    - <green>ЛКМ <gray>— выбрать
+  appearance:
+    title: <gold>Оформление
+    lore:
+    - <gray>Название, вариант столба и модель ItemsAdder
+    - <dark_gray>────────────────
+    - <green>ЛКМ — изменить
+status:
+  available: Доступно
+  permission: Требуется право доступа
+  cooldown: Действует задержка
+  funds: Не хватает монет или экономика недоступна
+  unavailable: Место сейчас недоступно
