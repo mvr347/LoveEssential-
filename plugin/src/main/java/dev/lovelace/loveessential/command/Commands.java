@@ -422,6 +422,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       case "import", "импорт" -> {
         permission(p, "import");
+        if (args.length > 1 && args[1].equalsIgnoreCase("citizens")) {
+          importCitizens(p, args);
+          return;
+        }
         String source = args[1], newId = args[2];
         if (!source.matches("[a-z0-9_-]{1,48}"))
           throw new IllegalArgumentException("validation.id");
@@ -543,6 +547,139 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       default -> lang.send(p, "help.npc-commands");
     }
+  }
+
+
+  /**
+   * {@code /npc import citizens [number|all]}: copies the NPCs of {@code plugins/Citizens/saves.yml}
+   * into LoveEssential and points the config bindings of the other Love plugins at the new NPCs.
+   */
+  private void importCitizens(Player p, String[] args) {
+    var provider = plugin.npcProvider();
+    if (provider == null || !provider.bound()) throw new IllegalArgumentException("errors.access");
+    var file = plugin.getDataFolder().toPath().toAbsolutePath().getParent().resolve("Citizens").resolve("saves.yml");
+    String only = args.length > 2 && !args[2].equalsIgnoreCase("all") ? args[2] : null;
+    CompletableFuture.supplyAsync(
+            () -> {
+              if (!java.nio.file.Files.isRegularFile(file)) throw new IllegalArgumentException("npc.import-nofile");
+              return dev.lovelace.loveessential.npc.CitizensImport.parse(
+                  org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile()));
+            },
+            plugin.io())
+        .whenComplete(
+            (result, error) ->
+                main.execute(
+                    () -> {
+                      if (error != null) {
+                        Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+                        lang.send(p, cause instanceof IllegalArgumentException ? cause.getMessage() : "errors.input");
+                        return;
+                      }
+                      try {
+                        runCitizensImport(p, provider, result, only);
+                      } catch (RuntimeException e) {
+                        plugin.getLogger().log(java.util.logging.Level.WARNING, "Citizens import failed", e);
+                        lang.send(p, "errors.input");
+                      }
+                    }));
+  }
+
+  private void runCitizensImport(
+      Player p,
+      dev.lovelace.loveessential.npc.LoveEssentialNpcProvider provider,
+      dev.lovelace.loveessential.npc.CitizensImport.Result result,
+      String only) {
+    var known = new HashMap<Integer, String>();
+    for (var handle : provider.all())
+      handle.tag("citizens-id").ifPresent(id -> {
+        try {
+          known.put(Integer.parseInt(id), handle.key());
+        } catch (NumberFormatException ignored) {
+          // Not one of ours.
+        }
+      });
+    var mapping = new LinkedHashMap<Integer, String>();
+    int created = 0, existing = 0;
+    var problems = new ArrayList<String>(result.skipped());
+    var mini = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
+    for (var e : result.entries()) {
+      if (only != null && !only.equals(Integer.toString(e.id()))) continue;
+      if (known.containsKey(e.id())) {
+        mapping.put(e.id(), known.get(e.id()));
+        existing++;
+        continue;
+      }
+      var world = Bukkit.getWorld(e.world());
+      if (world == null) {
+        problems.add(e.id() + ": world " + e.world() + " is not loaded");
+        continue;
+      }
+      org.bukkit.entity.EntityType type;
+      try {
+        type = org.bukkit.entity.EntityType.valueOf(e.type());
+      } catch (IllegalArgumentException unknown) {
+        problems.add(e.id() + ": unknown type " + e.type());
+        continue;
+      }
+      var spec =
+          dev.lovelace.lovecore.api.npc.NpcSpec.at(
+                  mini.deserialize(dev.lovelace.loveessential.tab.TabSyntax.legacy(e.name())),
+                  new org.bukkit.Location(world, e.x(), e.y(), e.z(), e.yaw(), e.pitch()))
+              .withType(type)
+              .withLookClose(e.lookClose())
+              .withHologram(
+                  e.hologram().stream()
+                      .map(line -> mini.deserialize(dev.lovelace.loveessential.tab.TabSyntax.legacy(line)))
+                      .toList())
+              .withTags(Map.of("citizens-id", Integer.toString(e.id())));
+      if (!e.skinValue().isBlank())
+        spec = spec.withSkin(new dev.lovelace.lovecore.api.presence.SkinTexture(e.skinValue(), e.skinSignature()));
+      else if (!e.skinName().isBlank()) spec = spec.withSkinName(e.skinName());
+      mapping.put(e.id(), provider.create(spec).key());
+      created++;
+    }
+    lang.send(
+        p,
+        "npc.import-done",
+        Map.of(
+            "created", Integer.toString(created),
+            "existing", Integer.toString(existing),
+            "skipped", Integer.toString(problems.size())));
+    mapping.forEach(
+        (old, key) -> lang.send(p, "npc.import-line", Map.of("old", Integer.toString(old), "new", key)));
+    problems.forEach(problem -> lang.send(p, "npc.import-problem", Map.of("problem", problem)));
+    if (mapping.isEmpty()) return;
+    var table = new org.bukkit.configuration.file.YamlConfiguration();
+    var tableFile = plugin.getDataFolder().toPath().resolve("citizens-import.yml").toFile();
+    if (tableFile.isFile()) {
+      try {
+        table.load(tableFile);
+      } catch (Exception unreadable) {
+        // Start a fresh table; the old file is overwritten below.
+      }
+    }
+    mapping.forEach((old, key) -> table.set(Integer.toString(old), key));
+    try {
+      table.save(tableFile);
+    } catch (java.io.IOException failed) {
+      plugin.getLogger().warning("Cannot write citizens-import.yml: " + failed.getMessage());
+    }
+    var changed = new TreeSet<String>();
+    for (var target : dev.lovelace.loveessential.npc.CitizensRebind.TARGETS) {
+      var other = Bukkit.getPluginManager().getPlugin(target.plugin());
+      if (other == null || !other.isEnabled()) continue;
+      Object current = other.getConfig().get(target.path());
+      var replacement = dev.lovelace.loveessential.npc.CitizensRebind.replacement(current, mapping);
+      if (replacement.isEmpty()) continue;
+      other.getConfig().set(target.path(), replacement.get());
+      other.saveConfig();
+      changed.add(target.plugin());
+      lang.send(
+          p,
+          "npc.import-rebound",
+          Map.of("plugin", target.plugin(), "path", target.path(), "old", String.valueOf(current), "new", replacement.get()));
+    }
+    lang.send(p, "npc.import-manual", Map.of("reload", changed.isEmpty() ? "-" : String.join(", ", changed)));
   }
 
   private void complete(CommandSender sender, CompletableFuture<?> future, String success) {
