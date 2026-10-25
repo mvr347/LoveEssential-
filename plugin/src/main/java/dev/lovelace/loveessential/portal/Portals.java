@@ -865,20 +865,15 @@ public final class Portals implements Listener, AutoCloseable {
   }
 
   private void actionMenu(Player p) {
-    actionMenu(p, 0);
-  }
-
-  private void actionMenu(Player p, int page) {
     var d = draft(p).value().value();
     var m = menu(p, 54, "portal-ui.actions", () -> wizard(p));
-    int actual = Math.clamp(page, 0, Math.max(0, (d.actions().size() - 1) / 20));
-    int start = actual * 20;
-    int count = Math.min(20, d.actions().size() - start);
-    button(m, MenuStyle.slot(count, count + 1), "portal-ui.add-command", "portal-ui.command-help", () -> commandForm(p, -1));
-    for (int i = start; i < start + count; i++) {
+    int count = d.actions().size();
+    int total = count + (count < 16 ? 1 : 0);
+    if (count < 16) button(m, MenuStyle.slot(count, total), "portal-ui.add-command", "portal-ui.command-help", () -> commandForm(p, -1));
+    for (int i = 0; i < count; i++) {
       int index = i;
       var a = d.actions().get(i);
-      int slot = MenuStyle.slot(i - start, count + 1);
+      int slot = MenuStyle.slot(i, total);
       m.inventory.setItem(
           slot,
           MenuStyle.head(
@@ -892,9 +887,6 @@ public final class Portals implements Listener, AutoCloseable {
                   lang.render("gui.click.edit"))));
       m.actions.put(slot, () -> commandForm(p, index));
     }
-    if (actual > 0) button(m, 36, "gui.previous", "gui.click.open", () -> actionMenu(p, actual - 1));
-    if ((actual + 1) * 20 < d.actions().size())
-      button(m, 44, "common.next", "gui.click.open", () -> actionMenu(p, actual + 1));
     MenuStyle.open(p, m.inventory);
   }
 

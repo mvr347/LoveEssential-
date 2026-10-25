@@ -174,3 +174,10 @@ plugins/LoveEssential/
 
 [Аудит Revive / ReviveMe, DeluxeCombat и связанных Love-плагинов](docs/REVIVE_COMBAT_AUDIT.md):
 подтверждённые ограничения, риски порядка обработчиков и сценарии проверки на сервере.
+
+## Аддон DeluxeCombat для Love-плагинов
+
+[Love Integration](addons/deluxecombat/README.md) — отдельный нативный аддон:
+единое CombatState через API DeluxeCombat, подтверждённое падение Revive/ReviveMe,
+исключение активных дуэлей, защита авторизации/vanish и атрибуция смерти по таймеру
+встроенного Revive. Устанавливается в `plugins/DeluxeCombat/addons/`.

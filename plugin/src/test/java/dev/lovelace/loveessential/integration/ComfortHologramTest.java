@@ -418,6 +418,8 @@ class ComfortHologramTest {
     // This test asserts command silence; an async join announcement is unrelated to permissions.
     await(plugin.module("joinquit", false));
     var visitor = server.addPlayer("Mortal");
+    // MockBukkit emits the vanilla join message synchronously when joinquit is disabled.
+    while (visitor.nextMessage() != null) {}
     command(visitor, "god");
     assertNull(visitor.nextMessage());
     command(visitor, "vanish");

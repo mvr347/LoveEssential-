@@ -39,6 +39,11 @@ class ReviveTest implements Listener {
     monitoredPvp++;
   }
 
+  int serverDeaths;
+  @EventHandler
+  public void actualDeath(org.bukkit.event.entity.PlayerDeathEvent e) { serverDeaths++; }
+
+
   @EventHandler
   public void downed(DownedEvent e) {
     seen.add(e);
@@ -137,6 +142,21 @@ class ReviveTest implements Listener {
     MockBukkit.createMockPlugin("ReviveMe");
     fall();
     assertTrue(plugin.module("revive"), "provider coexistence is not guarded at runtime");
+  }
+
+  @Test
+  void nativeCorpseHandlersSeeOnlyFinalDeathAndFallingDoesNotConsumeLoot() {
+    plugin.getConfig().set("revive.death-delay", 1);
+    plugin.getConfig().set("revive.keep-inventory", false);
+    victim.getInventory().setItem(0, new ItemStack(Material.DIAMOND, 7));
+    fall();
+    assertEquals(0, serverDeaths, "falling is not a Bukkit death for a corpse handler");
+    assertEquals(7, victim.getInventory().getItem(0).getAmount());
+    server.getScheduler().performTicks(40);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(1, serverDeaths, "the timer must produce exactly one real death");
+    server.getScheduler().performTicks(40);
+    assertEquals(1, serverDeaths);
   }
 
   @Test
@@ -475,7 +495,7 @@ class ReviveTest implements Listener {
     assertEquals(54, top.getSize());
     assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(51).getType(), "no mode switch");
     assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(52).getType(), "no back button");
-    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(49).getType(), "unused footer stays glass");
-    assertNotEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(53).getType(), "close is the final slot");
+    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(49).getType(), "no obsolete center close button");
+    assertNotEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(53).getType(), "close button");
   }
 }

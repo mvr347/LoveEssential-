@@ -15,3 +15,7 @@ jobs:
         with:
           name: LoveEssential-Java25
           path: plugin/target/LoveEssential-*.jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LoveDeluxeCombatAddon-Java25
+          path: addons/deluxecombat/target/LoveDeluxeCombatAddon-*.jar
