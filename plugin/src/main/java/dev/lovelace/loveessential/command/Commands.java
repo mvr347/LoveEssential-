@@ -719,8 +719,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
   }
 
   /**
-   * {@code /display}: the menu, or {@code [others] <clan|suffix> <chat|tab|nametag> [on|off]}. A player
-   * changes only what they see; the {@code own} scope needs {@code loveessential.display.own}.
+   * {@code /display}: the menu, or {@code [others] <clan|suffix> <chat|tab|nametag> [on|off]}. Without
+   * {@code others} the player's own tag is hidden from everybody, which needs
+   * {@code loveessential.display.own}; with {@code others} only what the player sees changes.
    */
   private void display(Player p, String[] args) {
     if (!plugin.module("display") || !love.authenticated(p))
@@ -737,7 +738,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
       throw new IllegalArgumentException("display.tab-shared");
     if (choice.scope() == dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OWN
         && !p.hasPermission(dev.lovelace.loveessential.module.DisplayPreferences.OWN_PERMISSION))
-      throw new IllegalArgumentException("errors.permission");
+      throw new IllegalArgumentException("display.own-denied");
     boolean value =
         choice.value() != null
             ? choice.value()

@@ -204,4 +204,21 @@ class TabIntegrationTest {
             .anyMatch(c -> c instanceof net.kyori.adventure.text.ObjectComponent),
         text.toString());
   }
+
+  @Test
+  void anOutputReplacementWithLegacyColorsIsNotShownRaw() throws Exception {
+    var alice = player("Alice", "world");
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    var rank =
+        dev.lovelace.loveessential.tab.PlaceholderOutput.parse(
+            java.util.Map.of("1", "&a#1", "else", "&7&l#>3"));
+    placeholders.configure(
+        new dev.lovelace.loveessential.tab.PlaceholderRefresh(200, java.util.Map.of()),
+        java.util.Map.of("%loveleaderboards_myrank%", rank));
+    var text = placeholders.renderTabName("%loveleaderboards_myrank% &f<player>", alice, alice);
+    String plain = PlainTextComponentSerializer.plainText().serialize(text);
+    assertEquals("#>3 Alice", plain, text.toString());
+    placeholders.configure(
+        new dev.lovelace.loveessential.tab.PlaceholderRefresh(200, java.util.Map.of()), java.util.Map.of());
+  }
 }

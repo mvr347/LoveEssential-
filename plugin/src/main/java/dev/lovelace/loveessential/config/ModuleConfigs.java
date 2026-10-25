@@ -564,6 +564,17 @@ public final class ModuleConfigs {
       if (preserve.stream().anyMatch(root -> key.startsWith(root + "."))) continue;
       if (defaults.isConfigurationSection(key)
           && target.contains(key)
+          && !target.isConfigurationSection(key)
+          && emptyValue(target.get(key))) {
+        // "animations: []" or a bare "animations:" where a section belongs: nothing was set, so the
+        // shipped defaults come back instead of the plugin refusing to start.
+        java.util.logging.Logger.getLogger("LoveEssential")
+            .warning("ключ «" + key + "» пуст, но должен быть разделом: возвращены настройки по умолчанию");
+        target.set(key, null);
+        target.createSection(key);
+      }
+      if (defaults.isConfigurationSection(key)
+          && target.contains(key)
           && !target.isConfigurationSection(key))
         throw new ConfigError(
             "ключ «" + key + "» должен быть разделом (вложенными настройками), а найдено значение «"
@@ -573,6 +584,14 @@ public final class ModuleConfigs {
         else target.set(key, snapshot(defaults.get(key)));
       }
     }
+  }
+
+  /** Null, blank text, an empty list or an empty map: a value that carries no setting. */
+  static boolean emptyValue(Object value) {
+    return value == null
+        || value instanceof String text && text.isBlank()
+        || value instanceof java.util.Collection<?> list && list.isEmpty()
+        || value instanceof Map<?, ?> map && map.isEmpty();
   }
 
   private static void copy(ConfigurationSection source, YamlConfiguration target, String prefix) {

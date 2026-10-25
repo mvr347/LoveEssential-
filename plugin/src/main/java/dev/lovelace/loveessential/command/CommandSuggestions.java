@@ -282,6 +282,8 @@ public final class CommandSuggestions {
     }
     if (command.equals("traces") && args.length == 1 && plugin.module("traces"))
       return List.of("on", "off");
+    if (command.equals("god") && args.length == 1 && sender.hasPermission("loveessential.god"))
+      return List.of("on", "off");
     if (command.equals("gamemode")
         && args.length == 1
         && sender.hasPermission("loveessential.gamemode"))

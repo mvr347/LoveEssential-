@@ -26,12 +26,13 @@ class DisplayPreferencesParseTest {
   }
 
   @Test
-  void withoutAScopeWordTheChoiceIsWhatThePlayerSees() {
+  void withoutAScopeWordTheChoiceIsThePlayersOwnTag() {
     var choice = DisplayPreferences.parse(new String[] {"clan", "chat", "off"});
-    assertEquals(Scope.OTHERS, choice.scope());
+    assertEquals(Scope.OWN, choice.scope());
     assertEquals(Element.CLAN_TAG, choice.element());
     assertEquals(Boolean.FALSE, choice.value());
-    assertEquals(Scope.OTHERS, DisplayPreferences.parse(new String[] {"суффикс", "таб"}).scope());
+    assertEquals(Scope.OWN, DisplayPreferences.parse(new String[] {"суффикс", "таб"}).scope());
+    assertEquals(Scope.OTHERS, DisplayPreferences.parse(new String[] {"others", "clan", "chat"}).scope());
   }
 
   @Test

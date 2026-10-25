@@ -12,6 +12,7 @@
 | `loveessential.display.own` | OP | Скрывать собственный тег клана и пометки у всех игроков (`/display own …`); без права `/display` меняет только то, что видит сам игрок |
 | `loveessential.feed` | OP | Восстановление сытости |
 | `loveessential.fly` | OP | Разрешение полёта |
+| `loveessential.god` | OP | Режим бога (`/god`) |
 | `loveessential.speed` | OP | Скорость ходьбы/полёта |
 | `loveessential.gamemode` | OP | Свой режим игры |
 | `loveessential.repair` | OP | Ремонт предмета в руке |

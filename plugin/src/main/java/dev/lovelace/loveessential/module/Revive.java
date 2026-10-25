@@ -64,7 +64,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   private final Map<UUID, Long> lastStart = new HashMap<>();
   private final Map<UUID, Long> notified = new HashMap<>();
   private final Set<UUID> dropping = new HashSet<>();
-  private final NamespacedKey slowKey, jumpKey, pending;
+  private final NamespacedKey slowKey, jumpKey, carryKey, pending;
   private BukkitTask task;
   private long ticks;
 
@@ -99,6 +99,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     this.inventories = inventories;
     slowKey = new NamespacedKey(plugin, "downed_slow");
     jumpKey = new NamespacedKey(plugin, "downed_jump");
+    carryKey = new NamespacedKey(plugin, "downed_carry");
     pending = new NamespacedKey(plugin, "downed_pending");
   }
 
@@ -122,6 +123,28 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     }
   }
 
+  /** Rejects an unknown pose, an unreadable sound line or a sound that does not exist, naming the key. */
+  public static void validate(org.bukkit.configuration.ConfigurationSection c) {
+    String pose = c.getString("revive.pose", "SLEEPING");
+    if (!pose.equalsIgnoreCase("SLEEPING") && !pose.equalsIgnoreCase("SWIMMING"))
+      throw new dev.lovelace.loveessential.config.ConfigError("revive.pose: SLEEPING или SWIMMING");
+    var sounds = c.getConfigurationSection("revive.sounds");
+    if (sounds == null) return;
+    for (String name : sounds.getKeys(false)) {
+      String key = "revive.sounds." + name;
+      ReviveRules.Cue cue;
+      try {
+        cue = ReviveRules.cue(sounds.getString(name, ""));
+      } catch (IllegalArgumentException e) {
+        throw new dev.lovelace.loveessential.config.ConfigError(
+            key + ": ожидается «название громкость высота», высота 0.5–2.0, громкость 0–10");
+      }
+      if (cue != null && SoundNames.find(cue.name()) == null)
+        throw new dev.lovelace.loveessential.config.ConfigError(
+            key + ": неизвестный звук «" + cue.name() + "»");
+    }
+  }
+
   // ---------------------------------------------------------------- settings
 
   private boolean enabled() {
@@ -138,6 +161,13 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   private boolean flag(String path, boolean fallback) {
     return plugin.getConfig().getBoolean(key(path), fallback);
+  }
+
+  /** Pose of a downed player as the others see it; the player's own client draws itself upright. */
+  private Pose pose() {
+    return "SWIMMING".equalsIgnoreCase(plugin.getConfig().getString(key("pose"), "SLEEPING"))
+        ? Pose.SWIMMING
+        : Pose.SLEEPING;
   }
 
   private boolean blocked(String action) {
@@ -202,6 +232,71 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     return number("suicide-count", 5, 1, 600);
   }
 
+  // ------------------------------------------------------------------ feedback
+
+  /** Plays {@code revive.sounds.<name>} at a place; {@code pitchAdd} raises it, for a rising tick. */
+  private void cue(String name, Location at, float pitchAdd) {
+    if (!flag("display.sounds", true) || at.getWorld() == null) return;
+    ReviveRules.Cue cue;
+    try {
+      cue = ReviveRules.cue(plugin.getConfig().getString(key("sounds." + name), ""));
+    } catch (IllegalArgumentException e) {
+      return;
+    }
+    var sound = cue == null ? null : SoundNames.find(cue.name());
+    if (sound != null)
+      at.getWorld().playSound(at, sound, cue.volume(), Math.clamp(cue.pitch() + pitchAdd, .5f, 2f));
+  }
+
+  private void cue(String name, Location at) {
+    cue(name, at, 0f);
+  }
+
+  /**
+   * The action bar of a downed player. It is sent every step because the client drops it after a
+   * few seconds, and the choice is made again every step, so when a revive is interrupted or the
+   * player starts giving up the old text is replaced at once.
+   */
+  private void status(Player p, State state) {
+    boolean canGiveUp = (ticks - state.since) * STEP >= number("suicide-delay", 5, 0, 600);
+    switch (ReviveRules.bar(state.reviver != null, state.carrier != null, state.suicide, canGiveUp)) {
+      case SUICIDE ->
+          p.sendActionBar(
+              lang.renderText(
+                  lang.text("revive.action-suicide"),
+                  Map.of(),
+                  Map.of("bar", bar(state.suicide / suicideCount()))));
+      case REVIVING -> {
+        var helper = state.reviver == null ? null : Bukkit.getPlayer(state.reviver);
+        if (helper != null)
+          p.sendActionBar(
+              lang.renderText(
+                  lang.text("revive.bar-reviving"),
+                  Map.of("reviver", helper.getName()),
+                  Map.of("bar", bar(state.progress / required()))));
+      }
+      case CARRIED -> {
+        var carrier = state.carrier == null ? null : Bukkit.getPlayer(state.carrier);
+        if (carrier != null)
+          p.sendActionBar(lang.render("revive.action-carried", Map.of("carrier", carrier.getName())));
+      }
+      case GIVE_UP -> p.sendActionBar(lang.render("revive.action-giveup"));
+      case WAIT ->
+          p.sendActionBar(
+              lang.render(
+                  "revive.action-wait",
+                  Map.of(
+                      "seconds",
+                      Long.toString(
+                          Math.max(
+                              1,
+                              (long)
+                                  Math.ceil(
+                                      number("suicide-delay", 5, 0, 600)
+                                          - (ticks - state.since) * STEP))))));
+    }
+  }
+
   // ------------------------------------------------------------------ falling
 
   private boolean eligible(Player p, EntityDamageEvent e) {
@@ -256,8 +351,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
             lang.render("revive.title"),
             lang.render("revive.subtitle"),
             Title.Times.times(Duration.ofMillis(200), Duration.ofSeconds(2), Duration.ofMillis(500))));
-    if (flag("display.sounds", true))
-      p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_HURT, 1f, .6f);
+    cue("down", p.getLocation());
     fire("down", p, null);
     return true;
   }
@@ -267,7 +361,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     modifier(p, Attribute.JUMP_STRENGTH, jumpKey, -1);
     p.setSprinting(false);
     p.setGliding(false);
-    p.setPose(Pose.SWIMMING, true);
+    p.setPose(pose(), true);
     p.closeInventory();
     if (flag("display.bossbar", true)) {
       state.bar = BossBar.bossBar(bossTitle(state), 1f, BossBar.Color.RED, BossBar.Overlay.PROGRESS);
@@ -300,12 +394,22 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     if (state.carrier != null) {
       var carrier = Bukkit.getPlayer(state.carrier);
       carrying.remove(state.carrier);
-      if (carrier != null) detach(carrier, p);
+      if (carrier != null) {
+        detach(carrier, p);
+        unslow(carrier);
+        carrier.sendActionBar(Component.empty());
+      }
     }
     if (state.reviver != null) {
       var helper = Bukkit.getPlayer(state.reviver);
       if (helper != null) helper.sendActionBar(Component.empty());
     }
+    p.sendActionBar(Component.empty());
+  }
+
+  private void unslow(Player carrier) {
+    AttributeInstance instance = carrier.getAttribute(Attribute.MOVEMENT_SPEED);
+    if (instance != null) instance.removeModifier(carryKey);
   }
 
   private void detach(Player carrier, Player downed) {
@@ -339,7 +443,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         states.remove(state.id);
         continue;
       }
-      if (p.getPose() != Pose.SWIMMING || !p.hasFixedPose()) p.setPose(Pose.SWIMMING, true);
+      if (p.getPose() != pose() || !p.hasFixedPose()) p.setPose(pose(), true);
       if (p.isGliding()) p.setGliding(false);
       state.invulnerable = Math.max(0, state.invulnerable - STEP);
       if (!checkCarrier(p, state)) continue;
@@ -347,7 +451,12 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       if (!states.containsKey(state.id)) continue;
       suicide(p, state);
       if (!states.containsKey(state.id)) continue;
-      boolean paused = state.carrier != null && flag("carry.pause-timer", true);
+      boolean paused =
+          ReviveRules.paused(
+              state.carrier != null,
+              state.reviver != null,
+              flag("carry.pause-timer", true),
+              flag("revive-pause-timer", true));
       if (!paused) state.remaining -= STEP;
       int left = (int) Math.ceil(state.remaining);
       if (second) {
@@ -362,6 +471,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         state.bar.progress(
             (float) Math.clamp(state.remaining / number("death-delay", 75, 1, 3600), 0, 1));
       }
+      status(p, state);
       if (state.remaining <= 0) expire(p, state);
     }
   }
@@ -391,10 +501,14 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     if (carrier == null || !carrier.isOnline() || carrier.isDead() || !carrier.getPassengers().contains(p)) {
       carrying.remove(state.carrier);
       state.carrier = null;
+      if (carrier != null) {
+        unslow(carrier);
+        carrier.sendActionBar(Component.empty());
+      }
+      cue("drop", p.getLocation());
       return true;
     }
     carrier.sendActionBar(lang.render("revive.action-carry", Map.of("downed", p.getName())));
-    p.sendActionBar(lang.render("revive.action-carried", Map.of("carrier", carrier.getName())));
     return true;
   }
 
@@ -422,11 +536,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
             lang.text("revive.action-reviving"),
             Map.of("downed", p.getName(), "percent", percent),
             Map.of("bar", bar)));
-    p.sendActionBar(
-        lang.renderText(
-            lang.text("revive.bar-reviving"),
-            Map.of("reviver", helper.getName()),
-            Map.of("bar", bar)));
+    if (ticks % 10 == 0)
+      cue("tick", p.getLocation(), (float) Math.min(1, state.progress / required) * .8f);
     if (state.progress >= required) complete(p, state, helper);
   }
 
@@ -486,6 +597,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     state.reviver = helper.getUniqueId();
     state.progress = 0;
     lastStart.put(helper.getUniqueId(), System.currentTimeMillis());
+    cue("start", downed.getLocation());
     fire("start", downed, helper);
     return helper;
   }
@@ -520,6 +632,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     state.reviver = null;
     state.progress = 0;
     helper.sendActionBar(Component.empty());
+    cue("stop", downed.getLocation());
+    status(downed, state);
     fire("stop", downed, helper);
   }
 
@@ -543,8 +657,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       helper.sendMessage(lang.render("revive.revived-helper", Map.of("downed", p.getName())));
       helper.sendActionBar(Component.empty());
     }
-    if (flag("display.sounds", true))
-      p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+    cue("revived", p.getLocation());
+    cue("revived-extra", p.getLocation());
     fire("revive", p, helper);
   }
 
@@ -630,9 +744,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       return;
     }
     state.suicide += STEP;
-    p.sendActionBar(
-        lang.renderText(
-            lang.text("revive.action-suicide"), Map.of(), Map.of("bar", bar(state.suicide / suicideCount()))));
+    if (ticks % 10 == 0) cue("giveup-tick", p.getLocation(), (float) (state.suicide / suicideCount()) * .6f);
     if (state.suicide >= suicideCount()) giveUp(p);
   }
 
@@ -702,7 +814,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         e.setCancelled(true);
         return;
       }
-      if (attacker != null && states.containsKey(p.getUniqueId()) && pickUp(attacker, p)) {
+      if (attacker != null
+          && flag("carry.left-click", false)
+          && states.containsKey(p.getUniqueId())
+          && pickUp(attacker, p)) {
         e.setCancelled(true);
         return;
       }
@@ -713,6 +828,11 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       if (downed != null) drop(p, downed);
     }
     var state = states.get(p.getUniqueId());
+    // Damage to the one who is carried throws both to the ground, as damage to the carrier does.
+    if (state != null && state.carrier != null && flag("carry.drop-on-damage", true)) {
+      var carrier = Bukkit.getPlayer(state.carrier);
+      if (carrier != null) drop(carrier, p);
+    }
     if (state != null) {
       if (state.invulnerable > 0) e.setCancelled(true);
       else state.cause = e;
@@ -741,9 +861,15 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         || !downed.hasPermission("loveessential.revive.pickable")) return false;
     var event = new PickupDownedEvent(downed, carrier);
     Bukkit.getPluginManager().callEvent(event);
-    if (event.isCancelled() || !carrier.addPassenger(downed)) return false;
+    if (event.isCancelled()) return false;
+    var helper = state.reviver == null ? null : Bukkit.getPlayer(state.reviver);
+    if (!carrier.addPassenger(downed)) return false;
+    if (helper != null) stop(downed, state, helper);
     state.carrier = carrier.getUniqueId();
     carrying.put(carrier.getUniqueId(), downed.getUniqueId());
+    double slow = number("carry.slow", .15, 0, .9);
+    if (slow > 0) modifier(carrier, Attribute.MOVEMENT_SPEED, carryKey, -slow);
+    cue("pickup", downed.getLocation());
     fire("pickup", downed, carrier);
     return true;
   }
@@ -753,6 +879,9 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     carrying.remove(carrier.getUniqueId());
     if (state != null) state.carrier = null;
     detach(carrier, downed);
+    unslow(carrier);
+    carrier.sendActionBar(Component.empty());
+    cue("drop", downed.getLocation());
     Bukkit.getPluginManager().callEvent(new DropDownedEvent(downed, carrier));
     fire("drop", downed, carrier);
   }
@@ -795,9 +924,13 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     }
     if (e.getHand() != EquipmentSlot.HAND
         || !(e.getRightClicked() instanceof Player victim)
-        || !states.containsKey(victim.getUniqueId())
-        || !p.isSneaking()
-        || !flag("steal.enabled", true)
+        || !states.containsKey(victim.getUniqueId())) return;
+    if (!p.isSneaking()) {
+      // Right click picks the downed player up, as ReviveMe does.
+      if (pickUp(p, victim)) e.setCancelled(true);
+      return;
+    }
+    if (!flag("steal.enabled", true)
         || !p.hasPermission("loveessential.revive.robber")
         || !victim.hasPermission("loveessential.revive.stealable")) return;
     e.setCancelled(true);

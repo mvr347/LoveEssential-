@@ -11,11 +11,13 @@ messages:
     passenger-ejected: <gray>Пассажир снят.
     prompt-mode: <yellow>Введите survival, creative, adventure или spectator.
     prompt-speed: <yellow>Введите скорость от 0 до 10. При полёте меняется скорость полёта, иначе — ходьбы.
-    usage: <gray>/sit · /ride [игрок] · /hat · /traces [on|off] · /speed <0–10> · /gamemode <режим>
+    usage: <gray>/sit · /ride [игрок] · /hat · /traces [on|off] · /god [вкл|выкл] · /speed <0–10> · /gamemode <режим>
     healed: <green>Здоровье восстановлено.
     fed: <green>Сытость восстановлена.
     fly-on: <green>Полёт разрешён.
     fly-off: <gray>Полёт выключен.
+    god-on: <green>Режим бога включён, урон и голод вас не трогают.
+    god-off: <gray>Режим бога выключен.
     traces-on: <green>Следы включены.
     traces-off: <gray>Следы выключены.
     repair-item: <yellow>Возьмите в основную руку предмет, который нужно починить.

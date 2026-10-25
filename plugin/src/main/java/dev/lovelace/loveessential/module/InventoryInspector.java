@@ -27,6 +27,11 @@ public final class InventoryInspector implements Listener, AutoCloseable {
     final Player viewer, target;
     Inventory inventory;
     boolean editing;
+
+    /** A search of a downed player: items and a close button only. */
+    boolean simple() {
+      return robbery != null;
+    }
     /** Set for robbing a downed player: replaces the invsee permission and module checks. */
     java.util.function.BiPredicate<Player, Player> robbery;
 
@@ -114,7 +119,10 @@ public final class InventoryInspector implements Listener, AutoCloseable {
     if (!allowed(s)) throw new IllegalArgumentException("errors.permission");
     s.inventory =
         Bukkit.createInventory(
-            s, 54, lang.render("inventory.title", Map.of("player", target.getName())));
+            s,
+            54,
+            lang.render(
+                s.simple() ? "revive.rob-title" : "inventory.title", Map.of("player", target.getName())));
     for (int i = 41; i < 54; i++)
       s.inventory.setItem(
           i,
@@ -122,6 +130,15 @@ public final class InventoryInspector implements Listener, AutoCloseable {
               Material.GRAY_STAINED_GLASS_PANE,
               net.kyori.adventure.text.Component.empty(),
               List.of()));
+    if (s.simple()) {
+      // A search of a downed player is just the items and a close button: no mode switch, no manual.
+      refresh(s);
+      s.inventory.setItem(
+          49, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
+      viewer.openInventory(s.inventory);
+      sessions.put(viewer.getUniqueId(), s);
+      return;
+    }
     s.inventory.setItem(
         45,
         PlayerProfiles.head(
@@ -146,6 +163,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
   private void refresh(Session s) {
     for (int i = 0; i <= 40; i++)
       s.inventory.setItem(i, copy(s.target.getInventory().getItem(targetSlot(i))));
+    if (s.simple()) return;
     s.inventory.setItem(
         49,
         MenuStyle.button(
@@ -228,7 +246,16 @@ public final class InventoryInspector implements Listener, AutoCloseable {
           .contains(e.getAction())) e.setCancelled(false);
       return;
     }
-    if (raw == 53 || raw == 51 || raw == 52) {
+    if (s.simple()) {
+      if (raw == 49)
+        Bukkit.getScheduler()
+            .runTask(
+                plugin,
+                () -> {
+                  if (sessions.get(s.viewer.getUniqueId()) == s) s.viewer.closeInventory();
+                });
+      if (raw > 40) return;
+    } else if (raw == 53 || raw == 51 || raw == 52) {
       Bukkit.getScheduler()
           .runTask(
               plugin,

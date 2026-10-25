@@ -84,4 +84,28 @@ class TabFileStabilityTest {
     assertTrue(error.detail().contains("modules/tab/tab.yml"), error.detail());
     assertTrue(error.detail().contains("nametag"), error.detail());
   }
+
+  @Test
+  void anEmptyListWhereASectionBelongsGetsTheDefaultsBackInsteadOfStoppingTheStart() throws Exception {
+    var file = new ModuleConfigs(plugin).configFile("tab");
+    var yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
+    yaml.set("animations", java.util.List.of());
+    yaml.save(file.toFile());
+    assertTrue(Files.readString(file).contains("animations: []"));
+    var loaded = assertDoesNotThrow(() -> new ModuleConfigs(plugin).load());
+    assertNotNull(loaded);
+    var after = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
+    assertTrue(after.isConfigurationSection("animations"));
+    assertTrue(after.isConfigurationSection("animations.kingdom"));
+  }
+
+  @Test
+  void aFilledValueWhereASectionBelongsStillFails() throws Exception {
+    var file = new ModuleConfigs(plugin).configFile("tab");
+    var yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
+    yaml.set("animations", java.util.List.of("a"));
+    yaml.save(file.toFile());
+    var error = assertThrows(ConfigError.class, () -> new ModuleConfigs(plugin).load());
+    assertTrue(error.detail().contains("animations"), error.detail());
+  }
 }

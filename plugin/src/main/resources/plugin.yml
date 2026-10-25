@@ -127,6 +127,8 @@ commands:
     aliases: [сытость, накормить]
   fly:
     aliases: [полёт, полет]
+  god:
+    aliases: [бог, godmode]
   speed:
     aliases: [скорость]
   gamemode:
@@ -211,6 +213,7 @@ permissions:
       loveessential.display.own: true
       loveessential.feed: true
       loveessential.fly: true
+      loveessential.god: true
       loveessential.speed: true
       loveessential.gamemode: true
       loveessential.repair: true
@@ -265,6 +268,8 @@ permissions:
   loveessential.feed:
     default: op
   loveessential.fly:
+    default: op
+  loveessential.god:
     default: op
   loveessential.speed:
     default: op
