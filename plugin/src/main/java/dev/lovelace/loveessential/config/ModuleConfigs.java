@@ -146,8 +146,11 @@ public final class ModuleConfigs {
                 && oldLang.contains(key)
                 && !module.contains("texts." + key)) module.set("texts." + key, oldLang.get(key));
         fillIn("modules/" + id + "/" + id + ".yml", module, moduleDefaults);
-        if (id.equals("scoreboard"))
+        if (id.equals("scoreboard")) {
           restyleScoreboard(module, moduleDefaults, resource("legacy/scoreboard-2026-10-23.yml"));
+          if (removeWorldLine(module) && Files.exists(configFile(id)))
+            backup(configFile(id), ".pre-world-line.bak");
+        }
         repairMappedLines(module);
         if (!(module.get("enabled") instanceof Boolean))
           throw new IllegalArgumentException("errors.config");
@@ -380,6 +383,16 @@ public final class ModuleConfigs {
    */
   private static final List<String> LEGACY_SCOREBOARD =
       List.of("catalog", "header", "max-selected-lines");
+
+  /** Retires only the personal world card; world placeholders remain available to integrations. */
+  static boolean removeWorldLine(YamlConfiguration module) {
+    boolean removed = module.contains("placeholders.world");
+    module.set("placeholders.world", null);
+    if (module.getStringList("categories.general.lore")
+        .equals(List.of("&7Координаты, мир, пинг, дата и время")))
+      module.set("categories.general.lore", List.of("&7Координаты, пинг, дата и время"));
+    return removed;
+  }
 
   /**
    * A scoreboard.yml written by the second personal sidebar (before named boards) is backed up to

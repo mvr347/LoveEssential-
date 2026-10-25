@@ -32,6 +32,12 @@ class ReviveTest implements Listener {
   LoveEssentialPlugin plugin;
   PlayerMock victim, helper;
   final List<Object> seen = new ArrayList<>();
+  int monitoredPvp;
+
+  @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+  public void monitorPvp(EntityDamageByEntityEvent event) {
+    monitoredPvp++;
+  }
 
   @EventHandler
   public void downed(DownedEvent e) {
@@ -114,6 +120,23 @@ class ReviveTest implements Listener {
   void fall() {
     hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
     assertTrue(oracle().downed(victim.getUniqueId()), "the lethal blow must put the player down");
+  }
+
+  @Test
+  void aLethalPvpHitIsCancelledBeforeTheCombatTrackerMonitorCanSeeIt() {
+    var event = new EntityDamageByEntityEvent(helper, victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+        DamageSource.builder(DamageType.PLAYER_ATTACK).withDirectEntity(helper).withCausingEntity(helper).build(), 100);
+    server.getPluginManager().callEvent(event);
+    assertTrue(oracle().downed(victim.getUniqueId()));
+    assertTrue(event.isCancelled());
+    assertEquals(0, monitoredPvp, "LoveCore CombatTracker uses this same MONITOR/ignoreCancelled contract");
+  }
+
+  @Test
+  void anExternalReviveMePluginDoesNotAutomaticallyDisableTheInternalModule() {
+    MockBukkit.createMockPlugin("ReviveMe");
+    fall();
+    assertTrue(plugin.module("revive"), "provider coexistence is not guarded at runtime");
   }
 
   @Test
@@ -452,7 +475,7 @@ class ReviveTest implements Listener {
     assertEquals(54, top.getSize());
     assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(51).getType(), "no mode switch");
     assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(52).getType(), "no back button");
-    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(53).getType(), "no corner close button");
-    assertNotEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(49).getType(), "close button");
+    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(49).getType(), "unused footer stays glass");
+    assertNotEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(53).getType(), "close is the final slot");
   }
 }

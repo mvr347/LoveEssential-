@@ -1,4 +1,11 @@
 menus:
+  holo-appearance-title:
+    size: 27
+    title: <gold>Оформление голограммы <id>
+    labels:
+      holo:
+        appearance: <gold>Оформление
+        appearance-help: <gray>Открыть фон, тень, интервалы, дальность и положение голограммы.
   holo-line-title:
     size: 54
     title: <gold>Редактор строки <number>

@@ -1554,7 +1554,9 @@ public final class NpcWizard implements Listener, AutoCloseable {
                     "step", Integer.toString(step + 1), "total", Integer.toString(LAST_STEP + 1))));
     holder.inventory = inv;
     MenuStyle.frame(inv);
-    inv.setItem(3, button(Material.BARRIER, "common.discard"));
+    int discardSlot = MenuStyle.slot(FIELDS[step].length, FIELDS[step].length + 1);
+    inv.setItem(discardSlot, button(Material.BARRIER, "common.discard"));
+    holder.routes.put(discardSlot, 3);
     inv.setItem(6, button(Material.BOOK, "wizard.sections-title"));
     inv.setItem(0, button(Material.PLAYER_HEAD, "wizard.sections." + step));
     inv.setItem(50, button(Material.LIME_CONCRETE, "common.publish"));
@@ -1592,7 +1594,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
               .map(c -> c.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
               .toList());
       item.setItemMeta(meta);
-      inv.setItem(MenuStyle.slot(i, FIELDS[step].length), item);
+      int from = MenuStyle.slot(i, FIELDS[step].length);
+      int to = MenuStyle.slot(i, FIELDS[step].length + 1);
+      inv.setItem(to, item);
+      holder.routes.put(to, from);
     }
     MenuStyle.open(p, inv);
   }

@@ -64,7 +64,7 @@ categories:
   general:
     display-name: '&bОбщее'
     lore:
-      - '&7Координаты, мир, пинг, дата и время'
+      - '&7Координаты, пинг, дата и время'
   reputation:
     display-name: '&dРепутация'
     lore:
@@ -147,13 +147,6 @@ placeholders:
     template: '&6x &b%lovetweaks_x%&7, &6y &b%lovetweaks_y%&7, &6z &b%lovetweaks_z%'
     lore:
       - '&7Текущие координаты игрока'
-    category: general
-
-  world:
-    display-name: '&bМир'
-    template: '&7бродит по миру &b%lovetweaks_world%'
-    lore:
-      - '&7Мир, в котором вы находитесь'
     category: general
 
   ping:

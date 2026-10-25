@@ -283,7 +283,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     var scope = dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OWN;
     tile(
         m,
-        4,
+        50,
         Material.LIME_DYE,
         "display.all-on",
         "display.all-on-lore",
@@ -970,12 +970,12 @@ public final class ControlMenus implements Listener, AutoCloseable {
           });
     }
     navigation(m, p, actual, list.size(), 20, n -> npcList(p, n), () -> home(p));
-    put(m, 4, Material.WRITABLE_BOOK, "gui.resume", "gui.click.open", c -> wizard.open(p));
+    put(m, 50, Material.WRITABLE_BOOK, "gui.resume", "gui.click.open", c -> wizard.open(p));
     int create = MenuStyle.slot(count, count + 1);
     put(m, create, Material.LIME_DYE, "gui.create-npc", "gui.create-npc-help", c -> wizard.open(p));
     if (!p.hasPermission("loveessential.npc.create") || !p.hasPermission("loveessential.npc.edit"))
       locked(m, create);
-    if (!p.hasPermission("loveessential.npc.edit")) locked(m, 4);
+    if (!p.hasPermission("loveessential.npc.edit")) locked(m, 50);
     MenuStyle.open(p, m.inventory);
   }
 
@@ -1192,12 +1192,49 @@ public final class ControlMenus implements Listener, AutoCloseable {
         total,
         n -> hologram(p, id, selected, n),
         () -> places(p, "hologram", 0));
+    put(m, 4, Material.COMPARATOR, "holo.appearance", "holo.appearance-help",
+        c -> hologramAppearance(p, id, selected, scroll));
+    tile(
+        m,
+        8,
+        Material.BOOK,
+        "holo.pages",
+        "holo.pages-lore",
+        Map.of("count", Integer.toString(v.pages().size())),
+        c -> hologramPages(p, id, selected));
+    put(
+        m,
+        50,
+        Material.BARRIER,
+        "gui.remove",
+        "gui.click.delete",
+        c ->
+            confirm(
+                p,
+                "gui.remove",
+                () -> gameplay.holograms().remove(p, old, () -> places(p, "hologram", 0)),
+                reopen,
+                allowed,
+                id));
+    MenuStyle.open(p, m.inventory);
+  }
+
+  public void hologramAppearance(Player p, String id, int page, int scroll) {
+    var old = gameplay.holograms().get(id)
+        .orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+    var v = old.value();
+    int selected = Math.clamp(page, 0, v.pages().size() - 1);
+    Predicate<Player> allowed = who -> admin(who) && plugin.module("hologram")
+        && gameplay.holograms().get(id).map(s -> s.revision() == old.revision()).orElse(false);
+    var m = menu(p, "holo.appearance-title", Map.of("id", id), allowed);
+    Runnable reopen = () -> hologramAppearance(p, id, selected, scroll);
+    m.reopen = reopen;
     entry(
         m,
-        3,
+        MenuStyle.slot(0, 5),
         Material.BLACK_DYE,
         lang.render("holo.background", Map.of("value", String.format("%08X", v.background()))),
-        List.of(lang.render("holo.background-help")),
+        List.of(lang.render("holo.background-help"), lang.render("gui.separator"), lang.render("gui.click.edit")),
         c ->
             request(
                 p,
@@ -1222,10 +1259,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 reopen));
     entry(
         m,
-        4,
+        MenuStyle.slot(1, 5),
         Material.GLOWSTONE_DUST,
         lang.render("holo.shadow", Map.of("value", lang.text(v.shadow() ? "holo.on" : "holo.off"))),
-        List.of(lang.render("holo.shadow-help")),
+        List.of(lang.render("holo.shadow-help"), lang.render("gui.separator"), lang.render("gui.click.switch")),
         c ->
             holoSave(
                 p,
@@ -1239,10 +1276,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 reopen));
     entry(
         m,
-        5,
+        MenuStyle.slot(2, 5),
         Material.STRING,
         lang.render("holo.spacing", Map.of("value", Double.toString(v.spacing()))),
-        List.of(lang.render("holo.spacing-help")),
+        List.of(lang.render("holo.spacing-help"), lang.render("gui.separator"), lang.render("gui.click.edit")),
         c ->
             request(
                 p,
@@ -1264,10 +1301,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 reopen));
     entry(
         m,
-        6,
+        MenuStyle.slot(3, 5),
         Material.ENDER_EYE,
         lang.render("holo.range", Map.of("value", Double.toString(v.range()))),
-        List.of(lang.render("holo.range-help")),
+        List.of(lang.render("holo.range-help"), lang.render("gui.separator"), lang.render("gui.click.edit")),
         c ->
             request(
                 p,
@@ -1289,7 +1326,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 reopen));
     entry(
         m,
-        7,
+        MenuStyle.slot(4, 5),
         Material.COMPASS,
         lang.render("gui.move"),
         List.of(
@@ -1320,32 +1357,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
               v.range(),
               reopen);
         });
-    tile(
-        m,
-        8,
-        Material.BOOK,
-        "holo.pages",
-        "holo.pages-lore",
-        Map.of("count", Integer.toString(v.pages().size())),
-        c -> hologramPages(p, id, selected));
-    put(
-        m,
-        50,
-        Material.BARRIER,
-        "gui.remove",
-        "gui.click.delete",
-        c ->
-            confirm(
-                p,
-                "gui.remove",
-                () -> gameplay.holograms().remove(p, old, () -> places(p, "hologram", 0)),
-                reopen,
-                allowed,
-                id));
+    navigation(m, p, 0, 0, n -> {}, () -> hologram(p, id, selected, scroll));
     MenuStyle.open(p, m.inventory);
   }
 
-  /** Page manager: one tile per page, with the page action and deletion as header controls. */
+  /** Page manager: pages and their editing actions belong to the work zone. */
   public void hologramPages(Player p, String id, int selected) {
     var old =
         gameplay
@@ -1367,9 +1383,12 @@ public final class ControlMenus implements Listener, AutoCloseable {
     var m = menu(p, "holo.pages-title", Map.of("id", id), allowed);
     Runnable reopen = () -> hologramPages(p, id, page);
     m.reopen = reopen;
+    int count = v.pages().size();
+    int create = count < 16 ? 1 : 0;
+    int total = count + create + 1 + (count > 1 ? 1 : 0);
     entry(
         m,
-        3,
+        MenuStyle.slot(count + create, total),
         Material.COMMAND_BLOCK,
         lang.render("holo.action"),
         List.of(
@@ -1405,7 +1424,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (v.pages().size() > 1)
       put(
           m,
-          5,
+          MenuStyle.slot(count + create + 1, total),
           Material.RED_DYE,
           "holo.delete-page",
           "gui.click.delete",
@@ -1427,7 +1446,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
       boolean chosen = i == page;
       tile(
           m,
-          MenuStyle.CONTENT[i],
+          MenuStyle.slot(i, total),
           Material.PAPER,
           chosen ? "holo.page-entry-selected" : "holo.page-entry",
           chosen ? "holo.page-lore-selected" : "holo.page-lore",
@@ -1447,7 +1466,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (v.pages().size() < 16)
       tile(
           m,
-          MenuStyle.CONTENT[v.pages().size()],
+          MenuStyle.slot(count, total),
           Material.BOOK,
           "holo.add-page",
           "holo.add-page-lore",
@@ -1486,7 +1505,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             line.item().isBlank()
                 ? gameplay.holograms().text(line, p)
                 : lang.render("holo.item-line"));
-    entry(m, 4, Material.PAPER, lang.render("holo.preview"), preview, c -> {});
+    entry(m, 19, Material.PAPER, lang.render("holo.preview"), preview, c -> {});
     put(
         m,
         20,
@@ -2076,7 +2095,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   private void number(Player p, String module, String path, Object value, Runnable back) {
     var m = menu(p, "settings-help.number-title", Map.of("path", settingName(path)), this::admin);
     m.inventory.setItem(
-        4,
+        22,
         MenuStyle.item(
             Material.COMPARATOR,
             lang.render("gui.label", Map.of("name", path)),

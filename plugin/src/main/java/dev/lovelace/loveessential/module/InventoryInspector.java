@@ -134,7 +134,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
       // A search of a downed player is just the items and a close button: no mode switch, no manual.
       refresh(s);
       s.inventory.setItem(
-          49, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
+          53, MenuStyle.button(lang, Material.BARRIER, "gui.close", "gui.click.close"));
       viewer.openInventory(s.inventory);
       sessions.put(viewer.getUniqueId(), s);
       return;
@@ -247,7 +247,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
       return;
     }
     if (s.simple()) {
-      if (raw == 49)
+      if (raw == 53)
         Bukkit.getScheduler()
             .runTask(
                 plugin,

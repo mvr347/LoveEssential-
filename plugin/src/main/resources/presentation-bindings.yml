@@ -1,6 +1,18 @@
 bindings:
 - module: hologram
   file: gui.yml
+  key: holo.appearance-title
+  path: menus.holo-appearance-title.title
+- module: hologram
+  file: gui.yml
+  key: holo.appearance
+  path: menus.holo-appearance-title.labels.holo.appearance
+- module: hologram
+  file: gui.yml
+  key: holo.appearance-help
+  path: menus.holo-appearance-title.labels.holo.appearance-help
+- module: hologram
+  file: gui.yml
   key: holo.line-title
   path: menus.holo-line-title.title
 - module: hologram
