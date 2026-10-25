@@ -8,25 +8,6 @@ depend:
 - LoveCore
 softdepend:
 - PlaceholderAPI
-- LoveAuth
-- LoveBehavior
-- LoveSubnames
-- LoveClans
-- LoveClaims
-- LoveChat
-- LoveChatFilter
-- LoveContracts
-- LoveShop
-- LoveShops
-- LoveTrades
-- LoveActivities
-- LoveDuels
-- LoveHunt
-- LoveLeaderboards
-- LoveBrew
-- LoveAdaptation
-- LoveTweaks
-- LoveWebAdmin
 commands:
   loveessential:
     aliases:
