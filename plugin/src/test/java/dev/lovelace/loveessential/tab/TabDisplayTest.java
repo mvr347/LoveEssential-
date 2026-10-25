@@ -98,7 +98,6 @@ class TabDisplayTest {
   @Test
   void theTabEntryDropsTheTagWhenItsOwnerHidesItThere() throws Exception {
     var p = server.addPlayer("Alice");
-    p.addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
     waitFor(() -> prefs.loaded(p.getUniqueId()));
     assertEquals("[ABC] Alice", text(tab.target(p).tabName()));
     prefs.set(p.getUniqueId(), Surface.TAB, Element.CLAN_TAG, Scope.OWN, false);
@@ -113,7 +112,6 @@ class TabDisplayTest {
   @Test
   void theNametagFollowsTheOwnersChoiceForEveryViewer() throws Exception {
     var p = server.addPlayer("Alice");
-    p.addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
     waitFor(() -> prefs.loaded(p.getUniqueId()));
     var target = tab.target(p);
     assertEquals("[ABC] ", text(target.tagPrefix()));
@@ -125,7 +123,7 @@ class TabDisplayTest {
   }
 
   @Test
-  void aViewerWhoHidesOtherPeoplesTagsGetsATextWithoutThemOthersKeepTheirs() throws Exception {
+  void legacyViewerChoicesAreIgnoredAndTheOwnersChoiceAppliesToEveryViewer() throws Exception {
     var owner = server.addPlayer("Alice");
     var picky = server.addPlayer("Bob");
     var normal = server.addPlayer("Carol");
@@ -137,9 +135,15 @@ class TabDisplayTest {
         target.tags().get(prefs.hiddenFor(owner.getUniqueId(), picky.getUniqueId(), Surface.NAMETAG));
     var forNormal =
         target.tags().get(prefs.hiddenFor(owner.getUniqueId(), normal.getUniqueId(), Surface.NAMETAG));
-    assertEquals("[] ", text(forPicky.prefix()));
+    assertEquals("[ABC] ", text(forPicky.prefix()));
     assertEquals("[ABC] ", text(forNormal.prefix()));
-    // Bob's own tag stays visible to Bob.
+    prefs.set(owner.getUniqueId(), Surface.NAMETAG, Element.CLAN_TAG, Scope.OWN, false);
+    target = tab.target(owner);
+    for (var viewer : java.util.List.of(owner, picky, normal)) {
+      var hidden = prefs.hiddenFor(owner.getUniqueId(), viewer.getUniqueId(), Surface.NAMETAG);
+      assertEquals("[] ", text(target.tags().get(hidden).prefix()));
+    }
+    // A different owner's tag stays visible.
     assertEquals(Set.of(), prefs.hiddenFor(picky.getUniqueId(), picky.getUniqueId(), Surface.NAMETAG));
   }
 

@@ -119,24 +119,23 @@ class DisplayPreferencesTest {
   }
 
   @Test
-  void theContractIsRegisteredForLoveChatAndHidesOwnTagsOnlyWithThePermission() throws Exception {
+  void theContractUsesOnlyTheOwnersChoiceForEveryViewerAndSurface() throws Exception {
     var owner = join("Owner").getUniqueId();
     var viewer = join("Viewer").getUniqueId();
     var contract = server.getServicesManager().load(DisplayPrefs.class);
     assertNotNull(contract, "LoveChat reads the choice through this service");
-    assertTrue(LoveCore.displayVisible(owner, viewer, Surface.CHAT, Element.CLAN_TAG));
-    contract.set(owner, Surface.CHAT, Element.CLAN_TAG, Scope.OWN, false);
-    assertTrue(
-        LoveCore.displayVisible(owner, viewer, Surface.CHAT, Element.CLAN_TAG),
-        "a player without loveessential.display.own cannot hide their tag from everybody");
-    server.getPlayer("Owner").addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
-    assertFalse(LoveCore.displayVisible(owner, viewer, Surface.CHAT, Element.CLAN_TAG));
-    contract.set(owner, Surface.CHAT, Element.CLAN_TAG, Scope.OWN, true);
-    contract.set(viewer, Surface.CHAT, Element.CLAN_TAG, Scope.OTHERS, false);
-    assertFalse(LoveCore.displayVisible(owner, viewer, Surface.CHAT, Element.CLAN_TAG));
-    assertTrue(
-        LoveCore.displayVisible(viewer, viewer, Surface.CHAT, Element.CLAN_TAG),
-        "the viewer's own tag is not an 'other' tag");
+    for (var surface : Surface.values())
+      for (var element : Element.values()) {
+        assertTrue(LoveCore.displayVisible(owner, viewer, surface, element));
+        contract.set(owner, surface, element, Scope.OWN, false);
+        assertFalse(LoveCore.displayVisible(owner, viewer, surface, element));
+        assertFalse(LoveCore.displayVisible(owner, owner, surface, element));
+        assertTrue(LoveCore.displayVisible(viewer, owner, surface, element), "other owners are unaffected");
+        contract.set(owner, surface, element, Scope.OWN, true);
+        contract.set(viewer, surface, element, Scope.OTHERS, false);
+        assertTrue(LoveCore.displayVisible(owner, viewer, surface, element), "legacy viewer flags are ignored");
+        assertTrue(LoveCore.displayVisible(owner, owner, surface, element));
+      }
   }
 
   @Test
@@ -160,30 +159,23 @@ class DisplayPreferencesTest {
   }
 
   @Test
-  void theCommandSetsAndTogglesAFlag() throws Exception {
+  void ordinaryPlayersCanChangeAllSixOwnerChoicesByCommand() throws Exception {
     var a = join("Alice");
-    server.dispatchCommand(a, "display own clan chat off");
-    assertTrue(
-        prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN),
-        "the own scope needs loveessential.display.own");
-    a.addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, true);
-    server.dispatchCommand(a, "display own clan chat off");
-    assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
-    server.dispatchCommand(a, "display own clan chat");
-    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
-    server.dispatchCommand(a, "оформление чужие пометки ник выкл");
-    assertFalse(prefs.shown(a.getUniqueId(), Surface.NAMETAG, Element.SUFFIX, Scope.OTHERS));
-    server.dispatchCommand(a, "display others clan tab off");
-    assertTrue(prefs.shown(a.getUniqueId(), Surface.TAB, Element.CLAN_TAG, Scope.OTHERS), "the shared player list cannot be changed for one viewer");
-    server.dispatchCommand(a, "display clan tab off");
-    assertFalse(
-        prefs.shown(a.getUniqueId(), Surface.TAB, Element.CLAN_TAG, Scope.OWN),
-        "without a scope word the player's own tag is hidden from everybody, the player list included");
-    server.dispatchCommand(a, "display others suffix chat off");
-    assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OTHERS));
-    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OWN));
-    server.dispatchCommand(a, "display own nonsense chat");
-    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OWN), "bad input changes nothing");
+    var b = join("Bob");
+    a.addAttachment(plugin, DisplayPreferences.OWN_PERMISSION, false);
+    for (var surface : new String[]{"chat", "tab", "nametag"})
+      for (var element : new String[]{"clan", "suffix"}) {
+        var choice = DisplayPreferences.parse(new String[]{element, surface});
+        server.dispatchCommand(a, "display " + element + " " + surface + " off");
+        assertFalse(prefs.visible(a.getUniqueId(), b.getUniqueId(), choice.surface(), choice.element()));
+        assertFalse(prefs.visible(a.getUniqueId(), a.getUniqueId(), choice.surface(), choice.element()));
+        server.dispatchCommand(a, "display own " + element + " " + surface);
+        assertTrue(prefs.visible(a.getUniqueId(), b.getUniqueId(), choice.surface(), choice.element()));
+      }
+    server.dispatchCommand(a, "оформление пометки ник выкл");
+    assertFalse(prefs.shown(a.getUniqueId(), Surface.NAMETAG, Element.SUFFIX, Scope.OWN));
+    server.dispatchCommand(a, "display others clan chat off");
+    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN), "removed scope changes nothing");
   }
 
   @Test
@@ -201,12 +193,10 @@ class DisplayPreferencesTest {
     int tile = firstTile(top);
     assertTrue(tile >= 0, "six tiles are expected in the work zone");
     click(a, tile);
-    assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OTHERS));
-    assertTrue(
-        prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN),
-        "the menu never hides the player's own tag from other people");
+    assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
+    assertFalse(prefs.visible(a.getUniqueId(), a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG));
     click(a, firstTile(a.getOpenInventory().getTopInventory()));
-    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OTHERS));
+    assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
   }
 
   @Test
@@ -222,11 +212,11 @@ class DisplayPreferencesTest {
       if (item == null || GuiRules.glass(item)) continue;
       String name = GuiRules.name(item);
       tiles++;
-      assertFalse(name.contains("Список игроков"), "no tile for the shared player list: " + name);
+
       assertFalse(name.contains("Недоступно"), name);
       assertFalse(name.contains("Суффикс"), name);
     }
-    assertEquals(4, tiles, "clan tag and marks, each in chat and on the nametag");
+    assertEquals(6, tiles, "clan and marks in chat, TAB and nametags");
   }
 
   int firstTile(org.bukkit.inventory.Inventory top) {

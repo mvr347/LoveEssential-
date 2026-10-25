@@ -55,6 +55,28 @@ class RetiredTextsTest {
   }
 
   @Test
+  void displayViewerLoreMigratesToOwnerWordingWithoutReplacingCustomLore() throws Exception {
+    var defaults = new YamlConfiguration();
+    try (var stream = getClass().getResourceAsStream("/modules/display/gui.yml")) {
+      assertNotNull(stream);
+      defaults.load(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8));
+    }
+    var installed = new YamlConfiguration();
+    String path = "messages.display.tile-lore";
+    installed.set(path, java.util.List.of(
+        "<dark_gray>Только у вас", "", "<dark_gray>▪ <gray>После клика:",
+        "  <gray>Состояние: <now> <dark_gray>→ <next>",
+        "  <gray>Другие игроки ничего не заметят.",
+        "<dark_gray><st>─────────────────────</st>",
+        "<green>ЛКМ <dark_gray>— <gray>переключить"));
+    ModuleConfigs.refreshRetiredTexts("display", installed, defaults);
+    assertEquals(defaults.getStringList(path), installed.getStringList(path));
+    installed.set(path, java.util.List.of("<gray>Моё описание"));
+    ModuleConfigs.refreshRetiredTexts("display", installed, defaults);
+    assertEquals(java.util.List.of("<gray>Моё описание"), installed.getStringList(path));
+  }
+
+  @Test
   void theOldMessagePrefixBecomesServer() {
     var installed = new YamlConfiguration();
     installed.set("messages.chat.prefix", "<dark_gray>[<gold>Love<dark_gray>] <reset>");

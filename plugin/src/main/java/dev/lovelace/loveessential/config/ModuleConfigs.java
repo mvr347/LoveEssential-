@@ -123,7 +123,10 @@ public final class ModuleConfigs {
         }
         fillIn("modules/" + id + "/gui.yml", gui, guiDefaults);
         repairMappedLines(gui);
+        String beforeDisplay = id.equals("display") ? gui.saveToString() : null;
         refreshRetiredTexts(id, gui, guiDefaults);
+        if (beforeDisplay != null && !beforeDisplay.equals(gui.saveToString())
+            && Files.exists(guiFile(id))) backup(guiFile(id), ".pre-own-display.bak");
         if (id.equals("tab")) {
           module.set("engine", null);
           module.set("external", null);
@@ -194,12 +197,15 @@ public final class ModuleConfigs {
    */
   private static final Map<String, Map<String, List<String>>> RETIRED_TEXTS =
       Map.of(
-          // 2026-10-23: /display changes only what the player sees; "my signatures" is gone from the menu.
+          // /display now changes the owner's signature for everyone, including themselves.
           "display",
           Map.of(
               "messages.display.usage",
               List.of(
-                  "<yellow>/display <gray>[own|others] [clan|suffix] [chat|tab|nametag] [on|off] — без аргументов открывается меню"),
+                  "<yellow>/display <gray>[own|others] [clan|suffix] [chat|tab|nametag] [on|off] — без аргументов открывается меню",
+                  "<yellow>/display <gray>[others] <clan|suffix> <chat|tab|nametag> [on|off] — без слова others меняется ваша подпись у всех, с others — чужие подписи у вас; без аргументов открывается меню"),
+              "menus.display-gui-title.title",
+              List.of("<gold>Теги и пометки"),
               "messages.display.scope-own",
               List.of("Мои подписи"),
               "messages.display.scope-others",
@@ -207,7 +213,8 @@ public final class ModuleConfigs {
               "messages.display.all-on",
               List.of(
                   "<gold>Показать всё <dark_gray>| <white>12 настроек",
-                  "<gold>Показать всё <dark_gray>| <white>6 настроек"),
+                  "<gold>Показать всё <dark_gray>| <white>6 настроек",
+                  "<gold>Показать всё <dark_gray>| <white>4 настройки"),
               "messages.display.element-suffix",
               List.of("Суффикс")),
           // 2026-10-25: the message prefix reads "Сервер" instead of "Love".
@@ -299,6 +306,24 @@ public final class ModuleConfigs {
           String fresh = defaults.getString(path);
           if (current != null && fresh != null && olds.contains(current)) gui.set(path, fresh);
         });
+    if (id.equals("display")) {
+      var oldLores = Map.of(
+          "messages.display.all-on-lore", List.of(
+              "<dark_gray>Сброс выбора", "", "<dark_gray>▪ <gray>После клика:",
+              "  <gray>Все теги и пометки других игроков снова видны вам.",
+              "<dark_gray><st>─────────────────────</st>",
+              "<green>ЛКМ <dark_gray>— <gray>показать всё"),
+          "messages.display.tile-lore", List.of(
+              "<dark_gray>Только у вас", "", "<dark_gray>▪ <gray>После клика:",
+              "  <gray>Состояние: <now> <dark_gray>→ <next>",
+              "  <gray>Другие игроки ничего не заметят.",
+              "<dark_gray><st>─────────────────────</st>",
+              "<green>ЛКМ <dark_gray>— <gray>переключить"));
+      oldLores.forEach((path, old) -> {
+        if (gui.getStringList(path).equals(old) && defaults.isList(path))
+          gui.set(path, defaults.getStringList(path));
+      });
+    }
   }
 
   private void inlineTab(YamlConfiguration module, YamlConfiguration legacyLanguage)

@@ -15,8 +15,9 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
  * Per-player choice of which clan tags and suffixes are shown, as the LoveCore {@link DisplayPrefs}
- * contract. Twelve flags per player (chat, TAB, nametag × tag, suffix × own, others), stored as one
- * bit mask in SQLite and cached while the player is online. Reads are safe from any thread (chat
+ * contract. Six owner choices (chat, TAB, nametag × clan, suffix) control visibility for everyone.
+ * The twelve-bit storage/API layout is retained for compatibility; legacy viewer choices no longer
+ * affect visibility. Reads are safe from any thread (chat
  * renders asynchronously); until a player's flags have loaded everything is shown.
  */
 public final class DisplayPreferences implements DisplayPrefs, Listener, AutoCloseable {
@@ -206,10 +207,8 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
   public record Choice(Scope scope, Element element, Surface surface, Boolean value) {}
 
   /**
-   * Parses {@code [own|others] <clan|suffix> <chat|tab|nametag> [on|off]}; Russian words work too.
-   * Without a scope word the choice is {@link Scope#OWN}: the player's own tag, hidden from everybody
-   * (the only scope that works for the player list, which is one entry for all viewers); what the
-   * player sees of others needs the word {@code others}. Anything else is a usage error.
+   * Parses {@code [own] <clan|suffix> <chat|tab|nametag> [on|off]}; Russian words work too.
+   * The choice always concerns the player's own signature, including when seen by its owner.
    */
   public static Choice parse(String[] args) {
     Scope scope = args.length == 0 ? null : scopeOf(args[0]);
@@ -243,7 +242,6 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
   private static Scope scopeOf(String word) {
     return switch (word.toLowerCase(Locale.ROOT)) {
       case "own", "my", "mine", "мои", "мой", "моё" -> Scope.OWN;
-      case "others", "other", "чужие", "чужой" -> Scope.OTHERS;
       default -> null;
     };
   }
@@ -257,24 +255,12 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
         + scope.name().toLowerCase(Locale.ROOT);
   }
 
-  /**
-   * Whether {@code owner}'s own choice to hide their signature from everybody counts. A player only
-   * changes what they see; hiding their own tag from the whole server needs
-   * {@code loveessential.display.own}. A stored choice of someone without it stays on disk but is
-   * ignored, so nobody is left with a hidden tag and no menu to bring it back.
-   */
-  private boolean ownChoiceCounts(UUID owner) {
-    var player = Bukkit.getPlayer(owner);
-    return player != null && player.hasPermission(OWN_PERMISSION);
-  }
-
-  /** Permission to hide one's own signature from other players. */
+  /** Legacy permission name retained for integrations; owner choices no longer require it. */
   public static final String OWN_PERMISSION = "loveessential.display.own";
 
   @Override
   public boolean visible(UUID owner, UUID viewer, Surface surface, Element element) {
-    if (ownChoiceCounts(owner) && !shown(owner, surface, element, Scope.OWN)) return false;
-    return owner.equals(viewer) || shown(viewer, surface, element, Scope.OTHERS);
+    return shown(owner, surface, element, Scope.OWN);
   }
 
   /** The viewer's setting for one player on one surface: which elements to leave out. */
