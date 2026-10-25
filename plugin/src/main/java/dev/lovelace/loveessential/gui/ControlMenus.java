@@ -274,14 +274,13 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   /**
-   * Personal menu for clan tags and suffixes. Everything here changes only what the player sees:
-   * four tiles, the clan tag and the marks, each in chat and on the nametag.
+   * Six owner choices: clan and suffix in chat, TAB and nametags, for every viewer.
    */
   public void displayMenu(Player p) {
     var m = menu(p, "display.gui-title", Map.of(), player -> plugin.module("display"));
     m.root = true;
     var id = p.getUniqueId();
-    var scope = dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OTHERS;
+    var scope = dev.lovelace.lovecore.api.display.DisplayPrefs.Scope.OWN;
     tile(
         m,
         4,
@@ -295,11 +294,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
           displayMenu(p);
         });
     var elements = dev.lovelace.lovecore.api.display.DisplayPrefs.Element.values();
-    // The player list is shared by every viewer and cannot be changed for one of them, so it is not offered.
-    var surfaces =
-        List.of(
-            dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.CHAT,
-            dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.NAMETAG);
+    var surfaces = Arrays.asList(dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.values());
     int index = 0;
     for (var element : elements)
       for (var surface : surfaces) {
@@ -309,7 +304,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 "element", lang.text("display.element-" + element.name().toLowerCase(Locale.ROOT)),
                 "surface", lang.text("display.surface-" + surface.name().toLowerCase(Locale.ROOT)),
                 // Texts saved by the previous version still read <scope>; keep it filled.
-                "scope", lang.text("display.scope-others"));
+                "scope", lang.text("display.scope-own"));
         boolean shown = displayPrefs.shown(id, surface, element, scope);
         tile(
             m,

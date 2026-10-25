@@ -18,8 +18,8 @@ class DisplayPreferencesParseTest {
     assertEquals(Element.CLAN_TAG, english.element());
     assertEquals(Surface.CHAT, english.surface());
     assertEquals(Boolean.FALSE, english.value());
-    var russian = DisplayPreferences.parse(new String[] {"чужие", "суффикс", "ник", "вкл"});
-    assertEquals(Scope.OTHERS, russian.scope());
+    var russian = DisplayPreferences.parse(new String[] {"мои", "суффикс", "ник", "вкл"});
+    assertEquals(Scope.OWN, russian.scope());
     assertEquals(Element.SUFFIX, russian.element());
     assertEquals(Surface.NAMETAG, russian.surface());
     assertEquals(Boolean.TRUE, russian.value());
@@ -32,12 +32,12 @@ class DisplayPreferencesParseTest {
     assertEquals(Element.CLAN_TAG, choice.element());
     assertEquals(Boolean.FALSE, choice.value());
     assertEquals(Scope.OWN, DisplayPreferences.parse(new String[] {"суффикс", "таб"}).scope());
-    assertEquals(Scope.OTHERS, DisplayPreferences.parse(new String[] {"others", "clan", "chat"}).scope());
+    assertThrows(IllegalArgumentException.class, () -> DisplayPreferences.parse(new String[] {"others", "clan", "chat"}));
   }
 
   @Test
   void withoutOnOffTheChoiceOnlyToggles() {
-    assertNull(DisplayPreferences.parse(new String[] {"others", "suffix", "tab"}).value());
+    assertNull(DisplayPreferences.parse(new String[] {"suffix", "tab"}).value());
   }
 
   @Test

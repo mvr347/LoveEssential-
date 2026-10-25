@@ -264,7 +264,8 @@ permissions:
   loveessential.heal:
     default: op
   loveessential.display.own:
-    default: op
+    description: Устаревшее право совместимости; управление своими подписями доступно всем.
+    default: true
   loveessential.feed:
     default: op
   loveessential.fly:
