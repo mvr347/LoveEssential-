@@ -495,6 +495,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
     Bukkit.getPluginManager().callEvent(new LoveEssentialReadyEvent(essentialApi));
   }
 
+  public dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider() {
+    return npcProvider;
+  }
+
   public boolean ready() {
     return ready;
   }

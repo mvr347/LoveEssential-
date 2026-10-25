@@ -476,6 +476,7 @@ messages:
     npc-commands:
     - <gold>Редактор NPC
     - <gray>/le npc create <id>; /le npc delete <id> confirm
+    - <gray>/npc import citizens [номер|all] — перенести NPC из plugins/Citizens/saves.yml
     - <gray>/npc sel [id] — выбрать NPC (смотря на него); /npc rename <имя> — переименовать, &-цвета работают
     - <gray>/npc wizard; /npc edit <id>
     - <gray>/npc set <параметр> <значение>; /npc here
@@ -500,6 +501,12 @@ messages:
     none-targeted: '<red>Посмотрите на NPC или укажите его: /npc sel <id>'
     rename-usage: '<yellow>Выберите NPC (/npc sel) и введите: /npc rename <имя>, например /npc rename &eБанкир'
     renamed: '<green>NPC переименован: <name>'
+    import-nofile: '<red>Файл plugins/Citizens/saves.yml не найден.'
+    import-done: '<green>Из Citizens перенесено: <created>, уже были: <existing>, пропущено: <skipped>.'
+    import-line: '<gray>Citizens #<old> → <new>'
+    import-problem: '<yellow>Пропущен NPC <problem>'
+    import-rebound: '<gray><plugin> <path>: <old> → <new>'
+    import-manual: '<yellow>Перезагрузите плагины, чьи привязки изменены: <reload>. Привязки LoveShops, стендов LoveLeaderboards и npc_quests.yml LoveContracts переставьте вручную по таблице выше (она записана в plugins/LoveEssential/citizens-import.yml); в конфигах плагинов integrations.npc-provider должен быть loveessential (/lovecore provider love).'
     confirm-delete: '<yellow>Для удаления: /npc delete <id> confirm'
   dialog:
     finished: <gray>Разговор завершён.
