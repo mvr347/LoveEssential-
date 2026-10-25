@@ -76,7 +76,7 @@ public final class DeluxeCombatAddon extends Addon {
       config.addDefault("duels.prevent-downed", true);
       config.addDefault("protection.auth", true);
       config.addDefault("protection.vanish", true);
-      config.addDefault("revive.prefer-reviveme-if-installed", true);
+      config.addDefault("revive.prefer-reviveme-if-installed", false);
       config.options().copyDefaults(true);
       if (!Files.exists(file)) { Files.createDirectories(file.getParent()); config.save(file.toFile()); }
       upstream = LoveCore.service(CombatState.class).orElseThrow(() -> new IllegalStateException("Служба CombatState LoveCore отсутствует"));
@@ -84,7 +84,9 @@ public final class DeluxeCombatAddon extends Addon {
       Bukkit.getServicesManager().register(CombatState.class, bridge, owner, ServicePriority.Highest);
       listen(new Events());
       hookDowned("LoveEssential", "dev.lovelace.loveessential.api.revive.DownedEvent", "getDowned", "getCause");
-      hookDowned("ReviveMe", "net.kokoricraft.reviveme.events.PlayerDownedEvent", "getPlayer", "getEnemy");
+      if (!Bukkit.getPluginManager().isPluginEnabled("LoveEssential")
+          || config.getBoolean("revive.prefer-reviveme-if-installed", false))
+        hookDowned("ReviveMe", "net.kokoricraft.reviveme.events.PlayerDownedEvent", "getPlayer", "getEnemy");
       hookEssentialCompletion();
       sync();
       tasks.add(Bukkit.getScheduler().runTaskTimer(owner, this::syncSafely, 1, Math.clamp(config.getInt("sync-period-ticks", 1), 1, 20)));
@@ -176,7 +178,7 @@ public final class DeluxeCombatAddon extends Addon {
         if (p == null) return;
         if (event instanceof Cancellable c && !c.isCancelled()
             && (config.getBoolean("duels.prevent-downed", true) && inDuel(p)
-                || pluginName.equals("LoveEssential") && config.getBoolean("revive.prefer-reviveme-if-installed", true)
+                || pluginName.equals("LoveEssential") && config.getBoolean("revive.prefer-reviveme-if-installed", false)
                     && Bukkit.getPluginManager().isPluginEnabled("ReviveMe"))) c.setCancelled(true);
       } catch (ReflectiveOperationException failure) { throw new EventException(failure); }
     }, owner, true);
