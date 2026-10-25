@@ -174,22 +174,22 @@ public final class ModulePolicy {
             "denied-states",
             "required-states")) {
       if (c.contains(path + field) && !c.isList(path + field))
-        throw new IllegalArgumentException("errors.config");
+        throw new dev.lovelace.loveessential.config.ConfigError(path + field + ": ожидается список");
       var entries = c.getList(path + field);
       if (entries != null
           && (entries.size() > 256
               || entries.stream().anyMatch(value -> !(value instanceof String))))
-        throw new IllegalArgumentException("errors.config");
+        throw new dev.lovelace.loveessential.config.ConfigError(path + field + ": не больше 256 текстовых записей");
       for (String entry : c.getStringList(path + field)) {
         if (entry.length() > 128 || entry.isBlank())
-          throw new IllegalArgumentException("errors.config");
+          throw new dev.lovelace.loveessential.config.ConfigError(path + field + ": пустая или слишком длинная запись");
         if (field.endsWith("states") && !STATES.contains(entry))
-          throw new IllegalArgumentException("errors.config");
+          throw new dev.lovelace.loveessential.config.ConfigError(path + field + ": неизвестное состояние «" + entry + "»");
         if (field.endsWith("gamemodes"))
           try {
             org.bukkit.GameMode.valueOf(entry.toUpperCase(Locale.ROOT));
           } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("errors.config");
+            throw new dev.lovelace.loveessential.config.ConfigError(path + field + ": неизвестный режим игры «" + entry + "»");
           }
       }
     }

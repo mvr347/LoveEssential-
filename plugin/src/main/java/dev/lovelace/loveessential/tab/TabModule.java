@@ -166,12 +166,12 @@ public final class TabModule implements Listener, AutoCloseable {
     if (refresh != null)
       for (String key : refresh.getKeys(false))
         if (!PlaceholderRefresh.valid(refresh.getLong(key)))
-          throw new IllegalArgumentException("errors.config");
+          throw new dev.lovelace.loveessential.config.ConfigError("tab.placeholder-refresh.%s: %s вне допустимого диапазона".formatted(key, refresh.get(key)));
     var replacements = tab.getConfigurationSection("placeholder-output-replacements");
     if (replacements != null)
       for (String token : replacements.getKeys(false)) {
         var rules = replacements.getConfigurationSection(token);
-        if (rules == null) throw new IllegalArgumentException("errors.config");
+        if (rules == null) throw new dev.lovelace.loveessential.config.ConfigError("tab.placeholder-output-replacements.%s: ожидается список правил".formatted(token));
         var map = new LinkedHashMap<String, String>();
         for (String key : rules.getKeys(false)) map.put(key, rules.getString(key, ""));
         PlaceholderOutput.parse(map);
@@ -180,10 +180,11 @@ public final class TabModule implements Listener, AutoCloseable {
     if (animations != null)
       for (String name : animations.getKeys(false)) {
         var s = animations.getConfigurationSection(name);
-        if (s == null || !name.matches("[A-Za-z0-9_-]{1,48}")) throw new IllegalArgumentException("errors.config");
+        if (s == null || !name.matches("[A-Za-z0-9_-]{1,48}"))
+          throw new dev.lovelace.loveessential.config.ConfigError("tab.animations.%s: имя из латиницы, цифр, _ и - (до 48 знаков), внутри — change-interval и texts".formatted(name));
         long interval = s.getLong("change-interval", 500);
         if (interval < TabAnimations.MIN_INTERVAL_MS || interval > TabAnimations.MAX_INTERVAL_MS)
-          throw new IllegalArgumentException("errors.config");
+          throw dev.lovelace.loveessential.config.ConfigError.range("tab.animations." + name + ".change-interval", interval, TabAnimations.MIN_INTERVAL_MS, TabAnimations.MAX_INTERVAL_MS);
       }
     Placeholders.validateConditions(tab);
     var engines = tab.getConfigurationSection("engine-conditions");
@@ -205,7 +206,7 @@ public final class TabModule implements Listener, AutoCloseable {
   private static void bounded(ConfigurationSection tab, String path, long min, long max) {
     if (!tab.contains(path)) return;
     long value = tab.getLong(path, min - 1);
-    if (value < min || value > max) throw new IllegalArgumentException("errors.config");
+    if (value < min || value > max) throw dev.lovelace.loveessential.config.ConfigError.range("tab." + path, value, min, max);
   }
 
   /** The public API implementation; registered with the services manager by the plugin. */

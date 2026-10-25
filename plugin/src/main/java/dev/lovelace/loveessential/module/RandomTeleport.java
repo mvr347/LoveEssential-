@@ -13,6 +13,8 @@ import org.bukkit.Chunk;
 import org.bukkit.block.Biome;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.event.*;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -60,6 +62,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     boolean warming;
     long due;
     int shownSecond = -1;
+    boolean faded;
   }
 
   private final LoveEssentialPlugin plugin;
@@ -198,6 +201,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     session.start = p.getLocation();
     session.warming = true;
     session.due = ticks + (long) warmupSeconds() * TICKS_PER_SECOND;
+    effectsStart(p, warmupSeconds());
   }
 
   // ------------------------------------------------------------------ session events
@@ -244,7 +248,10 @@ public final class RandomTeleport implements Listener, AutoCloseable {
   }
 
   private void cancel(Player p, String message) {
-    if (sessions.remove(p.getUniqueId()) != null) lang.send(p, message);
+    var session = sessions.remove(p.getUniqueId());
+    if (session == null) return;
+    if (session.faded) removeFade(p);
+    lang.send(p, message);
   }
 
   // ------------------------------------------------------------------ ticking
@@ -268,6 +275,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
         finish(p, session.point);
         continue;
       }
+      effectsFade(p, session, session.due - ticks);
       int seconds = (int) Math.ceil((session.due - ticks) / (double) TICKS_PER_SECOND);
       if (seconds != session.shownSecond) {
         session.shownSecond = seconds;
@@ -433,11 +441,13 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     World world = Bukkit.getWorld(point.world());
     var settings = world == null ? null : settings(world.getName());
     if (settings == null) {
+      removeFade(p);
       lang.send(p, "rtp.world-disabled");
       return;
     }
     long cost = cost();
     if (cost > 0 && !affordable(p, cost)) {
+      removeFade(p);
       lang.send(p, "rtp.no-funds", Map.of("amount", Long.toString(cost)));
       return;
     }
@@ -449,6 +459,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     if (!p.isOnline()) return;
     World world = point == null ? null : Bukkit.getWorld(point.world());
     if (point == null || world == null) {
+      removeFade(p);
       lang.send(p, "rtp.failed");
       return;
     }
@@ -480,6 +491,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
         plugin.getLogger().warning("RTP arrival of " + p.getName() + " was not charged " + cost);
     }
     lang.send(p, "rtp.done");
+    effectsArrived(p);
   }
 
   // ------------------------------------------------------------------ settings
@@ -545,6 +557,13 @@ public final class RandomTeleport implements Listener, AutoCloseable {
   /** Settings of an enabled world, or null when random teleport is off there. */
   Settings settings(String world) {
     var section = plugin.getConfig().getConfigurationSection("rtp.worlds." + world);
+    if (section == null) {
+      // A world without its own entry uses rtp.default-world, but only an ordinary (overworld-like) one:
+      // the Nether and the End need their own height range.
+      World loaded = Bukkit.getWorld(world);
+      if (loaded != null && loaded.getEnvironment() == World.Environment.NORMAL)
+        section = plugin.getConfig().getConfigurationSection("rtp.default-world");
+    }
     if (section == null || !section.getBoolean("enabled")) return null;
     return new Settings(
         section.getBoolean("center-on-border", true),
@@ -615,27 +634,49 @@ public final class RandomTeleport implements Listener, AutoCloseable {
       }
     for (String biome : c.getStringList("rtp.blacklist-biomes"))
       if (!biome.matches("[a-z0-9_]{1,64}")) throw new IllegalArgumentException("errors.config");
+    validateEffects(c);
     var worlds = c.getConfigurationSection("rtp.worlds");
-    if (worlds == null) return;
-    for (String world : worlds.getKeys(false)) {
-      String base = "rtp.worlds." + world + ".";
-      if (!(worlds.get(world + ".enabled", false) instanceof Boolean))
-        throw new IllegalArgumentException("errors.config");
-      decimal(c, base + "center-x", -30_000_000, 30_000_000);
-      decimal(c, base + "center-z", -30_000_000, 30_000_000);
-      decimal(c, base + "min-radius", 0, 100_000);
-      decimal(c, base + "max-radius", 1, 100_000);
-      if (c.getDouble(base + "min-radius", 200) >= c.getDouble(base + "max-radius", 2000))
-        throw new IllegalArgumentException("errors.config");
-      String shape = c.getString(base + "shape", "circle");
-      if (!shape.equals("circle") && !shape.equals("square"))
-        throw new IllegalArgumentException("errors.config");
-      bounded(c, base + "max-attempts", 1, 200);
-      bounded(c, base + "min-y", -2032, 2031);
-      bounded(c, base + "max-y", -2032, 2031);
-      if (c.getInt(base + "min-y", 60) >= c.getInt(base + "max-y", 220))
-        throw new IllegalArgumentException("errors.config");
+    if (worlds != null)
+      for (String world : worlds.getKeys(false)) validateWorld(c, "rtp.worlds." + world + ".");
+    if (c.isConfigurationSection("rtp.default-world")) validateWorld(c, "rtp.default-world.");
+  }
+
+  private static void validateEffects(ConfigurationSection c) {
+    bounded(c, "rtp.effects.fade-ticks", 0, 200);
+    bounded(c, "rtp.effects.arrive-fade-ticks", 0, 200);
+    for (String key : List.of("rtp.effects.fade-effect"))
+      if (c.contains(key) && fadeEffect(c.getString(key, "")) == null)
+        throw new dev.lovelace.loveessential.config.ConfigError(key + ": BLINDNESS или DARKNESS");
+    for (String key : List.of("rtp.effects.start-sound", "rtp.effects.arrive-sound"))
+      if (c.contains(key) && !c.getString(key, "").isBlank() && sound(c.getString(key, "")) == null)
+        throw new dev.lovelace.loveessential.config.ConfigError(key + ": неизвестный звук «" + c.getString(key) + "»");
+    String particle = c.getString("rtp.effects.arrive-particles", "");
+    if (!particle.isBlank()) {
+      try {
+        Particle.valueOf(particle.toUpperCase(Locale.ROOT));
+      } catch (IllegalArgumentException e) {
+        throw new dev.lovelace.loveessential.config.ConfigError("rtp.effects.arrive-particles: неизвестные частицы «" + particle + "»");
+      }
     }
+  }
+
+  private static void validateWorld(ConfigurationSection c, String base) {
+    if (!(c.get(base + "enabled", false) instanceof Boolean))
+      throw new dev.lovelace.loveessential.config.ConfigError(base + "enabled: ожидается true или false");
+    decimal(c, base + "center-x", -30_000_000, 30_000_000);
+    decimal(c, base + "center-z", -30_000_000, 30_000_000);
+    decimal(c, base + "min-radius", 0, 100_000);
+    decimal(c, base + "max-radius", 1, 100_000);
+    if (c.getDouble(base + "min-radius", 200) >= c.getDouble(base + "max-radius", 2000))
+      throw new dev.lovelace.loveessential.config.ConfigError(base + "min-radius должен быть меньше max-radius");
+    String shape = c.getString(base + "shape", "circle");
+    if (!shape.equals("circle") && !shape.equals("square"))
+      throw new dev.lovelace.loveessential.config.ConfigError(base + "shape: circle или square");
+    bounded(c, base + "max-attempts", 1, 200);
+    bounded(c, base + "min-y", -2032, 2031);
+    bounded(c, base + "max-y", -2032, 2031);
+    if (c.getInt(base + "min-y", 60) >= c.getInt(base + "max-y", 220))
+      throw new dev.lovelace.loveessential.config.ConfigError(base + "min-y должен быть меньше max-y");
   }
 
   private static void bounded(ConfigurationSection c, String path, double min, double max) {
@@ -646,7 +687,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
         || n.doubleValue() < min
         || n.doubleValue() > max
         || n.doubleValue() != Math.rint(n.doubleValue()))
-      throw new IllegalArgumentException("errors.config");
+      throw dev.lovelace.loveessential.config.ConfigError.range(path, value, min, max);
   }
 
   private static void decimal(ConfigurationSection c, String path, double min, double max) {
@@ -655,6 +696,83 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     if (!(value instanceof Number n)
         || !Double.isFinite(n.doubleValue())
         || n.doubleValue() < min
-        || n.doubleValue() > max) throw new IllegalArgumentException("errors.config");
+        || n.doubleValue() > max) throw dev.lovelace.loveessential.config.ConfigError.range(path, value, min, max);
+  }
+
+  // ------------------------------------------------------------------ effects
+
+  /** Fade used for the warmup and the arrival: BLINDNESS (black) or DARKNESS (pulsing dark). */
+  static PotionEffectType fadeEffect(String name) {
+    return switch (name == null ? "" : name.trim().toUpperCase(Locale.ROOT)) {
+      case "BLINDNESS" -> PotionEffectType.BLINDNESS;
+      case "DARKNESS" -> PotionEffectType.DARKNESS;
+      default -> null;
+    };
+  }
+
+  /** A sound by its Minecraft name (BLOCK_BEACON_ACTIVATE or minecraft:block.beacon.activate), or null. */
+  static Sound sound(String name) {
+    if (name == null || name.isBlank()) return null;
+    String key = name.trim().toLowerCase(Locale.ROOT).replace('_', '.');
+    if (key.contains(":")) key = key.substring(key.indexOf(':') + 1);
+    return Registry.SOUNDS.get(NamespacedKey.minecraft(key));
+  }
+
+  private boolean effectsOn() {
+    return plugin.getConfig().getBoolean("rtp.effects.enabled", true);
+  }
+
+  private void play(Player p, String path) {
+    var sound = sound(plugin.getConfig().getString("rtp.effects." + path, ""));
+    if (sound != null) p.playSound(p.getLocation(), sound, 1f, 1f);
+  }
+
+  /** Warmup starts: a sound and a title with the countdown. */
+  private void effectsStart(Player p, int seconds) {
+    if (!effectsOn()) return;
+    play(p, "start-sound");
+    if (plugin.getConfig().getBoolean("rtp.effects.title", true))
+      p.showTitle(
+          net.kyori.adventure.title.Title.title(
+              lang.render("rtp.warming-title"),
+              lang.render("rtp.warming-subtitle", Map.of("seconds", Integer.toString(seconds))),
+              net.kyori.adventure.title.Title.Times.times(
+                  java.time.Duration.ofMillis(200), java.time.Duration.ofSeconds(Math.max(1, seconds)), java.time.Duration.ofMillis(300))));
+  }
+
+  /** Fade to black for the last ticks of the warmup; it also covers the arrival fade. */
+  private void effectsFade(Player p, Session session, long ticksLeft) {
+    if (!effectsOn() || session.faded) return;
+    int fade = plugin.getConfig().getInt("rtp.effects.fade-ticks", 40);
+    if (fade <= 0 || ticksLeft > fade) return;
+    var type = fadeEffect(plugin.getConfig().getString("rtp.effects.fade-effect", "BLINDNESS"));
+    if (type == null) return;
+    int after = Math.max(0, plugin.getConfig().getInt("rtp.effects.arrive-fade-ticks", 40));
+    p.addPotionEffect(new PotionEffect(type, (int) ticksLeft + after + 10, 0, false, false, false));
+    session.faded = true;
+  }
+
+  private void removeFade(Player p) {
+    p.removePotionEffect(PotionEffectType.BLINDNESS);
+    p.removePotionEffect(PotionEffectType.DARKNESS);
+  }
+
+  /** Arrival: sound, portal particles and a title with the coordinates. */
+  private void effectsArrived(Player p) {
+    if (!effectsOn()) return;
+    play(p, "arrive-sound");
+    String particle = plugin.getConfig().getString("rtp.effects.arrive-particles", "PORTAL");
+    if (!particle.isBlank()) {
+      try {
+        p.getWorld().spawnParticle(Particle.valueOf(particle.toUpperCase(Locale.ROOT)), p.getLocation().add(0, 1, 0), 60, .4, .8, .4, .2);
+      } catch (IllegalArgumentException ignored) {
+        // Checked when the settings are loaded.
+      }
+    }
+    var at = p.getLocation();
+    var vars = Map.of("x", Integer.toString(at.getBlockX()), "y", Integer.toString(at.getBlockY()), "z", Integer.toString(at.getBlockZ()));
+    if (plugin.getConfig().getBoolean("rtp.effects.title", true))
+      p.showTitle(net.kyori.adventure.title.Title.title(lang.render("rtp.arrived-title"), lang.render("rtp.arrived-subtitle", vars)));
+    p.sendActionBar(lang.render("rtp.arrived-actionbar", vars));
   }
 }

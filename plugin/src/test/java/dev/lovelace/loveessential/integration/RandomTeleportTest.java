@@ -402,4 +402,29 @@ class RandomTeleportTest {
     server.getScheduler().performTicks(40);
     assertEquals(0, queued(name), "a disabled module does not refill the queue");
   }
+
+  @Test
+  void aWorldWithoutAnEntryUsesTheDefaultWorldBlock() throws Exception {
+    server.addSimpleWorld("spawn");
+    var settings = RandomTeleport.class.getDeclaredMethod("settings", String.class);
+    settings.setAccessible(true);
+    assertNotNull(settings.invoke(rtp(), "spawn"));
+    plugin.getConfig().set("rtp.default-world.enabled", false);
+    assertNull(settings.invoke(rtp(), "spawn"));
+    assertNull(settings.invoke(rtp(), "missing-world"));
+  }
+
+  @Test
+  void theFadeAndSoundNamesAreChecked() {
+    assertNotNull(RandomTeleport.class.getDeclaredMethods());
+    var good = new YamlConfiguration();
+    good.set("rtp.effects.fade-effect", "darkness");
+    good.set("rtp.effects.start-sound", "BLOCK_BEACON_ACTIVATE");
+    good.set("rtp.effects.arrive-particles", "PORTAL");
+    assertDoesNotThrow(() -> RandomTeleport.validate(good));
+    var bad = new YamlConfiguration();
+    bad.set("rtp.effects.fade-effect", "SPEED");
+    var error = assertThrows(dev.lovelace.loveessential.config.ConfigError.class, () -> RandomTeleport.validate(bad));
+    assertTrue(error.detail().contains("rtp.effects.fade-effect"));
+  }
 }

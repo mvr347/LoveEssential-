@@ -203,11 +203,29 @@ public final class Lang {
       send(to, denied.getMessage(), denied.variables());
       return;
     }
-    send(
-        to,
-        error instanceof dev.lovelace.loveessential.storage.SqliteStore.Conflict
-            ? "errors.conflict"
-            : contains(error.getMessage()) ? error.getMessage() : "errors.input");
+    if (error instanceof dev.lovelace.loveessential.config.ConfigError config) {
+      send(to, "errors.config-detail", Map.of("detail", config.detail()));
+      return;
+    }
+    if (error instanceof dev.lovelace.loveessential.storage.SqliteStore.Conflict) {
+      send(to, "errors.conflict");
+      return;
+    }
+    if (contains(error.getMessage())) {
+      send(to, error.getMessage());
+      return;
+    }
+    // A broken YAML file or an unreadable one: say which, instead of a generic "invalid input".
+    Throwable cause = error;
+    while (cause.getCause() != null) cause = cause.getCause();
+    String text = cause.getMessage() == null ? "" : cause.getMessage().strip();
+    boolean configProblem =
+        cause instanceof java.io.IOException
+            || cause instanceof org.bukkit.configuration.InvalidConfigurationException
+            || cause.getClass().getName().contains("yaml");
+    if (configProblem && !text.isEmpty())
+      send(to, "errors.config-detail", Map.of("detail", text.lines().findFirst().orElse(text)));
+    else send(to, "errors.input");
   }
 
   public void send(CommandSender to, String key) {

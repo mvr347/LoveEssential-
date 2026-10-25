@@ -53,4 +53,35 @@ class TabFileStabilityTest {
         after.getStringList("groups._DEFAULT_.header"));
     assertEquals(java.util.List.of("<clan> · <reputation>"), after.getStringList("groups._DEFAULT_.footer"));
   }
+
+  @Test
+  void aBadValueIsNamedInTheError() throws Exception {
+    var file = new ModuleConfigs(plugin).configFile("tab");
+    var text = Files.readString(file).replace("refresh-ticks: 10", "refresh-ticks: 1");
+    assertNotEquals(Files.readString(file), text);
+    Files.writeString(file, text);
+    var error = assertThrows(ConfigError.class, () -> new ModuleConfigs(plugin).load());
+    assertTrue(error.detail().contains("tab.refresh-ticks"), error.detail());
+    assertEquals("errors.config", error.getMessage());
+  }
+
+  @Test
+  void brokenYamlFailsTheLoadInsteadOfBeingReplaced() throws Exception {
+    var file = new ModuleConfigs(plugin).configFile("tab");
+    var before = Files.readString(file);
+    Files.writeString(file, before + "\n  : : broken [\n");
+    assertThrows(Exception.class, () -> new ModuleConfigs(plugin).load());
+    assertTrue(Files.readString(file).contains("broken ["));
+  }
+
+  @Test
+  void aValueWhereASectionBelongsNamesTheFileAndTheKey() throws Exception {
+    var file = new ModuleConfigs(plugin).configFile("tab");
+    var yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile());
+    yaml.set("nametag", true);
+    yaml.save(file.toFile());
+    var error = assertThrows(ConfigError.class, () -> new ModuleConfigs(plugin).load());
+    assertTrue(error.detail().contains("modules/tab/tab.yml"), error.detail());
+    assertTrue(error.detail().contains("nametag"), error.detail());
+  }
 }

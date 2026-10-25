@@ -61,7 +61,7 @@ public final class ModuleConfigs {
       Path mainFile = directory.resolve("config.yml");
       var original = read(mainFile);
       var core = read(mainFile);
-      fill(core, resource("config.yml"));
+      fillIn("config.yml", core, resource("config.yml"));
       var modules = new LinkedHashMap<String, YamlConfiguration>();
       var guis = new LinkedHashMap<String, YamlConfiguration>();
       var oldFiles = new ArrayList<Path>();
@@ -99,7 +99,7 @@ public final class ModuleConfigs {
           copy(original.getConfigurationSection("actions"), actions, "actions.");
           fill(legacy, actions);
         }
-        fill(module, legacy);
+        fillIn("modules/" + id + "/" + id + ".yml", module, legacy);
         if (id.equals("scoreboard")) migrateScoreboard(module);
         var gui = read(guiFile(id));
         if (module.isConfigurationSection("gui")) fill(gui, module.getConfigurationSection("gui"));
@@ -121,7 +121,7 @@ public final class ModuleConfigs {
                   && oldLang.contains(key)
                   && !gui.contains("texts." + key)) gui.set("texts." + key, oldLang.get(key));
         }
-        fill(gui, guiDefaults);
+        fillIn("modules/" + id + "/gui.yml", gui, guiDefaults);
         repairMappedLines(gui);
         refreshRetiredTexts(id, gui, guiDefaults);
         if (id.equals("tab")) {
@@ -139,7 +139,7 @@ public final class ModuleConfigs {
             if (!defaultsTexts.isConfigurationSection(key)
                 && oldLang.contains(key)
                 && !module.contains("texts." + key)) module.set("texts." + key, oldLang.get(key));
-        fill(module, moduleDefaults);
+        fillIn("modules/" + id + "/" + id + ".yml", module, moduleDefaults);
         if (id.equals("scoreboard"))
           restyleScoreboard(module, moduleDefaults, resource("legacy/scoreboard-2026-10-23.yml"));
         repairMappedLines(module);
@@ -535,6 +535,15 @@ public final class ModuleConfigs {
     return merged;
   }
 
+  /** {@link #fill} that names the file in the error, so the admin knows which one to open. */
+  private static void fillIn(String file, YamlConfiguration target, ConfigurationSection defaults) {
+    try {
+      fill(target, defaults);
+    } catch (ConfigError e) {
+      throw new ConfigError(file + ": " + e.detail());
+    }
+  }
+
   private static void fill(YamlConfiguration target, ConfigurationSection defaults) {
     var preserve =
         List.of(
@@ -556,7 +565,9 @@ public final class ModuleConfigs {
       if (defaults.isConfigurationSection(key)
           && target.contains(key)
           && !target.isConfigurationSection(key))
-        throw new IllegalArgumentException("errors.config");
+        throw new ConfigError(
+            "ключ «" + key + "» должен быть разделом (вложенными настройками), а найдено значение «"
+                + target.get(key) + "»");
       if (!target.contains(key)) {
         if (defaults.isConfigurationSection(key)) target.createSection(key);
         else target.set(key, snapshot(defaults.get(key)));

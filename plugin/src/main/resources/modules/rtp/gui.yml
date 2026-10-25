@@ -9,6 +9,11 @@ messages:
   rtp:
     usage: '<yellow>/rtp <gray>— случайная точка в этом мире'
     busy: '<gray>Перенос уже готовится. Не двигайтесь.'
+    warming-title: '<gold><bold>Телепорт'
+    warming-subtitle: '<gray>через <white><seconds> с<gray> — не двигайтесь'
+    arrived-title: '<green><bold>Вы на месте'
+    arrived-subtitle: '<gray><x> <y> <z>'
+    arrived-actionbar: '<green>Случайный телепорт: <white><x> <y> <z>'
     warming: '<gray>Перенос через <white><seconds> с <gray>— не двигайтесь'
     moved: '<red>Перенос отменён: вы сдвинулись'
     damaged: '<red>Перенос отменён: вас ранили'
