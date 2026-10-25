@@ -173,12 +173,14 @@ class DisplayPreferencesTest {
     assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
     server.dispatchCommand(a, "оформление чужие пометки ник выкл");
     assertFalse(prefs.shown(a.getUniqueId(), Surface.NAMETAG, Element.SUFFIX, Scope.OTHERS));
-    server.dispatchCommand(a, "display clan tab off");
+    server.dispatchCommand(a, "display others clan tab off");
     assertTrue(prefs.shown(a.getUniqueId(), Surface.TAB, Element.CLAN_TAG, Scope.OTHERS), "the shared player list cannot be changed for one viewer");
-    server.dispatchCommand(a, "display suffix chat off");
+    server.dispatchCommand(a, "display clan tab off");
     assertFalse(
-        prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OTHERS),
-        "without a scope word the command changes what the player sees");
+        prefs.shown(a.getUniqueId(), Surface.TAB, Element.CLAN_TAG, Scope.OWN),
+        "without a scope word the player's own tag is hidden from everybody, the player list included");
+    server.dispatchCommand(a, "display others suffix chat off");
+    assertFalse(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OTHERS));
     assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OWN));
     server.dispatchCommand(a, "display own nonsense chat");
     assertTrue(prefs.shown(a.getUniqueId(), Surface.CHAT, Element.SUFFIX, Scope.OWN), "bad input changes nothing");
