@@ -53,4 +53,17 @@ class RetiredTextsTest {
     assertEquals("new all", installed.getString("messages.display.all-on"));
     assertEquals("Моё оформление", installed.getString("messages.display.scope-own"));
   }
+
+  @Test
+  void theOldMessagePrefixBecomesServer() {
+    var installed = new YamlConfiguration();
+    installed.set("messages.chat.prefix", "<dark_gray>[<gold>Love<dark_gray>] <reset>");
+    var fresh = new YamlConfiguration();
+    fresh.set("messages.chat.prefix", "<dark_gray>[<gold>Сервер<dark_gray>] <reset>");
+    ModuleConfigs.refreshRetiredTexts("npc", installed, fresh);
+    assertTrue(installed.getString("messages.chat.prefix").contains("Сервер"));
+    installed.set("messages.chat.prefix", "<red>[Мой] ");
+    ModuleConfigs.refreshRetiredTexts("npc", installed, fresh);
+    assertEquals("<red>[Мой] ", installed.getString("messages.chat.prefix"));
+  }
 }

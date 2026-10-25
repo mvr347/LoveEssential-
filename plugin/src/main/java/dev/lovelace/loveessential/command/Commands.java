@@ -327,6 +327,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
     return true;
   }
 
+  /** The NPC each player picked with {@code /npc sel}; later commands use it when no id is given. */
+  private final Map<UUID, String> npcSelection = new ConcurrentHashMap<>();
+
   private void npc(Player p, String[] args) {
     if (!plugin.module("npc")) throw new IllegalArgumentException("errors.module-disabled");
     if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
@@ -335,6 +338,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
       return;
     }
     String op = args[0].toLowerCase(Locale.ROOT);
+    if (args.length == 1 && Set.of("edit", "изменить", "info", "инфо").contains(op)) {
+      String chosen = npcSelection.get(p.getUniqueId());
+      if (chosen != null) args = new String[] {args[0], chosen};
+    }
     if (args.length > 1
         && Set.of(
                 "edit",
@@ -462,13 +469,41 @@ public final class Commands implements CommandExecutor, TabCompleter {
         permission(p, "debug");
         lang.send(p, "npc.debug", Map.of("state", npcs.debug(args[1])));
       }
-      case "select", "выбрать" -> {
+      case "sel", "select", "выбрать" -> {
         permission(p, "view");
-        var target = p.getTargetEntity(8);
-        lang.send(
-            p,
-            "npc.selected",
-            Map.of("id", target == null ? "" : npcs.identify(target).orElse("")));
+        String id = null;
+        if (args.length > 1) id = npcs.resolve(args[1]);
+        else {
+          var target = p.getTargetEntity(8);
+          if (target != null) id = npcs.identify(target).orElse(null);
+        }
+        if (id == null || npcs.get(id).isEmpty()) throw new IllegalArgumentException("npc.none-targeted");
+        npcSelection.put(p.getUniqueId(), id);
+        lang.send(p, "npc.selected", Map.of("id", id));
+      }
+      case "rename", "переименовать" -> {
+        permission(p, "edit");
+        if (args.length < 2) throw new IllegalArgumentException("npc.rename-usage");
+        String id = npcSelection.get(p.getUniqueId());
+        if (id == null) {
+          var target = p.getTargetEntity(8);
+          if (target != null) id = npcs.identify(target).orElse(null);
+        }
+        if (id == null) throw new IllegalArgumentException("npc.none-targeted");
+        var n = npcs.get(id).orElseThrow(() -> new IllegalArgumentException("errors.not-found"));
+        String text = String.join(" ", slice(args, 1)).strip();
+        if (text.isEmpty() || text.length() > 256) throw new IllegalArgumentException("npc.rename-usage");
+        // "&eБанкир" is read like "<yellow>Банкир"; the name is kept inline, so it shows at once.
+        String named = dev.lovelace.loveessential.tab.TabSyntax.legacy(text);
+        npcSelection.put(p.getUniqueId(), id);
+        npcs.save(n.withNameKey("@inline:" + named), n.revision(), p.getUniqueId().toString())
+            .whenComplete(
+                (saved, error) ->
+                    main.execute(
+                        () -> {
+                          if (error != null) lang.send(p, "errors.storage");
+                          else lang.send(p, "npc.renamed", Map.of("name", text));
+                        }));
       }
       case "delete", "удалить" -> {
         permission(p, "delete");

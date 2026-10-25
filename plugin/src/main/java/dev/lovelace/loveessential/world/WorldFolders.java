@@ -27,14 +27,22 @@ final class WorldFolders {
     if (Files.isRegularFile(legacy.resolve("level.dat"))) {
       return legacy.toRealPath().getParent().equals(root);
     }
-    if (mainWorld == null || !Files.isDirectory(mainWorld)) return false;
-    Path main = mainWorld.toRealPath();
-    if (!main.startsWith(root)) return false;
-    Path dimension = main.resolve("dimensions").resolve("minecraft").resolve(name);
-    if (!Files.isDirectory(dimension)) return false;
-    if (!dimension.toRealPath().getParent().equals(main.resolve("dimensions").resolve("minecraft").toRealPath()))
-      return false;
-    for (String folder : DIMENSION_DATA) if (Files.isDirectory(dimension.resolve(folder))) return true;
+    var roots = new java.util.LinkedHashSet<Path>();
+    // The folder Bukkit reports for the main world may be the world itself or its overworld
+    // dimension, so its ancestors count too; every folder of the container is tried as well.
+    for (Path at = mainWorld; at != null && at.toAbsolutePath().normalize().startsWith(root) && !at.equals(root); at = at.getParent())
+      if (Files.isDirectory(at)) roots.add(at.toRealPath());
+    try (var children = Files.newDirectoryStream(root, p -> Files.isDirectory(p))) {
+      for (Path child : children) roots.add(child.toRealPath());
+    }
+    for (Path world : roots) {
+      if (!world.startsWith(root)) continue;
+      Path parent = world.resolve("dimensions").resolve("minecraft");
+      Path dimension = parent.resolve(name);
+      if (!Files.isDirectory(dimension)) continue;
+      if (!dimension.toRealPath().getParent().equals(parent.toRealPath())) continue;
+      for (String folder : DIMENSION_DATA) if (Files.isDirectory(dimension.resolve(folder))) return true;
+    }
     return false;
   }
 }

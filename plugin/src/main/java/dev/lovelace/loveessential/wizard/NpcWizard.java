@@ -696,7 +696,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                     n.dialog(),
                     n.actions(),
                     n.enabled())
-                .text(textKey, value);
+                .text(textKey, dev.lovelace.loveessential.tab.TabSyntax.legacy(value));
       }
       case "type" -> {
         String type = value.toUpperCase(Locale.ROOT);

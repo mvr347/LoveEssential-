@@ -210,6 +210,10 @@ public final class ModuleConfigs {
                   "<gold>Показать всё <dark_gray>| <white>6 настроек"),
               "messages.display.element-suffix",
               List.of("Суффикс")),
+          // 2026-10-25: the message prefix reads "Сервер" instead of "Love".
+          "npc",
+          Map.of(
+              "messages.chat.prefix", List.of("<dark_gray>[<gold>Love<dark_gray>] <reset>")),
           "sitride",
           Map.of(
               "messages.comfort.ride-consent",
