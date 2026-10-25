@@ -33,6 +33,14 @@ public final class TweaksScoreboardBridge implements AutoCloseable {
     if (tweaks == null || !tweaks.isEnabled()) return true;
     try {
       var type = tweaks.getClass();
+      // LoveTweaks no longer owns a sidebar. Treat current versions like no legacy owner, while
+      // retaining the adapter for older installed versions that still expose this API.
+      try {
+        type.getMethod("getScoreboardDisplayManager");
+        type.getMethod("getScoreboardConfig");
+      } catch (NoSuchMethodException removed) {
+        return true;
+      }
       display = type.getMethod("getScoreboardDisplayManager").invoke(tweaks);
       config = type.getMethod("getScoreboardConfig").invoke(tweaks);
       taskField = taskField(type);
