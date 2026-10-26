@@ -58,14 +58,14 @@ menus:
         saved-activity-lore:
         - <gray>Время игры и статистика на момент выхода.
         - <gray>Видимость определяется отдельной настройкой активности.
-        - <green>ЛКМ — открыть сохранённые данные.
+        - <green>ЛКМ <dark_gray>— <gray>открыть сохранённые данные
         saved-customization-lore:
         - '<gray>Ник: <white><display_name>'
         - '<gray>Пометка: <white><external_lovesubnames_current>'
         saved-adaptations-lore:
         - '<gray>Текущая: <white><external_loveadaptation_current_name>'
         - '<gray>Прогресс: <white><external_loveadaptation_current_progress>'
-        - <green>ЛКМ — посмотреть сохранённые адаптации.
+        - <green>ЛКМ <dark_gray>— <gray>посмотреть сохранённые адаптации
         saved-reputation-lore:
         - '<gray>Репутация: <white><reputation>'
         - '<gray>Вежливость: <white><external_lovebehavior_politeness_name>'
@@ -759,7 +759,7 @@ menus:
         - '<gray>Каналы LoveCore: чат, над панелью, заголовок.'
         - <green>ЛКМ <dark_gray>— <gray>открыть переключатели
         notification-lore:
-        - <gray>ЛКМ — переключить этот канал уведомлений.
+        - <green>ЛКМ <dark_gray>— <gray>переключить этот канал уведомлений
         - <gray>Важные сообщения и кнопки остаются доступны в чате.
         notify-chat: '<gold>Канал: чат'
         notify-actionbar: '<gold>Канал: Над панелью'
@@ -775,42 +775,42 @@ menus:
         lore:
         - <gray>Автоисправление LoveChat
         - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
       silent:
         material: FEATHER
         link: silent
         title: <gold>Тихий режим
         lore:
         - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
       mentions:
         material: NOTE_BLOCK
         link: mentions
         title: <gold>Упоминания
         lore:
         - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
       channel:
         material: PAPER
         link: channel
         title: <gold>Канал чата
         lore:
         - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
-        - <gray>ЛКМ — переключить локальный/глобальный канал.
+        - <green>ЛКМ <dark_gray>— <gray>переключить локальный/глобальный канал
       clan-invites:
         material: WHITE_BANNER
         link: clan-invites
         title: <gold>Приглашения в клан
         lore:
         - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
       player-trades:
         material: EMERALD
         link: player-trades
         title: <gold>Обмен с игроками
         lore:
         - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
     labels:
       profile-menu:
         settings-overview: <gold>Настройте игру под себя
@@ -839,27 +839,27 @@ menus:
         grammar-lore:
         - <gray>Автоисправление LoveChat
         - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
         silent: <gold>Тихий режим
         silent-lore:
         - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
         mentions: <gold>Упоминания
         mentions-lore:
         - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
         channel: <gold>Канал чата
         channel-lore:
         - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
-        - <gray>ЛКМ — переключить локальный/глобальный канал.
+        - <green>ЛКМ <dark_gray>— <gray>переключить локальный/глобальный канал
         clan-invites: <gold>Приглашения в клан
         clan-invites-lore:
         - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
         player-trades: <gold>Обмен с игроками
         player-trades-lore:
         - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
-        - <gray>ЛКМ — переключить.
+        - <green>ЛКМ <dark_gray>— <gray>переключить
   players-title:
     cards:
       identity:
