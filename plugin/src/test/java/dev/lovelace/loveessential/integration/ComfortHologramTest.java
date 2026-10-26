@@ -201,11 +201,12 @@ class ComfortHologramTest {
             .isPresent());
     // The SQLite write can finish before its main-thread confirmation is delivered.
     var confirmations = new ArrayList<String>();
-    waitFor(() -> {
-      String message = p.nextMessage();
-      if (message != null) confirmations.add(message);
-      return confirmations.stream().anyMatch(text -> text.contains("Точка дома установлена"));
-    });
+    waitFor(
+        () -> {
+          String message = p.nextMessage();
+          if (message != null) confirmations.add(message);
+          return confirmations.stream().anyMatch(text -> text.contains("Точка дома установлена"));
+        });
     while (p.nextComponentMessage() != null) {}
     command(p, "spawn");
     assertFalse(p.nextMessage().contains("Недостаточно прав"));
@@ -404,19 +405,108 @@ class ComfortHologramTest {
     var p = admin();
     await(plugin.module("utilities", true));
     command(p, "god");
-    assertTrue(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
-    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.VOID).isCancelled());
-    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.KILL).isCancelled());
+    assertTrue(p.isInvulnerable());
+    assertTrue(
+        damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK)
+            .isCancelled());
+    assertFalse(
+        damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.VOID).isCancelled());
+    assertFalse(
+        damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.KILL).isCancelled());
     p.setFoodLevel(20);
     var hunger = new org.bukkit.event.entity.FoodLevelChangeEvent(p, 10);
     server.getPluginManager().callEvent(hunger);
     assertTrue(hunger.isCancelled());
     command(p, "god off");
-    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+    assertFalse(p.isInvulnerable());
+    assertFalse(
+        damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK)
+            .isCancelled());
     command(p, "god вкл");
-    assertTrue(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+    assertTrue(
+        damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK)
+            .isCancelled());
     command(p, "god");
-    assertFalse(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+    assertFalse(
+        damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK)
+            .isCancelled());
+  }
+
+  @Test
+  void survivalCommandClearsAStaleFlagEvenIfAlreadyInSurvival() {
+    var p = admin();
+    p.setGameMode(org.bukkit.GameMode.SURVIVAL);
+    p.setInvulnerable(true);
+    command(p, "gamemode survival");
+    assertFalse(p.isInvulnerable());
+  }
+
+  @Test
+  void externalSurvivalChangeClearsAStaleFlagButKeepsActiveGod() {
+    var p = admin();
+    p.setGameMode(org.bukkit.GameMode.CREATIVE);
+    p.setInvulnerable(true);
+    p.setGameMode(org.bukkit.GameMode.SURVIVAL);
+    assertFalse(p.isInvulnerable());
+    command(p, "god on");
+    p.setGameMode(org.bukkit.GameMode.CREATIVE);
+    p.setGameMode(org.bukkit.GameMode.SURVIVAL);
+    assertTrue(p.isInvulnerable());
+    command(p, "god off");
+    assertFalse(p.isInvulnerable());
+  }
+
+  @Test
+  void quittingAndPluginShutdownClearTemporaryGodInvulnerability() throws Exception {
+    var p = admin();
+    command(p, "god on");
+    assertTrue(p.isInvulnerable());
+    p.disconnect();
+    assertFalse(p.isInvulnerable());
+    var other = server.addPlayer("OtherAdmin");
+    other.setOp(true);
+    command(other, "god on");
+    assertTrue(other.isInvulnerable());
+    server.getPluginManager().disablePlugin(plugin);
+    assertFalse(other.isInvulnerable());
+  }
+
+  @Test
+  void disablingUtilitiesClearsTheOwnedGodFlag() throws Exception {
+    var p = admin();
+    command(p, "god on");
+    assertTrue(p.isInvulnerable());
+    await(plugin.module("utilities", false));
+    server.getScheduler().performTicks(2);
+    assertFalse(p.isInvulnerable());
+  }
+
+  @Test
+  void aLeftoverOwnedFlagIsClearedWhenThePlayerJoinsAgain() {
+    var p = admin();
+    var key = new org.bukkit.NamespacedKey(plugin, "temporary_god");
+    p.setInvulnerable(true);
+    p.getPersistentDataContainer()
+        .set(key, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.player.PlayerJoinEvent(
+                p, net.kyori.adventure.text.Component.empty()));
+    assertFalse(p.isInvulnerable());
+    assertFalse(p.getPersistentDataContainer().has(key));
+  }
+
+  @Test
+  void joiningDoesNotClearAnUnmarkedAuthenticationOrExternalProtectionFlag() {
+    var p = admin();
+    p.setInvulnerable(true);
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.player.PlayerJoinEvent(
+                p, net.kyori.adventure.text.Component.empty()));
+    assertTrue(p.isInvulnerable());
   }
 
   @Test
@@ -431,6 +521,8 @@ class ComfortHologramTest {
     assertNull(visitor.nextMessage());
     command(visitor, "vanish");
     assertNull(visitor.nextMessage());
-    assertFalse(damage(visitor, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK).isCancelled());
+    assertFalse(
+        damage(visitor, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK)
+            .isCancelled());
   }
 }
