@@ -1332,15 +1332,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     m.actions.clear();
     MenuStyle.frame(m.inventory);
     m.inventory.setItem(
-        4,
-        MenuStyle.item(
-            Material.BOOK,
-            lang.render("profile-menu.settings-overview"),
-            lang.lines("profile-menu.settings-overview-lore").stream()
-                .map(t -> lang.renderText(t, Map.of()))
-                .toList()));
-    button(m, 52, Material.BARRIER, "gui.close", "gui.click.close", p::closeInventory);
-    m.inventory.setItem(
         0,
         head(
             p,
@@ -1480,55 +1471,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     }
     button(m, 51, Material.ARROW, "common.back", "gui.click.open", () -> settings(p));
     show(m);
-  }
-
-  private void drawAdaptations(Menu m, Player target) {
-    var viewer = m.viewer;
-    m.actions.clear();
-    MenuStyle.frame(m.inventory);
-    m.inventory.setItem(
-        4,
-        MenuStyle.item(
-            Material.BOOK,
-            lang.render("profile-menu.settings-overview"),
-            lang.lines("profile-menu.settings-overview-lore").stream()
-                .map(t -> lang.renderText(t, Map.of()))
-                .toList()));
-    button(m, 52, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
-    m.inventory.setItem(
-        0,
-        head(
-            target,
-            placeholders.render("profile-menu.heading", viewer, target),
-            textLines("profile-menu.adaptations-lore", viewer, target)));
-    var cards = plugin.getConfig().getConfigurationSection("profile.gui.adaptation-cards");
-    if (cards != null) {
-      int i = 0;
-      for (String id : cards.getKeys(false)) {
-        if (i >= 21) break;
-        Material material = Material.matchMaterial(cards.getString(id + ".material", "BOOK"));
-        if (material == null || material.isAir() || !material.isItem()) material = Material.BOOK;
-        card(
-            m,
-            MenuStyle.slot(i++, Math.min(21, cards.getKeys(false).size())),
-            material,
-            cards.getString(id + ".title-key", "profile-menu.adaptations"),
-            cards.getString(id + ".lore-key", "profile-menu.adaptations-lore"),
-            target,
-            null);
-      }
-    }
-    if (viewer.equals(target))
-      link(
-          m,
-          50,
-          "adaptations",
-          "profile-menu.open-adaptations",
-          "profile-menu.adaptations-lore",
-          Material.HEART_OF_THE_SEA,
-          target,
-          true);
-    button(m, 51, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, target));
   }
 
   public void players(Player viewer, String action, int page) {
