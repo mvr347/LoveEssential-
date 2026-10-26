@@ -15,7 +15,7 @@ public record Waystone(
   public record Route(String target, long cost, int warmup, int cooldown, String permission) {
     public Route {
       if (target == null
-          || !target.matches("[1-9][0-9]{0,2}")
+          || (!target.matches("[1-9][0-9]{0,9}") || Long.parseLong(target) > Integer.MAX_VALUE)
           || cost < 0
           || cost > 1_000_000_000L
           || warmup < 0
@@ -29,7 +29,7 @@ public record Waystone(
 
   public Waystone {
     if (id == null
-        || !id.matches("[1-9][0-9]{0,2}")
+        || (!id.matches("[1-9][0-9]{0,9}") || Long.parseLong(id) > Integer.MAX_VALUE)
         || name == null
         || name.isBlank()
         || name.length() > 64

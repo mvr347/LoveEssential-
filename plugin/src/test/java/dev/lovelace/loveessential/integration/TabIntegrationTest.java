@@ -68,9 +68,40 @@ class TabIntegrationTest {
   void worldList(boolean enabled) {
     plugin.getConfig().set("tab.per-world-playerlist.enabled", enabled);
     plugin.getConfig().set("tab.per-world-playerlist.refresh-ticks", 2);
-    plugin.getConfig().set("tab.per-world-playerlist.bypass-permission", "loveessential.tab.worldlist.bypass");
+    plugin
+        .getConfig()
+        .set("tab.per-world-playerlist.bypass-permission", "loveessential.tab.worldlist.bypass");
     plugin.getConfig().set("tab.per-world-playerlist.groups.overworld", List.of("world"));
     plugin.getConfig().set("tab.per-world-playerlist.groups.nether", List.of("world_nether"));
+  }
+
+  @Test
+  void rankMarkersAreRemovedButOrdinaryHashAndSuffixStay() throws Exception {
+    plugin
+        .getConfig()
+        .set(
+            "tab.groups._DEFAULT_.tabprefix",
+            "<head:name:%player%> <green>#1 <gray>#>3 <gray># <gold>Легенда ");
+    plugin.getConfig().set("tab.groups._DEFAULT_.tabsuffix", " <gray>🏰 Тест");
+    var alice = player("Alice", "world");
+    settle(20);
+    String name = PlainTextComponentSerializer.plainText().serialize(alice.playerListName());
+    assertFalse(name.contains("#1"), name);
+    assertFalse(name.contains("#>3"), name);
+    assertTrue(name.contains("# Легенда"), name);
+    assertTrue(name.contains("🏰 Тест"), name);
+    assertTrue(name.contains("Alice"), name);
+  }
+
+  @Test
+  void joiningAndStoppingNeverUseTheNullTeamNameFallback() throws Exception {
+    var alice = player("Alice", "world");
+    assertNotNull(alice.playerListName(), "join sets an explicit name immediately");
+    settle(20);
+    internal("tab", TabModule.class).stop();
+    assertNotNull(alice.playerListName());
+    assertEquals(
+        "Alice", PlainTextComponentSerializer.plainText().serialize(alice.playerListName()));
   }
 
   @Test
@@ -114,7 +145,8 @@ class TabIntegrationTest {
     var tab = internal("tab", TabModule.class);
     long settled = tab.sentValues();
     settle(120);
-    assertEquals(settled, tab.sentValues(), "a second update with the same state must send nothing");
+    assertEquals(
+        settled, tab.sentValues(), "a second update with the same state must send nothing");
     // A real change is sent again, once.
     plugin.getConfig().set("tab.groups._DEFAULT_.customtabname", "<gold><player>");
     settle(40);
@@ -167,7 +199,8 @@ class TabIntegrationTest {
     plugin.getConfig().set("tab.placeholders.date-format", "yyyy");
     var text =
         placeholders.renderRaw(
-            "&7ДОБРО ПОЖАЛОВАТЬ &c▐%player%▐ %world% %online% 100% hp &#ff8800%date%", alice, alice);
+            "&7ДОБРО ПОЖАЛОВАТЬ &c▐%player%▐ %world% %online% 100% hp &#ff8800%date%",
+            alice, alice);
     assertEquals(
         "ДОБРО ПОЖАЛОВАТЬ ▐Alice▐ world 1 100% hp " + java.time.Year.now(),
         PlainTextComponentSerializer.plainText().serialize(text));
@@ -182,7 +215,8 @@ class TabIntegrationTest {
     plugin.getConfig().set("tab.legacy-colors", false);
     assertEquals(
         "&7text",
-        PlainTextComponentSerializer.plainText().serialize(placeholders.renderRaw("&7text", alice, alice)));
+        PlainTextComponentSerializer.plainText()
+            .serialize(placeholders.renderRaw("&7text", alice, alice)));
   }
 
   @Test
@@ -195,14 +229,16 @@ class TabIntegrationTest {
             .filter(
                 c ->
                     c instanceof net.kyori.adventure.text.ObjectComponent o
-                        && o.contents() instanceof net.kyori.adventure.text.object.PlayerHeadObjectContents)
+                        && o.contents()
+                            instanceof net.kyori.adventure.text.object.PlayerHeadObjectContents)
             .count();
     assertEquals(1, heads, text.toString());
     assertTrue(
         ((net.kyori.adventure.text.object.PlayerHeadObjectContents)
                 ((net.kyori.adventure.text.ObjectComponent) text.children().get(0)).contents())
             .name()
-            .equals("Alice"), text.toString());
+            .equals("Alice"),
+        text.toString());
     assertTrue(PlainTextComponentSerializer.plainText().serialize(text).endsWith("Alice"));
   }
 
@@ -234,6 +270,7 @@ class TabIntegrationTest {
     String plain = PlainTextComponentSerializer.plainText().serialize(text);
     assertEquals("#>3 Alice", plain, text.toString());
     placeholders.configure(
-        new dev.lovelace.loveessential.tab.PlaceholderRefresh(200, java.util.Map.of()), java.util.Map.of());
+        new dev.lovelace.loveessential.tab.PlaceholderRefresh(200, java.util.Map.of()),
+        java.util.Map.of());
   }
 }

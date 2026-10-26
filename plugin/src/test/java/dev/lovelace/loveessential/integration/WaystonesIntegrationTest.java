@@ -168,6 +168,174 @@ class WaystonesIntegrationTest {
     MockBukkit.unmock();
   }
 
+  dev.lovelace.loveessential.dialog.NativeDialogs dialogs(
+      AtomicReference<dev.lovelace.loveessential.dialog.NativeDialogs.Form> form) throws Exception {
+    var f = LoveEssentialPlugin.class.getDeclaredField("extensions");
+    f.setAccessible(true);
+    var ui = ((Extensions) f.get(plugin)).ui;
+    ui.presenter((p, value) -> form.set(value));
+    return ui;
+  }
+
+  void clickNamed(String name) {
+    var top = player.getOpenInventory().getTopInventory();
+    int slot = -1;
+    for (int i = 0; i < top.getSize(); i++) {
+      var item = top.getItem(i);
+      if (item != null && dev.lovelace.loveessential.gui.GuiRules.name(item).contains(name)) {
+        slot = i;
+        break;
+      }
+    }
+    assertTrue(slot >= 0, name);
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.inventory.InventoryClickEvent(
+                player.getOpenInventory(),
+                org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+                slot,
+                org.bukkit.event.inventory.ClickType.LEFT,
+                org.bukkit.event.inventory.InventoryAction.PICKUP_ALL));
+  }
+
+  @Test
+  void sharedCatalogIncludesTheFourVoidcoreModelsAndPersistsEdits() throws Exception {
+    assertEquals(7, travel.availableModels().size());
+    for (int i = 1; i <= 4; i++) {
+      String item = "voidcore:waystone_" + i;
+      assertTrue(travel.availableModels().stream().anyMatch(m -> m.item().equals(item)));
+    }
+    player.setOp(true);
+    var form = new AtomicReference<dev.lovelace.loveessential.dialog.NativeDialogs.Form>();
+    var ui = dialogs(form);
+    server.dispatchCommand(player, "le waystone edit");
+    assertTrue(
+        dev.lovelace.loveessential.gui.GuiRules.name(
+                player.getOpenInventory().getTopInventory().getItem(
+                    player.getOpenInventory().getTopInventory().getSize() - 3))
+            .contains("каталог"));
+    server.dispatchCommand(player, "le waystone models");
+    assertTrue(
+        dev.lovelace.loveessential.gui.GuiRules.violations(
+                player.getOpenInventory().getTopInventory(), false)
+            .isEmpty());
+    clickNamed("Добавить модель");
+    assertTrue(
+        ui.respond(
+            player,
+            form.get().token(),
+            "save",
+            Map.of("name", "Общий деревянный", "style", "Деревянный", "item", "")));
+    waitFor(() -> travel.availableModels().size() == 8);
+    await(travel.load());
+    assertTrue(
+        travel.availableModels().stream().anyMatch(m -> m.name().equals("Общий деревянный")));
+    player.teleport(new Location(world, 40, 64, 0));
+    await(store.nextSequence("waystone", 999));
+    await(store.nextSequence("waystone", 999));
+    server.dispatchCommand(player, "le waystone create");
+    assertTrue(
+        form.get().fields().stream()
+            .filter(f -> f.id().equals("style"))
+            .findFirst()
+            .orElseThrow()
+            .choices()
+            .contains("Общий деревянный"));
+    assertTrue(
+        ui.respond(
+            player,
+            form.get().token(),
+            "create",
+            Map.of(
+                "name", "Тест", "style", "Общий деревянный", "direction", "Север", "model", "")));
+    waitFor(() -> travel.all().size() == 3);
+    assertEquals(
+        "wood",
+        travel.all().stream()
+            .filter(n -> n.name().equals("Тест"))
+            .findFirst()
+            .orElseThrow()
+            .style());
+  }
+
+  @Test
+  void aLateCatalogSaveDoesNotReopenAClosedMenu() throws Exception {
+    player.setOp(true);
+    var form = new AtomicReference<dev.lovelace.loveessential.dialog.NativeDialogs.Form>();
+    var ui = dialogs(form);
+    server.dispatchCommand(player, "le waystone models");
+    clickNamed("Добавить модель");
+    var field = SqliteStore.class.getDeclaredField("writer");
+    field.setAccessible(true);
+    var writer = (java.util.concurrent.ThreadPoolExecutor) field.get(store);
+    var blocked = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    writer.execute(
+        () -> {
+          blocked.countDown();
+          try {
+            release.await();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        });
+    assertTrue(blocked.await(5, TimeUnit.SECONDS));
+    try {
+      assertTrue(
+          ui.respond(
+              player,
+              form.get().token(),
+              "save",
+              Map.of("name", "Отложенная", "style", "Деревянный", "item", "")));
+      player.closeInventory();
+    } finally {
+      release.countDown();
+    }
+    waitFor(() -> travel.availableModels().stream().anyMatch(m -> m.name().equals("Отложенная")));
+    var top = player.getOpenInventory().getTopInventory();
+    assertTrue(
+        top == null || !(top.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout));
+  }
+
+  @Test
+  void removedPresetDoesNotReturnOnReloadOrChangeExistingStones() throws Exception {
+    var doc = await(store.get("waystone-model", "wood", Waystones.Model.class)).orElseThrow();
+    await(store.delete("waystone-model", doc.id(), doc.revision(), "test"));
+    await(travel.load());
+    assertFalse(travel.availableModels().stream().anyMatch(m -> m.name().equals("Деревянный")));
+    assertEquals(
+        "wood",
+        travel.all().stream().filter(n -> n.id().equals("1")).findFirst().orElseThrow().style());
+    await(travel.load());
+    assertEquals(6, travel.availableModels().size());
+  }
+
+  @Test
+  void visibleNumberIsReusedAndCommandsResolveItWithoutRetargetingOldRoutes() throws Exception {
+    var old = await(store.get("waystone", "1", Waystone.class)).orElseThrow();
+    await(store.delete("waystone", "1", old.revision(), "test"));
+    var at = Position.of(new Location(world, 40, 64, 0));
+    await(
+        store.save(
+            "waystone",
+            "1001",
+            0,
+            new Waystone("1001", "Новый", at, at, "wood", "", List.of()),
+            "test"));
+    await(travel.load());
+    assertEquals(1, travel.number("1001"));
+    assertEquals(2, travel.number("2"));
+    player.setOp(true);
+    assertTrue(server.dispatchCommand(player, "le waystone edit 1"));
+    assertTrue(
+        dev.lovelace.loveessential.gui.GuiRules.name(
+                player.getOpenInventory().getTopInventory().getItem(11))
+            .contains("Оформление"));
+    assertEquals(List.of("1", "2"), travel.suggestions(player, new String[] {"edit", ""}));
+    assertThrows(IllegalArgumentException.class, () -> travel.begin(player, "2", "1"));
+  }
+
   @Test
   void paidArrivalChargesOnceAndPersistsCooldown() throws Exception {
     travel.begin(player, "1", "2");
