@@ -41,10 +41,12 @@ class ReviveTest implements Listener {
   }
 
   int serverDeaths;
+  org.bukkit.event.entity.PlayerDeathEvent lastDeath;
 
   @EventHandler
   public void actualDeath(org.bukkit.event.entity.PlayerDeathEvent e) {
     serverDeaths++;
+    lastDeath = e;
   }
 
   @EventHandler
@@ -175,7 +177,7 @@ class ReviveTest implements Listener {
     var box = hitbox();
     victim.teleport(victim.getLocation().add(2, 0, 0));
     server.getScheduler().performTicks(4);
-    assertEquals(victim.getLocation(), box.getLocation());
+    assertEquals(victim.getLocation().add(0, 0, .65), box.getLocation());
     server.dispatchCommand(server.getConsoleSender(), "revive revive Victim");
     assertFalse(box.isValid());
     assertTrue(world.getEntitiesByClass(org.bukkit.entity.Interaction.class).isEmpty());
@@ -376,6 +378,169 @@ class ReviveTest implements Listener {
     assertEquals(1, serverDeaths, "the timer must produce exactly one real death");
     server.getScheduler().performTicks(40);
     assertEquals(1, serverDeaths);
+  }
+
+  @Test
+  void dismountPoseResetIsRepairedOnTheFollowingTickButCannotResurrectReleasedState() {
+    fall();
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    victim.setPose(org.bukkit.entity.Pose.STANDING, false); // vanilla dismount finishes later
+    victim.setSwimming(false);
+    server.getScheduler().performOneTick();
+    assertTrue(victim.hasFixedPose());
+    assertTrue(victim.isSwimming());
+    assertEquals(org.bukkit.entity.Pose.SLEEPING, victim.getPose());
+    rightClick(helper, victim);
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    server.dispatchCommand(server.getConsoleSender(), "revive revive Victim");
+    server.getScheduler().performTicks(4);
+    assertFalse(victim.hasFixedPose());
+    assertFalse(victim.isSwimming());
+  }
+
+  @Test
+  void revivedPlayerHasTwoSecondsOfDamageProtectionWithoutPersistentInvulnerability() {
+    fall();
+    server.dispatchCommand(server.getConsoleSender(), "revive revive Victim");
+    hit(victim, EntityDamageEvent.DamageCause.FALL, 1);
+    assertTrue(lastHit.isCancelled());
+    assertFalse(victim.isInvulnerable());
+    server.getScheduler().performTicks(20);
+    hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 1);
+    assertTrue(lastHit.isCancelled());
+    server.getScheduler().performTicks(24);
+    hit(victim, EntityDamageEvent.DamageCause.FALL, 1);
+    assertFalse(lastHit.isCancelled());
+  }
+
+  @Test
+  void downedPlayerCannotSetHomeOrBedSpawnEvenWithOpAndAllowedCommands() throws Exception {
+    fall();
+    victim.setOp(true);
+    plugin.getConfig().set("revive.allowed-commands", List.of("sethome", "le"));
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    server.dispatchCommand(victim, "le sethome"); // bypasses command-preprocess event as API would
+    assertTrue(
+        await(
+                store.get(
+                    "place",
+                    "home:" + victim.getUniqueId() + ":default",
+                    dev.lovelace.loveessential.module.Gameplay.Place.class))
+            .isEmpty());
+    var bed =
+        new org.bukkit.event.player.PlayerBedEnterEvent(
+            victim,
+            victim.getLocation().getBlock(),
+            org.bukkit.event.player.PlayerBedEnterEvent.BedEnterResult.OK,
+            null);
+    bed.setUseBed(org.bukkit.event.Event.Result.ALLOW);
+    server.getPluginManager().callEvent(bed);
+    assertTrue(bed.isCancelled());
+    var spawn =
+        new com.destroystokyo.paper.event.player.PlayerSetSpawnEvent(
+            victim,
+            com.destroystokyo.paper.event.player.PlayerSetSpawnEvent.Cause.RESPAWN_ANCHOR,
+            victim.getLocation(),
+            false,
+            false,
+            null);
+    server.getPluginManager().callEvent(spawn);
+    assertTrue(spawn.isCancelled());
+  }
+
+  @Test
+  void mobsDropExistingAggroAndCannotRetargetDuringRecovery() {
+    var zombie = world.spawn(victim.getLocation(), org.bukkit.entity.Zombie.class);
+    zombie.setTarget(victim);
+    fall();
+    assertNull(zombie.getTarget());
+    var target =
+        new org.bukkit.event.entity.EntityTargetEvent(
+            zombie, victim, org.bukkit.event.entity.EntityTargetEvent.TargetReason.CLOSEST_PLAYER);
+    server.getPluginManager().callEvent(target);
+    assertTrue(target.isCancelled());
+    server.dispatchCommand(server.getConsoleSender(), "revive revive Victim");
+    target.setCancelled(false);
+    server.getPluginManager().callEvent(target);
+    assertTrue(target.isCancelled());
+    server.getScheduler().performTicks(44);
+    target.setCancelled(false);
+    server.getPluginManager().callEvent(target);
+    assertFalse(target.isCancelled());
+  }
+
+  @Test
+  void acceptedNativeLogoutLeavesInventoryForDeluxeCombatAndDoesNotProduceAnotherDeath() {
+    victim.getInventory().setItem(0, new ItemStack(Material.DIAMOND, 7));
+    fall();
+    helper.setSneaking(true);
+    rightClick(helper, victim);
+    assertEquals(54, helper.getOpenInventory().getTopInventory().getSize());
+    assertTrue(plugin.handoffDownedCombatLogout(victim));
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(7, victim.getInventory().getItem(0).getAmount());
+    assertEquals(0, serverDeaths);
+    assertTrue(
+        helper.getOpenInventory().getTopInventory() == null
+            || helper.getOpenInventory().getTopInventory().getSize() != 54);
+    assertFalse(plugin.handoffDownedCombatLogout(victim));
+    victim.disconnect();
+    server.getScheduler().performTicks(4);
+    assertEquals(0, serverDeaths);
+  }
+
+  @Test
+  void acceptedNativeLogoutFromNormalQuitListenerPreventsMonitorFallbackDeath() {
+    fall();
+    final boolean[] transferred = {false};
+    server
+        .getPluginManager()
+        .registerEvents(
+            new Listener() {
+              @EventHandler(priority = org.bukkit.event.EventPriority.NORMAL)
+              public void nativeQuit(org.bukkit.event.player.PlayerQuitEvent e) {
+                if (e.getPlayer().equals(victim))
+                  transferred[0] = plugin.handoffDownedCombatLogout(victim);
+              }
+            },
+            plugin);
+    victim.disconnect();
+    assertTrue(transferred[0]);
+    assertEquals(0, serverDeaths);
+    assertFalse(oracle().downed(victim.getUniqueId()));
+  }
+
+  @Test
+  void sleepingBodyCenterUsesYawAndDoesNotMoveBackToFeetWhenLookingStraightUp() {
+    victim.teleport(new Location(world, -7, 72, 8, 90, -90));
+    fall();
+    var at = hitbox().getLocation();
+    assertEquals(-7.65, at.getX(), 1e-6);
+    assertEquals(72, at.getY(), 1e-6);
+    assertEquals(8, at.getZ(), 1e-6);
+  }
+
+  @Test
+  void deluxeCombatInventoryDecisionIsNotOverriddenByReviveKeepInventory() {
+    MockBukkit.createMockPlugin("DeluxeCombat");
+    plugin.getConfig().set("revive.keep-inventory", true);
+    fall();
+    plugin.getConfig().set("revive.death-delay", 1);
+    // The existing state uses the original timer; force a fresh one with the short timer.
+    server.dispatchCommand(server.getConsoleSender(), "revive revive Victim");
+    server.dispatchCommand(server.getConsoleSender(), "revive down Victim");
+    server.getScheduler().performTicks(40);
+    assertEquals(1, serverDeaths);
+    assertNotNull(lastDeath);
+    assertFalse(lastDeath.getKeepInventory());
   }
 
   @Test

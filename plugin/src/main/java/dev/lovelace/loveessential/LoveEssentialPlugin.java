@@ -95,6 +95,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   private EssentialApi essentialApi;
   private dev.lovelace.loveessential.module.Revive revive;
+
+  /** Called by the optional DeluxeCombat addon only after an accepted native combat logout. */
+  public boolean handoffDownedCombatLogout(org.bukkit.entity.Player player) {
+    return revive != null && revive.handoffCombatLogout(player);
+  }
+
   private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
   private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;

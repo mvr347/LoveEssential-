@@ -68,6 +68,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   private final Map<UUID, Integer> downs = new HashMap<>();
   private final Map<UUID, Long> lastStart = new HashMap<>();
   private final Map<UUID, Long> notified = new HashMap<>();
+  private final Map<UUID, Long> recoveryUntil = new HashMap<>();
   private final Set<UUID> dropping = new HashSet<>();
   private final NamespacedKey slowKey, jumpKey, carryKey, pending;
   private BukkitTask task;
@@ -122,6 +123,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   public void close() {
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
+    recoveryUntil.clear();
     // A shutdown is not a death: release everybody and mark them so health is fixed on next join.
     for (var id : List.copyOf(states.keySet())) {
       var p = Bukkit.getPlayer(id);
@@ -370,6 +372,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     p.setFireTicks(0);
     p.setFallDistance(0);
     apply(p, state);
+    clearMobTargets(p);
     p.showTitle(
         Title.title(
             lang.render("revive.title"),
@@ -424,23 +427,34 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       p.sendBlockChange(old.getLocation(), old.getBlockData());
   }
 
+  private Location bodyCenter(Player p, State state) {
+    var at = p.getLocation();
+    if (state.carrier == null && pose() == Pose.SLEEPING) {
+      var facing = at.clone();
+      facing.setPitch(0);
+      at.add(facing.getDirection().multiply(number("interaction.forward-offset", .65, -2, 2)));
+    }
+    return at;
+  }
+
   private void updateInteraction(Player p, State state) {
+    Location at = bodyCenter(p, state);
     if (state.interaction == null || !state.interaction.isValid()) {
       removeInteraction(state);
       state.interaction =
           p.getWorld()
               .spawn(
-                  p.getLocation(),
+                  at,
                   Interaction.class,
                   entity -> {
-                    entity.setInteractionWidth(1.6f);
-                    entity.setInteractionHeight(.9f);
+                    entity.setInteractionWidth((float) number("interaction.width", 1.6, .6, 3));
+                    entity.setInteractionHeight((float) number("interaction.height", .9, .3, 2));
                     entity.setResponsive(true);
                     entity.setPersistent(false);
                   });
       interactionTargets.put(state.interaction.getUniqueId(), p.getUniqueId());
-    } else if (!state.interaction.getLocation().equals(p.getLocation())) {
-      state.interaction.teleport(p.getLocation());
+    } else if (!state.interaction.getLocation().equals(at)) {
+      state.interaction.teleport(at);
     }
     for (Player viewer : Bukkit.getOnlinePlayers()) {
       boolean visible =
@@ -499,6 +513,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   /** Removes every effect of the downed state from the player; the state itself is already gone. */
   private void release(Player p, State state) {
+    inventories.invalidate(p);
     removeInteraction(state);
     for (var entry :
         Map.of(Attribute.MOVEMENT_SPEED, slowKey, Attribute.JUMP_STRENGTH, jumpKey).entrySet()) {
@@ -543,7 +558,9 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   private void tick() {
     ticks++;
+    recoveryUntil.values().removeIf(until -> until <= ticks);
     if (!enabled()) {
+      recoveryUntil.clear();
       for (var id : List.copyOf(states.keySet())) {
         var p = Bukkit.getPlayer(id);
         var state = states.remove(id);
@@ -625,6 +642,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         || !carrier.getPassengers().contains(p)) {
       carrying.remove(state.carrier);
       state.carrier = null;
+      restoreAfterDrop(p, state);
       if (carrier != null) {
         unslow(carrier);
         carrier.sendActionBar(Component.empty());
@@ -775,6 +793,9 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     release(p, state);
     var max = p.getAttribute(Attribute.MAX_HEALTH);
     p.setHealth(Math.min(number("revived-health", 4, 0.5, 40), max == null ? 20 : max.getValue()));
+    long protection = (long) Math.ceil(number("revived-protection-seconds", 2, 0, 60) / STEP);
+    if (protection > 0) recoveryUntil.put(p.getUniqueId(), ticks + protection);
+    clearMobTargets(p);
     Bukkit.getPluginManager().callEvent(new ReviveEvent(p, helper));
     p.sendMessage(
         helper == null
@@ -906,8 +927,11 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     release(p, state);
     dying.put(p.getUniqueId(), cause);
     if (state.cause != null) p.setLastDamageCause(state.cause);
-    p.setHealth(0);
-    dying.remove(p.getUniqueId());
+    try {
+      p.setHealth(0);
+    } finally {
+      dying.remove(p.getUniqueId());
+    }
     fire("death", p, null);
     return true;
   }
@@ -925,8 +949,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       cause = DownedDeathEvent.Cause.DAMAGE;
     }
     downs.remove(p.getUniqueId());
+    recoveryUntil.remove(p.getUniqueId());
     if (cause == null) return;
-    if (flag("keep-inventory", false)
+    if (!deluxeOwnsInventory()
+        && flag("keep-inventory", false)
         && (cause == DownedDeathEvent.Cause.TIMER || cause == DownedDeathEvent.Cause.SUICIDE)) {
       e.setKeepInventory(true);
       e.getDrops().clear();
@@ -934,6 +960,21 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       e.setDroppedExp(0);
     }
     if (!flag("death-message", true)) e.deathMessage(null);
+  }
+
+  private boolean deluxeOwnsInventory() {
+    return flag("deluxecombat-inventory", true)
+        && Bukkit.getPluginManager().isPluginEnabled("DeluxeCombat");
+  }
+
+  private boolean recovering(Player p) {
+    return enabled() && recoveryUntil.getOrDefault(p.getUniqueId(), 0L) > ticks;
+  }
+
+  /** Early damage cancellation without persisting vanilla invulnerability. */
+  @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+  public void recoveryDamage(EntityDamageEvent e) {
+    if (e.getEntity() instanceof Player p && recovering(p)) e.setCancelled(true);
   }
 
   // ----------------------------------------------------------------- damage
@@ -1015,15 +1056,34 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     carrying.remove(carrier.getUniqueId());
     if (state != null) state.carrier = null;
     detach(carrier, downed);
-    if (state != null) {
-      updatePose(downed, state);
-      updateInteraction(downed, state);
-    }
+    if (state != null) restoreAfterDrop(downed, state);
     unslow(carrier);
     carrier.sendActionBar(Component.empty());
     cue("drop", downed.getLocation());
     Bukkit.getPluginManager().callEvent(new DropDownedEvent(downed, carrier));
     fire("drop", downed, carrier);
+  }
+
+  private void restoreAfterDrop(Player p, State state) {
+    restoreCeiling(p, state);
+    p.setPose(Pose.STANDING, false);
+    updatePose(p, state);
+    updateInteraction(p, state);
+    // Dismount processing may reset the pose/location after removePassenger returns.
+    Bukkit.getScheduler()
+        .runTask(
+            plugin,
+            () -> {
+              if (!enabled()
+                  || states.get(p.getUniqueId()) != state
+                  || state.carrier != null
+                  || !p.isOnline()
+                  || p.isDead()) return;
+              restoreCeiling(p, state);
+              p.setPose(Pose.STANDING, false);
+              updatePose(p, state);
+              updateInteraction(p, state);
+            });
   }
 
   @EventHandler
@@ -1211,12 +1271,33 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     }
   }
 
-  @EventHandler(ignoreCancelled = true)
+  private void clearMobTargets(Player p) {
+    if (!flag("mobs-ignore", true)) return;
+    for (Entity entity : p.getNearbyEntities(32, 32, 32))
+      if (entity instanceof org.bukkit.entity.Mob mob && p.equals(mob.getTarget()))
+        mob.setTarget(null);
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void bed(PlayerBedEnterEvent e) {
+    if (enabled() && states.containsKey(e.getPlayer().getUniqueId())) e.setCancelled(true);
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+  public void respawnPoint(com.destroystokyo.paper.event.player.PlayerSetSpawnEvent e) {
+    if (enabled()
+        && states.containsKey(e.getPlayer().getUniqueId())
+        && e.getCause()
+            != com.destroystokyo.paper.event.player.PlayerSetSpawnEvent.Cause.PLAYER_RESPAWN
+        && e.getLocation() != null) e.setCancelled(true);
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
   public void target(EntityTargetEvent e) {
     if (enabled()
         && flag("mobs-ignore", true)
         && e.getTarget() instanceof Player p
-        && states.containsKey(p.getUniqueId())) e.setCancelled(true);
+        && (states.containsKey(p.getUniqueId()) || recovering(p))) e.setCancelled(true);
   }
 
   @EventHandler
@@ -1232,16 +1313,36 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   // ---------------------------------------------------------------- sessions
 
-  @EventHandler(priority = EventPriority.HIGH)
+  /** Native combat-logout corpse accepted: release effects, but leave all items to DeluxeCombat. */
+  public boolean handoffCombatLogout(Player p) {
+    if (!Bukkit.isPrimaryThread()) throw new IllegalStateException("Main thread required");
+    var state = states.remove(p.getUniqueId());
+    if (state == null) return false;
+    refund(state);
+    release(p, state);
+    p.getPersistentDataContainer().set(pending, PersistentDataType.BYTE, (byte) 1);
+    Bukkit.getPluginManager().callEvent(new DownedQuitEvent(p, false));
+    fire("quit", p, null);
+    return true;
+  }
+
+  @EventHandler(priority = EventPriority.MONITOR)
   public void quit(PlayerQuitEvent e) {
     var p = e.getPlayer();
     var carried = carrying.remove(p.getUniqueId());
     if (carried != null) {
+      unslow(p);
       var downed = Bukkit.getPlayer(carried);
       var state = downed == null ? null : states.get(downed.getUniqueId());
-      if (state != null) state.carrier = null;
+      if (state != null) {
+        state.carrier = null;
+        detach(p, downed);
+        restoreAfterDrop(downed, state);
+      }
     }
     var state = states.get(p.getUniqueId());
+    recoveryUntil.remove(p.getUniqueId());
+    downs.remove(p.getUniqueId());
     lastStart.remove(p.getUniqueId());
     notified.remove(p.getUniqueId());
     if (state == null) return;

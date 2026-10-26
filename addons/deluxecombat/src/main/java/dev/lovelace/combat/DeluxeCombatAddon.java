@@ -77,6 +77,7 @@ public final class DeluxeCombatAddon extends Addon {
       config.addDefault("protection.auth", true);
       config.addDefault("protection.vanish", true);
       config.addDefault("revive.prefer-reviveme-if-installed", false);
+      config.addDefault("revive.native-combat-logout", true);
       config.options().copyDefaults(true);
       if (!Files.exists(file)) { Files.createDirectories(file.getParent()); config.save(file.toFile()); }
       upstream = LoveCore.service(CombatState.class).orElseThrow(() -> new IllegalStateException("Служба CombatState LoveCore отсутствует"));
@@ -263,6 +264,20 @@ public final class DeluxeCombatAddon extends Addon {
       // A stale DC tag must not punish authentication/vanish or an isolated duel.
       // Ordinary and downed combat logouts remain DeluxeCombat's responsibility.
       if (excluded(e.getCombatlogger())) e.setCancelled(true);
+    }
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void nativeLogout(CombatlogEvent e) {
+      if (!config.getBoolean("revive.native-combat-logout", true)) return;
+      Plugin essential = Bukkit.getPluginManager().getPlugin("LoveEssential");
+      if (essential == null || !essential.isEnabled()) return;
+      try {
+        essential.getClass().getMethod("handoffDownedCombatLogout", Player.class)
+            .invoke(essential, e.getCombatlogger());
+      } catch (NoSuchMethodException olderEssential) {
+        // Older LoveEssential has no handoff contract. Never copy or clear its inventory here.
+      } catch (ReflectiveOperationException failure) {
+        owner.getLogger().log(Level.SEVERE, "[Love Integration] Не удалось передать выход раненого DeluxeCombat", failure);
+      }
     }
     @EventHandler(priority = EventPriority.MONITOR)
     public void quit(PlayerQuitEvent e) {

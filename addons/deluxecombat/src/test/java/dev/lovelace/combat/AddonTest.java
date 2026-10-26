@@ -37,7 +37,7 @@ class AddonTest {
     server = MockBukkit.mock();
     dc = MockBukkit.createMockPlugin("DeluxeCombat");
     Plugin core = MockBukkit.createMockPlugin("LoveCore");
-    MockBukkit.createMockPlugin("LoveEssential");
+    MockBukkit.loadWith(EssentialHandoff.class, new PluginDescriptionFile("LoveEssential", "test", EssentialHandoff.class.getName()));
     upstream = new CombatBridgeTest.State();
     server.getServicesManager().register(CombatState.class, upstream, core, ServicePriority.Normal);
     server.getServicesManager().register(DownedOracle.class, new DownedOracle() {
@@ -66,6 +66,21 @@ class AddonTest {
   public static class DuelManager {
     public DuelManager getMatchManager() { return this; }
     public boolean isInMatch(UUID id) { return true; }
+  }
+  public static class EssentialHandoff extends org.bukkit.plugin.java.JavaPlugin {
+    int handoffs;
+    public boolean handoffDownedCombatLogout(Player player) { handoffs++; return true; }
+  }
+  @Test void onlyAcceptedNativeCombatLogoutHandsInventoryResponsibilityToDeluxeCombat() {
+    var essential = (EssentialHandoff) server.getPluginManager().getPlugin("LoveEssential");
+    var event = new nl.marido.deluxecombat.events.CombatlogEvent(victim, attacker, victim.getLocation());
+    server.getPluginManager().callEvent(event);
+    assertEquals(1, essential.handoffs);
+    server.getServicesManager().register(AuthOracle.class, id -> false, dc, ServicePriority.Normal);
+    var cancelled = new nl.marido.deluxecombat.events.CombatlogEvent(victim, attacker, victim.getLocation());
+    server.getPluginManager().callEvent(cancelled);
+    assertTrue(cancelled.isCancelled());
+    assertEquals(1, essential.handoffs);
   }
   @Test void duelsVetoDowningAndCannotBePunishedByAStaleDeluxeCombatTag() {
     MockBukkit.loadWith(DuelsPlugin.class, new PluginDescriptionFile("LoveDuels", "test", DuelsPlugin.class.getName()));

@@ -153,3 +153,18 @@ DeluxeCombat. Если список игроков оформляет LoveEssent
 
 Источник: [документация конфигурации DeluxeCombat](https://www.spigotmc.org/wiki/deluxecombat-files/).
 Аддон не меняет конфиги DeluxeCombat автоматически и не перехватывает его пакеты.
+
+## Передача раненого нативному combat-logout
+
+Обновлённый LoveEssential поддерживает `handoffDownedCombatLogout(Player)`.
+Аддон вызывает его на MONITOR принятого `CombatlogEvent`, если включено
+`revive.native-combat-logout` (по умолчанию true). Отменённые события не передаются.
+Раненый освобождается от переноски, позы и обыска без второй смерти; инвентарь
+остаётся в ведении DeluxeCombat. На старом LoveEssential без этого метода
+передача недоступна, инвентарь аддон самостоятельно не трогает.
+
+В `modules/revive/revive.yml` новая настройка `deluxecombat-inventory: true`
+при включённом DeluxeCombat отключает переопределение drops/keepInventory/опыта
+со стороны revive. Нативный CORPSE включается через настройки самого DeluxeCombat.
+Для этой связки обновляйте и LoveEssential, и аддон. Порядок реального выхода,
+появление и лут corpse нужно проверить с установленной сборкой DeluxeCombat.
