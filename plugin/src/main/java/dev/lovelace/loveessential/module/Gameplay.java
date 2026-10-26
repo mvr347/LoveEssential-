@@ -302,6 +302,9 @@ public final class Gameplay implements Listener, AutoCloseable {
     String name = args.length > 0 ? args[0] : "default";
     switch (cmd) {
       case "sethome" -> {
+        if (love.service(dev.lovelace.lovecore.api.revive.DownedOracle.class)
+            .map(o -> o.downed(p.getUniqueId())).orElse(false))
+          throw new IllegalArgumentException("revive.refused");
         check("home");
         ((LoveEssentialPlugin) plugin).requireAccess("home", p);
         if (args.length != 0) throw new IllegalArgumentException("home.simple-usage");
@@ -365,9 +368,8 @@ public final class Gameplay implements Listener, AutoCloseable {
         }
         lastSkin.put(p.getUniqueId(), now);
         var profile = Bukkit.createProfile(skin);
-        java.util.concurrent.CompletableFuture.supplyAsync(
-                () -> lookupSkin(profile, skin),
-                ((LoveEssentialPlugin) plugin).io())
+        ((LoveEssentialPlugin) plugin).async(
+                () -> lookupSkin(profile, skin))
             .whenComplete(
                 (lookup, failure) ->
                     main.execute(() -> applyLookup(p, skin, reset, lookup, failure)));

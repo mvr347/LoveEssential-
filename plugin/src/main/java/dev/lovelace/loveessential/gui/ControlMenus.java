@@ -661,15 +661,14 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   input ->
                       complete(
                           p,
-                          CompletableFuture.runAsync(
+                          plugin.asyncRun(
                               () -> {
                                 try {
                                   lang.putAll(Map.of(text, input));
                                 } catch (Exception e) {
                                   throw new CompletionException(e);
                                 }
-                              },
-                              plugin.io()),
+                              }),
                           () -> settings(p, id, path, page),
                           true),
                   () -> settings(p, id, path, page),
@@ -2238,12 +2237,16 @@ public final class ControlMenus implements Listener, AutoCloseable {
   public void quit(PlayerQuitEvent e) {
     prompts.remove(e.getPlayer().getUniqueId());
     roots.remove(e.getPlayer().getUniqueId());
+    vanishFilter.remove(e.getPlayer().getUniqueId());
+    direct.remove(e.getPlayer().getUniqueId());
+    dispatching.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {
     HandlerList.unregisterAll(this);
     prompts.clear();
     roots.clear();
+    vanishFilter.clear();
     direct.clear();
     dispatching.clear();
   }

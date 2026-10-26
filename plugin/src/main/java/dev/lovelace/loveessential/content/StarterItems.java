@@ -89,7 +89,7 @@ public final class StarterItems implements Listener, AutoCloseable {
                       kit = saved.get();
                       return null;
                     });
-              return CompletableFuture.supplyAsync(
+              return plugin.async(
                       () -> {
                         var y = new YamlConfiguration();
                         if (config != null && Files.exists(config))
@@ -99,8 +99,7 @@ public final class StarterItems implements Listener, AutoCloseable {
                             throw new CompletionException(e);
                           }
                         return y;
-                      },
-                      plugin.io())
+                      })
                   .thenCompose(
                       y ->
                           main.call(

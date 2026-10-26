@@ -295,13 +295,13 @@ class WaystonesIntegrationTest {
                     .equals(
                         e.getPersistentDataContainer()
                             .get(key, org.bukkit.persistence.PersistentDataType.STRING)))
-        .findFirst()
+        .min(java.util.Comparator.comparingDouble(e -> e.getLocation().getY()))
         .orElseThrow();
   }
 
   @Test
   void renderedLabelAndInteractionUseTheSameRotatedCenterAndScaledHeight() throws Exception {
-    var profile = new WaystoneRender(0, 0, 0, 1.5, 3, 2, .25, .5, .25, .5, true, "NONE");
+    var profile = new WaystoneRender(1, .75, -1, 1.5, 3, 2, .25, .5, .25, .5, true, "NONE");
     await(store.save("waystone-render", WaystoneRender.key("wood", ""), 0, profile, "test"));
     await(travel.load());
     world.loadChunk(0, 0);
@@ -316,6 +316,9 @@ class WaystonesIntegrationTest {
     assertEquals(expected.getZ(), text.getLocation().getZ(), 1e-6);
     assertEquals(text.getLocation().getX(), box.getLocation().getX(), 1e-6);
     assertEquals(text.getLocation().getZ(), box.getLocation().getZ(), 1e-6);
+    var model = stoneEntity(org.bukkit.entity.BlockDisplay.class);
+    assertEquals(model.getLocation().getY(), box.getLocation().getY(), 1e-6);
+    assertNotEquals(stone.anchor().y(), box.getLocation().getY());
     assertEquals(3, box.getInteractionWidth(), 1e-6);
     assertEquals(4.5, box.getInteractionHeight(), 1e-6);
     assertEquals(.5, text.getTransformation().getScale().x(), 1e-6);

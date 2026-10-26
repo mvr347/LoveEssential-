@@ -1642,7 +1642,7 @@ public final class Waystones implements Listener, AutoCloseable {
       }
       if (profile.text())
         entity(
-            profile.label(at),
+            profile.label(at, n.style()),
             TextDisplay.class,
             entities,
             e -> {
@@ -1664,7 +1664,7 @@ public final class Waystones implements Listener, AutoCloseable {
             },
             n.id());
       entity(
-          profile.center(at),
+          profile.center(at, n.style()),
           Interaction.class,
           entities,
           e -> {

@@ -1282,4 +1282,15 @@ class PluginLifecycleTest {
     assertFalse(plugin.module("home"));
     assertNull(plugin.getConfig().get("tab.engine"));
   }
+  @Test
+  void rejectedReloadCompletesItsFutureAndDoesNotLeaveTheBusyFlagSet() {
+    plugin.io().shutdown();
+    for (int attempt = 0; attempt < 2; attempt++) {
+      var rejected = assertDoesNotThrow(plugin::reloadSettings);
+      assertTrue(rejected.isCompletedExceptionally());
+      assertInstanceOf(RejectedExecutionException.class,
+          assertThrows(ExecutionException.class, rejected::get).getCause());
+    }
+  }
+
 }

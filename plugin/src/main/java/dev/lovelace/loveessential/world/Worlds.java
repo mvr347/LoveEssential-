@@ -236,7 +236,7 @@ public final class Worlds implements Listener, AutoCloseable {
         Bukkit.getWorlds().isEmpty()
             ? null
             : Bukkit.getWorlds().get(0).getWorldFolder().toPath().toAbsolutePath().normalize();
-    return CompletableFuture.runAsync(
+    return plugin.asyncRun(
             () -> {
               try {
                 Path root = container.toRealPath();
@@ -248,8 +248,7 @@ public final class Worlds implements Listener, AutoCloseable {
               } catch (java.io.IOException e) {
                 throw new CompletionException(e);
               }
-            },
-            plugin.io())
+            })
         .thenCompose(v -> store.save("world", name, 0, d, actor))
         .thenCompose(
             rev ->

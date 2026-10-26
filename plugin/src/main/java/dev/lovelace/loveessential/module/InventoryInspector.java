@@ -301,7 +301,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
       sessions.remove(s.viewer.getUniqueId(), s);
   }
 
-  private void invalidate(Player player) {
+  public void invalidate(Player player) {
     for (var s : List.copyOf(sessions.values()))
       if (s.viewer.equals(player) || s.target.equals(player)) s.viewer.closeInventory();
   }
@@ -311,7 +311,7 @@ public final class InventoryInspector implements Listener, AutoCloseable {
     invalidate(e.getPlayer());
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.LOWEST)
   public void death(PlayerDeathEvent e) {
     invalidate(e.getEntity());
   }

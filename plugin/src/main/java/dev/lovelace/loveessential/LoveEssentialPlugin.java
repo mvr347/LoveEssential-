@@ -48,15 +48,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "rtp",
           "display",
           "waystones");
-  private final ExecutorService io =
-      new ThreadPoolExecutor(
-          8,
-          8,
-          0,
-          TimeUnit.MILLISECONDS,
-          new ArrayBlockingQueue<>(256),
-          Thread.ofVirtual().name("love-io-", 0).factory(),
-          new ThreadPoolExecutor.AbortPolicy());
+  private final dev.lovelace.loveessential.concurrent.VirtualIoExecutor io =
+      new dev.lovelace.loveessential.concurrent.VirtualIoExecutor("love-io-", 8, 256);
+  private final Object startupResources = new Object();
+  private boolean stopping;
   private final Map<String, Boolean> modules = new ConcurrentHashMap<>();
   private final Map<String, Long> moduleRevisions = new HashMap<>();
   private MainThread main;
@@ -95,6 +90,12 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   private EssentialApi essentialApi;
   private dev.lovelace.loveessential.module.Revive revive;
+
+  /** Called by the optional DeluxeCombat addon only after an accepted native combat logout. */
+  public boolean handoffDownedCombatLogout(org.bukkit.entity.Player player) {
+    return revive != null && revive.handoffCombatLogout(player);
+  }
+
   private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
   private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
@@ -106,7 +107,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private ActionEngine actions;
   private LoveBridge love;
   private Placeholders placeholders;
-  private boolean ready;
+  private volatile boolean ready;
   private dev.lovelace.loveessential.config.ModuleConfigs configFiles;
   private volatile org.bukkit.configuration.file.YamlConfiguration settings;
   private final java.util.concurrent.atomic.AtomicBoolean reloading =
@@ -147,15 +148,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
   /** Export during startup without restarting modules that are still loading. */
   public CompletableFuture<Void> exportSection(
       String module, String path, Object expected, Map<String, Object> value) {
-    return CompletableFuture.supplyAsync(
+    return async(
             () -> {
               try {
                 return configFiles.update(module, path, expected, value);
               } catch (Exception error) {
                 throw new CompletionException(error);
               }
-            },
-            io)
+            })
         .thenCompose(
             candidate ->
                 main.<Void>call(
@@ -169,9 +169,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   @Override
   public void onEnable() {
+    MainThread.require();
     main = new MainThread(this);
     configFiles = new dev.lovelace.loveessential.config.ModuleConfigs(this);
-    CompletableFuture.supplyAsync(
+    async(
             () -> {
               try {
                 saveDefaultConfig();
@@ -181,14 +182,19 @@ public class LoveEssentialPlugin extends JavaPlugin {
                     new SqliteStore(
                         getDataFolder().toPath().resolve("loveessential.db"),
                         getConfig().getInt("storage.write-queue", 256));
-                store = database;
-                lang = language;
+                synchronized (startupResources) {
+                  if (stopping) {
+                    database.close();
+                    throw new CancellationException("plugin-stopped-during-startup");
+                  }
+                  store = database;
+                  lang = language;
+                }
                 return new Loaded(database, language);
               } catch (Exception e) {
                 throw new CompletionException(e);
               }
-            },
-            io)
+            })
         .thenCompose(
             bundle ->
                 bundle
@@ -196,7 +202,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                     .publications()
                     .thenCompose(
                         pending ->
-                            CompletableFuture.runAsync(
+                            asyncRun(
                                     () -> {
                                       try {
                                         for (var e : pending.entrySet())
@@ -204,8 +210,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                                       } catch (Exception e) {
                                         throw new CompletionException(e);
                                       }
-                                    },
-                                    io)
+                                    })
                                 .thenCompose(
                                     v -> {
                                       CompletableFuture<Void> chain =
@@ -254,6 +259,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   }
 
   private void setup() {
+    MainThread.require();
     dev.lovelace.loveessential.gui.MenuStyle.configure(
         new dev.lovelace.loveessential.gui.GuiSettings(this, lang));
     love = new LoveBridge();
@@ -447,6 +453,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   /** Starts every service once the stored data is loaded; any failure disables the plugin. */
   private void startServices() {
+    MainThread.require();
     if (module("npc")) npcs.start();
     gameplay.start();
     nicknames.start();
@@ -456,7 +463,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     profiles.start();
     if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
       expansion =
-          new LoveExpansion(placeholders, lang, love, gameplay::afk, gameplay::vanished);
+          new LoveExpansion(this, placeholders, lang, love, gameplay::afk, gameplay::vanished);
       expansion.register();
     }
     getServer()
@@ -513,11 +520,22 @@ public class LoveEssentialPlugin extends JavaPlugin {
     return modules.getOrDefault(name, false);
   }
 
+  public <T> CompletableFuture<T> async(java.util.function.Supplier<T> work) {
+    return io.supply(work);
+  }
+
+  public CompletableFuture<Void> asyncRun(Runnable work) {
+    return io.run(work);
+  }
+
+  /** Compatibility executor; internal I/O uses async/asyncRun so stop cancels owned futures. */
   public ExecutorService io() {
     return io;
   }
 
   public CompletableFuture<Void> module(String name, boolean value) {
+    if (!Bukkit.isPrimaryThread())
+      return main.call(() -> module(name, value)).thenCompose(future -> future);
     if (!MODULES.contains(name))
       return CompletableFuture.failedFuture(new IllegalArgumentException("errors.module"));
     long revision = moduleRevisions.getOrDefault(name, 0L);
@@ -555,7 +573,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private CompletableFuture<Void> changeSettings(SettingsLoad loader) {
     if (!reloading.compareAndSet(false, true))
       return CompletableFuture.failedFuture(new IllegalArgumentException("wizard.busy"));
-    return CompletableFuture.supplyAsync(
+    return async(
             () -> {
               try {
                 var candidate = loader.load();
@@ -564,8 +582,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
               } catch (Exception e) {
                 throw new CompletionException(e);
               }
-            },
-            io)
+            })
         .thenCompose(
             candidate ->
                 main.<Void>call(
@@ -745,35 +762,69 @@ public class LoveEssentialPlugin extends JavaPlugin {
       throw dev.lovelace.loveessential.config.ConfigError.range(path, value, min, max);
   }
 
+  private void closeOwnedMenus() {
+    MainThread.require();
+    for (var player : Bukkit.getOnlinePlayers()) {
+      var inventory = player.getOpenInventory().getTopInventory();
+      if (inventory != null
+          && inventory.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout)
+        closeSafely("menu." + player.getUniqueId(), player::closeInventory);
+    }
+  }
+
+  private void closeSafely(String component, Runnable action) {
+    try {
+      action.run();
+    } catch (RuntimeException | LinkageError failure) {
+      getLogger().log(java.util.logging.Level.SEVERE,
+          "Не удалось завершить компонент LoveEssential: " + component, failure);
+    }
+  }
+
   @Override
   public void onDisable() {
+    MainThread.require();
+    synchronized (startupResources) { stopping = true; }
     ready = false;
     MainThread.stop(this);
-    getServer().getServicesManager().unregisterAll(this);
-    if (expansion != null) expansion.unregister();
-    if (npcProvider != null) npcProvider.close();
-    if (revive != null) revive.close();
-    if (displayPrefs != null) displayPrefs.close();
-    if (extensions != null) extensions.close();
-    if (contentMenus != null) contentMenus.close();
-    if (starter != null) starter.close();
-    if (content != null) content.close();
-    if (menus != null) menus.close();
-    if (wizard != null) wizard.close();
-    if (dialogs != null) dialogs.close();
-    if (npcs != null) npcs.close();
-    if (tab != null) tab.close();
-    if (profiles != null) profiles.close();
-    if (inventories != null) inventories.close();
-    if (messages != null) messages.close();
-    if (nicknames != null) nicknames.close();
-    if (gameplay != null) gameplay.close();
-    if (navigation != null) navigation.close();
-    dev.lovelace.loveessential.gui.MenuStyle.navigation(null);
-    dev.lovelace.loveessential.gui.MenuStyle.configure(null);
-    if (essentialApi != null) essentialApi.close();
-    if (store != null) store.close();
-    io.shutdown();
-    MainThread.detach(this);
+    try {
+      closeSafely("open-menus", this::closeOwnedMenus);
+      closeSafely("services", () -> getServer().getServicesManager().unregisterAll(this));
+      if (expansion != null) {
+        closeSafely("expansion", expansion::close);
+        closeSafely("expansion.unregister", () -> expansion.unregister());
+      }
+      if (npcProvider != null) closeSafely("npcProvider", npcProvider::close);
+      if (revive != null) closeSafely("revive", revive::close);
+      if (displayPrefs != null) closeSafely("displayPrefs", displayPrefs::close);
+      if (extensions != null) closeSafely("extensions", extensions::close);
+      if (contentMenus != null) closeSafely("contentMenus", contentMenus::close);
+      if (starter != null) closeSafely("starter", starter::close);
+      if (content != null) closeSafely("content", content::close);
+      if (menus != null) closeSafely("menus", menus::close);
+      if (wizard != null) closeSafely("wizard", wizard::close);
+      if (dialogs != null) closeSafely("dialogs", dialogs::close);
+      if (npcs != null) closeSafely("npcs", npcs::close);
+      if (tab != null) closeSafely("tab", tab::close);
+      if (profiles != null) closeSafely("profiles", profiles::close);
+      if (inventories != null) closeSafely("inventories", inventories::close);
+      if (messages != null) closeSafely("messages", messages::close);
+      if (nicknames != null) closeSafely("nicknames", nicknames::close);
+      if (gameplay != null) closeSafely("gameplay", gameplay::close);
+      if (navigation != null) closeSafely("navigation", navigation::close);
+      closeSafely("navigation.static", () -> dev.lovelace.loveessential.gui.MenuStyle.navigation(null));
+      closeSafely("gui.static", () -> dev.lovelace.loveessential.gui.MenuStyle.configure(null));
+      if (essentialApi != null) closeSafely("essentialApi", essentialApi::close);
+    } finally {
+      try {
+        closeSafely("io", () -> io.stop(java.time.Duration.ofSeconds(2)));
+      } finally {
+        try {
+          if (store != null) closeSafely("sqlite", store::close);
+        } finally {
+          MainThread.detach(this);
+        }
+      }
+    }
   }
 }
