@@ -365,6 +365,7 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public Optional<String> identify(Entity e) {
+    MainThread.require();
     return Optional.ofNullable(
         e.getPersistentDataContainer().get(entityKey, PersistentDataType.STRING));
   }
@@ -411,6 +412,7 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public Optional<Entity> entity(String id, Player viewer) {
+    MainThread.require();
     return live.values().stream()
         .filter(
             l ->
@@ -1143,6 +1145,7 @@ public final class NpcService implements Listener, AutoCloseable {
 
   @Override
   public void close() {
+    MainThread.require();
     closed = true;
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);

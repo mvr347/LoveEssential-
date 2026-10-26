@@ -1,9 +1,9 @@
 package dev.lovelace.loveessential.module;
 
+import dev.lovelace.lovecore.api.display.DisplayPrefs;
 import dev.lovelace.loveessential.LoveEssentialPlugin;
 import dev.lovelace.loveessential.MainThread;
 import dev.lovelace.loveessential.storage.SqliteStore;
-import dev.lovelace.lovecore.api.display.DisplayPrefs;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,23 +17,44 @@ import org.bukkit.event.player.PlayerQuitEvent;
  * Per-player choice of which clan tags and suffixes are shown, as the LoveCore {@link DisplayPrefs}
  * contract. Six owner choices (chat, TAB, nametag × clan, suffix) control visibility for everyone.
  * The twelve-bit storage/API layout is retained for compatibility; legacy viewer choices no longer
- * affect visibility. Reads are safe from any thread (chat
- * renders asynchronously); until a player's flags have loaded everything is shown.
+ * affect visibility. Reads are safe from any thread (chat renders asynchronously); until a player's
+ * flags have loaded everything is shown.
  */
 public final class DisplayPreferences implements DisplayPrefs, Listener, AutoCloseable {
   static final String KIND = "display-prefs";
 
-  /** Stored form: a set bit means "hidden", so an unset player is all zeros and shows everything. */
+  /**
+   * Stored form: a set bit means "hidden", so an unset player is all zeros and shows everything.
+   */
   public record Stored(int hidden) {}
 
+  private record Flags(int hidden, Map<String, String> values) {}
+
+  private static final Map<String, String> ALL_SHOWN = valuesFor(0);
+
+  private static Map<String, String> valuesFor(int hidden) {
+    var values = new LinkedHashMap<String, String>();
+    for (var surface : Surface.values())
+      for (var element : Element.values())
+        for (var scope : Scope.values())
+          values.put(
+              key(surface, element, scope),
+              Boolean.toString((hidden & bit(surface, element, scope)) == 0));
+    return Map.copyOf(values);
+  }
+
+  private static Flags flags(int hidden) {
+    return new Flags(hidden, hidden == 0 ? ALL_SHOWN : valuesFor(hidden));
+  }
+
   private static final class State {
-    volatile int hidden;
+    volatile Flags flags;
     long revision;
     CompletableFuture<?> tail = CompletableFuture.completedFuture(null);
 
     State(long revision, int hidden) {
       this.revision = revision;
-      this.hidden = hidden;
+      this.flags = flags(hidden);
     }
   }
 
@@ -42,6 +63,8 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
   private final SqliteStore store;
   private final Map<UUID, State> states = new ConcurrentHashMap<>();
   private final Set<UUID> loading = ConcurrentHashMap.newKeySet();
+  private final Map<UUID, CompletableFuture<?>> writes = new ConcurrentHashMap<>();
+  private final Map<UUID, Object> sessions = new HashMap<>();
   private volatile boolean closed;
 
   public DisplayPreferences(LoveEssentialPlugin plugin, MainThread main, SqliteStore store) {
@@ -75,7 +98,7 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
     var state = states.get(player);
     return state == null
         || !plugin.module("display")
-        || (state.hidden & bit(surface, element, scope)) == 0;
+        || (state.flags.hidden() & bit(surface, element, scope)) == 0;
   }
 
   @Override
@@ -85,9 +108,9 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
     int bit = bit(surface, element, scope);
     boolean previous;
     synchronized (state) {
-      previous = (state.hidden & bit) == 0;
+      previous = (state.flags.hidden() & bit) == 0;
       if (previous == shown) return previous;
-      state.hidden = shown ? state.hidden & ~bit : state.hidden | bit;
+      state.flags = flags(shown ? state.flags.hidden() & ~bit : state.flags.hidden() | bit);
       persist(player, state);
     }
     return previous;
@@ -99,8 +122,8 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
     if (state == null) return;
     synchronized (state) {
       int next = shown ? 0 : mask();
-      if (state.hidden == next) return;
-      state.hidden = next;
+      if (state.flags.hidden() == next) return;
+      state.flags = flags(next);
       persist(player, state);
     }
   }
@@ -109,14 +132,13 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
   private static int mask() {
     int mask = 0;
     for (var s : Surface.values())
-      for (var e : Element.values())
-        for (var c : Scope.values()) mask |= bit(s, e, c);
+      for (var e : Element.values()) for (var c : Scope.values()) mask |= bit(s, e, c);
     return mask;
   }
 
   /** Writes the latest mask; saves run one after another so revisions never clash. */
   private void persist(UUID player, State state) {
-    state.tail =
+    var tail =
         state
             .tail
             .handle((value, error) -> null)
@@ -126,10 +148,15 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
                   int snapshot;
                   synchronized (state) {
                     expected = state.revision;
-                    snapshot = state.hidden;
+                    snapshot = state.flags.hidden();
                   }
                   return store
-                      .save(KIND, player.toString(), expected, new Stored(snapshot), player.toString())
+                      .save(
+                          KIND,
+                          player.toString(),
+                          expected,
+                          new Stored(snapshot),
+                          player.toString())
                       .thenAccept(
                           revision -> {
                             synchronized (state) {
@@ -149,18 +176,29 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
                                 + error.getClass().getSimpleName()
                                 + ")");
                 });
+    state.tail = tail;
+    writes.put(player, tail);
+    tail.whenComplete((value, error) -> writes.remove(player, tail));
   }
 
   private void load(UUID player) {
-    if (states.containsKey(player) || !loading.add(player)) return;
-    store
-        .get(KIND, player.toString(), Stored.class)
+    MainThread.require();
+    var online = Bukkit.getPlayer(player);
+    if (closed || online == null || states.containsKey(player) || !loading.add(player)) return;
+    Object session = new Object();
+    sessions.put(player, session);
+    var previousWrite = writes.get(player);
+    (previousWrite == null
+            ? CompletableFuture.completedFuture(null)
+            : previousWrite.handle((value, error) -> null))
+        .thenCompose(ignored -> store.get(KIND, player.toString(), Stored.class))
         .whenComplete(
             (saved, error) ->
                 main.execute(
                     () -> {
+                      if (sessions.get(player) != session) return;
                       loading.remove(player);
-                      if (closed || Bukkit.getPlayer(player) == null) return;
+                      if (closed || Bukkit.getPlayer(player) != online) return;
                       if (error != null) {
                         plugin
                             .getLogger()
@@ -170,7 +208,15 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
                                     + " ("
                                     + error.getClass().getSimpleName()
                                     + ")");
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> load(player), 200L);
+                        Bukkit.getScheduler()
+                            .runTaskLater(
+                                plugin,
+                                () -> {
+                                  if (!closed
+                                      && sessions.get(player) == session
+                                      && Bukkit.getPlayer(player) == online) load(player);
+                                },
+                                200L);
                         return;
                       }
                       states.putIfAbsent(
@@ -191,24 +237,21 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
     var id = event.getPlayer().getUniqueId();
     states.remove(id);
     loading.remove(id);
+    sessions.remove(id);
   }
 
   /** Flags as placeholder values: {@code display_<surface>_<element>_<scope>} = true when shown. */
   public Map<String, String> values(UUID player) {
-    var values = new LinkedHashMap<String, String>();
-    for (var s : Surface.values())
-      for (var e : Element.values())
-        for (var c : Scope.values())
-          values.put(key(s, e, c), Boolean.toString(shown(player, s, e, c)));
-    return values;
+    var state = states.get(player);
+    return state == null || !plugin.module("display") ? ALL_SHOWN : state.flags.values();
   }
 
   /** One command choice; {@code value} is null when the command only toggles. */
   public record Choice(Scope scope, Element element, Surface surface, Boolean value) {}
 
   /**
-   * Parses {@code [own] <clan|suffix> <chat|tab|nametag> [on|off]}; Russian words work too.
-   * The choice always concerns the player's own signature, including when seen by its owner.
+   * Parses {@code [own] <clan|suffix> <chat|tab|nametag> [on|off]}; Russian words work too. The
+   * choice always concerns the player's own signature, including when seen by its owner.
    */
   public static Choice parse(String[] args) {
     Scope scope = args.length == 0 ? null : scopeOf(args[0]);
@@ -266,7 +309,8 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
   /** The viewer's setting for one player on one surface: which elements to leave out. */
   public Set<Element> hiddenFor(UUID owner, UUID viewer, Surface surface) {
     var hidden = EnumSet.noneOf(Element.class);
-    for (var element : Element.values()) if (!visible(owner, viewer, surface, element)) hidden.add(element);
+    for (var element : Element.values())
+      if (!visible(owner, viewer, surface, element)) hidden.add(element);
     return hidden;
   }
 
@@ -275,5 +319,8 @@ public final class DisplayPreferences implements DisplayPrefs, Listener, AutoClo
     closed = true;
     states.clear();
     loading.clear();
+    sessions.clear();
+    writes.clear();
+    org.bukkit.event.HandlerList.unregisterAll(this);
   }
 }

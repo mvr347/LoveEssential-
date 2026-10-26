@@ -82,6 +82,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
     double remaining, invulnerable, progress, suicide;
     volatile UUID reviver;
+    volatile Map<String, String> placeholderValues = Map.of();
     UUID carrier;
     Runnable refund;
     EntityDamageEvent cause;
@@ -115,12 +116,14 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   }
 
   public void start() {
+    dev.lovelace.loveessential.MainThread.require();
     Bukkit.getPluginManager().registerEvents(this, plugin);
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 2, 2);
   }
 
   @Override
   public void close() {
+    dev.lovelace.loveessential.MainThread.require();
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
     recoveryUntil.clear();
@@ -220,15 +223,23 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
           "revive_reviver", "",
           "revive_suicide", "0",
           "revive_bar", "");
+    return state.placeholderValues;
+  }
+
+  /** Captured on the server thread; PAPI may read the immutable result from async chat. */
+  private void publishValues(State state) {
+    dev.lovelace.loveessential.MainThread.require();
     var reviver = state.reviver == null ? null : Bukkit.getPlayer(state.reviver);
-    return Map.of(
-        "revive_status", lang.text("revive.status-downed"),
-        "revive_death_delay", Integer.toString((int) Math.ceil(state.remaining)),
-        "revive_invulnerability",
-            Integer.toString((int) Math.ceil(Math.max(0, state.invulnerable))),
-        "revive_reviver", reviver == null ? "" : reviver.getName(),
-        "revive_suicide", Integer.toString((int) Math.round(100 * state.suicide / suicideCount())),
-        "revive_bar", plainBar(state.progress / required()));
+    state.placeholderValues =
+        Map.of(
+            "revive_status", lang.text("revive.status-downed"),
+            "revive_death_delay", Integer.toString((int) Math.ceil(state.remaining)),
+            "revive_invulnerability",
+                Integer.toString((int) Math.ceil(Math.max(0, state.invulnerable))),
+            "revive_reviver", reviver == null ? "" : reviver.getName(),
+            "revive_suicide",
+                Integer.toString((int) Math.round(100 * state.suicide / suicideCount())),
+            "revive_bar", plainBar(state.progress / required()));
   }
 
   private static String plainBar(double fraction) {
@@ -366,6 +377,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     state.cause = cause;
     state.remaining = number("death-delay", 75, 1, 3600);
     state.invulnerable = number("invulnerability-delay", 15, 0, 600);
+    publishValues(state);
     states.put(p.getUniqueId(), state);
     downs.merge(p.getUniqueId(), 1, Integer::sum);
     var max = p.getAttribute(Attribute.MAX_HEALTH);
@@ -610,6 +622,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         state.bar.progress(
             (float) Math.clamp(state.remaining / number("death-delay", 75, 1, 3600), 0, 1));
       }
+      publishValues(state);
       status(p, state);
       if (state.remaining <= 0) expire(p, state);
     }

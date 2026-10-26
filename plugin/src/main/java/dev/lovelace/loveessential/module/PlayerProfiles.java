@@ -27,6 +27,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 public final class PlayerProfiles implements Listener, AutoCloseable {
   private final LoveEssentialPlugin plugin;
+  private final MainThread main;
   private final Lang lang;
   private final LoveBridge love;
   private final Gameplay gameplay;
@@ -132,6 +133,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       PrivateMessages messages,
       InventoryInspector inventories) {
     this.plugin = plugin;
+    this.main = new MainThread(plugin);
     this.lang = lang;
     this.love = love;
     this.gameplay = gameplay;
@@ -340,7 +342,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         .profile(uuid, "loveessential.player-info", gson.toJson(data))
         .whenComplete(
             (value, error) ->
-                new MainThread(plugin)
+                main
                     .execute(
                         () -> {
                           if (error != null)
@@ -403,14 +405,14 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                   gson.fromJson(
                       row.json(),
                       new com.google.gson.reflect.TypeToken<Map<String, String>>() {}.getType());
-              return new MainThread(plugin)
+              return main
                   .call(() -> privacy.offline(row.id()))
                   .thenCompose(f -> f)
                   .thenApply(prefs -> new Saved(row.id(), Map.copyOf(data), prefs));
             })
         .whenComplete(
             (saved, error) ->
-                new MainThread(plugin)
+                main
                     .execute(
                         () -> {
                           if (!request.equals(requests.get(viewer.getUniqueId()))
@@ -1027,7 +1029,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             })
         .whenComplete(
             (saved, error) ->
-                new dev.lovelace.loveessential.MainThread(plugin)
+                main
                     .execute(
                         () -> {
                           if (!p.isOnline()) return;

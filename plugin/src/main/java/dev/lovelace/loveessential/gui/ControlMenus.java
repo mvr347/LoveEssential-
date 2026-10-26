@@ -2237,12 +2237,16 @@ public final class ControlMenus implements Listener, AutoCloseable {
   public void quit(PlayerQuitEvent e) {
     prompts.remove(e.getPlayer().getUniqueId());
     roots.remove(e.getPlayer().getUniqueId());
+    vanishFilter.remove(e.getPlayer().getUniqueId());
+    direct.remove(e.getPlayer().getUniqueId());
+    dispatching.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {
     HandlerList.unregisterAll(this);
     prompts.clear();
     roots.clear();
+    vanishFilter.clear();
     direct.clear();
     dispatching.clear();
   }

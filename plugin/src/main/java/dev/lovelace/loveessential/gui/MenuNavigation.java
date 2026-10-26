@@ -120,6 +120,10 @@ public final class MenuNavigation implements Listener, AutoCloseable {
   @EventHandler
   public void closed(InventoryCloseEvent event) {
     if (!(event.getPlayer() instanceof Player player)) return;
+    if (!plugin.isEnabled() || !plugin.ready()) {
+      routes.invalidate(player.getUniqueId());
+      return;
+    }
     var route = routes.getIfPresent(player.getUniqueId());
     if (route == null || route.current != event.getInventory() || route.suspended) return;
     plugin

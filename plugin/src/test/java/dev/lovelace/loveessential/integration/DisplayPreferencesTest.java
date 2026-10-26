@@ -219,6 +219,47 @@ class DisplayPreferencesTest {
     assertEquals(6, tiles, "clan and marks in chat, TAB and nametags");
   }
 
+  @Test
+  void reconnectWaitsForThePreviousSessionsPendingWrite() throws Exception {
+    var a = join("FastRelog");
+    var id = a.getUniqueId();
+    var field = LoveEssentialPlugin.class.getDeclaredField("store"); field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    field = store.getClass().getDeclaredField("writer"); field.setAccessible(true);
+    var writer = (java.util.concurrent.ExecutorService) field.get(store);
+    var entered = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    writer.execute(() -> {
+      entered.countDown();
+      try { release.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    });
+    assertTrue(entered.await(2, java.util.concurrent.TimeUnit.SECONDS));
+    try {
+      prefs.set(id, Surface.CHAT, Element.CLAN_TAG, Scope.OWN, false);
+      a.disconnect();
+      var b = new PlayerMock(server, "FastRelog", id); server.addPlayer(b);
+      for (int tick = 0; tick < 30; tick++) { server.getScheduler().performOneTick(); Thread.sleep(3); }
+      assertFalse(prefs.loaded(id), "old preferences must not be read before the pending write");
+      release.countDown();
+      waitFor(() -> prefs.loaded(id));
+      assertFalse(prefs.shown(id, Surface.CHAT, Element.CLAN_TAG, Scope.OWN));
+    } finally { release.countDown(); }
+  }
+
+  @Test
+  void placeholderValuesReuseAnImmutableSnapshotUntilFlagsChange() throws Exception {
+    var a = join("SnapshotReader");
+    var before = prefs.values(a.getUniqueId());
+    assertSame(before, prefs.values(a.getUniqueId()));
+    assertThrows(UnsupportedOperationException.class, () -> before.put("x", "y"));
+    prefs.set(a.getUniqueId(), Surface.CHAT, Element.CLAN_TAG, Scope.OWN, false);
+    var after = prefs.values(a.getUniqueId());
+    assertNotSame(before, after);
+    assertEquals("true", before.get("display_chat_clan_own"));
+    assertEquals("false", after.get("display_chat_clan_own"));
+    assertSame(after, prefs.values(a.getUniqueId()));
+  }
+
   int firstTile(org.bukkit.inventory.Inventory top) {
     for (int slot = 9; slot < top.getSize() - 9; slot++) {
       var item = top.getItem(slot);
