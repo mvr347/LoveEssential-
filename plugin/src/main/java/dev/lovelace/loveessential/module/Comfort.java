@@ -53,11 +53,13 @@ public final class Comfort implements Listener, AutoCloseable {
   private final Map<UUID, Seat> seats = new HashMap<>();
   private final Map<UUID, Lying> lying = new HashMap<>();
   private final Map<UUID, Entity> rides = new HashMap<>();
-  private final NamespacedKey npcKey;
+  private final NamespacedKey npcKey, godKey;
   private final Map<UUID, Step> steps = new HashMap<>();
   private final Map<UUID, Boolean> traces = new HashMap<>();
-  /** Players in god mode until they quit; never persisted, so nobody comes back invulnerable. */
+
+  /** Session-only god state. A PDC ownership marker repairs its vanilla flag after a crash. */
   private final Set<UUID> god = new HashSet<>();
+
   private org.bukkit.scheduler.BukkitTask task;
 
   public Comfort(
@@ -74,6 +76,7 @@ public final class Comfort implements Listener, AutoCloseable {
     this.love = love;
     this.gameplay = gameplay;
     this.npcKey = new NamespacedKey(plugin, "npc");
+    this.godKey = new NamespacedKey(plugin, "temporary_god");
   }
 
   public void start() {
@@ -83,6 +86,8 @@ public final class Comfort implements Listener, AutoCloseable {
   }
 
   private void load(Player p) {
+    if (!god.contains(p.getUniqueId())
+        && p.getPersistentDataContainer().has(godKey, PersistentDataType.BYTE)) releaseGod(p);
     store
         .profile(p.getUniqueId(), "loveessential.traces")
         .whenComplete(
@@ -189,12 +194,14 @@ public final class Comfort implements Listener, AutoCloseable {
       }
       case "god" -> {
         if (args.length > 1) throw new IllegalArgumentException("comfort.usage");
-        boolean on =
-            args.length == 0 ? !god.contains(p.getUniqueId()) : switchWord(args[0]);
+        boolean on = args.length == 0 ? !god.contains(p.getUniqueId()) : switchWord(args[0]);
         if (on) {
           god.add(p.getUniqueId());
           p.setFireTicks(0);
         } else god.remove(p.getUniqueId());
+        if (on) p.getPersistentDataContainer().set(godKey, PersistentDataType.BYTE, (byte) 1);
+        else p.getPersistentDataContainer().remove(godKey);
+        p.setInvulnerable(on);
         lang.send(p, on ? "comfort.god-on" : "comfort.god-off");
       }
       case "speed" -> {
@@ -216,6 +223,8 @@ public final class Comfort implements Listener, AutoCloseable {
               default -> throw new IllegalArgumentException("comfort.usage");
             };
         p.setGameMode(mode);
+        if (p.getGameMode() == GameMode.SURVIVAL && !god.contains(p.getUniqueId()))
+          p.setInvulnerable(false);
         lang.send(p, "common.done");
       }
       case "repair" -> {
@@ -251,13 +260,22 @@ public final class Comfort implements Listener, AutoCloseable {
     return god.contains(id);
   }
 
-  // Lowest: later handlers that skip cancelled events (the downed state of revive) never see the blow.
+  // Lowest: later handlers that skip cancelled events (the downed state of revive) never see the
+  // blow.
   @EventHandler(priority = EventPriority.LOWEST)
   public void godDamage(EntityDamageEvent e) {
-    if (e.getEntity() instanceof Player p && god.contains(p.getUniqueId()) && !godIgnores(e.getCause())) {
+    if (e.getEntity() instanceof Player p
+        && god.contains(p.getUniqueId())
+        && !godIgnores(e.getCause())) {
       e.setCancelled(true);
       p.setFireTicks(0);
     }
+  }
+
+  @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+  public void gameMode(PlayerGameModeChangeEvent e) {
+    if (e.getNewGameMode() == GameMode.SURVIVAL && !god.contains(e.getPlayer().getUniqueId()))
+      e.getPlayer().setInvulnerable(false);
   }
 
   @EventHandler(priority = EventPriority.LOWEST)
@@ -473,7 +491,8 @@ public final class Comfort implements Listener, AutoCloseable {
   }
 
   static boolean rideableType(EntityType type, Collection<String> denied) {
-    return type == EntityType.PLAYER || denied.stream().noneMatch(n -> n.equalsIgnoreCase(type.name()));
+    return type == EntityType.PLAYER
+        || denied.stream().noneMatch(n -> n.equalsIgnoreCase(type.name()));
   }
 
   /** A flying or gliding carrier would take the rider over claim borders and out of reach. */
@@ -511,6 +530,7 @@ public final class Comfort implements Listener, AutoCloseable {
   }
 
   private void maintain() {
+    if (!god.isEmpty() && !plugin.module("utilities")) clearGod();
     for (var entry : List.copyOf(lying.entrySet())) {
       var p = Bukkit.getPlayer(entry.getKey());
       var state = entry.getValue();
@@ -691,12 +711,26 @@ public final class Comfort implements Listener, AutoCloseable {
     rides.remove(e.getPlayer().getUniqueId());
     steps.remove(e.getPlayer().getUniqueId());
     traces.remove(e.getPlayer().getUniqueId());
-    god.remove(e.getPlayer().getUniqueId());
+    if (god.remove(e.getPlayer().getUniqueId())) releaseGod(e.getPlayer());
+  }
+
+  private void releaseGod(Player p) {
+    p.setInvulnerable(false);
+    p.getPersistentDataContainer().remove(godKey);
+  }
+
+  private void clearGod() {
+    for (UUID id : god) {
+      Player p = Bukkit.getPlayer(id);
+      if (p != null) releaseGod(p);
+    }
+    god.clear();
   }
 
   public void close() {
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
+    clearGod();
     for (UUID id : List.copyOf(lying.keySet())) {
       var p = Bukkit.getPlayer(id);
       if (p != null) unlay(p);
