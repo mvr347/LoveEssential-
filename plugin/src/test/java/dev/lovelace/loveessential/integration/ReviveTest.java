@@ -754,6 +754,20 @@ class ReviveTest implements Listener {
   }
 
   @Test
+  void shuttingDownRefundsAnUnfinishedReviveExactlyOnce() {
+    configurePrice(2);
+    fall();
+    helper.setLevel(5);
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(10);
+    assertEquals(3, helper.getLevel());
+    server.getPluginManager().disablePlugin(plugin);
+    assertEquals(5, helper.getLevel(), "shutdown must refund an unfinished revive");
+    assertFalse(victim.hasFixedPose());
+  }
+
+  @Test
   void thePriceIsTakenOnStartRefundedOnStopAndKeptOnSuccess() {
     configurePrice(2);
     fall();

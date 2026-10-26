@@ -393,7 +393,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         var path = plugin.getDataFolder().toPath().resolve("exports").resolve(n.id() + ".json");
         complete(
             p,
-            CompletableFuture.runAsync(
+            plugin.asyncRun(
                 () -> {
                   try {
                     java.nio.file.Files.createDirectories(path.getParent());
@@ -401,8 +401,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                   } catch (Exception e) {
                     throw new CompletionException(e);
                   }
-                },
-                plugin.io()),
+                }),
             "chat.saved");
       }
       case "import", "импорт" -> {
@@ -415,7 +414,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         if (!source.matches("[a-z0-9_-]{1,48}"))
           throw new IllegalArgumentException("validation.id");
         var path = plugin.getDataFolder().toPath().resolve("exports").resolve(source + ".json");
-        CompletableFuture.supplyAsync(
+        plugin.async(
                 () -> {
                   try {
                     if (java.nio.file.Files.size(path) > 2_000_000)
@@ -425,8 +424,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
                   } catch (Exception e) {
                     throw new CompletionException(e);
                   }
-                },
-                plugin.io())
+                })
             .whenComplete(
                 (bundle, error) ->
                     main.execute(
@@ -596,13 +594,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
     if (provider == null || !provider.bound()) throw new IllegalArgumentException("errors.access");
     var file = plugin.getDataFolder().toPath().toAbsolutePath().getParent().resolve("Citizens").resolve("saves.yml");
     String only = args.length > 2 && !args[2].equalsIgnoreCase("all") ? args[2] : null;
-    CompletableFuture.supplyAsync(
+    plugin.async(
             () -> {
               if (!java.nio.file.Files.isRegularFile(file)) throw new IllegalArgumentException("npc.import-nofile");
               return dev.lovelace.loveessential.npc.CitizensImport.parse(
                   org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file.toFile()));
-            },
-            plugin.io())
+            })
         .whenComplete(
             (result, error) ->
                 main.execute(

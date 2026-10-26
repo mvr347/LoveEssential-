@@ -661,15 +661,14 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   input ->
                       complete(
                           p,
-                          CompletableFuture.runAsync(
+                          plugin.asyncRun(
                               () -> {
                                 try {
                                   lang.putAll(Map.of(text, input));
                                 } catch (Exception e) {
                                   throw new CompletionException(e);
                                 }
-                              },
-                              plugin.io()),
+                              }),
                           () -> settings(p, id, path, page),
                           true),
                   () -> settings(p, id, path, page),

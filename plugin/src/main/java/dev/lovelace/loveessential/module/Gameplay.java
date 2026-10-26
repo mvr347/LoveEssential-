@@ -368,9 +368,8 @@ public final class Gameplay implements Listener, AutoCloseable {
         }
         lastSkin.put(p.getUniqueId(), now);
         var profile = Bukkit.createProfile(skin);
-        java.util.concurrent.CompletableFuture.supplyAsync(
-                () -> lookupSkin(profile, skin),
-                ((LoveEssentialPlugin) plugin).io())
+        ((LoveEssentialPlugin) plugin).async(
+                () -> lookupSkin(profile, skin))
             .whenComplete(
                 (lookup, failure) ->
                     main.execute(() -> applyLookup(p, skin, reset, lookup, failure)));

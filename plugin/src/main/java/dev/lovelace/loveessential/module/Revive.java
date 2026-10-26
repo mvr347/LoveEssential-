@@ -131,6 +131,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       if (state != null) removeInteraction(state);
       if (p != null && state != null) {
         p.getPersistentDataContainer().set(pending, PersistentDataType.BYTE, (byte) 1);
+        refund(state);
         release(p, state);
       }
     }

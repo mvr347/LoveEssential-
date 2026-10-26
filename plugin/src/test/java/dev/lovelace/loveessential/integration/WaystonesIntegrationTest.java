@@ -295,7 +295,7 @@ class WaystonesIntegrationTest {
                     .equals(
                         e.getPersistentDataContainer()
                             .get(key, org.bukkit.persistence.PersistentDataType.STRING)))
-        .findFirst()
+        .min(java.util.Comparator.comparingDouble(e -> e.getLocation().getY()))
         .orElseThrow();
   }
 

@@ -225,15 +225,14 @@ public final class Holograms implements HologramService, Listener, AutoCloseable
   }
 
   public void publishText(Player p, String key, String text, Runnable done) {
-    CompletableFuture.runAsync(
+    plugin.asyncRun(
             () -> {
               try {
                 lang.putAll(Map.of(key, text));
               } catch (Exception e) {
                 throw new CompletionException(e);
               }
-            },
-            plugin.io())
+            })
         .whenComplete(
             (v, e) ->
                 main.execute(

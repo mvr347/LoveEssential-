@@ -48,15 +48,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "rtp",
           "display",
           "waystones");
-  private final ExecutorService io =
-      new ThreadPoolExecutor(
-          8,
-          8,
-          0,
-          TimeUnit.MILLISECONDS,
-          new ArrayBlockingQueue<>(256),
-          Thread.ofVirtual().name("love-io-", 0).factory(),
-          new ThreadPoolExecutor.AbortPolicy());
+  private final dev.lovelace.loveessential.concurrent.VirtualIoExecutor io =
+      new dev.lovelace.loveessential.concurrent.VirtualIoExecutor("love-io-", 8, 256);
+  private final Object startupResources = new Object();
+  private boolean stopping;
   private final Map<String, Boolean> modules = new ConcurrentHashMap<>();
   private final Map<String, Long> moduleRevisions = new HashMap<>();
   private MainThread main;
@@ -153,15 +148,14 @@ public class LoveEssentialPlugin extends JavaPlugin {
   /** Export during startup without restarting modules that are still loading. */
   public CompletableFuture<Void> exportSection(
       String module, String path, Object expected, Map<String, Object> value) {
-    return CompletableFuture.supplyAsync(
+    return async(
             () -> {
               try {
                 return configFiles.update(module, path, expected, value);
               } catch (Exception error) {
                 throw new CompletionException(error);
               }
-            },
-            io)
+            })
         .thenCompose(
             candidate ->
                 main.<Void>call(
@@ -177,7 +171,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   public void onEnable() {
     main = new MainThread(this);
     configFiles = new dev.lovelace.loveessential.config.ModuleConfigs(this);
-    CompletableFuture.supplyAsync(
+    async(
             () -> {
               try {
                 saveDefaultConfig();
@@ -187,14 +181,19 @@ public class LoveEssentialPlugin extends JavaPlugin {
                     new SqliteStore(
                         getDataFolder().toPath().resolve("loveessential.db"),
                         getConfig().getInt("storage.write-queue", 256));
-                store = database;
-                lang = language;
+                synchronized (startupResources) {
+                  if (stopping) {
+                    database.close();
+                    throw new CancellationException("plugin-stopped-during-startup");
+                  }
+                  store = database;
+                  lang = language;
+                }
                 return new Loaded(database, language);
               } catch (Exception e) {
                 throw new CompletionException(e);
               }
-            },
-            io)
+            })
         .thenCompose(
             bundle ->
                 bundle
@@ -202,7 +201,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                     .publications()
                     .thenCompose(
                         pending ->
-                            CompletableFuture.runAsync(
+                            asyncRun(
                                     () -> {
                                       try {
                                         for (var e : pending.entrySet())
@@ -210,8 +209,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                                       } catch (Exception e) {
                                         throw new CompletionException(e);
                                       }
-                                    },
-                                    io)
+                                    })
                                 .thenCompose(
                                     v -> {
                                       CompletableFuture<Void> chain =
@@ -519,6 +517,15 @@ public class LoveEssentialPlugin extends JavaPlugin {
     return modules.getOrDefault(name, false);
   }
 
+  public <T> CompletableFuture<T> async(java.util.function.Supplier<T> work) {
+    return io.supply(work);
+  }
+
+  public CompletableFuture<Void> asyncRun(Runnable work) {
+    return io.run(work);
+  }
+
+  /** Compatibility executor; internal I/O uses async/asyncRun so stop cancels owned futures. */
   public ExecutorService io() {
     return io;
   }
@@ -561,7 +568,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private CompletableFuture<Void> changeSettings(SettingsLoad loader) {
     if (!reloading.compareAndSet(false, true))
       return CompletableFuture.failedFuture(new IllegalArgumentException("wizard.busy"));
-    return CompletableFuture.supplyAsync(
+    return async(
             () -> {
               try {
                 var candidate = loader.load();
@@ -570,8 +577,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
               } catch (Exception e) {
                 throw new CompletionException(e);
               }
-            },
-            io)
+            })
         .thenCompose(
             candidate ->
                 main.<Void>call(
@@ -753,6 +759,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   @Override
   public void onDisable() {
+    synchronized (startupResources) { stopping = true; }
     ready = false;
     MainThread.stop(this);
     getServer().getServicesManager().unregisterAll(this);
@@ -778,8 +785,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     dev.lovelace.loveessential.gui.MenuStyle.navigation(null);
     dev.lovelace.loveessential.gui.MenuStyle.configure(null);
     if (essentialApi != null) essentialApi.close();
+    io.stop(java.time.Duration.ofSeconds(2));
     if (store != null) store.close();
-    io.shutdown();
     MainThread.detach(this);
   }
 }

@@ -915,15 +915,14 @@ public final class NpcWizard implements Listener, AutoCloseable {
         .prepare(publication, snapshot.texts())
         .thenCompose(
             v ->
-                CompletableFuture.runAsync(
+                ((dev.lovelace.loveessential.LoveEssentialPlugin) plugin).asyncRun(
                     () -> {
                       try {
                         lang.putAll(snapshot.texts());
                       } catch (Exception e) {
                         throw new CompletionException(e);
                       }
-                    },
-                    pluginExecutor()))
+                    }))
         .thenCompose(
             v ->
                 main.call(
@@ -950,10 +949,6 @@ public final class NpcWizard implements Listener, AutoCloseable {
                       lang.send(p, "wizard.published", Map.of("id", "" + npcs.number(saved.id())));
                       save(p);
                     }));
-  }
-
-  private Executor pluginExecutor() {
-    return ((dev.lovelace.loveessential.LoveEssentialPlugin) plugin).io();
   }
 
   private static Throwable root(Throwable e) {

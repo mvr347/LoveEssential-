@@ -78,15 +78,14 @@ public final class ContentLibrary implements Listener, AutoCloseable {
         .prepare(publication, immutable)
         .thenCompose(
             v ->
-                CompletableFuture.runAsync(
+                plugin.asyncRun(
                     () -> {
                       try {
                         lang.putAll(immutable);
                       } catch (Exception e) {
                         throw new CompletionException(e);
                       }
-                    },
-                    plugin.io()))
+                    }))
         .thenCompose(v -> store.complete(publication));
   }
 
