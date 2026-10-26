@@ -47,7 +47,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   private final JavaPlugin plugin;
   private final MainThread main;
-  /** Set by {@link #bind} once the plugin has loaded its data; the provider is registered earlier. */
+  /** Bound before publication once the stored definitions have loaded. */
   private volatile NpcService npcs;
 
   private volatile HologramService holograms;
@@ -67,8 +67,8 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   }
 
   /**
-   * Plugins look the provider up while the server finishes starting, before LoveEssential has read
-   * its database. It is therefore registered at once and answers "nothing found" until bound.
+   * Binds loaded data before publication in LoveCore. An unbound adapter is not published: an
+   * empty lookup must mean an absent NPC rather than a database that has not loaded yet.
    */
   public void bind(NpcService npcs, HologramService holograms) {
     this.holograms = holograms;
@@ -109,7 +109,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   @Override
   public Optional<NpcHandle> byKey(String key) {
-    return key != null && view(key).isPresent() ? Optional.of(new Handle(key)) : Optional.empty();
+    return key == null ? Optional.empty() : view(key.trim()).map(n -> new Handle(n.id()));
   }
 
   @Override
@@ -149,6 +149,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
     chain(id, () -> npcs.save(saved, 0, "provider"))
         .whenComplete(
             (result, error) -> {
+              optimistic.remove(id, saved);
               if (error != null)
                 plugin
                     .getLogger()
@@ -160,16 +161,18 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   @Override
   public boolean remove(String key) {
-    var found = view(key);
+    if (key == null) return false;
+    var found = view(key.trim());
     if (found.isEmpty()) return false;
-    optimistic.remove(key);
+    String id = found.get().id();
+    optimistic.remove(id);
     chain(
-            key,
+            id,
             () -> {
-              var current = npcs.get(key);
+              var current = npcs.get(id);
               return current.isEmpty()
                   ? CompletableFuture.completedFuture(null)
-                  : npcs.delete(key, current.get().revision(), "provider");
+                  : npcs.delete(id, current.get().revision(), "provider");
             })
         .whenComplete(
             (v, error) -> {
@@ -178,7 +181,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
                     .getLogger()
                     .log(java.util.logging.Level.WARNING, "NPC " + key + " was not removed", error);
             });
-    removeHologram(key);
+    removeHologram(id);
     return true;
   }
 
@@ -194,7 +197,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   /** Runs saves for one NPC strictly one after another. */
   private <T> CompletableFuture<T> chain(String id, java.util.function.Supplier<CompletableFuture<T>> step) {
     var result = new CompletableFuture<T>();
-    tails.compute(
+    var queued = tails.compute(
         id,
         (key, tail) -> {
           CompletableFuture<?> before =
@@ -214,13 +217,16 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
               });
           return next;
         });
+    // Attach outside compute: a synchronously completed step must not mutate the same map recursively.
+    queued.whenComplete((value, error) -> tails.remove(id, queued));
     return result;
   }
 
   private void change(String id, UnaryOperator<NpcDefinition> edit) {
     var current = view(id);
     if (current.isEmpty()) return;
-    optimistic.put(id, edit.apply(current.get()));
+    var predicted = edit.apply(current.get());
+    optimistic.put(id, predicted);
     chain(
             id,
             () -> {
@@ -231,17 +237,11 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
             })
         .whenComplete(
             (saved, error) -> {
+              optimistic.remove(id, predicted);
               if (error != null)
                 plugin
                     .getLogger()
                     .log(java.util.logging.Level.WARNING, "NPC " + id + " was not updated", error);
-              // Once the queue for this id has drained the stored definition is the truth.
-              tails.computeIfPresent(
-                  id,
-                  (key, tail) -> {
-                    if (tail.isDone()) optimistic.remove(id);
-                    return tail.isDone() ? null : tail;
-                  });
             });
   }
 

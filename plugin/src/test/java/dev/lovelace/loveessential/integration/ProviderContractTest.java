@@ -83,6 +83,37 @@ class ProviderContractTest implements Listener {
   }
 
   @Test
+  void numericAliasesAlwaysReturnTheStableKeyAndRemovalUsesThatKey() throws Exception {
+    var handle = provider().create(NpcSpec.at(Component.text("Banker"), here()).withType(EntityType.VILLAGER));
+    var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
+    waitFor(() -> api.npc(handle.key()).isPresent());
+    var field = LoveEssentialPlugin.class.getDeclaredField("npcs");
+    field.setAccessible(true);
+    var service = (dev.lovelace.loveessential.npc.NpcService) field.get(plugin);
+    waitFor(() -> service.number(handle.key()) > 0);
+    String number = Integer.toString(service.number(handle.key()));
+    var alias = provider().byKey(" " + number + " ").orElseThrow();
+    assertEquals(handle.key(), alias.key());
+    alias.tag("banker", "yes");
+    waitFor(() -> api.npc(handle.key()).map(n -> "yes".equals(n.settings().get("tag.banker"))).orElse(false));
+    assertTrue(provider().remove(number));
+    waitFor(() -> api.npc(handle.key()).isEmpty());
+    assertTrue(provider().byKey(handle.key()).isEmpty());
+  }
+
+  @Test
+  void externalDeletionDoesNotLeaveAProviderOnlyGhost() throws Exception {
+    var handle = provider().create(NpcSpec.at(Component.text("Temporary"), here()).withType(EntityType.VILLAGER));
+    var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
+    waitFor(() -> api.npc(handle.key()).isPresent());
+    var snapshot = api.npc(handle.key()).orElseThrow();
+    var deleted = api.delete(handle.key(), snapshot.revision());
+    waitFor(deleted::isDone);
+    deleted.join();
+    assertTrue(provider().byKey(handle.key()).isEmpty());
+  }
+
+  @Test
   void theReadyEventIsFiredOnceTheServiceIsUsable() {
     assertTrue(seen.stream().anyMatch(LoveEssentialReadyEvent.class::isInstance));
     var event = (LoveEssentialReadyEvent) seen.stream().filter(LoveEssentialReadyEvent.class::isInstance).findFirst().get();
