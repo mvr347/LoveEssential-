@@ -79,7 +79,19 @@ public record WaystoneRender(
   }
 
   public Location center(Location anchor) {
-    return local(anchor, centerX * scale, 0, centerZ * scale);
+    return local(anchor, (modelX + centerX) * scale, modelY * scale, (modelZ + centerZ) * scale);
+  }
+
+  /**
+   * Items are centred on their display origin; their default +1 lift puts the base on the anchor.
+   * Keep that pivot correction separate from the user offset applied to all three entities.
+   */
+  public Location center(Location anchor, String style) {
+    return center(anchor).subtract(0, (style.equals("itemsadder") ? 1 : 0) * scale, 0);
+  }
+
+  public Location label(Location anchor, String style) {
+    return center(anchor, style).add(0, height * scale + gap, 0);
   }
 
   public Location label(Location anchor) {
