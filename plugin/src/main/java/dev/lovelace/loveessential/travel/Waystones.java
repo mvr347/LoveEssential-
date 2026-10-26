@@ -57,6 +57,9 @@ public final class Waystones implements Listener, AutoCloseable {
 
   private record Saved(long revision, int number) {}
 
+  private final Map<String, SqliteStore.Document<WaystoneRender>> renderProfiles = new HashMap<>();
+  private final Set<String> profileWrites = new HashSet<>();
+
   private final Map<String, Long> retries = new HashMap<>();
   private final Set<String> writing = new HashSet<>();
   private final Map<UUID, Object> sessions = new HashMap<>();
@@ -232,6 +235,32 @@ public final class Waystones implements Listener, AutoCloseable {
                         new Model(m.name(), m.style(), m.item());
                         catalog.put(d.id(), d);
                       }
+                      return null;
+                    }))
+        .thenCompose(v -> store.list("waystone-render", WaystoneRender.class))
+        .thenCompose(
+            saved ->
+                main.call(
+                    () -> {
+                      renderProfiles.clear();
+                      for (var d : saved) {
+                        var r = d.value();
+                        new WaystoneRender(
+                            r.modelX(),
+                            r.modelY(),
+                            r.modelZ(),
+                            r.scale(),
+                            r.height(),
+                            r.width(),
+                            r.centerX(),
+                            r.centerZ(),
+                            r.gap(),
+                            r.textScale(),
+                            r.text(),
+                            r.context());
+                        renderProfiles.put(d.id(), d);
+                      }
+                      for (String id : List.copyOf(models.keySet())) removeModel(id);
                       return null;
                     }))
         .thenCompose(v -> store.list("waystone-refund", Refund.class))
@@ -436,6 +465,10 @@ public final class Waystones implements Listener, AutoCloseable {
     if (doc != null)
       buttons.add(
           ui.button(
+              "render", "waystones.render-settings", values -> renderForm(p, doc, page, parent)));
+    if (doc != null)
+      buttons.add(
+          ui.button(
               "delete",
               "waystones.model-delete",
               values -> {
@@ -504,6 +537,122 @@ public final class Waystones implements Listener, AutoCloseable {
                 List.of("Деревянный", "Каменный", "Рунический", "ItemsAdder")),
             ui.text("item", "waystones.model-item", current.item(), 128)),
         buttons,
+        this::admin);
+  }
+
+  private WaystoneRender renderProfile(String style, String item) {
+    var saved = renderProfiles.get(WaystoneRender.key(style, item));
+    return saved == null ? WaystoneRender.defaults(style, item) : saved.value();
+  }
+
+  private static double decimal(String value) {
+    return Double.parseDouble(value.strip().replace(',', '.'));
+  }
+
+  private static double[] coordinates(String value, int count) {
+    String[] parts = value.strip().split("\\s+");
+    if (parts.length != count) throw new IllegalArgumentException("waystones.render-invalid");
+    double[] result = new double[count];
+    for (int i = 0; i < count; i++) result[i] = decimal(parts[i]);
+    return result;
+  }
+
+  private void renderForm(Player p, SqliteStore.Document<Model> model, int page, Runnable parent) {
+    staff(p);
+    if (catalog.get(model.id()) != model) throw new IllegalArgumentException("waystones.changed");
+    String id = WaystoneRender.key(model.value().style(), model.value().item());
+    var doc = renderProfiles.get(id);
+    var r = renderProfile(model.value().style(), model.value().item());
+    ui.show(
+        p,
+        "waystones.render-settings",
+        "waystones.render-help",
+        List.of(
+            ui.text(
+                "offset",
+                "waystones.render-offset",
+                r.modelX() + " " + r.modelY() + " " + r.modelZ(),
+                100),
+            ui.text("scale", "waystones.render-scale", Double.toString(r.scale()), 24),
+            ui.text("height", "waystones.render-height", Double.toString(r.height()), 24),
+            ui.text("width", "waystones.render-width", Double.toString(r.width()), 24),
+            ui.text("center", "waystones.render-center", r.centerX() + " " + r.centerZ(), 80),
+            ui.text("gap", "waystones.render-gap", Double.toString(r.gap()), 24),
+            ui.text(
+                "text-scale", "waystones.render-text-scale", Double.toString(r.textScale()), 24),
+            NativeDialogs.Field.select(
+                "text",
+                lang.render("waystones.render-text"),
+                r.text() ? "Показывать" : "Скрыть",
+                List.of("Показывать", "Скрыть")),
+            NativeDialogs.Field.select(
+                "context",
+                lang.render("waystones.render-context"),
+                r.context().equals("FIXED") ? "Фиксированный" : "Без преобразований",
+                List.of("Фиксированный", "Без преобразований"))),
+        List.of(
+            ui.button(
+                "save",
+                "waystones.render-save",
+                values -> {
+                  staff(p);
+                  if (catalog.get(model.id()) != model || renderProfiles.get(id) != doc)
+                    throw new IllegalArgumentException("waystones.changed");
+                  WaystoneRender next;
+                  try {
+                    double[] offset = coordinates(values.get("offset"), 3),
+                        center = coordinates(values.get("center"), 2);
+                    next =
+                        new WaystoneRender(
+                            offset[0],
+                            offset[1],
+                            offset[2],
+                            decimal(values.get("scale")),
+                            decimal(values.get("height")),
+                            decimal(values.get("width")),
+                            center[0],
+                            center[1],
+                            decimal(values.get("gap")),
+                            decimal(values.get("text-scale")),
+                            values.get("text").equals("Показывать"),
+                            values.get("context").equals("Фиксированный") ? "FIXED" : "NONE");
+                  } catch (RuntimeException invalid) {
+                    throw new IllegalArgumentException("waystones.render-invalid", invalid);
+                  }
+                  if (!profileWrites.add(id)) throw new IllegalArgumentException("waystones.busy");
+                  var pending =
+                      store.save(
+                          "waystone-render",
+                          id,
+                          doc == null ? 0 : doc.revision(),
+                          next,
+                          p.getUniqueId().toString());
+                  modelMenu(p, page, parent);
+                  Inventory open = p.getOpenInventory().getTopInventory();
+                  pending.whenComplete(
+                      (revision, error) ->
+                          main.execute(
+                              () -> {
+                                profileWrites.remove(id);
+                                if (error != null) {
+                                  if (p.isOnline()) lang.send(p, "errors.storage");
+                                  return;
+                                }
+                                renderProfiles.put(
+                                    id, new SqliteStore.Document<>(id, revision, next));
+                                for (Waystone n : all())
+                                  if (WaystoneRender.key(n.style(), n.model()).equals(id)) {
+                                    removeModel(n.id());
+                                    retries.remove(n.id());
+                                  }
+                                if (p.isOnline()
+                                    && enabled()
+                                    && admin(p)
+                                    && p.getOpenInventory().getTopInventory() == open)
+                                  modelMenu(p, page, parent);
+                              }));
+                }),
+            ui.button("back", "common.back", values -> modelForm(p, model, page, parent))),
         this::admin);
   }
 
@@ -1436,13 +1585,23 @@ public final class Waystones implements Listener, AutoCloseable {
   private void spawn(Waystone n) {
     var entities = new ArrayList<Entity>();
     var at = n.anchor().location();
+    var profile = renderProfile(n.style(), n.model());
+    var origin = profile.model(at);
+    float scale = (float) profile.scale();
     try {
       if (n.style().equals("itemsadder"))
         entity(
-            at.clone().add(0, 1, 0),
+            origin,
             ItemDisplay.class,
             entities,
-            e -> e.setItemStack(customItem(n.model())),
+            e -> {
+              e.setItemStack(customItem(n.model()));
+              e.setItemDisplayTransform(
+                  ItemDisplay.ItemDisplayTransform.valueOf(profile.context()));
+              var tr = e.getTransformation();
+              tr.getScale().set(scale);
+              e.setTransformation(tr);
+            },
             n.id());
       else {
         Material pole =
@@ -1452,7 +1611,7 @@ public final class Waystones implements Listener, AutoCloseable {
         for (int i = 0; i < 3; i++) {
           int level = i;
           entity(
-              at.clone().add(0, i * .7, 0),
+              origin.clone().add(0, i * .7 * scale, 0),
               BlockDisplay.class,
               entities,
               e -> {
@@ -1460,42 +1619,57 @@ public final class Waystones implements Listener, AutoCloseable {
                     (level == 2 && n.style().equals("rune") ? Material.SEA_LANTERN : pole)
                         .createBlockData());
                 var tr = e.getTransformation();
-                tr.getScale().set(level == 0 ? .8f : .35f, .7f, .35f);
-                tr.getTranslation().set(-.2f, 0, -.2f);
+                float width = level == 0 ? .8f : .35f;
+                tr.getScale().set(width * scale, .7f * scale, .35f * scale);
+                tr.getTranslation().set(-width * scale / 2, 0, -.175f * scale);
                 e.setTransformation(tr);
               },
               n.id());
         }
         if (n.style().equals("wood"))
           entity(
-              at.clone().add(0, 1.5, 0),
+              origin.clone().add(0, 1.5 * scale, 0),
               BlockDisplay.class,
               entities,
               e -> {
                 e.setBlock(Material.SPRUCE_PLANKS.createBlockData());
                 var t = e.getTransformation();
-                t.getScale().set(1.2f, .3f, .15f);
-                t.getTranslation().set(-.6f, 0, -.075f);
+                t.getScale().set(1.2f * scale, .3f * scale, .15f * scale);
+                t.getTranslation().set(-.6f * scale, 0, -.075f * scale);
                 e.setTransformation(t);
               },
               n.id());
       }
+      if (profile.text())
+        entity(
+            profile.label(at),
+            TextDisplay.class,
+            entities,
+            e -> {
+              e.text(
+                  text(
+                      plugin
+                          .getConfig()
+                          .getString("waystones.render.label-text", "<gold><name> <gray>· ПКМ"),
+                      Map.of("name", n.name())));
+              e.setBillboard(Display.Billboard.CENTER);
+              e.setAlignment(TextDisplay.TextAlignment.CENTER);
+              e.setShadowed(true);
+              e.setDefaultBackground(false);
+              e.setBackgroundColor(Color.fromARGB(0));
+              e.setLineWidth(240);
+              var tr = e.getTransformation();
+              tr.getScale().set((float) profile.textScale());
+              e.setTransformation(tr);
+            },
+            n.id());
       entity(
-          at.clone().add(0, 2.5, 0),
-          TextDisplay.class,
-          entities,
-          e -> {
-            e.text(text("<gold><name> <gray>· ПКМ", Map.of("name", n.name())));
-            e.setBillboard(Display.Billboard.CENTER);
-          },
-          n.id());
-      entity(
-          at,
+          profile.center(at),
           Interaction.class,
           entities,
           e -> {
-            e.setInteractionWidth(1.4f);
-            e.setInteractionHeight(2.8f);
+            e.setInteractionWidth((float) (profile.width() * profile.scale()));
+            e.setInteractionHeight((float) (profile.height() * profile.scale()));
             e.setResponsive(true);
           },
           n.id());
