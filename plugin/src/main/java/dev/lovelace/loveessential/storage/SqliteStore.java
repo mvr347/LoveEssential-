@@ -80,6 +80,9 @@ public final class SqliteStore implements AutoCloseable {
         s.execute(
             "CREATE TABLE IF NOT EXISTS npc_numbers(id TEXT PRIMARY KEY,number INTEGER NOT NULL"
                 + " UNIQUE CHECK(number BETWEEN 1 AND 999))");
+        s.execute(
+            "CREATE TABLE IF NOT EXISTS waystone_numbers(id TEXT PRIMARY KEY,number INTEGER NOT"
+                + " NULL UNIQUE CHECK(number BETWEEN 1 AND 999))");
         s.execute("INSERT OR IGNORE INTO schema_version VALUES(3)");
         c.commit();
       } catch (Exception e) {
@@ -219,6 +222,7 @@ public final class SqliteStore implements AutoCloseable {
               seq.executeUpdate();
             }
             if (kind.equals("npc")) allocateNumber(c, id);
+            if (kind.equals("waystone")) allocateNumber(c, "waystone_numbers", id);
             audit(c, kind, id, next, actor, "save");
             c.commit();
             return next;
@@ -235,18 +239,25 @@ public final class SqliteStore implements AutoCloseable {
   public CompletableFuture<Integer> nextSequence(String name, int limit) {
     if (name == null || !name.matches("[a-z0-9_-]{1,64}") || limit < 1)
       return CompletableFuture.failedFuture(new IllegalArgumentException("invalid-sequence"));
-    return write(c -> {
-      try (var schema = c.createStatement()) {
-        schema.execute("CREATE TABLE IF NOT EXISTS sequences(name TEXT PRIMARY KEY,value INTEGER NOT NULL)");
-      }
-      try (var statement = c.prepareStatement("INSERT INTO sequences VALUES(?,1) ON CONFLICT(name) DO UPDATE SET value=value+1 WHERE value<? RETURNING value")) {
-        statement.setString(1, name); statement.setInt(2, limit);
-        try (var result = statement.executeQuery()) {
-          if (!result.next()) throw new IllegalArgumentException("waystones.limit");
-          return result.getInt(1);
-        }
-      }
-    });
+    return write(
+        c -> {
+          try (var schema = c.createStatement()) {
+            schema.execute(
+                "CREATE TABLE IF NOT EXISTS sequences(name TEXT PRIMARY KEY,value INTEGER NOT"
+                    + " NULL)");
+          }
+          try (var statement =
+              c.prepareStatement(
+                  "INSERT INTO sequences VALUES(?,1) ON CONFLICT(name) DO UPDATE SET value=value+1"
+                      + " WHERE value<? RETURNING value")) {
+            statement.setString(1, name);
+            statement.setInt(2, limit);
+            try (var result = statement.executeQuery()) {
+              if (!result.next()) throw new IllegalArgumentException("waystones.limit");
+              return result.getInt(1);
+            }
+          }
+        });
   }
 
   public CompletableFuture<Void> delete(String kind, String id, long expected, String actor) {
@@ -266,6 +277,11 @@ public final class SqliteStore implements AutoCloseable {
                 statement.setString(1, id);
                 statement.executeUpdate();
               }
+            if (kind.equals("waystone"))
+              try (var statement = c.prepareStatement("DELETE FROM waystone_numbers WHERE id=?")) {
+                statement.setString(1, id);
+                statement.executeUpdate();
+              }
             audit(c, kind, id, expected, actor, "delete");
             c.commit();
             return null;
@@ -279,7 +295,11 @@ public final class SqliteStore implements AutoCloseable {
   }
 
   private int allocateNumber(Connection connection, String id) throws SQLException {
-    try (var query = connection.prepareStatement("SELECT number FROM npc_numbers WHERE id=?")) {
+    return allocateNumber(connection, "npc_numbers", id);
+  }
+
+  private int allocateNumber(Connection connection, String table, String id) throws SQLException {
+    try (var query = connection.prepareStatement("SELECT number FROM " + table + " WHERE id=?")) {
       query.setString(1, id);
       try (var result = query.executeQuery()) {
         if (result.next()) return result.getInt(1);
@@ -287,12 +307,12 @@ public final class SqliteStore implements AutoCloseable {
     }
     var occupied = new BitSet(1000);
     try (var query = connection.createStatement();
-        var result = query.executeQuery("SELECT number FROM npc_numbers")) {
+        var result = query.executeQuery("SELECT number FROM " + table)) {
       while (result.next()) occupied.set(result.getInt(1));
     }
     int number = occupied.nextClearBit(1);
     if (number > 999) throw new SQLException("validation.limit");
-    try (var insert = connection.prepareStatement("INSERT INTO npc_numbers VALUES(?,?)")) {
+    try (var insert = connection.prepareStatement("INSERT INTO " + table + " VALUES(?,?)")) {
       insert.setString(1, id);
       insert.setInt(2, number);
       insert.executeUpdate();
@@ -301,13 +321,22 @@ public final class SqliteStore implements AutoCloseable {
   }
 
   public CompletableFuture<Map<String, Integer>> npcNumbers(Collection<String> ids) {
+    return documentNumbers("npc_numbers", ids);
+  }
+
+  public CompletableFuture<Map<String, Integer>> waystoneNumbers(Collection<String> ids) {
+    return documentNumbers("waystone_numbers", ids);
+  }
+
+  private CompletableFuture<Map<String, Integer>> documentNumbers(
+      String table, Collection<String> ids) {
     var ordered = ids.stream().sorted().toList();
     return write(
         connection -> {
           connection.setAutoCommit(false);
           try {
             var result = new LinkedHashMap<String, Integer>();
-            for (String id : ordered) result.put(id, allocateNumber(connection, id));
+            for (String id : ordered) result.put(id, allocateNumber(connection, table, id));
             connection.commit();
             return Map.copyOf(result);
           } catch (Exception error) {

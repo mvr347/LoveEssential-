@@ -199,6 +199,13 @@ class ComfortHologramTest {
     assertTrue(
         await(store.get("place", "home:" + p.getUniqueId() + ":default", Gameplay.Place.class))
             .isPresent());
+    // The SQLite write can finish before its main-thread confirmation is delivered.
+    var confirmations = new ArrayList<String>();
+    waitFor(() -> {
+      String message = p.nextMessage();
+      if (message != null) confirmations.add(message);
+      return confirmations.stream().anyMatch(text -> text.contains("Точка дома установлена"));
+    });
     while (p.nextComponentMessage() != null) {}
     command(p, "spawn");
     assertFalse(p.nextMessage().contains("Недостаточно прав"));

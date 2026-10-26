@@ -36,6 +36,30 @@ public final class Waystones implements Listener, AutoCloseable {
   private final Map<String, SqliteStore.Document<Waystone>> nodes =
       new TreeMap<>(Comparator.comparingInt(Integer::parseInt));
   private final Map<String, List<Entity>> models = new HashMap<>();
+  private final Map<String, Integer> numbers = new HashMap<>();
+  private final Map<String, SqliteStore.Document<Model>> catalog = new TreeMap<>();
+  private final Set<String> modelWrites = new HashSet<>();
+  private final Set<String> modelNamesInFlight = new HashSet<>();
+
+  public record Model(String name, String style, String item) {
+    public Model {
+      if (name == null
+          || name.isBlank()
+          || name.length() > 64
+          || style == null
+          || !Set.of("wood", "stone", "rune", "itemsadder").contains(style)
+          || item == null
+          || item.length() > 128
+          || style.equals("itemsadder") && !item.matches("[a-z0-9_.-]+:[a-z0-9_./-]+"))
+        throw new IllegalArgumentException("waystones.invalid");
+    }
+  }
+
+  private record Saved(long revision, int number) {}
+
+  private final Map<String, SqliteStore.Document<WaystoneRender>> renderProfiles = new HashMap<>();
+  private final Set<String> profileWrites = new HashSet<>();
+
   private final Map<String, Long> retries = new HashMap<>();
   private final Set<String> writing = new HashSet<>();
   private final Map<UUID, Object> sessions = new HashMap<>();
@@ -190,6 +214,55 @@ public final class Waystones implements Listener, AutoCloseable {
                       }
                       return null;
                     }))
+        .thenCompose(v -> store.waystoneNumbers(nodes.keySet()))
+        .thenCompose(
+            loaded ->
+                main.call(
+                    () -> {
+                      numbers.clear();
+                      numbers.putAll(loaded);
+                      return null;
+                    }))
+        .thenCompose(v -> seedModels())
+        .thenCompose(v -> store.list("waystone-model", Model.class))
+        .thenCompose(
+            loaded ->
+                main.call(
+                    () -> {
+                      catalog.clear();
+                      for (var d : loaded) {
+                        var m = d.value();
+                        new Model(m.name(), m.style(), m.item());
+                        catalog.put(d.id(), d);
+                      }
+                      return null;
+                    }))
+        .thenCompose(v -> store.list("waystone-render", WaystoneRender.class))
+        .thenCompose(
+            saved ->
+                main.call(
+                    () -> {
+                      renderProfiles.clear();
+                      for (var d : saved) {
+                        var r = d.value();
+                        new WaystoneRender(
+                            r.modelX(),
+                            r.modelY(),
+                            r.modelZ(),
+                            r.scale(),
+                            r.height(),
+                            r.width(),
+                            r.centerX(),
+                            r.centerZ(),
+                            r.gap(),
+                            r.textScale(),
+                            r.text(),
+                            r.context());
+                        renderProfiles.put(d.id(), d);
+                      }
+                      for (String id : List.copyOf(models.keySet())) removeModel(id);
+                      return null;
+                    }))
         .thenCompose(v -> store.list("waystone-refund", Refund.class))
         .thenCompose(
             saved ->
@@ -205,6 +278,382 @@ public final class Waystones implements Listener, AutoCloseable {
                       }
                       return null;
                     }));
+  }
+
+  private CompletableFuture<Void> seedModels() {
+    return store
+        .get("waystone-catalog", "initialized", Boolean.class)
+        .thenCompose(
+            marker -> {
+              if (marker.isPresent()) return CompletableFuture.completedFuture(null);
+              var defaults = new LinkedHashMap<String, Model>();
+              defaults.put("wood", new Model("Деревянный", "wood", ""));
+              defaults.put("stone", new Model("Каменный", "stone", ""));
+              defaults.put("rune", new Model("Рунический", "rune", ""));
+              for (int i = 1; i <= 4; i++)
+                defaults.put(
+                    "voidcore-" + i,
+                    new Model("Указатели · " + i, "itemsadder", "voidcore:waystone_" + i));
+              CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
+              for (var entry : defaults.entrySet())
+                chain =
+                    chain.thenCompose(
+                        v ->
+                            store
+                                .get("waystone-model", entry.getKey(), Model.class)
+                                .thenCompose(
+                                    existing ->
+                                        existing.isPresent()
+                                            ? CompletableFuture.completedFuture(null)
+                                            : store
+                                                .save(
+                                                    "waystone-model",
+                                                    entry.getKey(),
+                                                    0,
+                                                    entry.getValue(),
+                                                    "bootstrap")
+                                                .thenApply(r -> null)));
+              return chain.thenCompose(
+                  v ->
+                      store
+                          .save("waystone-catalog", "initialized", 0, true, "bootstrap")
+                          .thenApply(r -> null));
+            });
+  }
+
+  public Collection<Model> availableModels() {
+    return catalog.values().stream().map(SqliteStore.Document::value).toList();
+  }
+
+  private List<String> modelChoices() {
+    var labels = new ArrayList<String>();
+    for (Model m : availableModels()) if (!labels.contains(m.name())) labels.add(m.name());
+    labels.add("ItemsAdder");
+    return List.copyOf(labels);
+  }
+
+  private Model chosenModel(String label, String manual) {
+    if (label.equals("ItemsAdder")) return new Model("ItemsAdder", "itemsadder", manual);
+    return availableModels().stream()
+        .filter(m -> m.name().equals(label))
+        .findFirst()
+        .orElseGet(
+            () ->
+                switch (label) {
+                  case "Деревянный" -> new Model(label, "wood", "");
+                  case "Каменный" -> new Model(label, "stone", "");
+                  case "Рунический" -> new Model(label, "rune", "");
+                  default -> throw new IllegalArgumentException("waystones.changed");
+                });
+  }
+
+  private String modelLabel(Waystone n) {
+    return availableModels().stream()
+        .filter(m -> m.style().equals(n.style()) && m.item().equals(n.model()))
+        .map(Model::name)
+        .findFirst()
+        .orElseGet(
+            () ->
+                switch (n.style()) {
+                  case "wood" -> "Деревянный";
+                  case "stone" -> "Каменный";
+                  case "rune" -> "Рунический";
+                  default -> "ItemsAdder";
+                });
+  }
+
+  private void modelMenu(Player p, int requested) {
+    modelMenu(p, requested, null);
+  }
+
+  private void modelMenu(Player p, int requested, Runnable parent) {
+    staff(p);
+    var entries = List.copyOf(catalog.values());
+    int page = Math.clamp(requested, 0, Math.max(0, (entries.size() - 1) / 20));
+    var m = menu(p, "models", page);
+    m.allowed = who -> enabled() && admin(who);
+    int count = Math.min(20, entries.size() - page * 20);
+    for (int i = 0; i < count; i++) {
+      var entry = entries.get(page * 20 + i);
+      card(
+          m,
+          MenuStyle.CONTENT[i],
+          setting("models", "entry-title", "<gold><name>"),
+          plugin.getConfig().getStringList("waystones.gui.menus.waystones-models.entry-lore"),
+          Map.of(
+              "name",
+              entry.value().name(),
+              "item",
+              entry.value().item().isBlank() ? "Встроенная модель" : entry.value().item()),
+          () -> modelForm(p, entry, page, parent));
+    }
+    button(
+        m,
+        entries.isEmpty() ? 22 : MenuStyle.CONTENT[count],
+        "add-model",
+        () -> modelForm(p, null, page, parent));
+    if (page > 0) button(m, 36, "previous", () -> modelMenu(p, page - 1, parent));
+    if ((page + 1) * 20 < entries.size())
+      button(m, 44, "next", () -> modelMenu(p, page + 1, parent));
+    if (parent != null) back(m, parent);
+    MenuStyle.open(p, m.inventory);
+  }
+
+  private void modelForm(Player p, SqliteStore.Document<Model> doc, int page, Runnable parent) {
+    staff(p);
+    Model current =
+        doc == null ? new Model("Новая модель", "itemsadder", "voidcore:waystone_1") : doc.value();
+    String id = doc == null ? UUID.randomUUID().toString() : doc.id();
+    sessions.put(p.getUniqueId(), new Object());
+    var buttons = new ArrayList<NativeDialogs.Button>();
+    buttons.add(
+        ui.button(
+            "save",
+            "waystones.model-save",
+            values -> {
+              staff(p);
+              if (doc == null && catalog.size() + modelWrites.size() >= 128
+                  || doc != null && catalog.get(id) != doc)
+                throw new IllegalArgumentException("waystones.changed");
+              String style =
+                  switch (values.get("style")) {
+                    case "Деревянный" -> "wood";
+                    case "Каменный" -> "stone";
+                    case "Рунический" -> "rune";
+                    default -> "itemsadder";
+                  };
+              var model =
+                  new Model(
+                      values.get("name"),
+                      style,
+                      style.equals("itemsadder") ? values.get("item") : "");
+              if (catalog.values().stream()
+                      .anyMatch(d -> !d.id().equals(id) && d.value().name().equals(model.name()))
+                  || modelNamesInFlight.contains(model.name())
+                  || model.name().equals("ItemsAdder"))
+                throw new IllegalArgumentException("waystones.invalid");
+              if (style.equals("itemsadder")) customItem(model.item());
+              if (!modelWrites.add(id)) throw new IllegalArgumentException("waystones.busy");
+              modelNamesInFlight.add(model.name());
+              var pending =
+                  store.save(
+                      "waystone-model",
+                      id,
+                      doc == null ? 0 : doc.revision(),
+                      model,
+                      p.getUniqueId().toString());
+              modelMenu(p, page, parent);
+              Inventory open = p.getOpenInventory().getTopInventory();
+              pending.whenComplete(
+                  (revision, error) ->
+                      main.execute(
+                          () -> {
+                            modelWrites.remove(id);
+                            modelNamesInFlight.remove(model.name());
+                            if (error != null) {
+                              if (p.isOnline()) lang.send(p, "errors.storage");
+                              return;
+                            }
+                            catalog.put(id, new SqliteStore.Document<>(id, revision, model));
+                            if (p.isOnline()
+                                && enabled()
+                                && admin(p)
+                                && p.getOpenInventory().getTopInventory() == open)
+                              modelMenu(p, page, parent);
+                          }));
+            }));
+    if (doc != null)
+      buttons.add(
+          ui.button(
+              "render", "waystones.render-settings", values -> renderForm(p, doc, page, parent)));
+    if (doc != null)
+      buttons.add(
+          ui.button(
+              "delete",
+              "waystones.model-delete",
+              values -> {
+                staff(p);
+                if (catalog.get(id) != doc) throw new IllegalArgumentException("waystones.changed");
+                ui.show(
+                    p,
+                    "waystones.model-delete",
+                    "waystones.model-delete-help",
+                    List.of(),
+                    List.of(
+                        ui.button(
+                            "confirm",
+                            "gui.remove",
+                            ignored -> {
+                              staff(p);
+                              if (!modelWrites.add(id))
+                                throw new IllegalArgumentException("waystones.busy");
+                              var pending =
+                                  store.delete(
+                                      "waystone-model",
+                                      id,
+                                      doc.revision(),
+                                      p.getUniqueId().toString());
+                              modelMenu(p, page, parent);
+                              Inventory open = p.getOpenInventory().getTopInventory();
+                              pending.whenComplete(
+                                  (v, error) ->
+                                      main.execute(
+                                          () -> {
+                                            modelWrites.remove(id);
+                                            if (error != null) {
+                                              if (p.isOnline()) lang.send(p, "errors.storage");
+                                              return;
+                                            }
+                                            catalog.remove(id);
+                                            if (p.isOnline()
+                                                && enabled()
+                                                && admin(p)
+                                                && p.getOpenInventory().getTopInventory() == open)
+                                              modelMenu(p, page, parent);
+                                          }));
+                            }),
+                        ui.button(
+                            "back", "common.back", ignored -> modelForm(p, doc, page, parent))),
+                    this::admin);
+              }));
+    buttons.add(ui.button("back", "common.back", values -> modelMenu(p, page, parent)));
+    String styleLabel =
+        switch (current.style()) {
+          case "wood" -> "Деревянный";
+          case "stone" -> "Каменный";
+          case "rune" -> "Рунический";
+          default -> "ItemsAdder";
+        };
+    ui.show(
+        p,
+        "waystones.models",
+        "waystones.models-help",
+        List.of(
+            ui.text("name", "waystones.name", current.name(), 64),
+            NativeDialogs.Field.select(
+                "style",
+                lang.render("waystones.style"),
+                styleLabel,
+                List.of("Деревянный", "Каменный", "Рунический", "ItemsAdder")),
+            ui.text("item", "waystones.model-item", current.item(), 128)),
+        buttons,
+        this::admin);
+  }
+
+  private WaystoneRender renderProfile(String style, String item) {
+    var saved = renderProfiles.get(WaystoneRender.key(style, item));
+    return saved == null ? WaystoneRender.defaults(style, item) : saved.value();
+  }
+
+  private static double decimal(String value) {
+    return Double.parseDouble(value.strip().replace(',', '.'));
+  }
+
+  private static double[] coordinates(String value, int count) {
+    String[] parts = value.strip().split("\\s+");
+    if (parts.length != count) throw new IllegalArgumentException("waystones.render-invalid");
+    double[] result = new double[count];
+    for (int i = 0; i < count; i++) result[i] = decimal(parts[i]);
+    return result;
+  }
+
+  private void renderForm(Player p, SqliteStore.Document<Model> model, int page, Runnable parent) {
+    staff(p);
+    if (catalog.get(model.id()) != model) throw new IllegalArgumentException("waystones.changed");
+    String id = WaystoneRender.key(model.value().style(), model.value().item());
+    var doc = renderProfiles.get(id);
+    var r = renderProfile(model.value().style(), model.value().item());
+    ui.show(
+        p,
+        "waystones.render-settings",
+        "waystones.render-help",
+        List.of(
+            ui.text(
+                "offset",
+                "waystones.render-offset",
+                r.modelX() + " " + r.modelY() + " " + r.modelZ(),
+                100),
+            ui.text("scale", "waystones.render-scale", Double.toString(r.scale()), 24),
+            ui.text("height", "waystones.render-height", Double.toString(r.height()), 24),
+            ui.text("width", "waystones.render-width", Double.toString(r.width()), 24),
+            ui.text("center", "waystones.render-center", r.centerX() + " " + r.centerZ(), 80),
+            ui.text("gap", "waystones.render-gap", Double.toString(r.gap()), 24),
+            ui.text(
+                "text-scale", "waystones.render-text-scale", Double.toString(r.textScale()), 24),
+            NativeDialogs.Field.select(
+                "text",
+                lang.render("waystones.render-text"),
+                r.text() ? "Показывать" : "Скрыть",
+                List.of("Показывать", "Скрыть")),
+            NativeDialogs.Field.select(
+                "context",
+                lang.render("waystones.render-context"),
+                r.context().equals("FIXED") ? "Фиксированный" : "Без преобразований",
+                List.of("Фиксированный", "Без преобразований"))),
+        List.of(
+            ui.button(
+                "save",
+                "waystones.render-save",
+                values -> {
+                  staff(p);
+                  if (catalog.get(model.id()) != model || renderProfiles.get(id) != doc)
+                    throw new IllegalArgumentException("waystones.changed");
+                  WaystoneRender next;
+                  try {
+                    double[] offset = coordinates(values.get("offset"), 3),
+                        center = coordinates(values.get("center"), 2);
+                    next =
+                        new WaystoneRender(
+                            offset[0],
+                            offset[1],
+                            offset[2],
+                            decimal(values.get("scale")),
+                            decimal(values.get("height")),
+                            decimal(values.get("width")),
+                            center[0],
+                            center[1],
+                            decimal(values.get("gap")),
+                            decimal(values.get("text-scale")),
+                            values.get("text").equals("Показывать"),
+                            values.get("context").equals("Фиксированный") ? "FIXED" : "NONE");
+                  } catch (RuntimeException invalid) {
+                    throw new IllegalArgumentException("waystones.render-invalid", invalid);
+                  }
+                  if (!profileWrites.add(id)) throw new IllegalArgumentException("waystones.busy");
+                  var pending =
+                      store.save(
+                          "waystone-render",
+                          id,
+                          doc == null ? 0 : doc.revision(),
+                          next,
+                          p.getUniqueId().toString());
+                  modelMenu(p, page, parent);
+                  Inventory open = p.getOpenInventory().getTopInventory();
+                  pending.whenComplete(
+                      (revision, error) ->
+                          main.execute(
+                              () -> {
+                                profileWrites.remove(id);
+                                if (error != null) {
+                                  if (p.isOnline()) lang.send(p, "errors.storage");
+                                  return;
+                                }
+                                renderProfiles.put(
+                                    id, new SqliteStore.Document<>(id, revision, next));
+                                for (Waystone n : all())
+                                  if (WaystoneRender.key(n.style(), n.model()).equals(id)) {
+                                    removeModel(n.id());
+                                    retries.remove(n.id());
+                                  }
+                                if (p.isOnline()
+                                    && enabled()
+                                    && admin(p)
+                                    && p.getOpenInventory().getTopInventory() == open)
+                                  modelMenu(p, page, parent);
+                              }));
+                }),
+            ui.button("back", "common.back", values -> modelForm(p, model, page, parent))),
+        this::admin);
   }
 
   public void start() {
@@ -244,7 +693,7 @@ public final class Waystones implements Listener, AutoCloseable {
   }
 
   private Waystone node(String id) {
-    if (id == null || !id.matches("[1-9][0-9]{0,2}"))
+    if (id == null || !id.matches("[1-9][0-9]{0,9}"))
       throw new IllegalArgumentException("waystones.not-found");
     var d = nodes.get(id);
     if (d == null) throw new IllegalArgumentException("waystones.not-found");
@@ -252,7 +701,22 @@ public final class Waystones implements Listener, AutoCloseable {
   }
 
   public Collection<Waystone> all() {
-    return nodes.values().stream().map(SqliteStore.Document::value).toList();
+    return nodes.values().stream()
+        .map(SqliteStore.Document::value)
+        .sorted(Comparator.comparingInt(n -> number(n.id())))
+        .toList();
+  }
+
+  public int number(String id) {
+    return numbers.getOrDefault(id, 0);
+  }
+
+  private String byNumber(String value) {
+    return numbers.entrySet().stream()
+        .filter(e -> e.getValue().toString().equals(value))
+        .map(Map.Entry::getKey)
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("waystones.not-found"));
   }
 
   public void command(Player p, String[] args) {
@@ -263,10 +727,11 @@ public final class Waystones implements Listener, AutoCloseable {
         return;
       }
       staff(p);
-      if (Set.of("create", "создать").contains(args[0])) create(p);
+      if (Set.of("models", "модели").contains(args[0])) modelMenu(p, 0);
+      else if (Set.of("create", "создать").contains(args[0])) create(p);
       else if (Set.of("edit", "изменить", "меню").contains(args[0])) {
         if (args.length == 1) list(p, 0);
-        else editor(p, args[1]);
+        else editor(p, byNumber(args[1]));
       } else throw new IllegalArgumentException("waystones.usage");
       return;
     }
@@ -284,9 +749,10 @@ public final class Waystones implements Listener, AutoCloseable {
   public List<String> suggestions(Player p, String[] args) {
     if (!admin(p)) return args.length <= 1 ? List.of("cancel", "отмена") : List.of();
     if (args.length <= 1)
-      return List.of("create", "создать", "edit", "изменить", "cancel", "отмена");
+      return List.of(
+          "create", "создать", "edit", "изменить", "models", "модели", "cancel", "отмена");
     if (args.length == 2 && Set.of("edit", "изменить").contains(args[0]))
-      return List.copyOf(nodes.keySet());
+      return numbers.values().stream().sorted().map(String::valueOf).toList();
     return List.of();
   }
 
@@ -303,10 +769,15 @@ public final class Waystones implements Listener, AutoCloseable {
             : context instanceof List<?> parts && !parts.isEmpty()
                 ? String.valueOf(parts.getFirst())
                 : "";
-    if (nodeId.matches("[1-9][0-9]{0,2}") && nodes.containsKey(nodeId))
+    if (nodeId.matches("[1-9][0-9]{0,9}") && nodes.containsKey(nodeId))
       m.variables = Map.of("name", node(nodeId).name());
     int size =
-        screen.equals("list") || screen.equals("routes") || screen.equals("travel") ? 54 : 27;
+        screen.equals("list")
+                || screen.equals("models")
+                || screen.equals("routes")
+                || screen.equals("travel")
+            ? 54
+            : 27;
     m.inventory =
         Bukkit.createInventory(
             m, size, text(setting(screen, "title", "<gold>Путевые столбы"), m.variables));
@@ -383,12 +854,13 @@ public final class Waystones implements Listener, AutoCloseable {
           MenuStyle.CONTENT[i],
           setting("list", "entry-title", "<gold><name> · №<id>"),
           plugin.getConfig().getStringList("waystones.gui.menus.waystones-list.entry-lore"),
-          Map.of("name", n.name(), "id", n.id()),
+          Map.of("name", n.name(), "id", Integer.toString(number(n.id()))),
           () -> editor(p, n.id()));
     }
     button(m, list.isEmpty() ? 22 : MenuStyle.CONTENT[count], "create", () -> create(p));
     if (page > 0) button(m, 36, "previous", () -> list(p, page - 1));
     if ((page + 1) * 20 < list.size()) button(m, 44, "next", () -> list(p, page + 1));
+    button(m, 51, "models", () -> modelMenu(p, 0, () -> list(p, page)));
     MenuStyle.open(p, m.inventory);
   }
 
@@ -404,8 +876,8 @@ public final class Waystones implements Listener, AutoCloseable {
             NativeDialogs.Field.select(
                 "style",
                 lang.render("waystones.style"),
-                "Каменный",
-                List.of("Деревянный", "Каменный", "Рунический", "ItemsAdder")),
+                modelChoices().contains("Каменный") ? "Каменный" : modelChoices().getFirst(),
+                modelChoices()),
             NativeDialogs.Field.select(
                 "direction",
                 lang.render("waystones.direction"),
@@ -421,13 +893,8 @@ public final class Waystones implements Listener, AutoCloseable {
                   if (nodes.size() + writing.size()
                       >= plugin.getConfig().getInt("waystones.max-stones", 100))
                     throw new IllegalArgumentException("waystones.limit");
-                  String style =
-                      switch (v.get("style")) {
-                        case "Деревянный" -> "wood";
-                        case "Рунический" -> "rune";
-                        case "ItemsAdder" -> "itemsadder";
-                        default -> "stone";
-                      };
+                  Model chosen = chosenModel(v.get("style"), v.get("model"));
+                  String style = chosen.style();
                   float yaw =
                       switch (v.get("direction")) {
                         case "Восток" -> 270;
@@ -443,13 +910,13 @@ public final class Waystones implements Listener, AutoCloseable {
                               n.anchor().world().equals(at.getWorld().getUID())
                                   && n.anchor().location().distanceSquared(at) < 4))
                     throw new IllegalArgumentException("waystones.overlap");
-                  if (style.equals("itemsadder")) customItem(v.get("model"));
+                  if (style.equals("itemsadder")) customItem(chosen.item());
                   var arrival = at.clone().add(at.getDirection().multiply(2));
                   if (v.get("name").isBlank())
                     throw new IllegalArgumentException("waystones.invalid");
                   Object session = sessions.get(p.getUniqueId());
                   store
-                      .nextSequence("waystone", 999)
+                      .nextSequence("waystone", Integer.MAX_VALUE)
                       .whenComplete(
                           (number, error) ->
                               main.execute(
@@ -474,7 +941,7 @@ public final class Waystones implements Listener, AutoCloseable {
                                             Position.of(at),
                                             Position.of(arrival),
                                             style,
-                                            v.get("model"),
+                                            chosen.item(),
                                             List.of());
                                     save(p, n, 0, () -> editor(p, id));
                                   }));
@@ -548,14 +1015,10 @@ public final class Waystones implements Listener, AutoCloseable {
   private void appearance(Player p, Waystone n) {
     staff(p);
     var doc = nodes.get(n.id());
-    List<String> styles = List.of("Деревянный", "Каменный", "Рунический", "ItemsAdder");
-    String selected =
-        switch (n.style()) {
-          case "wood" -> styles.get(0);
-          case "rune" -> styles.get(2);
-          case "itemsadder" -> styles.get(3);
-          default -> styles.get(1);
-        };
+    List<String> styles = new ArrayList<>(modelChoices());
+    String selected = modelLabel(n);
+    // Preserve a manually selected legacy model if its catalog entry was removed.
+    if (!styles.contains(selected)) styles.add(selected);
     ui.show(
         p,
         "waystones.appearance",
@@ -572,14 +1035,9 @@ public final class Waystones implements Listener, AutoCloseable {
                   staff(p);
                   if (nodes.get(n.id()) != doc)
                     throw new IllegalArgumentException("waystones.changed");
-                  String style =
-                      switch (v.get("style")) {
-                        case "Деревянный" -> "wood";
-                        case "Рунический" -> "rune";
-                        case "ItemsAdder" -> "itemsadder";
-                        default -> "stone";
-                      };
-                  if (style.equals("itemsadder")) customItem(v.get("model"));
+                  Model chosen = chosenModel(v.get("style"), v.get("model"));
+                  String style = chosen.style();
+                  if (style.equals("itemsadder")) customItem(chosen.item());
                   save(
                       p,
                       new Waystone(
@@ -588,7 +1046,7 @@ public final class Waystones implements Listener, AutoCloseable {
                           n.anchor(),
                           n.arrival(),
                           style,
-                          v.get("model"),
+                          chosen.item(),
                           n.routes()),
                       doc.revision(),
                       () -> editor(p, n.id()));
@@ -699,6 +1157,11 @@ public final class Waystones implements Listener, AutoCloseable {
     Object session = sessions.get(p.getUniqueId());
     store
         .save(KIND, n.id(), expected, n, p.getUniqueId().toString())
+        .thenCompose(
+            revision ->
+                store
+                    .waystoneNumbers(List.of(n.id()))
+                    .thenApply(assigned -> new Saved(revision, assigned.get(n.id()))))
         .whenComplete(
             (revision, error) ->
                 main.execute(
@@ -708,7 +1171,8 @@ public final class Waystones implements Listener, AutoCloseable {
                         if (p.isOnline()) lang.send(p, "errors.storage");
                         return;
                       }
-                      nodes.put(n.id(), new SqliteStore.Document<>(n.id(), revision, n));
+                      numbers.put(n.id(), revision.number());
+                      nodes.put(n.id(), new SqliteStore.Document<>(n.id(), revision.revision(), n));
                       retries.remove(n.id());
                       removeModel(n.id());
                       if (p.isOnline() && session == sessions.get(p.getUniqueId()) && enabled())
@@ -733,6 +1197,7 @@ public final class Waystones implements Listener, AutoCloseable {
                         return;
                       }
                       nodes.remove(n.id());
+                      numbers.remove(n.id());
                       retries.remove(n.id());
                       removeModel(n.id());
                       if (p.isOnline() && enabled()) list(p, 0);
@@ -1120,13 +1585,23 @@ public final class Waystones implements Listener, AutoCloseable {
   private void spawn(Waystone n) {
     var entities = new ArrayList<Entity>();
     var at = n.anchor().location();
+    var profile = renderProfile(n.style(), n.model());
+    var origin = profile.model(at);
+    float scale = (float) profile.scale();
     try {
       if (n.style().equals("itemsadder"))
         entity(
-            at.clone().add(0, 1, 0),
+            origin,
             ItemDisplay.class,
             entities,
-            e -> e.setItemStack(customItem(n.model())),
+            e -> {
+              e.setItemStack(customItem(n.model()));
+              e.setItemDisplayTransform(
+                  ItemDisplay.ItemDisplayTransform.valueOf(profile.context()));
+              var tr = e.getTransformation();
+              tr.getScale().set(scale);
+              e.setTransformation(tr);
+            },
             n.id());
       else {
         Material pole =
@@ -1136,7 +1611,7 @@ public final class Waystones implements Listener, AutoCloseable {
         for (int i = 0; i < 3; i++) {
           int level = i;
           entity(
-              at.clone().add(0, i * .7, 0),
+              origin.clone().add(0, i * .7 * scale, 0),
               BlockDisplay.class,
               entities,
               e -> {
@@ -1144,42 +1619,57 @@ public final class Waystones implements Listener, AutoCloseable {
                     (level == 2 && n.style().equals("rune") ? Material.SEA_LANTERN : pole)
                         .createBlockData());
                 var tr = e.getTransformation();
-                tr.getScale().set(level == 0 ? .8f : .35f, .7f, .35f);
-                tr.getTranslation().set(-.2f, 0, -.2f);
+                float width = level == 0 ? .8f : .35f;
+                tr.getScale().set(width * scale, .7f * scale, .35f * scale);
+                tr.getTranslation().set(-width * scale / 2, 0, -.175f * scale);
                 e.setTransformation(tr);
               },
               n.id());
         }
         if (n.style().equals("wood"))
           entity(
-              at.clone().add(0, 1.5, 0),
+              origin.clone().add(0, 1.5 * scale, 0),
               BlockDisplay.class,
               entities,
               e -> {
                 e.setBlock(Material.SPRUCE_PLANKS.createBlockData());
                 var t = e.getTransformation();
-                t.getScale().set(1.2f, .3f, .15f);
-                t.getTranslation().set(-.6f, 0, -.075f);
+                t.getScale().set(1.2f * scale, .3f * scale, .15f * scale);
+                t.getTranslation().set(-.6f * scale, 0, -.075f * scale);
                 e.setTransformation(t);
               },
               n.id());
       }
+      if (profile.text())
+        entity(
+            profile.label(at),
+            TextDisplay.class,
+            entities,
+            e -> {
+              e.text(
+                  text(
+                      plugin
+                          .getConfig()
+                          .getString("waystones.render.label-text", "<gold><name> <gray>· ПКМ"),
+                      Map.of("name", n.name())));
+              e.setBillboard(Display.Billboard.CENTER);
+              e.setAlignment(TextDisplay.TextAlignment.CENTER);
+              e.setShadowed(true);
+              e.setDefaultBackground(false);
+              e.setBackgroundColor(Color.fromARGB(0));
+              e.setLineWidth(240);
+              var tr = e.getTransformation();
+              tr.getScale().set((float) profile.textScale());
+              e.setTransformation(tr);
+            },
+            n.id());
       entity(
-          at.clone().add(0, 2.5, 0),
-          TextDisplay.class,
-          entities,
-          e -> {
-            e.text(text("<gold><name> <gray>· ПКМ", Map.of("name", n.name())));
-            e.setBillboard(Display.Billboard.CENTER);
-          },
-          n.id());
-      entity(
-          at,
+          profile.center(at),
           Interaction.class,
           entities,
           e -> {
-            e.setInteractionWidth(1.4f);
-            e.setInteractionHeight(2.8f);
+            e.setInteractionWidth((float) (profile.width() * profile.scale()));
+            e.setInteractionHeight((float) (profile.height() * profile.scale()));
             e.setResponsive(true);
           },
           n.id());

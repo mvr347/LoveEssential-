@@ -571,6 +571,8 @@ class ExtensionsIntegrationTest {
 
   @Test
   void tabCommandsWriteGroupPropertiesIntoModuleConfig() throws Exception {
+    // Config writes restart enabled modules; cancelling the old scoreboard task is insufficient.
+    await(plugin.module("scoreboard", false));
     var p = admin();
     server.dispatchCommand(p, "le tab group staff tabprefix <red>[Страж]");
     waitFor(() -> plugin.getConfig().contains("tab.groups.staff.tabprefix"));

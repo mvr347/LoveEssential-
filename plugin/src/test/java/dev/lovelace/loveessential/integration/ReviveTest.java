@@ -2,10 +2,10 @@ package dev.lovelace.loveessential.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import dev.lovelace.loveessential.LoveEssentialPlugin;
-import dev.lovelace.loveessential.api.revive.*;
 import dev.lovelace.lovecore.api.LoveCore;
 import dev.lovelace.lovecore.api.revive.DownedOracle;
+import dev.lovelace.loveessential.LoveEssentialPlugin;
+import dev.lovelace.loveessential.api.revive.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,11 +17,11 @@ import org.bukkit.damage.DamageType;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.*;
 import org.mockbukkit.mockbukkit.*;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -30,6 +30,7 @@ import org.mockbukkit.mockbukkit.entity.PlayerMock;
 class ReviveTest implements Listener {
   ServerMock server;
   LoveEssentialPlugin plugin;
+  org.mockbukkit.mockbukkit.world.WorldMock world;
   PlayerMock victim, helper;
   final List<Object> seen = new ArrayList<>();
   int monitoredPvp;
@@ -40,9 +41,11 @@ class ReviveTest implements Listener {
   }
 
   int serverDeaths;
-  @EventHandler
-  public void actualDeath(org.bukkit.event.entity.PlayerDeathEvent e) { serverDeaths++; }
 
+  @EventHandler
+  public void actualDeath(org.bukkit.event.entity.PlayerDeathEvent e) {
+    serverDeaths++;
+  }
 
   @EventHandler
   public void downed(DownedEvent e) {
@@ -67,17 +70,20 @@ class ReviveTest implements Listener {
   @BeforeEach
   void setup() throws Exception {
     server = MockBukkit.mock();
-    server.addSimpleWorld("world");
+    world = server.addSimpleWorld("world");
     MockBukkit.createMockPlugin("LoveCore");
     server.getPluginManager().registerEvents(this, MockBukkit.createMockPlugin("Observer"));
     plugin = MockBukkit.load(LoveEssentialPlugin.class);
     waitFor(plugin::ready);
     plugin.getConfig().set("npc.max-active", 0);
-    for (var module : List.of("scoreboard", "tab", "starter")) await(plugin.module(module, false));
+    for (var module : List.of("scoreboard", "tab", "starter", "rtp"))
+      await(plugin.module(module, false));
     await(plugin.module("revive", true));
     plugin.getConfig().set("revive.reliving-count", 2);
     victim = join("Victim");
     helper = join("Helper");
+    // Each player loads visibility asynchronously, in both directions.
+    waitFor(() -> helper.canSee(victim) && victim.canSee(helper));
     victim.setOp(false);
     helper.setOp(false);
   }
@@ -102,7 +108,8 @@ class ReviveTest implements Listener {
   }
 
   PlayerMock join(String name) throws Exception {
-    var p = server.addPlayer(name);
+    var p = new RecordingPlayer(server, name);
+    server.addPlayer(p);
     var watcher = server.getOnlinePlayers().iterator().next();
     waitFor(() -> watcher.equals(p) || watcher.canSee(p));
     return p;
@@ -114,8 +121,7 @@ class ReviveTest implements Listener {
 
   void hit(PlayerMock p, EntityDamageEvent.DamageCause cause, double amount) {
     var event =
-        new EntityDamageEvent(
-            p, cause, DamageSource.builder(DamageType.GENERIC).build(), amount);
+        new EntityDamageEvent(p, cause, DamageSource.builder(DamageType.GENERIC).build(), amount);
     server.getPluginManager().callEvent(event);
     lastHit = event;
   }
@@ -123,18 +129,231 @@ class ReviveTest implements Listener {
   EntityDamageEvent lastHit;
 
   void fall() {
+    // Real online players keep their chunk loaded; MockBukkit does not load it on teleport.
+    var at = victim.getLocation();
+    victim.getWorld().loadChunk(at.getBlockX() >> 4, at.getBlockZ() >> 4);
     hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
     assertTrue(oracle().downed(victim.getUniqueId()), "the lethal blow must put the player down");
   }
 
+  org.bukkit.entity.Interaction hitbox() {
+    return world.getEntitiesByClass(org.bukkit.entity.Interaction.class).stream()
+        .filter(e -> !victim.canSee(e))
+        .findFirst()
+        .orElseThrow();
+  }
+
+  @Test
+  void emptyHandCanPickUpThroughTheBodyInteractionEntity() {
+    fall();
+    helper.teleport(victim.getLocation());
+    var box = hitbox();
+    assertEquals(1.6f, box.getInteractionWidth());
+    assertEquals(.9f, box.getInteractionHeight());
+    assertFalse(box.isPersistent());
+    var click = new PlayerInteractEntityEvent(helper, box, org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(click);
+    assertTrue(click.isCancelled());
+    assertTrue(helper.getPassengers().contains(victim));
+  }
+
+  @Test
+  void sneakingBodyClickOpensSearchInsteadOfCarrying() {
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    var click =
+        new PlayerInteractEntityEvent(helper, hitbox(), org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(click);
+    assertEquals(54, helper.getOpenInventory().getTopInventory().getSize());
+    assertFalse(helper.getPassengers().contains(victim));
+  }
+
+  @Test
+  void bodyInteractionFollowsThePlayerAndIsRemovedOnRevive() {
+    fall();
+    var box = hitbox();
+    victim.teleport(victim.getLocation().add(2, 0, 0));
+    server.getScheduler().performTicks(4);
+    assertEquals(victim.getLocation(), box.getLocation());
+    server.dispatchCommand(server.getConsoleSender(), "revive revive Victim");
+    assertFalse(box.isValid());
+    assertTrue(world.getEntitiesByClass(org.bukkit.entity.Interaction.class).isEmpty());
+  }
+
+  static final class RecordingPlayer extends PlayerMock {
+    org.bukkit.entity.Entity attacked;
+    boolean lineOfSight = true;
+
+    @Override
+    public boolean hasLineOfSight(org.bukkit.entity.Entity target) {
+      return lineOfSight;
+    }
+
+    @Override
+    public void attack(org.bukkit.entity.Entity target) {
+      attacked = target;
+    }
+
+    final java.util.Map<Location, org.bukkit.block.data.BlockData> changes =
+        new java.util.HashMap<>();
+
+    RecordingPlayer(ServerMock server, String name) {
+      super(server, name);
+    }
+
+    @Override
+    public void sendBlockChange(Location location, org.bukkit.block.data.BlockData data) {
+      changes.put(location.clone(), data.clone());
+    }
+  }
+
+  @Test
+  void aWallPreventsPickingUpThroughTheExpandedBody() {
+    fall();
+    helper.teleport(victim.getLocation());
+    ((RecordingPlayer) helper).lineOfSight = false;
+    var click =
+        new PlayerInteractEntityEvent(helper, hitbox(), org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(click);
+    assertFalse(helper.getPassengers().contains(victim));
+  }
+
+  @Test
+  void vanishedPlayersDoNotLeaveAVisibleClickableBody() {
+    fall();
+    var box = hitbox();
+    assertTrue(helper.canSee(box));
+    helper.hidePlayer(plugin, victim);
+    server.getScheduler().performTicks(4);
+    assertFalse(helper.canSee(box));
+    helper.showPlayer(plugin, victim);
+    server.getScheduler().performTicks(4);
+    assertTrue(helper.canSee(box));
+  }
+
+  @Test
+  void attackingTheBodyUsesTheRealPlayerAttackInsteadOfAbsorbingTheHit() {
+    fall();
+    helper.teleport(victim.getLocation());
+    var attack =
+        new io.papermc.paper.event.player.PrePlayerAttackEntityEvent(helper, hitbox(), false);
+    server.getPluginManager().callEvent(attack);
+    assertSame(victim, ((RecordingPlayer) helper).attacked);
+  }
+
+  @Test
+  void fallingEnablesLocalCrawlingAndDoesNotPlaceARealBlock() {
+    var ceiling = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    fall();
+    assertTrue(victim.isSwimming());
+    assertEquals(Material.AIR, ceiling.getType());
+    assertEquals(
+        Material.BARRIER,
+        ((RecordingPlayer) victim).changes.get(ceiling.getLocation()).getMaterial());
+    var stopSwimming = new org.bukkit.event.entity.EntityToggleSwimEvent(victim, false);
+    server.getPluginManager().callEvent(stopSwimming);
+    assertTrue(stopSwimming.isCancelled());
+  }
+
+  @Test
+  void movingAndRevivingRestoreTheRealClientBlocks() {
+    var previous = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    fall();
+    victim.teleport(victim.getLocation().add(1, 0, 0));
+    server.getScheduler().performTicks(4);
+    assertEquals(
+        Material.AIR, ((RecordingPlayer) victim).changes.get(previous.getLocation()).getMaterial());
+    var current = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    current.setType(Material.STONE);
+    server.dispatchCommand(server.getConsoleSender(), "revive revive Victim");
+    assertFalse(victim.isSwimming());
+    assertFalse(victim.hasFixedPose());
+    assertEquals(
+        Material.STONE,
+        ((RecordingPlayer) victim).changes.get(current.getLocation()).getMaterial());
+  }
+
+  @Test
+  void pickingUpRestoresTheCeilingAndDroppingEnablesCrawlingAgain() {
+    var ceiling = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    fall();
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    assertEquals(
+        Material.AIR, ((RecordingPlayer) victim).changes.get(ceiling.getLocation()).getMaterial());
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    var current = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    assertEquals(
+        Material.BARRIER,
+        ((RecordingPlayer) victim).changes.get(current.getLocation()).getMaterial());
+  }
+
+  @Test
+  void preciseEntityClickAndOrdinaryClickOnlyOpenOneSearchWindow() {
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    var precise =
+        new org.bukkit.event.player.PlayerInteractAtEntityEvent(
+            helper,
+            victim,
+            new org.bukkit.util.Vector(0, .2, 0),
+            org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(precise);
+    assertTrue(precise.isCancelled());
+    var first = helper.getOpenInventory().getTopInventory();
+    assertEquals(54, first.getSize());
+    assertTrue(rightClick(helper, victim).isCancelled());
+    assertSame(first, helper.getOpenInventory().getTopInventory());
+  }
+
+  @Test
+  void cancelledEntityClicksAndOffHandClicksDoNotPickUp() {
+    fall();
+    helper.teleport(victim.getLocation());
+    var cancelled =
+        new PlayerInteractEntityEvent(helper, victim, org.bukkit.inventory.EquipmentSlot.HAND);
+    cancelled.setCancelled(true);
+    server.getPluginManager().callEvent(cancelled);
+    var offHand =
+        new PlayerInteractEntityEvent(helper, victim, org.bukkit.inventory.EquipmentSlot.OFF_HAND);
+    server.getPluginManager().callEvent(offHand);
+    assertFalse(helper.getPassengers().contains(victim));
+    assertTrue(rightClick(helper, victim).isCancelled());
+    assertTrue(helper.getPassengers().contains(victim));
+  }
+
+  @Test
+  void disablingReviveRestoresTheClientBlockAndSwimmingState() throws Exception {
+    var ceiling = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    fall();
+    await(plugin.module("revive", false));
+    server.getScheduler().performTicks(4);
+    assertFalse(victim.isSwimming());
+    assertEquals(
+        Material.AIR, ((RecordingPlayer) victim).changes.get(ceiling.getLocation()).getMaterial());
+  }
+
   @Test
   void aLethalPvpHitIsCancelledBeforeTheCombatTrackerMonitorCanSeeIt() {
-    var event = new EntityDamageByEntityEvent(helper, victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK,
-        DamageSource.builder(DamageType.PLAYER_ATTACK).withDirectEntity(helper).withCausingEntity(helper).build(), 100);
+    var event =
+        new EntityDamageByEntityEvent(
+            helper,
+            victim,
+            EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+            DamageSource.builder(DamageType.PLAYER_ATTACK)
+                .withDirectEntity(helper)
+                .withCausingEntity(helper)
+                .build(),
+            100);
     server.getPluginManager().callEvent(event);
     assertTrue(oracle().downed(victim.getUniqueId()));
     assertTrue(event.isCancelled());
-    assertEquals(0, monitoredPvp, "LoveCore CombatTracker uses this same MONITOR/ignoreCancelled contract");
+    assertEquals(
+        0, monitoredPvp, "LoveCore CombatTracker uses this same MONITOR/ignoreCancelled contract");
   }
 
   @Test
@@ -218,7 +437,12 @@ class ReviveTest implements Listener {
     server.getScheduler().performTicks(60);
     assertFalse(oracle().downed(victim.getUniqueId()));
     assertEquals(4.0, victim.getHealth(), 0.001);
-    var revived = seen.stream().filter(ReviveEvent.class::isInstance).map(ReviveEvent.class::cast).findFirst().orElseThrow();
+    var revived =
+        seen.stream()
+            .filter(ReviveEvent.class::isInstance)
+            .map(ReviveEvent.class::cast)
+            .findFirst()
+            .orElseThrow();
     assertEquals(helper, revived.getReviver());
   }
 
@@ -251,7 +475,12 @@ class ReviveTest implements Listener {
     fall();
     server.getScheduler().performTicks(40);
     assertFalse(oracle().downed(victim.getUniqueId()));
-    var death = seen.stream().filter(DownedDeathEvent.class::isInstance).map(DownedDeathEvent.class::cast).findFirst().orElseThrow();
+    var death =
+        seen.stream()
+            .filter(DownedDeathEvent.class::isInstance)
+            .map(DownedDeathEvent.class::cast)
+            .findFirst()
+            .orElseThrow();
     assertEquals(DownedDeathEvent.Cause.TIMER, death.getCause());
   }
 
@@ -276,7 +505,12 @@ class ReviveTest implements Listener {
     assertFalse(oracle().downed(victim.getUniqueId()));
     assertEquals(
         DownedDeathEvent.Cause.SUICIDE,
-        seen.stream().filter(DownedDeathEvent.class::isInstance).map(DownedDeathEvent.class::cast).findFirst().orElseThrow().getCause());
+        seen.stream()
+            .filter(DownedDeathEvent.class::isInstance)
+            .map(DownedDeathEvent.class::cast)
+            .findFirst()
+            .orElseThrow()
+            .getCause());
   }
 
   @Test
@@ -313,19 +547,40 @@ class ReviveTest implements Listener {
   void leavingWithoutDisconnectKillRestoresHealthOnNextJoin() throws Exception {
     plugin.getConfig().set("revive.disconnect-kill", false);
     fall();
-    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerQuitEvent(victim, net.kyori.adventure.text.Component.empty(), org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.player.PlayerQuitEvent(
+                victim,
+                net.kyori.adventure.text.Component.empty(),
+                org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
     assertFalse(oracle().downed(victim.getUniqueId()));
     assertEquals(1.0, victim.getHealth(), 0.001);
-    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerJoinEvent(victim, net.kyori.adventure.text.Component.empty()));
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.player.PlayerJoinEvent(
+                victim, net.kyori.adventure.text.Component.empty()));
     assertEquals(4.0, victim.getHealth(), 0.001);
   }
 
   @Test
   void disconnectKillEndsTheDownedStateWithAQuitDeath() {
     fall();
-    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerQuitEvent(victim, net.kyori.adventure.text.Component.empty(), org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
+    server
+        .getPluginManager()
+        .callEvent(
+            new org.bukkit.event.player.PlayerQuitEvent(
+                victim,
+                net.kyori.adventure.text.Component.empty(),
+                org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
     assertFalse(oracle().downed(victim.getUniqueId()));
-    assertTrue(seen.stream().anyMatch(e -> e instanceof DownedDeathEvent d && d.getCause() == DownedDeathEvent.Cause.QUIT));
+    assertTrue(
+        seen.stream()
+            .anyMatch(
+                e ->
+                    e instanceof DownedDeathEvent d
+                        && d.getCause() == DownedDeathEvent.Cause.QUIT));
   }
 
   void configurePrice(int levels) {
@@ -365,9 +620,13 @@ class ReviveTest implements Listener {
 
   @Test
   void configuredActionsRunWhenSomebodyIsRevived() {
-    plugin.getConfig().set(
-        "revive.events.revive.downed",
-        List.of(java.util.Map.of("type", "potion", "effect", "regeneration", "seconds", 5, "amplifier", 1)));
+    plugin
+        .getConfig()
+        .set(
+            "revive.events.revive.downed",
+            List.of(
+                java.util.Map.of(
+                    "type", "potion", "effect", "regeneration", "seconds", 5, "amplifier", 1)));
     fall();
     helper.teleport(victim.getLocation());
     helper.setSneaking(true);
@@ -381,7 +640,9 @@ class ReviveTest implements Listener {
     fall();
     helper.teleport(victim.getLocation());
     helper.setSneaking(true);
-    var click = new org.bukkit.event.player.PlayerInteractEntityEvent(helper, victim, org.bukkit.inventory.EquipmentSlot.HAND);
+    var click =
+        new org.bukkit.event.player.PlayerInteractEntityEvent(
+            helper, victim, org.bukkit.inventory.EquipmentSlot.HAND);
     server.getPluginManager().callEvent(click);
     assertTrue(click.isCancelled());
     assertEquals(54, helper.getOpenInventory().getTopInventory().getSize());
@@ -392,7 +653,9 @@ class ReviveTest implements Listener {
   void aStandingPlayerCannotRobAHealthyOne() {
     helper.teleport(victim.getLocation());
     helper.setSneaking(true);
-    var click = new org.bukkit.event.player.PlayerInteractEntityEvent(helper, victim, org.bukkit.inventory.EquipmentSlot.HAND);
+    var click =
+        new org.bukkit.event.player.PlayerInteractEntityEvent(
+            helper, victim, org.bukkit.inventory.EquipmentSlot.HAND);
     server.getPluginManager().callEvent(click);
     assertFalse(click.isCancelled());
   }
@@ -409,7 +672,10 @@ class ReviveTest implements Listener {
             attacker,
             target,
             EntityDamageEvent.DamageCause.ENTITY_ATTACK,
-            DamageSource.builder(DamageType.PLAYER_ATTACK).withDirectEntity(attacker).withCausingEntity(attacker).build(),
+            DamageSource.builder(DamageType.PLAYER_ATTACK)
+                .withDirectEntity(attacker)
+                .withCausingEntity(attacker)
+                .build(),
             1);
     server.getPluginManager().callEvent(hit);
     return hit;
@@ -421,7 +687,9 @@ class ReviveTest implements Listener {
     helper.teleport(victim.getLocation());
     assertTrue(rightClick(helper, victim).isCancelled());
     assertTrue(helper.getPassengers().contains(victim));
-    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
     assertFalse(helper.getPassengers().contains(victim));
     assertTrue(oracle().downed(victim.getUniqueId()));
   }
@@ -493,9 +761,15 @@ class ReviveTest implements Listener {
     rightClick(helper, victim);
     var top = helper.getOpenInventory().getTopInventory();
     assertEquals(54, top.getSize());
-    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(51).getType(), "no mode switch");
-    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(52).getType(), "no back button");
-    assertEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(49).getType(), "no obsolete center close button");
-    assertNotEquals(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(53).getType(), "close button");
+    assertEquals(
+        org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(51).getType(), "no mode switch");
+    assertEquals(
+        org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(52).getType(), "no back button");
+    assertEquals(
+        org.bukkit.Material.GRAY_STAINED_GLASS_PANE,
+        top.getItem(49).getType(),
+        "no obsolete center close button");
+    assertNotEquals(
+        org.bukkit.Material.GRAY_STAINED_GLASS_PANE, top.getItem(53).getType(), "close button");
   }
 }

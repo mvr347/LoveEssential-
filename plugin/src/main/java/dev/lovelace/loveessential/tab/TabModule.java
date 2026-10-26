@@ -1,13 +1,13 @@
 package dev.lovelace.loveessential.tab;
 
+import dev.lovelace.lovecore.api.display.DisplayPrefs;
 import dev.lovelace.loveessential.LoveEssentialPlugin;
-import dev.lovelace.loveessential.api.TabService;
 import dev.lovelace.loveessential.MainThread;
+import dev.lovelace.loveessential.api.TabService;
 import dev.lovelace.loveessential.lang.Lang;
-import dev.lovelace.loveessential.storage.SqliteStore;
 import dev.lovelace.loveessential.module.DisplayPreferences;
 import dev.lovelace.loveessential.module.Visibility;
-import dev.lovelace.lovecore.api.display.DisplayPrefs;
+import dev.lovelace.loveessential.storage.SqliteStore;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -94,8 +94,8 @@ public final class TabModule implements Listener, AutoCloseable {
   record NameTagText(Component prefix, Component suffix, NamedTextColor color) {}
 
   /**
-   * Nametag text for each combination of left-out elements (clan tag, suffix), rendered when a viewer
-   * first needs it and kept for the rest of the cycle; most players only ever need one.
+   * Nametag text for each combination of left-out elements (clan tag, suffix), rendered when a
+   * viewer first needs it and kept for the rest of the cycle; most players only ever need one.
    */
   static final class NameTagTexts {
     private final java.util.function.Function<Set<DisplayPrefs.Element>, NameTagText> render;
@@ -156,8 +156,8 @@ public final class TabModule implements Listener, AutoCloseable {
   }
 
   /**
-   * Load-time checks for tab.yml. A bad value fails the reload with an error instead of breaking the
-   * TAB list while players are online.
+   * Load-time checks for tab.yml. A bad value fails the reload with an error instead of breaking
+   * the TAB list while players are online.
    */
   public static void validate(ConfigurationSection config) {
     var tab = config.getConfigurationSection("tab");
@@ -166,12 +166,16 @@ public final class TabModule implements Listener, AutoCloseable {
     if (refresh != null)
       for (String key : refresh.getKeys(false))
         if (!PlaceholderRefresh.valid(refresh.getLong(key)))
-          throw new dev.lovelace.loveessential.config.ConfigError("tab.placeholder-refresh.%s: %s вне допустимого диапазона".formatted(key, refresh.get(key)));
+          throw new dev.lovelace.loveessential.config.ConfigError(
+              "tab.placeholder-refresh.%s: %s вне допустимого диапазона"
+                  .formatted(key, refresh.get(key)));
     var replacements = tab.getConfigurationSection("placeholder-output-replacements");
     if (replacements != null)
       for (String token : replacements.getKeys(false)) {
         var rules = replacements.getConfigurationSection(token);
-        if (rules == null) throw new dev.lovelace.loveessential.config.ConfigError("tab.placeholder-output-replacements.%s: ожидается список правил".formatted(token));
+        if (rules == null)
+          throw new dev.lovelace.loveessential.config.ConfigError(
+              "tab.placeholder-output-replacements.%s: ожидается список правил".formatted(token));
         var map = new LinkedHashMap<String, String>();
         for (String key : rules.getKeys(false)) map.put(key, rules.getString(key, ""));
         PlaceholderOutput.parse(map);
@@ -181,10 +185,16 @@ public final class TabModule implements Listener, AutoCloseable {
       for (String name : animations.getKeys(false)) {
         var s = animations.getConfigurationSection(name);
         if (s == null || !name.matches("[A-Za-z0-9_-]{1,48}"))
-          throw new dev.lovelace.loveessential.config.ConfigError("tab.animations.%s: имя из латиницы, цифр, _ и - (до 48 знаков), внутри — change-interval и texts".formatted(name));
+          throw new dev.lovelace.loveessential.config.ConfigError(
+              "tab.animations.%s: имя из латиницы, цифр, _ и - (до 48 знаков), внутри — change-interval и texts"
+                  .formatted(name));
         long interval = s.getLong("change-interval", 500);
         if (interval < TabAnimations.MIN_INTERVAL_MS || interval > TabAnimations.MAX_INTERVAL_MS)
-          throw dev.lovelace.loveessential.config.ConfigError.range("tab.animations." + name + ".change-interval", interval, TabAnimations.MIN_INTERVAL_MS, TabAnimations.MAX_INTERVAL_MS);
+          throw dev.lovelace.loveessential.config.ConfigError.range(
+              "tab.animations." + name + ".change-interval",
+              interval,
+              TabAnimations.MIN_INTERVAL_MS,
+              TabAnimations.MAX_INTERVAL_MS);
       }
     Placeholders.validateConditions(tab);
     var engines = tab.getConfigurationSection("engine-conditions");
@@ -193,8 +203,10 @@ public final class TabModule implements Listener, AutoCloseable {
         try {
           var condition =
               new com.google.gson.Gson()
-                  .fromJson(engines.getString(id, ""), dev.lovelace.loveessential.api.Condition.class);
-          if (condition == null || condition.type() == null) throw new IllegalArgumentException("errors.config");
+                  .fromJson(
+                      engines.getString(id, ""), dev.lovelace.loveessential.api.Condition.class);
+          if (condition == null || condition.type() == null)
+            throw new IllegalArgumentException("errors.config");
         } catch (RuntimeException e) {
           throw new IllegalArgumentException("errors.config", e);
         }
@@ -206,7 +218,8 @@ public final class TabModule implements Listener, AutoCloseable {
   private static void bounded(ConfigurationSection tab, String path, long min, long max) {
     if (!tab.contains(path)) return;
     long value = tab.getLong(path, min - 1);
-    if (value < min || value > max) throw dev.lovelace.loveessential.config.ConfigError.range("tab." + path, value, min, max);
+    if (value < min || value > max)
+      throw dev.lovelace.loveessential.config.ConfigError.range("tab." + path, value, min, max);
   }
 
   /** The public API implementation; registered with the services manager by the plugin. */
@@ -250,8 +263,8 @@ public final class TabModule implements Listener, AutoCloseable {
   private boolean wasDeferred;
 
   /**
-   * True while another plugin (TAB, CMI, ...) owns the player list, name tags and sidebar; then this
-   * module and the scoreboard stay passive. {@code tab.mode}: auto (default), on, off.
+   * True while another plugin (TAB, CMI, ...) owns the player list, name tags and sidebar; then
+   * this module and the scoreboard stay passive. {@code tab.mode}: auto (default), on, off.
    */
   public boolean deferred() {
     var names = plugin.getConfig().getStringList("tab.external-plugins");
@@ -261,7 +274,9 @@ public final class TabModule implements Listener, AutoCloseable {
         name -> Bukkit.getPluginManager().isPluginEnabled(name));
   }
 
-  /** Hands everything back once when an external plugin appears, and takes it again when it is gone. */
+  /**
+   * Hands everything back once when an external plugin appears, and takes it again when it is gone.
+   */
   private boolean passive() {
     boolean now = deferred();
     if (now && !wasDeferred) {
@@ -272,7 +287,10 @@ public final class TabModule implements Listener, AutoCloseable {
               name -> Bukkit.getPluginManager().isPluginEnabled(name));
       plugin
           .getLogger()
-          .info("[tab] " + (who == null ? "tab.mode: off" : who + " is installed") + ": the TAB and scoreboard modules stay passive.");
+          .info(
+              "[tab] "
+                  + (who == null ? "tab.mode: off" : who + " is installed")
+                  + ": the TAB and scoreboard modules stay passive.");
       for (var p : Bukkit.getOnlinePlayers()) release(p);
       views.clear();
       listState.clear();
@@ -289,7 +307,10 @@ public final class TabModule implements Listener, AutoCloseable {
   public void start() {
     enabled = true;
     applyConfiguration();
-    for (var p : Bukkit.getOnlinePlayers()) preferences.load(p.getUniqueId());
+    for (var p : Bukkit.getOnlinePlayers()) {
+      preferences.load(p.getUniqueId());
+      if (!passive() && plugin.allows("tab", p)) p.playerListName(target(p).tabName());
+    }
     if (task != null) task.cancel();
     task =
         Bukkit.getScheduler()
@@ -306,7 +327,8 @@ public final class TabModule implements Listener, AutoCloseable {
       for (String key : refresh.getKeys(false))
         if (!key.equals("default")) perPlaceholder.put(key, refresh.getLong(key));
     var tables = new HashMap<String, PlaceholderOutput.Table>();
-    var replacements = tab == null ? null : tab.getConfigurationSection("placeholder-output-replacements");
+    var replacements =
+        tab == null ? null : tab.getConfigurationSection("placeholder-output-replacements");
     if (replacements != null)
       for (String token : replacements.getKeys(false)) {
         var rules = replacements.getConfigurationSection(token);
@@ -370,9 +392,12 @@ public final class TabModule implements Listener, AutoCloseable {
         render(props.value(TabProperties.TAB_PREFIX).orElse(""), p, hiddenInTab)
             .append(placeholders.renderTabName(name, p, p, hiddenInTab))
             .append(render(props.value(TabProperties.TAB_SUFFIX).orElse(""), p, hiddenInTab));
+    if (plugin.getConfig().getBoolean("tab.hide-rank-markers", true))
+      tabName = withoutRanks(tabName);
     var nametag = section("nametag");
     boolean collision =
-        props.value(TabProperties.COLLISION)
+        props
+            .value(TabProperties.COLLISION)
             .map(Boolean::parseBoolean)
             .orElse(nametag != null && nametag.getBoolean("collision", false));
     boolean visible = nametag == null || nametag.getBoolean("enabled", true);
@@ -380,16 +405,7 @@ public final class TabModule implements Listener, AutoCloseable {
     visible = visible && !"never".equals(props.value(TabProperties.VISIBILITY).orElse("always"));
     visible = visible && !invisible(p, group, nametag);
     return new Target(
-        p,
-        props,
-        group,
-        tabName,
-        tagPrefix,
-        tagSuffix,
-        own.color(),
-        collision,
-        visible,
-        tags);
+        p, props, group, tabName, tagPrefix, tagSuffix, own.color(), collision, visible, tags);
   }
 
   private boolean invisible(Player p, String group, ConfigurationSection nametag) {
@@ -460,6 +476,14 @@ public final class TabModule implements Listener, AutoCloseable {
       if (p.hasPermission(node.isBlank() ? "group." + id : node)) return id;
     }
     return groups.isConfigurationSection(DEFAULT_GROUP) ? DEFAULT_GROUP : null;
+  }
+
+  private static final java.util.regex.Pattern RANK_MARKER =
+      java.util.regex.Pattern.compile(
+          "(?<![\\p{L}\\p{N}_#])#(?:>\\d+|\\d+)(?![\\p{L}\\p{N}_])\\h*");
+
+  static Component withoutRanks(Component name) {
+    return name.replaceText(builder -> builder.match(RANK_MARKER).replacement(""));
   }
 
   /** The last named color in a component, used as the nametag team color. */
@@ -566,7 +590,8 @@ public final class TabModule implements Listener, AutoCloseable {
     }
     var comparator = TabSort.comparator(keys);
     var result = new ArrayList<>(players);
-    result.sort((a, b) -> comparator.compare(entries.get(a.getUniqueId()), entries.get(b.getUniqueId())));
+    result.sort(
+        (a, b) -> comparator.compare(entries.get(a.getUniqueId()), entries.get(b.getUniqueId())));
     return result;
   }
 
@@ -596,8 +621,8 @@ public final class TabModule implements Listener, AutoCloseable {
     }
     if (plugin.getConfig().getBoolean("tab.header-footer.enabled", true)
         && dueFor(
-            "header-footer:" + viewer.getUniqueId(),
-            interval("header-footer.refresh-ticks", 20))) headerFooter(viewer, view, targets);
+            "header-footer:" + viewer.getUniqueId(), interval("header-footer.refresh-ticks", 20)))
+      headerFooter(viewer, view, targets);
     boolean respect = plugin.getConfig().getBoolean("tab.respect-other-scoreboards", true);
     if (!respect
         || companionBoard.test(viewer.getScoreboard())
@@ -606,8 +631,10 @@ public final class TabModule implements Listener, AutoCloseable {
       viewer.setScoreboard(view.board);
       if (dueFor("nametag:" + viewer.getUniqueId(), interval("nametag.refresh-ticks", 10)))
         teams(viewer, view, sorted, targets);
-      if (customSidebar != null && customEnabled.getAsBoolean()) customSidebar.accept(viewer, view.board);
-      objective(viewer, view, sorted, "playerlist-objective", DisplaySlot.PLAYER_LIST, LIST_OBJECTIVE);
+      if (customSidebar != null && customEnabled.getAsBoolean())
+        customSidebar.accept(viewer, view.board);
+      objective(
+          viewer, view, sorted, "playerlist-objective", DisplaySlot.PLAYER_LIST, LIST_OBJECTIVE);
       objective(viewer, view, sorted, "below-name", DisplaySlot.BELOW_NAME, BELOW_OBJECTIVE);
     }
     if (dueFor("bossbar:" + viewer.getUniqueId(), interval("bossbar-refresh-ticks", 20)))
@@ -616,9 +643,14 @@ public final class TabModule implements Listener, AutoCloseable {
 
   private void headerFooter(Player viewer, View view, Map<UUID, Target> targets) {
     var props = targets.get(viewer.getUniqueId()).properties();
-    Component header = placeholders.renderRaw(expand(props.value(TabProperties.HEADER).orElse("")), viewer, viewer);
-    Component footer = placeholders.renderRaw(expand(props.value(TabProperties.FOOTER).orElse("")), viewer, viewer);
-    if (!Objects.equals(view.sent.get("header"), header) || !Objects.equals(view.sent.get("footer"), footer)) {
+    Component header =
+        placeholders.renderRaw(
+            expand(props.value(TabProperties.HEADER).orElse("")), viewer, viewer);
+    Component footer =
+        placeholders.renderRaw(
+            expand(props.value(TabProperties.FOOTER).orElse("")), viewer, viewer);
+    if (!Objects.equals(view.sent.get("header"), header)
+        || !Objects.equals(view.sent.get("footer"), footer)) {
       viewer.sendPlayerListHeaderAndFooter(header, footer);
       sentValues++;
       view.sent.put("header", header);
@@ -686,7 +718,9 @@ public final class TabModule implements Listener, AutoCloseable {
     return sentValues;
   }
 
-  /** Calls {@code apply} only when {@code value} differs from the value last sent under this key. */
+  /**
+   * Calls {@code apply} only when {@code value} differs from the value last sent under this key.
+   */
   private void setSent(View view, String key, Object value, Runnable apply) {
     if (Objects.equals(view.sent.get(key), value)) return;
     apply.run();
@@ -695,12 +729,7 @@ public final class TabModule implements Listener, AutoCloseable {
   }
 
   private void objective(
-      Player viewer,
-      View view,
-      List<Player> players,
-      String path,
-      DisplaySlot slot,
-      String name) {
+      Player viewer, View view, List<Player> players, String path, DisplaySlot slot, String name) {
     var section = plugin.getConfig().getConfigurationSection("tab." + path);
     if (section == null || !section.getBoolean("enabled", false) || !allowedFor(viewer, section)) {
       removeObjective(view, name);
@@ -708,12 +737,16 @@ public final class TabModule implements Listener, AutoCloseable {
     }
     Objective existing = view.board.getObjective(name);
     final Objective obj =
-        existing != null ? existing : view.board.registerNewObjective(name, Criteria.DUMMY, Component.empty());
-    Component title = placeholders.renderRaw(expand(section.getString("title", "")), viewer, viewer);
+        existing != null
+            ? existing
+            : view.board.registerNewObjective(name, Criteria.DUMMY, Component.empty());
+    Component title =
+        placeholders.renderRaw(expand(section.getString("title", "")), viewer, viewer);
     setSent(view, name + ".title", title, () -> obj.displayName(title));
     obj.setDisplaySlot(slot);
     String renderType = section.getString("render-type", "integer");
-    RenderType type = renderType.equalsIgnoreCase("hearts") ? RenderType.HEARTS : RenderType.INTEGER;
+    RenderType type =
+        renderType.equalsIgnoreCase("hearts") ? RenderType.HEARTS : RenderType.INTEGER;
     setSent(view, name + ".render", type, () -> obj.setRenderType(type));
     String fancy = section.getString("fancy-value", "");
     Set<String> expected = new HashSet<>();
@@ -725,7 +758,11 @@ public final class TabModule implements Listener, AutoCloseable {
       setSent(view, name + ":" + p.getName() + ".score", value, () -> score.setScore(value));
       if (!fancy.isBlank()) {
         Component text = placeholders.renderRaw(expand(fancy), viewer, p);
-        setSent(view, name + ":" + p.getName() + ".fancy", text, () -> score.numberFormat(NumberFormat.fixed(text)));
+        setSent(
+            view,
+            name + ":" + p.getName() + ".fancy",
+            text,
+            () -> score.numberFormat(NumberFormat.fixed(text)));
       }
     }
     for (String entry : new HashSet<>(view.board.getEntries()))
@@ -806,11 +843,12 @@ public final class TabModule implements Listener, AutoCloseable {
     }
   }
 
-  /** A bossbar from tab.yml; color, overlay and progress may come from placeholders or conditions. */
+  /**
+   * A bossbar from tab.yml; color, overlay and progress may come from placeholders or conditions.
+   */
   BossBar bossBar(Player p, ConfigurationSection s) {
     var name = placeholders.renderRaw(expand(s.getString("text", "")), p, p);
-    return BossBar.bossBar(
-        name, progress(p, s), color(p, s), overlay(p, s));
+    return BossBar.bossBar(name, progress(p, s), color(p, s), overlay(p, s));
   }
 
   private float progress(Player p, ConfigurationSection s) {
@@ -883,13 +921,16 @@ public final class TabModule implements Listener, AutoCloseable {
     lastRun.keySet().removeIf(key -> key.endsWith(p.getUniqueId().toString()));
     if (p.getScoreboard().equals(view.board)) p.setScoreboard(view.previous);
     p.sendPlayerListHeaderAndFooter(Component.empty(), Component.empty());
-    p.playerListName(null);
+    // A null display name lets the client fall back to old scoreboard-team rank prefixes.
+    p.playerListName(Component.text(p.getName()));
     p.setPlayerListOrder(0);
   }
 
   @EventHandler
   public void join(PlayerJoinEvent e) {
     preferences.load(e.getPlayer().getUniqueId());
+    if (enabled && !passive() && plugin.allows("tab", e.getPlayer()))
+      e.getPlayer().playerListName(target(e.getPlayer()).tabName());
   }
 
   /** Leases from a plugin that is being disabled end with it. */

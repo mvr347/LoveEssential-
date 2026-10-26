@@ -1,14 +1,15 @@
 package dev.lovelace.loveessential.module;
 
 import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
+import dev.lovelace.lovecore.api.revive.DownedOracle;
+import dev.lovelace.lovecore.api.social.ProfileOracle;
 import dev.lovelace.loveessential.LoveEssentialPlugin;
 import dev.lovelace.loveessential.api.Action;
 import dev.lovelace.loveessential.api.revive.*;
 import dev.lovelace.loveessential.condition.ActionEngine;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
-import dev.lovelace.lovecore.api.revive.DownedOracle;
-import dev.lovelace.lovecore.api.social.ProfileOracle;
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,8 +21,11 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Pose;
 import org.bukkit.event.*;
@@ -41,8 +45,8 @@ import org.bukkit.scheduler.BukkitTask;
  * A deadly blow does not kill: the player falls, crawls and waits to be revived, carried or
  * searched. Reverse-engineered from ReviveMe's documented behaviour, with two deliberate
  * differences: nobody is made invulnerable through the entity flag (it is saved in the player data
- * and once left players immortal after quitting), and the final death is an ordinary
- * {@code setHealth(0)}, so drops, keep-inventory and death messages follow the server rules.
+ * and once left players immortal after quitting), and the final death is an ordinary {@code
+ * setHealth(0)}, so drops, keep-inventory and death messages follow the server rules.
  *
  * <p>Everything runs on the server thread. The module is off by default; every handler returns at
  * once while it is disabled.
@@ -59,6 +63,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   private final InventoryInspector inventories;
   private final Map<UUID, State> states = new ConcurrentHashMap<>();
   private final Map<UUID, UUID> carrying = new HashMap<>();
+  private final Map<UUID, UUID> interactionTargets = new HashMap<>();
   private final Map<UUID, DownedDeathEvent.Cause> dying = new HashMap<>();
   private final Map<UUID, Integer> downs = new HashMap<>();
   private final Map<UUID, Long> lastStart = new HashMap<>();
@@ -70,8 +75,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   private static final class State {
     final UUID id;
+
     /** Game time of the fall, in revive ticks: real time would drift from the game under lag. */
     final long since;
+
     double remaining, invulnerable, progress, suicide;
     volatile UUID reviver;
     UUID carrier;
@@ -79,6 +86,9 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     EntityDamageEvent cause;
     BossBar bar;
     int shownSecond = -1;
+    Block crawlCeiling;
+    Interaction interaction;
+    final Map<UUID, Integer> lastInteractions = new HashMap<>();
 
     State(UUID id, long since) {
       this.id = id;
@@ -116,6 +126,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     for (var id : List.copyOf(states.keySet())) {
       var p = Bukkit.getPlayer(id);
       var state = states.remove(id);
+      if (state != null) removeInteraction(state);
       if (p != null && state != null) {
         p.getPersistentDataContainer().set(pending, PersistentDataType.BYTE, (byte) 1);
         release(p, state);
@@ -123,7 +134,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     }
   }
 
-  /** Rejects an unknown pose, an unreadable sound line or a sound that does not exist, naming the key. */
+  /**
+   * Rejects an unknown pose, an unreadable sound line or a sound that does not exist, naming the
+   * key.
+   */
   public static void validate(org.bukkit.configuration.ConfigurationSection c) {
     String pose = c.getString("revive.pose", "SLEEPING");
     if (!pose.equalsIgnoreCase("SLEEPING") && !pose.equalsIgnoreCase("SWIMMING"))
@@ -163,7 +177,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     return plugin.getConfig().getBoolean(key(path), fallback);
   }
 
-  /** Pose of a downed player as the others see it; the player's own client draws itself upright. */
+  /** Pose sent to other players; the local client also needs a low ceiling to stay crawling. */
   private Pose pose() {
     return "SWIMMING".equalsIgnoreCase(plugin.getConfig().getString(key("pose"), "SLEEPING"))
         ? Pose.SWIMMING
@@ -207,7 +221,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     return Map.of(
         "revive_status", lang.text("revive.status-downed"),
         "revive_death_delay", Integer.toString((int) Math.ceil(state.remaining)),
-        "revive_invulnerability", Integer.toString((int) Math.ceil(Math.max(0, state.invulnerable))),
+        "revive_invulnerability",
+            Integer.toString((int) Math.ceil(Math.max(0, state.invulnerable))),
         "revive_reviver", reviver == null ? "" : reviver.getName(),
         "revive_suicide", Integer.toString((int) Math.round(100 * state.suicide / suicideCount())),
         "revive_bar", plainBar(state.progress / required()));
@@ -234,7 +249,9 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   // ------------------------------------------------------------------ feedback
 
-  /** Plays {@code revive.sounds.<name>} at a place; {@code pitchAdd} raises it, for a rising tick. */
+  /**
+   * Plays {@code revive.sounds.<name>} at a place; {@code pitchAdd} raises it, for a rising tick.
+   */
   private void cue(String name, Location at, float pitchAdd) {
     if (!flag("display.sounds", true) || at.getWorld() == null) return;
     ReviveRules.Cue cue;
@@ -259,7 +276,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
    */
   private void status(Player p, State state) {
     boolean canGiveUp = (ticks - state.since) * STEP >= number("suicide-delay", 5, 0, 600);
-    switch (ReviveRules.bar(state.reviver != null, state.carrier != null, state.suicide, canGiveUp)) {
+    switch (ReviveRules.bar(
+        state.reviver != null, state.carrier != null, state.suicide, canGiveUp)) {
       case SUICIDE ->
           p.sendActionBar(
               lang.renderText(
@@ -278,7 +296,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       case CARRIED -> {
         var carrier = state.carrier == null ? null : Bukkit.getPlayer(state.carrier);
         if (carrier != null)
-          p.sendActionBar(lang.render("revive.action-carried", Map.of("carrier", carrier.getName())));
+          p.sendActionBar(
+              lang.render("revive.action-carried", Map.of("carrier", carrier.getName())));
       }
       case GIVE_UP -> p.sendActionBar(lang.render("revive.action-giveup"));
       case WAIT ->
@@ -306,10 +325,13 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         || p.isInvulnerable()
         || p.getGameMode() == GameMode.CREATIVE
         || p.getGameMode() == GameMode.SPECTATOR
-        || e != null && plugin.getConfig().getStringList(key("instant-kill-causes")).contains(e.getCause().name()))
-      return false;
-    if (love.service(dev.lovelace.lovecore.api.auth.AuthOracle.class).isPresent() && !love.authenticated(p))
-      return false;
+        || e != null
+            && plugin
+                .getConfig()
+                .getStringList(key("instant-kill-causes"))
+                .contains(e.getCause().name())) return false;
+    if (love.service(dev.lovelace.lovecore.api.auth.AuthOracle.class).isPresent()
+        && !love.authenticated(p)) return false;
     if (flag("totem-first", true)
         && (p.getInventory().getItemInMainHand().getType() == Material.TOTEM_OF_UNDYING
             || p.getInventory().getItemInOffHand().getType() == Material.TOTEM_OF_UNDYING))
@@ -319,9 +341,11 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     double range = number("nearby-check-range", 0, 0, 256);
     if (range > 0
         && p.getWorld().getNearbyPlayers(p.getLocation(), range).stream()
-            .noneMatch(o -> !o.equals(p) && !states.containsKey(o.getUniqueId())
-                && o.getGameMode() != GameMode.SPECTATOR))
-      return false;
+            .noneMatch(
+                o ->
+                    !o.equals(p)
+                        && !states.containsKey(o.getUniqueId())
+                        && o.getGameMode() != GameMode.SPECTATOR)) return false;
     return true;
   }
 
@@ -350,7 +374,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         Title.title(
             lang.render("revive.title"),
             lang.render("revive.subtitle"),
-            Title.Times.times(Duration.ofMillis(200), Duration.ofSeconds(2), Duration.ofMillis(500))));
+            Title.Times.times(
+                Duration.ofMillis(200), Duration.ofSeconds(2), Duration.ofMillis(500))));
     cue("down", p.getLocation());
     fire("down", p, null);
     return true;
@@ -361,12 +386,101 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     modifier(p, Attribute.JUMP_STRENGTH, jumpKey, -1);
     p.setSprinting(false);
     p.setGliding(false);
-    p.setPose(pose(), true);
+    updatePose(p, state);
+    updateInteraction(p, state);
     p.closeInventory();
     if (flag("display.bossbar", true)) {
-      state.bar = BossBar.bossBar(bossTitle(state), 1f, BossBar.Color.RED, BossBar.Overlay.PROGRESS);
+      state.bar =
+          BossBar.bossBar(bossTitle(state), 1f, BossBar.Color.RED, BossBar.Overlay.PROGRESS);
       p.showBossBar(state.bar);
     }
+  }
+
+  /**
+   * The client calculates its own pose and ignores a forced sleeping metadata pose on dry land. A
+   * private ceiling makes it use vanilla crawling without changing any real world blocks.
+   */
+  private void updatePose(Player p, State state) {
+    if (p.getPose() != pose() || !p.hasFixedPose()) p.setPose(pose(), true);
+    if (!p.isSwimming()) p.setSwimming(true);
+    Block next = state.carrier == null ? p.getLocation().getBlock().getRelative(0, 1, 0) : null;
+    if (next != null && !next.getType().isAir()) next = null;
+    if (!Objects.equals(next, state.crawlCeiling)) {
+      restoreCeiling(p, state);
+      state.crawlCeiling = next;
+      if (next != null) p.sendBlockChange(next.getLocation(), Material.BARRIER.createBlockData());
+    } else if (next != null && ticks % 10 == 0) {
+      // Chunk refreshes and real block updates can overwrite a client-only block.
+      p.sendBlockChange(next.getLocation(), Material.BARRIER.createBlockData());
+    }
+  }
+
+  private void restoreCeiling(Player p, State state) {
+    if (state.crawlCeiling == null) return;
+    Block old = state.crawlCeiling;
+    state.crawlCeiling = null;
+    if (p.getWorld().equals(old.getWorld())
+        && old.getWorld().isChunkLoaded(old.getX() >> 4, old.getZ() >> 4))
+      p.sendBlockChange(old.getLocation(), old.getBlockData());
+  }
+
+  private void updateInteraction(Player p, State state) {
+    if (state.interaction == null || !state.interaction.isValid()) {
+      removeInteraction(state);
+      state.interaction =
+          p.getWorld()
+              .spawn(
+                  p.getLocation(),
+                  Interaction.class,
+                  entity -> {
+                    entity.setInteractionWidth(1.6f);
+                    entity.setInteractionHeight(.9f);
+                    entity.setResponsive(true);
+                    entity.setPersistent(false);
+                  });
+      interactionTargets.put(state.interaction.getUniqueId(), p.getUniqueId());
+    } else if (!state.interaction.getLocation().equals(p.getLocation())) {
+      state.interaction.teleport(p.getLocation());
+    }
+    for (Player viewer : Bukkit.getOnlinePlayers()) {
+      boolean visible =
+          !viewer.equals(p) && viewer.getWorld().equals(p.getWorld()) && viewer.canSee(p);
+      if (visible && !viewer.canSee(state.interaction))
+        viewer.showEntity(plugin, state.interaction);
+      else if (!visible && viewer.canSee(state.interaction))
+        viewer.hideEntity(plugin, state.interaction);
+    }
+  }
+
+  private void removeInteraction(State state) {
+    if (state.interaction == null) return;
+    interactionTargets.remove(state.interaction.getUniqueId());
+    state.interaction.remove();
+    state.interaction = null;
+  }
+
+  private Player interactionTarget(Entity entity) {
+    if (entity instanceof Player p) return p;
+    UUID id = interactionTargets.get(entity.getUniqueId());
+    return id == null ? null : Bukkit.getPlayer(id);
+  }
+
+  @EventHandler(priority = EventPriority.HIGHEST)
+  public void attackInteraction(PrePlayerAttackEntityEvent e) {
+    if (!enabled() || (e.willAttack() && e.isCancelled())) return;
+    if (!interactionTargets.containsKey(e.getAttacked().getUniqueId())) return;
+    Player target = interactionTarget(e.getAttacked());
+    e.setCancelled(true);
+    if (target == null
+        || target.equals(e.getPlayer())
+        || !states.containsKey(target.getUniqueId())
+        || !e.getPlayer().canSee(target)
+        || e.getPlayer().getWorld() != target.getWorld()
+        || !e.getPlayer().hasLineOfSight(target)
+        || e.getPlayer().getLocation().distanceSquared(target.getLocation()) > 36) return;
+    // Interaction entities are not damageable (willAttack=false and initially cancelled).
+    // A real attack preserves weapon damage, cooldown, enchants and ordinary PvP protection events.
+    e.getPlayer().attack(target);
   }
 
   private static void modifier(Player p, Attribute attribute, NamespacedKey key, double amount) {
@@ -385,10 +499,14 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   /** Removes every effect of the downed state from the player; the state itself is already gone. */
   private void release(Player p, State state) {
-    for (var entry : Map.of(Attribute.MOVEMENT_SPEED, slowKey, Attribute.JUMP_STRENGTH, jumpKey).entrySet()) {
+    removeInteraction(state);
+    for (var entry :
+        Map.of(Attribute.MOVEMENT_SPEED, slowKey, Attribute.JUMP_STRENGTH, jumpKey).entrySet()) {
       AttributeInstance instance = p.getAttribute(entry.getKey());
       if (instance != null) instance.removeModifier(entry.getValue());
     }
+    restoreCeiling(p, state);
+    p.setSwimming(false);
     p.setPose(Pose.STANDING, false);
     if (state.bar != null) p.hideBossBar(state.bar);
     if (state.carrier != null) {
@@ -429,6 +547,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       for (var id : List.copyOf(states.keySet())) {
         var p = Bukkit.getPlayer(id);
         var state = states.remove(id);
+        if (state != null) removeInteraction(state);
         if (p != null && state != null) {
           refund(state);
           release(p, state);
@@ -441,9 +560,11 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       var p = Bukkit.getPlayer(state.id);
       if (p == null || !p.isOnline() || p.isDead()) {
         states.remove(state.id);
+        removeInteraction(state);
         continue;
       }
-      if (p.getPose() != pose() || !p.hasFixedPose()) p.setPose(pose(), true);
+      updatePose(p, state);
+      updateInteraction(p, state);
       if (p.isGliding()) p.setGliding(false);
       state.invulnerable = Math.max(0, state.invulnerable - STEP);
       if (!checkCarrier(p, state)) continue;
@@ -498,7 +619,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   private boolean checkCarrier(Player p, State state) {
     if (state.carrier == null) return true;
     var carrier = Bukkit.getPlayer(state.carrier);
-    if (carrier == null || !carrier.isOnline() || carrier.isDead() || !carrier.getPassengers().contains(p)) {
+    if (carrier == null
+        || !carrier.isOnline()
+        || carrier.isDead()
+        || !carrier.getPassengers().contains(p)) {
       carrying.remove(state.carrier);
       state.carrier = null;
       if (carrier != null) {
@@ -530,7 +654,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     state.progress += STEP * speed(helper);
     Bukkit.getPluginManager().callEvent(new RevivingEvent(p, helper, state.progress, required));
     var bar = bar(state.progress / required);
-    var percent = Integer.toString((int) Math.min(100, Math.round(100 * state.progress / required)));
+    var percent =
+        Integer.toString((int) Math.min(100, Math.round(100 * state.progress / required)));
     helper.sendActionBar(
         lang.renderText(
             lang.text("revive.action-reviving"),
@@ -547,7 +672,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         && helper.isSneaking()
         && !states.containsKey(helper.getUniqueId())
         && helper.getWorld().equals(downed.getWorld())
-        && helper.getLocation().distance(downed.getLocation()) <= number("reliving-distance-max", 5, 1, 32);
+        && helper.getLocation().distance(downed.getLocation())
+            <= number("reliving-distance-max", 5, 1, 32);
   }
 
   private Player nearest(Player downed) {
@@ -610,13 +736,14 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   }
 
   private String refusal(Player downed, Player helper) {
-    if (flag("restrictions.deny-in-combat", false) && love.combat(helper)) return "revive.refused-combat";
+    if (flag("restrictions.deny-in-combat", false) && love.combat(helper))
+      return "revive.refused-combat";
     if (flag("restrictions.clan-only", false)
         && !love.service(ProfileOracle.class)
             .map(o -> o.areClanmates(downed.getUniqueId(), helper.getUniqueId()))
             .orElse(true)) return "revive.refused-clan";
-    if (flag("restrictions.respect-claims", false) && !love.territorialAccess(helper, downed.getLocation()))
-      return "revive.refused-claim";
+    if (flag("restrictions.respect-claims", false)
+        && !love.territorialAccess(helper, downed.getLocation())) return "revive.refused-claim";
     long cooldown = (long) number("start-cooldown", 0, 0, 3600) * 1000;
     if (cooldown > 0
         && System.currentTimeMillis() - lastStart.getOrDefault(helper.getUniqueId(), 0L) < cooldown)
@@ -673,11 +800,14 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   }
 
   private boolean free(Player helper) {
-    return priceType().equals("none") || priceAmount() <= 0 || helper.hasPermission("loveessential.revive.free");
+    return priceType().equals("none")
+        || priceAmount() <= 0
+        || helper.hasPermission("loveessential.revive.free");
   }
 
   private Material priceMaterial() {
-    var material = Material.matchMaterial(plugin.getConfig().getString(key("price.material"), "GOLDEN_APPLE"));
+    var material =
+        Material.matchMaterial(plugin.getConfig().getString(key("price.material"), "GOLDEN_APPLE"));
     return material == null || !material.isItem() ? Material.GOLDEN_APPLE : material;
   }
 
@@ -690,7 +820,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
           PlainText.of(
               lang.render(
                   "revive.price-item",
-                  Map.of("amount", amount, "item", priceMaterial().name().toLowerCase(Locale.ROOT))));
+                  Map.of(
+                      "amount", amount, "item", priceMaterial().name().toLowerCase(Locale.ROOT))));
       default -> "";
     };
   }
@@ -701,7 +832,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     return switch (priceType()) {
       case "money" -> love.economy().map(e -> e.has(helper, amount)).orElse(false);
       case "level" -> helper.getLevel() >= amount;
-      case "item" -> helper.getInventory().containsAtLeast(new ItemStack(priceMaterial()), (int) amount);
+      case "item" ->
+          helper.getInventory().containsAtLeast(new ItemStack(priceMaterial()), (int) amount);
       default -> true;
     };
   }
@@ -724,7 +856,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         var stack = new ItemStack(priceMaterial(), (int) amount);
         helper.getInventory().removeItem(stack);
         return () ->
-            helper.getInventory().addItem(stack.clone()).values()
+            helper
+                .getInventory()
+                .addItem(stack.clone())
+                .values()
                 .forEach(rest -> helper.getWorld().dropItemNaturally(helper.getLocation(), rest));
       }
       default -> {
@@ -737,14 +872,13 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   private void suicide(Player p, State state) {
     double after = number("suicide-delay", 5, 0, 600);
-    if (state.carrier != null
-        || !p.isSneaking()
-        || (ticks - state.since) * STEP < after) {
+    if (state.carrier != null || !p.isSneaking() || (ticks - state.since) * STEP < after) {
       state.suicide = 0;
       return;
     }
     state.suicide += STEP;
-    if (ticks % 10 == 0) cue("giveup-tick", p.getLocation(), (float) (state.suicide / suicideCount()) * .6f);
+    if (ticks % 10 == 0)
+      cue("giveup-tick", p.getLocation(), (float) (state.suicide / suicideCount()) * .6f);
     if (state.suicide >= suicideCount()) giveUp(p);
   }
 
@@ -785,8 +919,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     var leftover = states.remove(p.getUniqueId());
     if (leftover != null) {
       // Killed by damage after the invulnerability window: still a downed death.
-      Bukkit.getPluginManager()
-          .callEvent(new DownedDeathEvent(p, DownedDeathEvent.Cause.DAMAGE));
+      Bukkit.getPluginManager().callEvent(new DownedDeathEvent(p, DownedDeathEvent.Cause.DAMAGE));
       refund(leftover);
       release(p, leftover);
       cause = DownedDeathEvent.Cause.DAMAGE;
@@ -843,7 +976,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   @EventHandler(ignoreCancelled = true)
   public void regain(EntityRegainHealthEvent e) {
-    if (e.getEntity() instanceof Player p && states.containsKey(p.getUniqueId())) e.setCancelled(true);
+    if (e.getEntity() instanceof Player p && states.containsKey(p.getUniqueId()))
+      e.setCancelled(true);
   }
 
   // ------------------------------------------------------------------- carry
@@ -866,6 +1000,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     if (!carrier.addPassenger(downed)) return false;
     if (helper != null) stop(downed, state, helper);
     state.carrier = carrier.getUniqueId();
+    updatePose(downed, state);
+    updateInteraction(downed, state);
     carrying.put(carrier.getUniqueId(), downed.getUniqueId());
     double slow = number("carry.slow", .15, 0, .9);
     if (slow > 0) modifier(carrier, Attribute.MOVEMENT_SPEED, carryKey, -slow);
@@ -879,6 +1015,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     carrying.remove(carrier.getUniqueId());
     if (state != null) state.carrier = null;
     detach(carrier, downed);
+    if (state != null) {
+      updatePose(downed, state);
+      updateInteraction(downed, state);
+    }
     unslow(carrier);
     carrier.sendActionBar(Component.empty());
     cue("drop", downed.getLocation());
@@ -914,26 +1054,51 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
 
   // ------------------------------------------------------------------- steal
 
-  @EventHandler(priority = EventPriority.HIGH)
+  @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
   public void interactEntity(PlayerInteractEntityEvent e) {
+    handleEntityClick(e);
+  }
+
+  // Bukkit gives the precise-hit event its own handler list.
+  @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+  public void interactAtEntity(PlayerInteractAtEntityEvent e) {
+    handleEntityClick(e);
+  }
+
+  private void handleEntityClick(PlayerInteractEntityEvent e) {
     if (!enabled()) return;
     var p = e.getPlayer();
     if (states.containsKey(p.getUniqueId()) && blocked("items")) {
       e.setCancelled(true);
       return;
     }
-    if (e.getHand() != EquipmentSlot.HAND
-        || !(e.getRightClicked() instanceof Player victim)
-        || !states.containsKey(victim.getUniqueId())) return;
+    Player victim = interactionTarget(e.getRightClicked());
+    if (e.getHand() == EquipmentSlot.HAND && victim != null && interactDowned(p, victim))
+      e.setCancelled(true);
+  }
+
+  private boolean interactDowned(Player p, Player victim) {
+    State state = states.get(victim.getUniqueId());
+    if (!enabled()
+        || state == null
+        || p.equals(victim)
+        || states.containsKey(p.getUniqueId())
+        || !p.canSee(victim)
+        || !p.getWorld().equals(victim.getWorld())
+        || !p.hasLineOfSight(victim)
+        || p.getLocation().distanceSquared(victim.getLocation()) > 36) return false;
+    int now = Bukkit.getCurrentTick();
+    state.lastInteractions.values().removeIf(tick -> tick != now);
+    if (state.lastInteractions.containsKey(p.getUniqueId())) return true;
     if (!p.isSneaking()) {
       // Right click picks the downed player up, as ReviveMe does.
-      if (pickUp(p, victim)) e.setCancelled(true);
-      return;
+      if (!pickUp(p, victim)) return false;
+      state.lastInteractions.put(p.getUniqueId(), now);
+      return true;
     }
     if (!flag("steal.enabled", true)
         || !p.hasPermission("loveessential.revive.robber")
-        || !victim.hasPermission("loveessential.revive.stealable")) return;
-    e.setCancelled(true);
+        || !victim.hasPermission("loveessential.revive.stealable")) return false;
     try {
       inventories.rob(
           p,
@@ -941,12 +1106,17 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
           (robber, target) ->
               enabled()
                   && states.containsKey(target.getUniqueId())
+                  && !states.containsKey(robber.getUniqueId())
                   && robber.hasPermission("loveessential.revive.robber")
+                  && target.hasPermission("loveessential.revive.stealable")
+                  && robber.canSee(target)
                   && robber.getWorld().equals(target.getWorld())
                   && robber.getLocation().distance(target.getLocation()) <= 6);
     } catch (IllegalArgumentException refused) {
       // The window could not open (for example the robber is not authenticated): nothing to do.
     }
+    state.lastInteractions.put(p.getUniqueId(), now);
+    return true;
   }
 
   // ------------------------------------------------------------ restrictions
@@ -971,6 +1141,12 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       e.setUseItemInHand(Event.Result.DENY);
       e.setUseInteractedBlock(Event.Result.DENY);
     }
+  }
+
+  @EventHandler(ignoreCancelled = true)
+  public void swimming(EntityToggleSwimEvent e) {
+    if (!e.isSwimming() && enabled() && states.containsKey(e.getEntity().getUniqueId()))
+      e.setCancelled(true);
   }
 
   @EventHandler(ignoreCancelled = true)
@@ -1047,7 +1223,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   public void gameMode(PlayerGameModeChangeEvent e) {
     var state = states.get(e.getPlayer().getUniqueId());
     if (state == null
-        || e.getNewGameMode() != GameMode.CREATIVE && e.getNewGameMode() != GameMode.SPECTATOR) return;
+        || e.getNewGameMode() != GameMode.CREATIVE && e.getNewGameMode() != GameMode.SPECTATOR)
+      return;
     states.remove(e.getPlayer().getUniqueId());
     refund(state);
     release(e.getPlayer(), state);
@@ -1121,13 +1298,17 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     String sub = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
     switch (sub) {
       case "suicide" -> {
-        if (!(sender instanceof Player p) || !p.hasPermission("loveessential.revive.command.suicide"))
+        if (!(sender instanceof Player p)
+            || !p.hasPermission("loveessential.revive.command.suicide"))
           throw new IllegalArgumentException("errors.permission");
         var state = states.get(p.getUniqueId());
         if (state == null) throw new IllegalArgumentException("revive.command-not-downed");
         double wait = number("suicide-delay", 5, 0, 600) - (ticks - state.since) * STEP;
         if (wait > 0) {
-          lang.send(p, "revive.command-not-yet", Map.of("seconds", Long.toString((long) Math.ceil(wait))));
+          lang.send(
+              p,
+              "revive.command-not-yet",
+              Map.of("seconds", Long.toString((long) Math.ceil(wait))));
           return;
         }
         giveUp(p);
@@ -1156,11 +1337,16 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
         }
         lang.send(sender, "revive.command-done");
       }
-      default -> lang.lines("revive.command-usage").forEach(line -> sender.sendMessage(lang.renderText(line, Map.of())));
+      default ->
+          lang.lines("revive.command-usage")
+              .forEach(line -> sender.sendMessage(lang.renderText(line, Map.of())));
     }
   }
 
-  /** Names for tab completion of {@code /revive <sub> <player>}: only downed players for revive/kill. */
+  /**
+   * Names for tab completion of {@code /revive <sub> <player>}: only downed players for
+   * revive/kill.
+   */
   public List<String> downedNames() {
     return states.keySet().stream()
         .map(Bukkit::getPlayer)

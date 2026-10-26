@@ -15,6 +15,45 @@ class SqliteStoreTest {
   record Value(String text, List<Integer> list) {}
 
   @Test
+  void waystoneNumbersReuseHolesAndSurviveRestartWithoutReusingInternalIds() throws Exception {
+    var file = dir.resolve("numbers.db");
+    try (var db = new SqliteStore(file, 32)) {
+      db.save("waystone", "1", 0, "first", "test").get();
+      db.save("waystone", "2", 0, "second", "test").get();
+      assertEquals(Map.of("1", 1, "2", 2), db.waystoneNumbers(List.of("1", "2")).get());
+      assertThrows(ExecutionException.class, () -> db.delete("waystone", "1", 99, "test").get());
+      assertEquals(1, db.waystoneNumbers(List.of("1")).get().get("1"));
+      db.delete("waystone", "1", 1, "test").get();
+      db.save("waystone", "1001", 0, "replacement", "test").get();
+      assertEquals(Map.of("1001", 1, "2", 2), db.waystoneNumbers(List.of("1001", "2")).get());
+      assertTrue(db.get("waystone", "1", String.class).get().isEmpty());
+    }
+    try (var db = new SqliteStore(file, 32)) {
+      assertEquals(Map.of("1001", 1, "2", 2), db.waystoneNumbers(List.of("1001", "2")).get());
+      db.delete("waystone", "1001", 1, "test").get();
+      db.delete("waystone", "2", 1, "test").get();
+      db.save("waystone", "1002", 0, "new", "test").get();
+      assertEquals(1, db.waystoneNumbers(List.of("1002")).get().get("1002"));
+    }
+  }
+
+  @Test
+  void concurrentWaystoneSavesAssignDistinctVisibleNumbers() throws Exception {
+    try (var db = new SqliteStore(dir.resolve("parallel.db"), 32)) {
+      var pending = new ArrayList<CompletableFuture<Long>>();
+      var ids = new ArrayList<String>();
+      for (int i = 1; i <= 20; i++) {
+        String id = Integer.toString(i);
+        ids.add(id);
+        pending.add(db.save("waystone", id, 0, "value", "test"));
+      }
+      CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new)).get();
+      var numbers = db.waystoneNumbers(ids).get();
+      assertEquals(20, new HashSet<>(numbers.values()).size());
+    }
+  }
+
+  @Test
   void documentsSurviveRestartAndPreserveUnicode() throws Exception {
     try (var db = new SqliteStore(dir.resolve("data.db"), 32)) {
       assertEquals(
