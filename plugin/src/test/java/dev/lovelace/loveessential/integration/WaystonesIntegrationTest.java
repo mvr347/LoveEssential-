@@ -355,13 +355,13 @@ class WaystonesIntegrationTest {
     var form = new AtomicReference<dev.lovelace.loveessential.dialog.NativeDialogs.Form>();
     var ui = dialogs(form);
     server.dispatchCommand(player, "le waystone edit");
+    // The catalog is a header control, not a footer button.
+    var top = player.getOpenInventory().getTopInventory();
     assertTrue(
-        dev.lovelace.loveessential.gui.GuiRules.name(
-                player
-                    .getOpenInventory()
-                    .getTopInventory()
-                    .getItem(player.getOpenInventory().getTopInventory().getSize() - 3))
-            .contains("каталог"));
+        java.util.stream.IntStream.range(1, 9)
+            .mapToObj(top::getItem)
+            .filter(java.util.Objects::nonNull)
+            .anyMatch(i -> dev.lovelace.loveessential.gui.GuiRules.name(i).contains("каталог")));
     server.dispatchCommand(player, "le waystone models");
     assertTrue(
         dev.lovelace.loveessential.gui.GuiRules.violations(

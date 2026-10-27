@@ -16,9 +16,14 @@ menus:
     title: <gold>Путевые столбы
     entry-title: <gold><name> · №<id>
     entry-lore:
-    - <gray>Настроить вид, прибытие и направления
+    - '<gray>Мир: <white><world> <dark_gray>· <white><pos>'
+    - '<gray>Модель: <white><model> <dark_gray>· <gray>размер <white><size>'
+    - '<gray>Направлений отсюда: <white><routes>'
     - <dark_gray>────────────────
-    - <green>ЛКМ — открыть
+    - <green>ЛКМ <dark_gray>— <gray>открыть редактор
+    empty-title: <gray>Столбов пока нет
+    empty-lore:
+    - <gray>Нажмите «Создать столб» вверху — он появится там, где вы стоите.
   waystones-editor:
     size: 27
     title: '<gold>Столб: <name>'
@@ -27,11 +32,19 @@ menus:
     title: '<gold>Из <name>: направления'
     entry-title: <gold><name>
     linked-lore:
-    - <green>Направление включено
-    - <gray>ЛКМ — настроить цену, время и доступ
+    - '<gray>Мир: <white><world> <dark_gray>· <white><distance> бл.'
+    - '<gray>Связь: <white><status>'
+    - '<gray>Цена: <white><cost> <dark_gray>· <gray>подготовка <white><warmup> с <dark_gray>· <gray>перерыв <white><cooldown> с'
+    - <dark_gray>────────────────
+    - <green>ЛКМ <dark_gray>— <gray>изменить цену, время и доступ
     unlinked-lore:
-    - <gray>Направление не подключено
-    - <gray>ЛКМ — добавить маршрут
+    - '<gray>Мир: <white><world> <dark_gray>· <white><distance> бл.'
+    - '<gray>Связь: <white><status>'
+    - <dark_gray>────────────────
+    - <green>ЛКМ <dark_gray>— <gray>добавить направление
+    empty-title: <gray>Других столбов нет
+    empty-lore:
+    - <gray>Создайте ещё один столб, чтобы было куда ходить.
   waystones-travel:
     size: 54
     title: <gold><name> · Направления
@@ -118,10 +131,23 @@ buttons:
     - <gray>Удаление требует подтверждения
     - <dark_gray>────────────────
     - <green>ЛКМ <gray>— выбрать
+  visit:
+    title: <gold>Перейти к столбу
+    lore:
+    - <gray>Телепорт к точке прибытия этого столба
+    - <dark_gray>────────────────
+    - <green>ЛКМ <dark_gray>— <gray>телепортироваться
+  link-all:
+    title: <gold>Связать со всеми в мире
+    lore:
+    - <gray>Двусторонние направления со всеми столбами этого мира
+    - <gray>Цена и время — по умолчанию из настроек
+    - <dark_gray>────────────────
+    - <green>ЛКМ <dark_gray>— <gray>продолжить
   appearance:
     title: <gold>Оформление
     lore:
-    - <gray>Название, вариант столба и модель ItemsAdder
+    - <gray>Название, вариант столба, размер и модель ItemsAdder
     - <dark_gray>────────────────
     - <green>ЛКМ — изменить
 status:
