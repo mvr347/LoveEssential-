@@ -1,5 +1,6 @@
 package dev.lovelace.loveessential.module;
 
+import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
 import dev.lovelace.lovecore.api.revive.DownedOracle;
 import dev.lovelace.lovecore.api.social.ProfileOracle;
@@ -194,6 +195,23 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     return plugin.getConfig().getStringList(key("blocked-actions")).contains(action);
   }
 
+  // Published mechanics are resolved on main; the oracle below remains thread safe.
+  public Set<PlayerMechanics.State> mechanics(UUID id) {
+    dev.lovelace.loveessential.MainThread.require();
+    var result =
+        EnumSet.noneOf(PlayerMechanics.State.class);
+    var state = states.get(id);
+    if (state != null) {
+      result.add(PlayerMechanics.State.DOWNED);
+      if (state.carrier != null) result.add(PlayerMechanics.State.RIDING);
+    }
+    if (carrying.containsKey(id))
+      result.add(PlayerMechanics.State.CARRYING);
+    if (states.values().stream().anyMatch(s -> id.equals(s.reviver)))
+      result.add(PlayerMechanics.State.REVIVING);
+    return Set.copyOf(result);
+  }
+
   // ------------------------------------------------------------------ oracle
 
   @Override
@@ -379,6 +397,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     state.invulnerable = number("invulnerability-delay", 15, 0, 600);
     publishValues(state);
     states.put(p.getUniqueId(), state);
+    plugin.mechanicsChanged(p);
     downs.merge(p.getUniqueId(), 1, Integer::sum);
     var max = p.getAttribute(Attribute.MAX_HEALTH);
     p.setHealth(Math.min(number("downed-health", 1, 0.5, 40), max == null ? 20 : max.getValue()));
@@ -551,6 +570,15 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       if (helper != null) helper.sendActionBar(Component.empty());
     }
     p.sendActionBar(Component.empty());
+    plugin.mechanicsChanged(p);
+    if (state.carrier != null) {
+      var carrier = Bukkit.getPlayer(state.carrier);
+      if (carrier != null) plugin.mechanicsChanged(carrier);
+    }
+    if (state.reviver != null) {
+      var helper = Bukkit.getPlayer(state.reviver);
+      if (helper != null) plugin.mechanicsChanged(helper);
+    }
   }
 
   private void unslow(Player carrier) {
@@ -753,6 +781,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     if (event.isCancelled()) return null;
     state.refund = charge(helper);
     state.reviver = helper.getUniqueId();
+    plugin.mechanicsChanged(helper);
     state.progress = 0;
     lastStart.put(helper.getUniqueId(), System.currentTimeMillis());
     cue("start", downed.getLocation());
@@ -789,6 +818,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     if (flag("price.refund-on-stop", true)) refund(state);
     state.refund = null;
     state.reviver = null;
+    plugin.mechanicsChanged(helper);
     state.progress = 0;
     helper.sendActionBar(Component.empty());
     cue("stop", downed.getLocation());
@@ -1061,6 +1091,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     double slow = number("carry.slow", .15, 0, .9);
     if (slow > 0) modifier(carrier, Attribute.MOVEMENT_SPEED, carryKey, -slow);
     cue("pickup", downed.getLocation());
+    plugin.mechanicsChanged(downed);
+    plugin.mechanicsChanged(carrier);
     fire("pickup", downed, carrier);
     return true;
   }
@@ -1075,6 +1107,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     carrier.sendActionBar(Component.empty());
     cue("drop", downed.getLocation());
     Bukkit.getPluginManager().callEvent(new DropDownedEvent(downed, carrier));
+    plugin.mechanicsChanged(downed);
+    plugin.mechanicsChanged(carrier);
     fire("drop", downed, carrier);
   }
 

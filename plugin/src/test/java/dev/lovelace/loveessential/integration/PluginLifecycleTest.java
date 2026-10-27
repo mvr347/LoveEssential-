@@ -241,7 +241,11 @@ class PluginLifecycleTest {
                     dev.lovelace.loveessential.module.Gameplay.Place.class))
             .isPresent());
     assertTrue(suggestions(p, "home", "").isEmpty());
+    // A database barrier alone does not publish the saved home to the main-thread cache.
+    var gameplay = internal("gameplay", dev.lovelace.loveessential.module.Gameplay.class);
+    waitFor(() -> gameplay.names(p, "home").contains("default"));
     server.dispatchCommand(p, "le удалитьдом");
+    waitFor(() -> gameplay.names(p, "home").isEmpty());
     await(store.profile(p.getUniqueId(), "test.barrier", "true"));
     assertTrue(
         await(

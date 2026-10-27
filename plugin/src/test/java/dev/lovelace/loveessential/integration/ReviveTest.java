@@ -277,6 +277,33 @@ class ReviveTest implements Listener {
   }
 
   @Test
+  void mechanicsTracksDownedCarryDropAndModuleStop() throws Exception {
+    var mechanics =
+        org.bukkit.Bukkit.getServicesManager()
+            .load(dev.lovelace.loveessential.api.mechanics.PlayerMechanicsService.class);
+    assertNotNull(mechanics);
+    fall();
+    assertTrue(mechanics.snapshot(victim.getUniqueId()).hitboxModified());
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    assertTrue(mechanics.snapshot(victim.getUniqueId()).states().contains(dev.lovelace.loveessential.api.mechanics.PlayerMechanics.State.RIDING));
+    assertTrue(
+        mechanics
+            .snapshot(helper.getUniqueId())
+            .states()
+            .contains(dev.lovelace.loveessential.api.mechanics.PlayerMechanics.State.CARRYING));
+    assertFalse(mechanics.snapshot(helper.getUniqueId()).movementControlled());
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    assertTrue(mechanics.snapshot(helper.getUniqueId()).states().isEmpty());
+    assertTrue(mechanics.snapshot(victim.getUniqueId()).hitboxModified());
+    await(plugin.module("revive", false));
+    server.getScheduler().performTicks(4); // Revive releases controlled bodies in its own tick.
+    assertTrue(mechanics.snapshot(victim.getUniqueId()).states().isEmpty());
+  }
+
+  @Test
   void pickingUpRestoresTheCeilingAndDroppingEnablesCrawlingAgain() {
     var ceiling = victim.getLocation().getBlock().getRelative(0, 1, 0);
     fall();
