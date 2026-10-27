@@ -128,6 +128,16 @@ class ProfilePrivacyTest {
         .collect(java.util.stream.Collectors.joining());
   }
 
+  /** Every item name of the open menu, one per line. */
+  String titles(PlayerMock p) {
+    var inventory = p.getOpenInventory().getTopInventory();
+    var out = new StringBuilder();
+    for (int slot = 0; slot < inventory.getSize(); slot++)
+      if (inventory.getItem(slot) != null && inventory.getItem(slot).getItemMeta().hasDisplayName())
+        out.append(title(p, slot)).append('\n');
+    return out.toString();
+  }
+
   String title(PlayerMock p, int slot) {
     return PlainTextComponentSerializer.plainText()
         .serialize(
@@ -176,7 +186,13 @@ class ProfilePrivacyTest {
     instance.set(null, papi);
     for (String id :
         List.of(
-            "loveadaptation", "lovebehavior", "lovesubnames", "clans", "lovetrades", "lovechat")) {
+            "loveadaptation",
+            "lovebehavior",
+            "lovesubnames",
+            "clans",
+            "lovetrades",
+            "lovechat",
+            "lovechatfilter")) {
       expansions.put(
           id,
           new PlaceholderExpansion() {
@@ -196,6 +212,7 @@ class ProfilePrivacyTest {
             public String onPlaceholderRequest(Player target, String params) {
               if (id.equals("clans") || id.equals("lovetrades")) return "yes";
               if (id.equals("lovechat")) return params.equals("channel") ? "global" : "false";
+              if (id.equals("lovechatfilter")) return "false";
               return "&a" + target.getName() + ":" + params;
             }
           });
@@ -255,10 +272,11 @@ class ProfilePrivacyTest {
     var p = player("Owner");
     command(p, "profile settings");
     var inventory = p.getOpenInventory().getTopInventory();
-    assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, "Уведомления")).getType());
-    assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, "Персонализация")).getType());
-    assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, "Боковая панель")).getType());
+    for (String tab : List.of("Чат", "ЛС и обмен", "Уведомления", "Отображение", "Приватность", "Табло"))
+      assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, tab)).getType(), tab);
     String text = lore(p);
+    click(p, named(p, "ЛС и обмен"));
+    text += lore(p);
     assertTrue(text.contains("Да") || text.contains("Включено"), text);
     assertTrue(text.contains("Выключено"));
     assertTrue(text.contains("Глобальный"));
@@ -269,7 +287,7 @@ class ProfilePrivacyTest {
     command(p, "profile");
     var meta =
         (org.bukkit.inventory.meta.SkullMeta)
-            p.getOpenInventory().getTopInventory().getItem(12).getItemMeta();
+            p.getOpenInventory().getTopInventory().getItem(4).getItemMeta();
     // MockBukkit does not decode texture properties into URLs. Assert the exact client payload.
     String expected = plugin.getConfig().getString("profile.gui.textures.profile-menu.settings");
     assertTrue(
@@ -296,60 +314,46 @@ class ProfilePrivacyTest {
     command(viewer, "profile Target");
     assertTrue(lore(viewer).contains("Общая статистика"));
     assertFalse(lore(viewer).contains("K/D:"));
-    click(viewer, 12); // public summary has no drill-down
-    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
+    click(viewer, named(viewer, "Мир и выживание")); // public summary has no drill-down
+    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
     command(target, "profile");
+    assertEquals("Настройки", title(target, 4));
     assertEquals(
-        List.of("Безопасность", "Настройки", "Поведение", "Статистика", "Адаптации"),
-        java.util.stream.IntStream.rangeClosed(11, 15)
-            .mapToObj(slot -> title(target, slot))
-            .toList());
-    click(target, 14);
-    assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
-    click(target, named(target, "Мир и выживание"));
-    assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
-    var seen = new StringBuilder(lore(target));
-    int world = named(target, "Мир и выживание");
-    for (int i = 0; i < 4; i++) {
-      click(target, world);
-      seen.append(lore(target));
-    }
-    assertTrue(seen.toString().contains("Убийств игроков: 9"));
-    assertTrue(seen.toString().contains("K/D: 3.0"));
-    assertTrue(seen.toString().contains("В игре: 1 ч 0 мин"));
-    assertTrue(seen.toString().contains("Добыто блоков: 17"));
+        List.of("Статистика", "Активность и приватность"),
+        List.of(
+            title(target, named(target, "Статистика")),
+            title(target, named(target, "Активность и приватность"))));
+    click(target, named(target, "Статистика"));
+    assertEquals(54, target.getOpenInventory().getTopInventory().getSize());
+    // One metric is one item with its value in the name; the world tab holds all four groups.
+    String metrics = titles(target);
+    assertTrue(metrics.contains("Убийств игроков: 9"), metrics);
+    assertTrue(metrics.contains("K/D: 3.0"), metrics);
+    assertTrue(metrics.contains("В игре: 1 ч 0 мин"), metrics);
+    assertTrue(metrics.contains("Добыто блоков: 17"), metrics);
     click(target, target.getOpenInventory().getTopInventory().getSize() - 2);
-    assertEquals("Настройки", title(target, 12));
+    assertEquals("Настройки", title(target, 4));
   }
 
   @Test
-  void statisticCardsCycleIndependentlyInBothDirectionsAndResetAfterClosing() throws Exception {
+  void statisticTabsSwitchCategoriesAndResetAfterClosing() throws Exception {
     MockBukkit.createMockPlugin("LoveDuels");
     var p = player("Reader");
     command(p, "profile stats");
     var inventory = p.getOpenInventory().getTopInventory();
-    assertEquals(27, inventory.getSize());
+    assertEquals(54, inventory.getSize());
     int world = named(p, "Мир и выживание"), duels = named(p, "Дуэли");
-    var firstWorld = List.copyOf(inventory.getItem(world).getItemMeta().lore());
-    var firstDuels = List.copyOf(inventory.getItem(duels).getItemMeta().lore());
-    click(p, world);
-    assertEquals(firstDuels, inventory.getItem(duels).getItemMeta().lore());
-    click(p, world, ClickType.RIGHT);
-    assertEquals(firstWorld, inventory.getItem(world).getItemMeta().lore());
-    click(p, world, ClickType.RIGHT);
-    assertTrue(
-        inventory.getItem(world).getItemMeta().lore().stream()
-            .map(PlainTextComponentSerializer.plainText()::serialize)
-            .anyMatch(text -> text.contains("4/4")));
+    assertTrue(world >= 1 && world <= 8 && duels >= 1 && duels <= 8, "tabs live in the header");
+    String firstWorld = titles(p);
+    assertTrue(firstWorld.contains("Убийств игроков"));
     click(p, duels);
-    assertNotEquals(firstDuels, inventory.getItem(duels).getItemMeta().lore());
-    assertSame(inventory, p.getOpenInventory().getTopInventory());
+    String onDuels = titles(p);
+    assertNotEquals(firstWorld, onDuels);
+    assertTrue(onDuels.contains("Процент побед"), onDuels);
     click(p, inventory.getSize() - 1);
     command(p, "profile stats");
-    assertEquals(
-        firstWorld, p.getOpenInventory().getTopInventory().getItem(world).getItemMeta().lore());
-    assertEquals(
-        firstDuels, p.getOpenInventory().getTopInventory().getItem(duels).getItemMeta().lore());
+    assertEquals(firstWorld, titles(p));
   }
 
   @Test
@@ -369,16 +373,16 @@ class ProfilePrivacyTest {
     waitFor(
         () ->
             viewer.getOpenInventory().getTopInventory() != null
-                && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+                && viewer.getOpenInventory().getTopInventory().getSize() == 45);
     assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
     var meta =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(url, meta.getPlayerProfile().getTextures().getSkin().toExternalForm());
     assertFalse(lore(viewer).contains("K/D:"));
-    assertEquals("Пожаловаться", title(viewer, 5));
+    assertTrue(viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
     assertFalse(
-        title(viewer, 25).contains("Назад"), "direct offline profile has no invented parent");
+        title(viewer, 43).contains("Назад"), "direct offline profile has no invented parent");
   }
 
   @Test
@@ -392,9 +396,9 @@ class ProfilePrivacyTest {
     waitFor(
         () ->
             viewer.getOpenInventory().getTopInventory() != null
-                && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+                && viewer.getOpenInventory().getTopInventory().getSize() == 45);
     var menu = viewer.getOpenInventory().getTopInventory();
-    click(viewer, 16);
+    click(viewer, named(viewer, "Мир и выживание"));
     assertSame(menu, viewer.getOpenInventory().getTopInventory());
     target.reconnect();
     waitFor(() -> profiles.privacy().loaded(target.getUniqueId()));
@@ -434,15 +438,15 @@ class ProfilePrivacyTest {
     skin.setTextures(textures);
     target.setPlayerProfile(skin);
     command(viewer, "le profile view Target");
-    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
     assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
     assertFalse(lore(viewer).contains("Координаты:"));
     var skull =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
-    click(viewer, 12);
-    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    click(viewer, named(viewer, "Мир и выживание"));
+    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
   }
 
   @Test
@@ -451,25 +455,25 @@ class ProfilePrivacyTest {
     var viewer = player("Viewer");
     viewer.setOp(true);
     command(viewer, "profile Owner");
-    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
     command(owner, "profile hide");
     waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
     assertFalse(
         viewer.getOpenInventory().getTopInventory() != null
-            && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+            && viewer.getOpenInventory().getTopInventory().getSize() == 45);
     command(viewer, "profile Owner");
     assertFalse(
         viewer.getOpenInventory().getTopInventory() != null
-            && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+            && viewer.getOpenInventory().getTopInventory().getSize() == 45);
     assertFalse(server.getCommandMap().tabComplete(viewer, "le profile view ").contains("Owner"));
     command(owner, "profile");
-    assertEquals(27, owner.getOpenInventory().getTopInventory().getSize());
+    assertEquals(45, owner.getOpenInventory().getTopInventory().getSize());
     command(viewer, "profile list");
     assertFalse(lore(viewer).contains("Owner"));
     command(owner, "profile show");
     waitFor(() -> profiles.privacy().preferences(owner).profileVisible());
     command(viewer, "profile view Owner");
-    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
   }
 
   @Test
@@ -486,15 +490,15 @@ class ProfilePrivacyTest {
     command(viewer, "profile Owner");
     assertTrue(profiles.canView(viewer, owner));
     assertFalse(lore(viewer).contains("77"));
-    command(owner, "profile");
     owner.addAttachment(plugin, "loveadaptation.use", true);
-    click(owner, 15);
+    command(owner, "profile");
+    click(owner, named(owner, "Адаптации"));
     assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu", calls.getLast());
     command(owner, "profile settings");
-    click(owner, named(owner, "Активность и приватность"));
-    assertTrue(title(owner, 3).contains("доступен"));
-    assertTrue(title(owner, 5).contains("скрыта"));
-    click(owner, 5);
+    click(owner, named(owner, "Приватность"));
+    assertTrue(title(owner, named(owner, "Профиль доступен")).contains("доступен"));
+    assertTrue(title(owner, named(owner, "Активность скрыта")).contains("скрыта"));
+    click(owner, named(owner, "Активность скрыта"));
     waitFor(() -> profiles.privacy().preferences(owner).activityVisible());
     assertTrue(profiles.privacy().preferences(owner).profileVisible());
   }
@@ -503,8 +507,8 @@ class ProfilePrivacyTest {
   void guiHasIndependentPersistentPrivacyTogglesAndNoReputationOnSelf() throws Exception {
     var owner = player("Owner");
     command(owner, "profile settings");
-    click(owner, named(owner, "Активность и приватность"));
-    click(owner, 3);
+    click(owner, named(owner, "Приватность"));
+    click(owner, named(owner, "Профиль доступен"));
     waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
     assertTrue(profiles.privacy().preferences(owner).activityVisible());
     var doc =
@@ -517,7 +521,7 @@ class ProfilePrivacyTest {
     assertFalse(doc.value().profileVisible());
     assertTrue(doc.value().activityVisible());
     command(owner, "profile");
-    click(owner, 15);
+    assertFalse(titles(owner).contains("Репутация"), "no reputation card on the own profile");
     assertTrue(calls.isEmpty());
   }
 
@@ -566,10 +570,10 @@ class ProfilePrivacyTest {
     viewer.addAttachment(plugin, "lovebehavior.rep", true);
     viewer.addAttachment(plugin, "lovebehavior.behavior", true);
     command(viewer, "profile Target");
-    click(viewer, 3);
+    click(viewer, named(viewer, "Репутация"));
     assertEquals(List.of("LoveBehavior:rep:Viewer:Target"), calls);
     command(viewer, "profile");
-    click(viewer, 13);
+    click(viewer, named(viewer, "Поведение"));
     assertEquals("LoveBehavior:behavior:Viewer:", calls.getLast());
   }
 
@@ -581,10 +585,10 @@ class ProfilePrivacyTest {
     var viewer = player("Viewer");
     var target = player("Target");
     command(viewer, "profile Target");
-    click(viewer, 11);
+    assertFalse(titles(viewer).contains("Безопасность"), "no account card on another profile");
     assertTrue(calls.isEmpty());
     command(viewer, "profile");
-    click(viewer, 11);
+    click(viewer, named(viewer, "Безопасность"));
     assertEquals(List.of("LoveBehavior:account:Viewer:"), calls);
   }
 

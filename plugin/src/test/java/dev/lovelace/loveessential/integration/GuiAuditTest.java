@@ -184,7 +184,7 @@ class GuiAuditTest {
     for (int cycle = 0; cycle < 50; cycle++) {
       server.dispatchCommand(player, "profile");
       var root = player.getOpenInventory().getTopInventory();
-      click(player, 12);
+      click(player, 4);
       var settings = player.getOpenInventory().getTopInventory();
       assertNotSame(root, settings);
       assertTrue(name(player, settings.getSize() - 2).contains("Назад"));

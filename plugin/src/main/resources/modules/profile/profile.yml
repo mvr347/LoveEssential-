@@ -25,6 +25,10 @@ links:
     plugin: LoveSubnames
     command: suffixes
     permission: lovesubnames.use
+  display:
+    plugin: LoveEssential
+    command: display
+    permission: ''
   scoreboard:
     plugin: LoveEssential
     command: scoreboard

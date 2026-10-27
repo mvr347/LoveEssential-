@@ -1,32 +1,13 @@
 refresh-ticks: 20
 menus:
   profile-menu-title:
-    size: 27
+    size: 45
     buttons:
-      '11':
+      '4':
         enabled: true
-        slot: 11
-        texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
-        title: <gold>Безопасность
-      '12':
-        enabled: true
-        slot: 12
+        slot: 4
         texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
         title: <gold>Настройки
-      '13':
-        enabled: true
-        slot: 13
-        title: <gold>Поведение
-      '14':
-        enabled: true
-        slot: 14
-        texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
-        title: <gold>Статистика
-      '15':
-        enabled: true
-        slot: 15
-        texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
-        title: <gold>Адаптации
     title: <gold>Профиль <dark_gray>| <white><player>
     textures:
       profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
@@ -53,6 +34,24 @@ menus:
     labels:
       profile-menu:
         behavior: <gold>Поведение
+        tab-current: <yellow>Сейчас открыто
+        tab-chat: <gold>Чат
+        tab-chat-lore: <gray>Грамматика, тихий режим, упоминания, канал.
+        tab-dm: <gold>ЛС и обмен
+        tab-dm-lore: <gray>Личные сообщения, игнор, приглашения и обмен.
+        tab-alerts: <gold>Уведомления
+        tab-alerts-lore: <gray>Где показывать системные сообщения.
+        tab-display: <gold>Отображение
+        tab-display-lore: <gray>Что видно в табе, чате и над головой.
+        tab-privacy: <gold>Приватность
+        tab-privacy-lore: <gray>Кто видит ваш профиль и активность.
+        tab-board: <gold>Табло
+        tab-board-lore: <gray>Боковая панель со сводкой.
+        stats-empty: <gray>Данных пока нет
+        display: <gold>Отображение
+        display-lore:
+        - <gray>Теги, суффиксы и подписи в табе и чате.
+        - <green>ЛКМ <dark_gray>— <gray>открыть настройки отображения
         open-behavior: <gold>Открыть LoveBehavior
         no-data: —
         saved-activity-lore:
@@ -218,15 +217,21 @@ menus:
         - '<gray>Прогресс: <white><papi:loveadaptation_travel_progress:"—">'
         - <papi:loveadaptation_travel_bar:"—">
   public-profile-title:
-    size: 27
+    size: 45
     title: <gold>Профиль <dark_gray>| <white><player>
     labels:
       public-profile:
         report: <gold>Пожаловаться
         report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
+        message: <gold>Написать
+        message-help: <green>ЛКМ <dark_gray>— <gray>личное сообщение
+        ignore: <gold>Игнорировать
+        ignore-help: <green>ЛКМ <dark_gray>— <gray>скрыть или вернуть сообщения игрока
+        complaints: <red>Жалобы на игрока
+        complaints-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
         offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
   profile-menu-statistics:
-    size: 27
+    size: 54
     title: <gold>Статистика
     categories:
       world:
@@ -298,7 +303,7 @@ menus:
             - ''
             - '<gray>Побед: <duels_wins>'
             - '<gray>Поражений: <duels_losses>'
-            - '<gray>Побед: <duels_winrate>'
+            - '<gray>Процент побед: <duels_winrate>'
           streaks:
             title: <gold>Серии
             lore:
@@ -595,7 +600,7 @@ menus:
             - ''
             - '<gray>Побед: <duels_wins>'
             - '<gray>Поражений: <duels_losses>'
-            - '<gray>Побед: <duels_winrate>'
+            - '<gray>Процент побед: <duels_winrate>'
           streaks:
             title: <gold>Серии
             lore:
