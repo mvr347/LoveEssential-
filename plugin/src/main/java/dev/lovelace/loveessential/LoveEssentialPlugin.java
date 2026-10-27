@@ -1,5 +1,7 @@
 package dev.lovelace.loveessential;
 
+import dev.lovelace.loveessential.module.MechanicsService;
+import dev.lovelace.loveessential.api.mechanics.PlayerMechanicsService;
 import dev.lovelace.loveessential.api.*;
 import dev.lovelace.loveessential.command.Commands;
 import dev.lovelace.loveessential.condition.*;
@@ -48,6 +50,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "rtp",
           "display",
           "waystones");
+  private MechanicsService mechanics;
+
+  public void mechanicsChanged(org.bukkit.entity.Player player) {
+    if (mechanics != null) mechanics.refresh(player);
+  }
+
+  public void mechanicsPulse(org.bukkit.entity.Player player) {
+    if (mechanics != null) mechanics.pulse(player);
+  }
+
   private final dev.lovelace.loveessential.concurrent.VirtualIoExecutor io =
       new dev.lovelace.loveessential.concurrent.VirtualIoExecutor("love-io-", 8, 256);
   private final Object startupResources = new Object();
@@ -473,6 +485,15 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (module("tab")) tab.start();
     content.refresh();
     ready = true;
+    mechanics = new MechanicsService(this, gameplay, revive);
+    getServer()
+        .getServicesManager()
+        .register(
+            PlayerMechanicsService.class,
+            mechanics,
+            this,
+            ServicePriority.Normal);
+    mechanics.start();
     starter.start();
     extensions.start();
     displayPrefs.start();
@@ -789,6 +810,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     MainThread.stop(this);
     try {
       closeSafely("open-menus", this::closeOwnedMenus);
+      if (mechanics != null) closeSafely("mechanics", mechanics::close);
       closeSafely("services", () -> getServer().getServicesManager().unregisterAll(this));
       if (expansion != null) {
         closeSafely("expansion", expansion::close);

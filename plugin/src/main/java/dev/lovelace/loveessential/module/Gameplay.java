@@ -1,5 +1,6 @@
 package dev.lovelace.loveessential.module;
 
+import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import dev.lovelace.loveessential.*;
 import dev.lovelace.loveessential.api.*;
@@ -90,6 +91,11 @@ public final class Gameplay implements Listener, AutoCloseable {
 
   public dev.lovelace.loveessential.portal.Portals portals() {
     return portals;
+  }
+
+  public java.util.Set<PlayerMechanics.State> mechanics(
+      UUID id) {
+    return comfort.mechanics(id);
   }
 
   public Vanish vanishEffects() {
@@ -609,7 +615,7 @@ public final class Gameplay implements Listener, AutoCloseable {
   private static final String SKIN_KEY = "loveessential.skin";
 
   /** Swaps only the textures property; the account name and UUID of the profile stay untouched. */
-  private static void applyTextures(Player p, String value, String signature) {
+  private void applyTextures(Player p, String value, String signature) {
     var current = p.getPlayerProfile();
     current.removeProperty("textures");
     if (value != null && !value.isBlank())
@@ -617,6 +623,7 @@ public final class Gameplay implements Listener, AutoCloseable {
           new ProfileProperty(
               "textures", value, signature == null || signature.isBlank() ? null : signature));
     p.setPlayerProfile(current);
+    if (plugin instanceof LoveEssentialPlugin essential) essential.mechanicsPulse(p);
   }
 
   /** A chosen skin is persisted as signed textures, so it survives a relog without a Mojang call. */

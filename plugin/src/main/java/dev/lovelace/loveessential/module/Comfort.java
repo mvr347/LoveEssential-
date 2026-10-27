@@ -1,5 +1,6 @@
 package dev.lovelace.loveessential.module;
 
+import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import dev.lovelace.loveessential.*;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
@@ -77,6 +78,23 @@ public final class Comfort implements Listener, AutoCloseable {
     this.gameplay = gameplay;
     this.npcKey = new NamespacedKey(plugin, "npc");
     this.godKey = new NamespacedKey(plugin, "temporary_god");
+  }
+
+  public Set<PlayerMechanics.State> mechanics(UUID id) {
+    MainThread.require();
+    var result =
+        EnumSet.noneOf(PlayerMechanics.State.class);
+    if (seats.containsKey(id))
+      result.add(PlayerMechanics.State.SITTING);
+    if (lying.containsKey(id))
+      result.add(PlayerMechanics.State.LYING);
+    if (rides.containsKey(id))
+      result.add(PlayerMechanics.State.RIDING);
+    if (god.contains(id))
+      result.add(PlayerMechanics.State.GOD);
+    if (rides.values().stream().anyMatch(e -> e.getUniqueId().equals(id)))
+      result.add(PlayerMechanics.State.CARRYING);
+    return Set.copyOf(result);
   }
 
   public void start() {
@@ -190,6 +208,7 @@ public final class Comfort implements Listener, AutoCloseable {
         boolean on = !p.getAllowFlight();
         p.setAllowFlight(on);
         if (!on) p.setFlying(false);
+        plugin.mechanicsPulse(p);
         lang.send(p, on ? "comfort.fly-on" : "comfort.fly-off");
       }
       case "god" -> {
@@ -202,6 +221,7 @@ public final class Comfort implements Listener, AutoCloseable {
         if (on) p.getPersistentDataContainer().set(godKey, PersistentDataType.BYTE, (byte) 1);
         else p.getPersistentDataContainer().remove(godKey);
         p.setInvulnerable(on);
+        plugin.mechanicsChanged(p);
         lang.send(p, on ? "comfort.god-on" : "comfort.god-off");
       }
       case "speed" -> {
@@ -210,6 +230,7 @@ public final class Comfort implements Listener, AutoCloseable {
         if (value < 0 || value > 10) throw new IllegalArgumentException("comfort.usage");
         if (p.isFlying()) p.setFlySpeed(value / 10f);
         else p.setWalkSpeed(value / 10f);
+        plugin.mechanicsPulse(p);
         lang.send(p, "common.done");
       }
       case "gamemode" -> {
@@ -364,6 +385,7 @@ public final class Comfort implements Listener, AutoCloseable {
       throw new IllegalArgumentException("comfort.seat-state");
     }
     seats.put(p.getUniqueId(), new Seat(seat, at.clone(), block));
+    plugin.mechanicsChanged(p);
   }
 
   private void lay(Player p) {
@@ -385,12 +407,16 @@ public final class Comfort implements Listener, AutoCloseable {
     at.setY(y);
     if (!clear(at, 1.8)) throw new IllegalArgumentException("comfort.seat-space");
     lying.put(p.getUniqueId(), new Lying(at.clone(), block, p.getPose(), p.hasFixedPose()));
+    plugin.mechanicsChanged(p);
     p.setPose(Pose.SLEEPING, true);
   }
 
   private void unlay(Player p) {
     var state = lying.remove(p.getUniqueId());
-    if (state != null) p.setPose(state.previous(), state.fixed());
+    if (state != null) {
+      p.setPose(state.previous(), state.fixed());
+      plugin.mechanicsChanged(p);
+    }
   }
 
   private void eject(Player carrier) {
@@ -399,6 +425,8 @@ public final class Comfort implements Listener, AutoCloseable {
       if (passenger instanceof Player rider && rides.get(rider.getUniqueId()) == carrier) {
         if (rider.leaveVehicle()) {
           rides.remove(rider.getUniqueId());
+          plugin.mechanicsChanged(rider);
+          plugin.mechanicsChanged(carrier);
           found = true;
         }
       }
@@ -414,7 +442,11 @@ public final class Comfort implements Listener, AutoCloseable {
         && rides.get(rider.getUniqueId()) == carrier
         && rider.getVehicle() == carrier) {
       e.setCancelled(true);
-      if (rider.leaveVehicle()) rides.remove(rider.getUniqueId());
+      if (rider.leaveVehicle()) {
+        rides.remove(rider.getUniqueId());
+        plugin.mechanicsChanged(rider);
+        plugin.mechanicsChanged(carrier);
+      }
     }
   }
 
@@ -436,8 +468,12 @@ public final class Comfort implements Listener, AutoCloseable {
 
   private void ride(Player p, String[] args) {
     if (rides.containsKey(p.getUniqueId())) {
-      p.leaveVehicle();
-      rides.remove(p.getUniqueId());
+      var carrier = rides.get(p.getUniqueId());
+      if (p.leaveVehicle()) {
+        rides.remove(p.getUniqueId());
+        plugin.mechanicsChanged(p);
+        if (carrier instanceof Player other) plugin.mechanicsChanged(other);
+      }
       return;
     }
     if (p.isInsideVehicle() || p.isFlying() || love.combat(p))
@@ -478,6 +514,8 @@ public final class Comfort implements Listener, AutoCloseable {
       throw new IllegalArgumentException("errors.territory");
     if (!target.addPassenger(p)) throw new IllegalArgumentException("comfort.ride-target");
     rides.put(p.getUniqueId(), target);
+    plugin.mechanicsChanged(p);
+    if (target instanceof Player carrier) plugin.mechanicsChanged(carrier);
   }
 
   /**
@@ -521,6 +559,7 @@ public final class Comfort implements Listener, AutoCloseable {
 
   private void release(Player p, boolean restore) {
     var seat = seats.remove(p.getUniqueId());
+    if (seat != null) plugin.mechanicsChanged(p);
     if (seat == null) return;
     seat.entity().remove();
     if (restore && p.isOnline()) {
@@ -717,6 +756,7 @@ public final class Comfort implements Listener, AutoCloseable {
   private void releaseGod(Player p) {
     p.setInvulnerable(false);
     p.getPersistentDataContainer().remove(godKey);
+    plugin.mechanicsChanged(p);
   }
 
   private void clearGod() {

@@ -109,6 +109,50 @@ class ComfortHologramTest {
   }
 
   @Test
+  void mechanicsServicePublishesCommittedGodStateAndUnregistersOnStop() throws Exception {
+    var service =
+        Bukkit.getServicesManager()
+            .load(dev.lovelace.loveessential.api.mechanics.PlayerMechanicsService.class);
+    assertNotNull(service);
+    var p = admin();
+    var failure =
+        java.util.concurrent.CompletableFuture.supplyAsync(
+            () ->
+                assertThrows(IllegalStateException.class, () -> service.snapshot(p.getUniqueId())));
+    assertNotNull(failure.get(2, TimeUnit.SECONDS));
+    var seen = new ArrayList<dev.lovelace.loveessential.api.mechanics.PlayerMechanicsChangeEvent>();
+    var observer = new org.bukkit.event.Listener() {};
+    Bukkit.getPluginManager()
+        .registerEvent(
+            dev.lovelace.loveessential.api.mechanics.PlayerMechanicsChangeEvent.class,
+            observer,
+            org.bukkit.event.EventPriority.MONITOR,
+            (listener, event) ->
+                seen.add(
+                    (dev.lovelace.loveessential.api.mechanics.PlayerMechanicsChangeEvent) event),
+            MockBukkit.createMockPlugin("MechanicsObserver"));
+    command(p, "god on");
+    assertTrue(
+        service
+            .snapshot(p.getUniqueId())
+            .states()
+            .contains(dev.lovelace.loveessential.api.mechanics.PlayerMechanics.State.GOD));
+    assertTrue(
+        seen.stream()
+            .anyMatch(
+                e -> e.getPlayerId().equals(p.getUniqueId()) && e.getState().movementControlled()));
+    server.getPluginManager().disablePlugin(plugin);
+    assertEquals(
+        dev.lovelace.loveessential.api.mechanics.PlayerMechanics.NONE,
+        service.snapshot(p.getUniqueId()));
+    assertNull(
+        Bukkit.getServicesManager()
+            .load(dev.lovelace.loveessential.api.mechanics.PlayerMechanicsService.class));
+    assertEquals(
+        dev.lovelace.loveessential.api.mechanics.PlayerMechanics.NONE, seen.getLast().getState());
+  }
+
+  @Test
   void laySurvivesServerPoseResetAndSecondCommandRestoresStanding() throws Exception {
     var world =
         new org.mockbukkit.mockbukkit.world.WorldMock() {
@@ -148,6 +192,12 @@ class ComfortHologramTest {
     p.teleport(new Location(world, .5, 64, .5));
     command(p, "lay");
     assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
+    assertTrue(
+        Bukkit.getServicesManager()
+            .load(dev.lovelace.loveessential.api.mechanics.PlayerMechanicsService.class)
+            .snapshot(p.getUniqueId())
+            .states()
+            .contains(dev.lovelace.loveessential.api.mechanics.PlayerMechanics.State.LYING));
     p.setPose(org.bukkit.entity.Pose.STANDING, false); // A server/client update must not end /lay.
     server.getScheduler().performTicks(5);
     assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
