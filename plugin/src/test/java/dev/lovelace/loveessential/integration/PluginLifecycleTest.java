@@ -85,19 +85,19 @@ class PluginLifecycleTest {
     var gui =
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
             directory.resolve("modules/profile/gui.yml").toFile());
-    assertTrue(gui.contains("menus.profile-menu-title.buttons.12"));
-    assertTrue(gui.getString("menus.profile-menu-title.buttons.12.title").contains("Настройки"));
+    assertTrue(gui.contains("menus.profile-menu-title.buttons.4"));
+    assertTrue(gui.getString("menus.profile-menu-title.buttons.4.title").contains("Настройки"));
     var p = admin();
     String previous =
-        plugin.getConfig().getString("profile.gui.menus.profile-menu-title.buttons.12.title");
+        plugin.getConfig().getString("profile.gui.menus.profile-menu-title.buttons.4.title");
     await(
         plugin.editSetting(
             "profile",
-            "gui.menus.profile-menu-title.buttons.12.title",
+            "gui.menus.profile-menu-title.buttons.4.title",
             previous,
             "<gold>Мои параметры"));
     server.dispatchCommand(p, "profile");
-    assertEquals(12, itemNamed(p, "Мои параметры"));
+    assertEquals(4, itemNamed(p, "Мои параметры"));
     assertFalse(
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 directory.resolve("modules/profile/profile.yml").toFile())
@@ -697,7 +697,7 @@ class PluginLifecycleTest {
     target.setLevel(42);
     target.setStatistic(org.bukkit.Statistic.DEATHS, 7);
     server.dispatchCommand(viewer, "le userinfo Target");
-    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
     var skull =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();

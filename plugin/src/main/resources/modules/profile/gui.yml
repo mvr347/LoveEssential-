@@ -1,32 +1,13 @@
 refresh-ticks: 20
 menus:
   profile-menu-title:
-    size: 27
+    size: 45
     buttons:
-      '11':
+      '4':
         enabled: true
-        slot: 11
-        texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
-        title: <gold>Безопасность
-      '12':
-        enabled: true
-        slot: 12
+        slot: 4
         texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
         title: <gold>Настройки
-      '13':
-        enabled: true
-        slot: 13
-        title: <gold>Поведение
-      '14':
-        enabled: true
-        slot: 14
-        texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
-        title: <gold>Статистика
-      '15':
-        enabled: true
-        slot: 15
-        texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
-        title: <gold>Адаптации
     title: <gold>Профиль <dark_gray>| <white><player>
     textures:
       profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
@@ -53,6 +34,24 @@ menus:
     labels:
       profile-menu:
         behavior: <gold>Поведение
+        tab-current: <yellow>Сейчас открыто
+        tab-chat: <gold>Чат
+        tab-chat-lore: <gray>Грамматика, тихий режим, упоминания, канал.
+        tab-dm: <gold>ЛС и обмен
+        tab-dm-lore: <gray>Личные сообщения, игнор, приглашения и обмен.
+        tab-alerts: <gold>Уведомления
+        tab-alerts-lore: <gray>Где показывать системные сообщения.
+        tab-display: <gold>Отображение
+        tab-display-lore: <gray>Что видно в табе, чате и над головой.
+        tab-privacy: <gold>Приватность
+        tab-privacy-lore: <gray>Кто видит ваш профиль и активность.
+        tab-board: <gold>Табло
+        tab-board-lore: <gray>Боковая панель со сводкой.
+        stats-empty: <gray>Данных пока нет
+        display: <gold>Отображение
+        display-lore:
+        - <gray>Теги, суффиксы и подписи в табе и чате.
+        - <green>ЛКМ <dark_gray>— <gray>открыть настройки отображения
         open-behavior: <gold>Открыть LoveBehavior
         no-data: —
         saved-activity-lore:
@@ -218,15 +217,21 @@ menus:
         - '<gray>Прогресс: <white><papi:loveadaptation_travel_progress:"—">'
         - <papi:loveadaptation_travel_bar:"—">
   public-profile-title:
-    size: 27
+    size: 45
     title: <gold>Профиль <dark_gray>| <white><player>
     labels:
       public-profile:
         report: <gold>Пожаловаться
         report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
+        message: <gold>Написать
+        message-help: <green>ЛКМ <dark_gray>— <gray>личное сообщение
+        ignore: <gold>Игнорировать
+        ignore-help: <green>ЛКМ <dark_gray>— <gray>скрыть или вернуть сообщения игрока
+        complaints: <red>Жалобы на игрока
+        complaints-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
         offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
   profile-menu-statistics:
-    size: 27
+    size: 54
     title: <gold>Статистика
     categories:
       world:
@@ -298,7 +303,7 @@ menus:
             - ''
             - '<gray>Побед: <duels_wins>'
             - '<gray>Поражений: <duels_losses>'
-            - '<gray>Побед: <duels_winrate>'
+            - '<gray>Процент побед: <duels_winrate>'
           streaks:
             title: <gold>Серии
             lore:
@@ -595,7 +600,7 @@ menus:
             - ''
             - '<gray>Побед: <duels_wins>'
             - '<gray>Поражений: <duels_losses>'
-            - '<gray>Побед: <duels_winrate>'
+            - '<gray>Процент побед: <duels_winrate>'
           streaks:
             title: <gold>Серии
             lore:
@@ -774,7 +779,7 @@ menus:
         title: <gold>Грамматика
         lore:
         - <gray>Автоисправление LoveChat
-        - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+        - '<gray>Состояние: <white><papi:lovechatfilter_grammar:"—">'
         - <green>ЛКМ <dark_gray>— <gray>переключить
       silent:
         material: FEATHER
@@ -824,12 +829,8 @@ menus:
         - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки
         customization-lore:
         - '<gray>Внешний вид: <nickname> <suffix>'
-        - <gray>Цвета, градиенты, сброс ника и пометки.
+        - <gray>Пометки рядом с ником. Ник настраивается в отдельном плагине.
         - <green>ЛКМ <dark_gray>— <gray>открыть персонализацию
-        nickname: <gold>Никнейм
-        nickname-lore:
-        - '<gray>Текущий: <nickname>'
-        - <gray>Цвет, градиент, текст и сброс к стандартному имени.
         suffixes: <gold>Пометки
         suffixes-lore:
         - '<gray>Текущая: <suffix>'
@@ -838,7 +839,7 @@ menus:
         grammar: <gold>Грамматика
         grammar-lore:
         - <gray>Автоисправление LoveChat
-        - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+        - '<gray>Состояние: <white><papi:lovechatfilter_grammar:"—">'
         - <green>ЛКМ <dark_gray>— <gray>переключить
         silent: <gold>Тихий режим
         silent-lore:
@@ -1009,15 +1010,36 @@ menus:
         sent: <gray>Жалоба отправлена администрации.
         reason-length: '<gray>Опишите ситуацию: от 8 до 1024 символов.'
         cooldown: <gray>Вы недавно отправляли жалобу. Попробуйте позже.
-        entry: <gold>Жалоба на <white><player>
+        subject: <gold>Жалобы на <white><player>
+        open-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
+        progress: '<gray>До порога: <bar> <white><count>/<limit>'
+        total: '<gray>Всего жалоб за всё время: <white><count>'
+        level-quiet: <gray>Пока без оповещений
+        level-notify: <yellow>Администрация оповещена
+        level-danger: <red>Риск временного бана
         author: '<gray>Автор: <white><player>'
-        new: <yellow>Не рассмотрена
-        resolved: <gray>Рассмотрена
+        status-open: <yellow>Не рассмотрена
+        status-confirmed: <green>Подтверждена
+        status-rejected: <gray>Отклонена
+        empty: <gray>Жалоб нет
+        empty-lore: <gray>Когда игроки пожалуются друг на друга, жалобы появятся здесь.
         detail: <gold>Рассмотрение жалобы
-        detail-help: <gray>Это сохранённые сведения. Изменение полей здесь не меняет исходную жалобу.
+        detail-help: <gray>Это сохранённые сведения. Изменение полей здесь не меняет исходную жалобу. «Подтвердить» снижает вежливость игрока, «Отклонить» ничего не меняет.
         author-label: <gold>Автор
         target-label: <gold>Игрок
-        resolve: <gold>Отметить рассмотренной
+        confirm: <green>Подтвердить
+        reject: <red>Отклонить
+        ban: <red>Временный бан
+        ban-help: <gray>Выполнит команды бана из настроек. Решение лучше принимать после просмотра жалоб.
+        ban-confirm: <red>Забанить
+        ban-unconfigured: <gray>Команды бана не заданы в настройках профиля.
+        banned: <gray>Команды бана для <white><player> <gray>выполнены.
+        duplicate: <gray>Вы уже жаловались на этого игрока. Дождитесь решения администрации.
+        alert: '<yellow>Жалобы на <white><player><yellow>: <white><count> <yellow>от разных игроков. Откройте /reports.'
+        alert-danger: '<red>Жалоб на <white><player><red>: <white><count><red>. Возможен временный бан — откройте /reports.'
+        summary: '<yellow>Игроков с <white><threshold>+ <yellow>жалобами: <white><count><yellow>. Откройте /reports.'
+        outcome-confirmed: <gray>Ваша жалоба на <white><player> <gray>рассмотрена и подтверждена. Спасибо!
+        outcome-rejected: <gray>Ваша жалоба на <white><player> <gray>рассмотрена и отклонена.
         usage: <gray>/жалоба <ник>
 frame:
   material: GRAY_STAINED_GLASS_PANE

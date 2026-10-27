@@ -827,4 +827,19 @@ public class LoveEssentialPlugin extends JavaPlugin {
       }
     }
   }
+
+  /** Shared ignore list (chat, private messages, requests); read reflectively by LoveChat. */
+  public boolean isIgnoring(java.util.UUID who, java.util.UUID target) {
+    return messages != null && messages.ignores(who, target);
+  }
+
+  /** Moves one entry from another plugin's old list into the shared one; false means retry later. */
+  public boolean importIgnore(org.bukkit.entity.Player who, java.util.UUID target) {
+    return messages != null && messages.importIgnore(who, target);
+  }
+
+  /** Adds or removes a shared ignore entry; false means the list is not ready, retry later. */
+  public boolean setIgnored(org.bukkit.entity.Player who, java.util.UUID target, boolean ignore) {
+    return messages != null && messages.setIgnored(who, target, ignore);
+  }
 }

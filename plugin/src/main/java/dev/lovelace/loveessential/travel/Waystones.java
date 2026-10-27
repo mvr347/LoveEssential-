@@ -209,7 +209,8 @@ public final class Waystones implements Listener, AutoCloseable {
                             n.arrival(),
                             n.style(),
                             n.model(),
-                            n.routes());
+                            n.routes(),
+                            n.size());
                         nodes.put(d.id(), d);
                       }
                       return null;
@@ -833,57 +834,225 @@ public final class Waystones implements Listener, AutoCloseable {
   }
 
   private void pages(Menu m, int page, int count, IntConsumer open) {
-    if (page > 0) button(m, 36, "previous", () -> open.accept(page - 1));
-    if ((page + 1) * 21 < count) button(m, 44, "next", () -> open.accept(page + 1));
+    // Pagination is a header control (gui_gen): the side columns stay empty.
+    if (page > 0) button(m, 1, "previous", () -> open.accept(page - 1));
+    if ((page + 1) * 21 < count) button(m, 5, "next", () -> open.accept(page + 1));
   }
 
   private int page(int page, int count) {
     return Math.clamp(page, 0, Math.max(0, (count - 1) / 21));
   }
 
+  // ---- size ----------------------------------------------------------------------------
+
+  private List<Double> sizePresets() {
+    var out = new ArrayList<Double>();
+    for (Object v : plugin.getConfig().getList("waystones.render.size-presets", List.of()))
+      try {
+        double d = Double.parseDouble(v.toString());
+        if (d >= Waystone.MIN_SIZE && d <= Waystone.MAX_SIZE) out.add(d);
+      } catch (NumberFormatException skip) {
+        // A bad preset is ignored; the defaults below keep the dialog usable.
+      }
+    return out.isEmpty() ? List.of(.5, 1.0, 1.5, 2.0, 2.5, 3.0) : out;
+  }
+
+  private static String sizeLabel(double size) {
+    return "×" + (size == Math.rint(size) ? Long.toString((long) size) : Double.toString(size));
+  }
+
+  private List<NativeDialogs.Field> sizeFields(double current) {
+    var labels = new ArrayList<String>();
+    for (double d : sizePresets()) labels.add(sizeLabel(d));
+    String custom = lang.text("waystones.size-custom-option");
+    labels.add(custom);
+    String selected = labels.contains(sizeLabel(current)) ? sizeLabel(current) : custom;
+    return List.of(
+        NativeDialogs.Field.select("size", lang.render("waystones.size"), selected, labels),
+        ui.text("size-custom", "waystones.size-custom", Double.toString(current), 8));
+  }
+
+  private double chosenSize(Map<String, String> values) {
+    String picked = values.get("size");
+    if (!picked.equals(lang.text("waystones.size-custom-option")))
+      return Double.parseDouble(picked.substring(1));
+    try {
+      double d = decimal(values.get("size-custom"));
+      if (d >= Waystone.MIN_SIZE && d <= Waystone.MAX_SIZE) return d;
+    } catch (NumberFormatException invalid) {
+      // fall through to the shared message
+    }
+    throw new IllegalArgumentException("waystones.size-invalid");
+  }
+
+  /** Render profile with this stone's own multiplier applied, capped so a stone stays loadable. */
+  private WaystoneRender profileFor(Waystone n) {
+    var base = renderProfile(n.style(), n.model());
+    double factor = Math.min(n.factor(), Math.max(.05, 8 / base.scale()));
+    return base.scaled(factor);
+  }
+
+  /** Keeps the arrival point out of the (possibly enlarged) interaction box. */
+  private Position clearOfModel(Waystone n, Position arrival) {
+    var profile = profileFor(n);
+    double radius = profile.width() * profile.effective() / 2 + 1;
+    var anchor = n.anchor().location();
+    var at = arrival.location();
+    if (!at.getWorld().equals(anchor.getWorld())) return arrival;
+    double dx = at.getX() - anchor.getX(), dz = at.getZ() - anchor.getZ();
+    if (Math.sqrt(dx * dx + dz * dz) >= radius) return arrival;
+    var moved = anchor.clone().add(anchor.getDirection().setY(0).normalize().multiply(radius));
+    moved.setYaw(at.getYaw());
+    moved.setPitch(at.getPitch());
+    return Position.of(moved);
+  }
+
+  // ---- routes --------------------------------------------------------------------------
+
+  private double distance(Waystone a, Waystone b) {
+    var x = a.anchor().location();
+    var y = b.anchor().location();
+    return x.getWorld().equals(y.getWorld()) ? x.distance(y) : Double.MAX_VALUE;
+  }
+
+  private String distanceText(Waystone a, Waystone b) {
+    double d = distance(a, b);
+    return d == Double.MAX_VALUE ? lang.text("waystones.other-world") : Math.round(d) + "";
+  }
+
+  private long suggestedCost(Waystone a, Waystone b) {
+    var cfg = plugin.getConfig();
+    double d = distance(a, b);
+    if (d == Double.MAX_VALUE) return Math.max(0, cfg.getLong("waystones.route-defaults.cross-world-cost", 0));
+    return Math.max(
+        0, Math.round(d / 100 * cfg.getDouble("waystones.route-defaults.cost-per-100-blocks", 0)));
+  }
+
+  private static boolean hasRoute(Waystone from, Waystone to) {
+    return from.routes().stream().anyMatch(r -> r.target().equals(to.id()));
+  }
+
+  private String linkStatus(Waystone from, Waystone to) {
+    boolean out = hasRoute(from, to), back = hasRoute(to, from);
+    return lang.text(
+        out && back
+            ? "waystones.dir-both"
+            : out ? "waystones.dir-out" : back ? "waystones.dir-back" : "waystones.dir-none");
+  }
+
+  private static long number(Map<String, String> values, String field, long min, long max) {
+    try {
+      long v = Long.parseLong(values.get(field).strip());
+      if (v >= min && v <= max) return v;
+    } catch (NumberFormatException invalid) {
+      // reported below with the field name
+    }
+    throw new IllegalArgumentException("waystones.route-invalid-" + field);
+  }
+
+  private static Waystone withRoute(Waystone n, Waystone.Route route) {
+    var list = new ArrayList<>(n.routes());
+    list.removeIf(a -> a.target().equals(route.target()));
+    list.add(route);
+    return n.withRoutes(list);
+  }
+
+  private static Waystone withoutRoute(Waystone n, String target) {
+    return n.withRoutes(n.routes().stream().filter(a -> !a.target().equals(target)).toList());
+  }
+
+  /**
+   * Saves {@code first}, then {@code second}; if the second write fails the first is restored, so
+   * a two-way link is never left half made.
+   */
+  private void saveBoth(
+      Player p, Waystone first, Waystone second, Runnable after) {
+    var before = node(first.id());
+    long firstRevision = nodes.get(first.id()).revision();
+    var secondDoc = nodes.get(second.id());
+    save(
+        p,
+        first,
+        firstRevision,
+        () -> {
+          if (nodes.get(second.id()) != secondDoc) {
+            restore(p, before);
+            return;
+          }
+          save(p, second, secondDoc.revision(), after, () -> restore(p, before));
+        },
+        null);
+  }
+
+  private void restore(Player p, Waystone before) {
+    var doc = nodes.get(before.id());
+    if (doc == null) return;
+    lang.send(p, "waystones.route-rollback");
+    save(p, before, doc.revision(), () -> {}, null);
+  }
+
   private void list(Player p, int requested) {
     staff(p);
     var list = List.copyOf(all());
-    int page = Math.clamp(requested, 0, Math.max(0, (list.size() - 1) / 20));
+    int page = page(requested, list.size());
     var m = menu(p, "list", page);
-    int count = Math.min(20, list.size() - page * 20);
-    for (int i = 0; i < count; i++) {
-      var n = list.get(page * 20 + i);
+    for (int i = page * 21; i < Math.min(list.size(), (page + 1) * 21); i++) {
+      var n = list.get(i);
+      var world = Bukkit.getWorld(n.anchor().world());
+      var at = n.anchor().location();
       card(
           m,
-          MenuStyle.CONTENT[i],
+          MenuStyle.CONTENT[i % 21],
           setting("list", "entry-title", "<gold><name> · №<id>"),
           plugin.getConfig().getStringList("waystones.gui.menus.waystones-list.entry-lore"),
-          Map.of("name", n.name(), "id", Integer.toString(number(n.id()))),
+          Map.of(
+              "name", n.name(),
+              "id", Integer.toString(number(n.id())),
+              "world", world == null ? "?" : world.getName(),
+              "pos", Math.round(at.getX()) + " " + Math.round(at.getY()) + " " + Math.round(at.getZ()),
+              "routes", Integer.toString(n.routes().size()),
+              "model", modelLabel(n),
+              "size", sizeLabel(n.factor())),
           () -> editor(p, n.id()));
     }
-    button(m, list.isEmpty() ? 22 : MenuStyle.CONTENT[count], "create", () -> create(p));
-    if (page > 0) button(m, 36, "previous", () -> list(p, page - 1));
-    if ((page + 1) * 20 < list.size()) button(m, 44, "next", () -> list(p, page + 1));
-    button(m, 51, "models", () -> modelMenu(p, 0, () -> list(p, page)));
+    if (list.isEmpty())
+      card(
+          m,
+          22,
+          setting("list", "empty-title", "<gray>Столбов пока нет"),
+          plugin.getConfig().getStringList("waystones.gui.menus.waystones-list.empty-lore"),
+          Map.of(),
+          null);
+    button(m, 2, "create", () -> create(p));
+    button(m, 3, "models", () -> modelMenu(p, 0, () -> list(p, page)));
+    pages(m, page, list.size(), a -> list(p, a));
     MenuStyle.open(p, m.inventory);
   }
 
   private void create(Player p) {
     staff(p);
     sessions.put(p.getUniqueId(), new Object());
+    var fields = new ArrayList<NativeDialogs.Field>();
+    fields.add(NativeDialogs.Field.text("name", lang.render("waystones.name"), "Путевой столб", 64));
+    fields.add(
+        NativeDialogs.Field.select(
+            "style",
+            lang.render("waystones.style"),
+            modelChoices().contains("Каменный") ? "Каменный" : modelChoices().getFirst(),
+            modelChoices()));
+    fields.add(
+        NativeDialogs.Field.select(
+            "direction",
+            lang.render("waystones.direction"),
+            "Север",
+            List.of("Север", "Восток", "Юг", "Запад")));
+    fields.addAll(sizeFields(1));
+    fields.add(NativeDialogs.Field.text("model", lang.render("waystones.model"), "", 128));
     ui.show(
         p,
         "waystones.create",
         "waystones.create-help",
-        List.of(
-            NativeDialogs.Field.text("name", lang.render("waystones.name"), "Путевой столб", 64),
-            NativeDialogs.Field.select(
-                "style",
-                lang.render("waystones.style"),
-                modelChoices().contains("Каменный") ? "Каменный" : modelChoices().getFirst(),
-                modelChoices()),
-            NativeDialogs.Field.select(
-                "direction",
-                lang.render("waystones.direction"),
-                "Север",
-                List.of("Север", "Восток", "Юг", "Запад")),
-            NativeDialogs.Field.text("model", lang.render("waystones.model"), "", 128)),
+        fields,
         List.of(
             ui.button(
                 "create",
@@ -895,6 +1064,7 @@ public final class Waystones implements Listener, AutoCloseable {
                     throw new IllegalArgumentException("waystones.limit");
                   Model chosen = chosenModel(v.get("style"), v.get("model"));
                   String style = chosen.style();
+                  double size = chosenSize(v);
                   float yaw =
                       switch (v.get("direction")) {
                         case "Восток" -> 270;
@@ -934,7 +1104,7 @@ public final class Waystones implements Listener, AutoCloseable {
                                       lang.send(p, "waystones.limit");
                                       return;
                                     }
-                                    var n =
+                                    var draft =
                                         new Waystone(
                                             id,
                                             v.get("name"),
@@ -942,8 +1112,17 @@ public final class Waystones implements Listener, AutoCloseable {
                                             Position.of(arrival),
                                             style,
                                             chosen.item(),
-                                            List.of());
-                                    save(p, n, 0, () -> editor(p, id));
+                                            List.of(),
+                                            size);
+                                    var n = draft.withArrival(clearOfModel(draft, draft.arrival()));
+                                    save(
+                                        p,
+                                        n,
+                                        0,
+                                        () -> {
+                                          lang.send(p, "waystones.next-step");
+                                          editor(p, id);
+                                        });
                                   }));
                 }),
             ui.button("back", "common.back", v -> list(p, 0))),
@@ -956,47 +1135,39 @@ public final class Waystones implements Listener, AutoCloseable {
     var m = menu(p, "editor", id);
     m.allowed = who -> enabled() && admin(who) && nodes.containsKey(id) && node(id) == n;
     m.reopen = () -> editor(p, id);
-    button(m, 11, "appearance", () -> appearance(p, n));
-    button(m, 10, "directions", () -> routes(p, id, 0));
+    // Five actions in the middle of the work row (slots 9-17 of a 27-slot menu), in the order an
+    // administrator normally goes: look, directions, arrival, turn, visit.
+    int[] columns = {2, 3, 4, 5, 6};
+    button(m, 9 + columns[0], "appearance", () -> appearance(p, n));
+    button(m, 9 + columns[1], "directions", () -> routes(p, id, 0));
     button(
         m,
-        13,
+        9 + columns[2],
         "arrival",
         () ->
             save(
                 p,
-                new Waystone(
-                    id,
-                    n.name(),
-                    n.anchor(),
-                    Position.of(p.getLocation()),
-                    n.style(),
-                    n.model(),
-                    n.routes()),
+                n.withArrival(Position.of(p.getLocation())),
                 nodes.get(id).revision(),
                 () -> editor(p, id)));
     button(
         m,
-        15,
+        9 + columns[3],
         "rotate",
         () -> {
           var a = n.anchor();
           save(
               p,
-              new Waystone(
-                  id,
-                  n.name(),
-                  new Position(a.world(), a.x(), a.y(), a.z(), (a.yaw() + 90) % 360, 0),
-                  n.arrival(),
-                  n.style(),
-                  n.model(),
-                  n.routes()),
+              n.withAnchor(
+                  new Position(a.world(), a.x(), a.y(), a.z(), (a.yaw() + 90) % 360, 0)),
               nodes.get(id).revision(),
               () -> editor(p, id));
         });
+    button(m, 9 + columns[4], "visit", () -> p.teleport(n.arrival().location()));
+    // Deleting is a header control, away from the everyday buttons.
     button(
         m,
-        16,
+        4,
         "delete",
         () ->
             ui.show(
@@ -1008,7 +1179,6 @@ public final class Waystones implements Listener, AutoCloseable {
                     ui.button("delete", "gui.remove", v -> remove(p, n)),
                     ui.button("back", "common.back", v -> editor(p, id))),
                 this::admin));
-    back(m, () -> list(p, 0));
     MenuStyle.open(p, m.inventory);
   }
 
@@ -1019,14 +1189,16 @@ public final class Waystones implements Listener, AutoCloseable {
     String selected = modelLabel(n);
     // Preserve a manually selected legacy model if its catalog entry was removed.
     if (!styles.contains(selected)) styles.add(selected);
+    var fields = new ArrayList<NativeDialogs.Field>();
+    fields.add(ui.text("name", "waystones.name", n.name(), 64));
+    fields.add(NativeDialogs.Field.select("style", lang.render("waystones.style"), selected, styles));
+    fields.addAll(sizeFields(n.factor()));
+    fields.add(ui.text("model", "waystones.model", n.model(), 128));
     ui.show(
         p,
         "waystones.appearance",
         "waystones.appearance-help",
-        List.of(
-            ui.text("name", "waystones.name", n.name(), 64),
-            NativeDialogs.Field.select("style", lang.render("waystones.style"), selected, styles),
-            ui.text("model", "waystones.model", n.model(), 128)),
+        fields,
         List.of(
             ui.button(
                 "save",
@@ -1038,16 +1210,12 @@ public final class Waystones implements Listener, AutoCloseable {
                   Model chosen = chosenModel(v.get("style"), v.get("model"));
                   String style = chosen.style();
                   if (style.equals("itemsadder")) customItem(chosen.item());
+                  var next =
+                      n.withAppearance(
+                          v.get("name"), style, chosen.item(), chosenSize(v), n.arrival());
                   save(
                       p,
-                      new Waystone(
-                          n.id(),
-                          v.get("name"),
-                          n.anchor(),
-                          n.arrival(),
-                          style,
-                          chosen.item(),
-                          n.routes()),
+                      next.withArrival(clearOfModel(next, n.arrival())),
                       doc.revision(),
                       () -> editor(p, n.id()));
                 }),
@@ -1058,14 +1226,23 @@ public final class Waystones implements Listener, AutoCloseable {
   private void routes(Player p, String source, int requested) {
     staff(p);
     var n = node(source);
-    var targets = all().stream().filter(t -> !t.id().equals(source)).toList();
+    var targets =
+        all().stream()
+            .filter(t -> !t.id().equals(source))
+            .sorted(
+                Comparator.<Waystone>comparingDouble(t -> distance(n, t))
+                    .thenComparing(t -> t.anchor().world().toString())
+                    .thenComparing(Waystone::name))
+            .toList();
     int page = page(requested, targets.size());
     var m = menu(p, "routes", List.of(source, page));
     m.allowed = who -> enabled() && admin(who) && nodes.containsKey(source) && node(source) == n;
     m.reopen = () -> routes(p, source, page);
     for (int i = page * 21; i < Math.min(targets.size(), (page + 1) * 21); i++) {
       var target = targets.get(i);
-      boolean linked = n.routes().stream().anyMatch(r -> r.target().equals(target.id()));
+      var route =
+          n.routes().stream().filter(r -> r.target().equals(target.id())).findFirst().orElse(null);
+      var world = Bukkit.getWorld(target.anchor().world());
       card(
           m,
           MenuStyle.CONTENT[i % 21],
@@ -1074,23 +1251,97 @@ public final class Waystones implements Listener, AutoCloseable {
               .getConfig()
               .getStringList(
                   "waystones.gui.menus.waystones-routes."
-                      + (linked ? "linked-lore" : "unlinked-lore")),
-          Map.of("name", target.name()),
+                      + (route != null ? "linked-lore" : "unlinked-lore")),
+          Map.of(
+              "name", target.name(),
+              "world", world == null ? "?" : world.getName(),
+              "distance", distanceText(n, target),
+              "status", linkStatus(n, target),
+              "cost", route == null ? "—" : Long.toString(route.cost()),
+              "warmup", route == null ? "—" : Integer.toString(route.warmup()),
+              "cooldown", route == null ? "—" : Integer.toString(route.cooldown())),
           () -> routeForm(p, n, target, page));
     }
+    if (targets.isEmpty())
+      card(
+          m,
+          22,
+          setting("routes", "empty-title", "<gray>Других столбов нет"),
+          plugin.getConfig().getStringList("waystones.gui.menus.waystones-routes.empty-lore"),
+          Map.of(),
+          null);
+    long missing =
+        targets.stream()
+            .filter(t -> distance(n, t) != Double.MAX_VALUE && (!hasRoute(n, t) || !hasRoute(t, n)))
+            .count();
+    if (missing > 0)
+      button(m, 4, "link-all", () -> linkAll(p, source, page));
     pages(m, page, targets.size(), a -> routes(p, source, a));
-    back(m, () -> editor(p, source));
     MenuStyle.open(p, m.inventory);
+  }
+
+  /** Links this stone with every other stone in its world, both ways, with default settings. */
+  private void linkAll(Player p, String source, int page) {
+    staff(p);
+    var n = node(source);
+    var targets =
+        all().stream()
+            .filter(t -> !t.id().equals(source) && distance(n, t) != Double.MAX_VALUE)
+            .filter(t -> !hasRoute(n, t) || !hasRoute(t, n))
+            .toList();
+    ui.show(
+        p,
+        lang.render("waystones.link-all"),
+        lang.render(
+            "waystones.link-all-help", Map.of("count", Integer.toString(targets.size()))),
+        List.of(),
+        List.of(
+            ui.button(
+                "link",
+                "waystones.link-all-confirm",
+                v -> linkNext(p, source, new ArrayDeque<>(targets.stream().map(Waystone::id).toList()), page)),
+            ui.button("back", "common.back", v -> routes(p, source, page))),
+        this::admin);
+  }
+
+  private void linkNext(Player p, String source, Deque<String> queue, int page) {
+    staff(p);
+    if (queue.isEmpty()) {
+      routes(p, source, page);
+      return;
+    }
+    var a = node(source);
+    var b = nodes.get(queue.peek()) == null ? null : node(queue.peek());
+    queue.poll();
+    if (b == null) {
+      linkNext(p, source, queue, page);
+      return;
+    }
+    var cfg = plugin.getConfig();
+    int warmup = cfg.getInt("waystones.route-defaults.warmup", 3);
+    int cooldown = cfg.getInt("waystones.route-defaults.cooldown", 30);
+    Waystone nextA = hasRoute(a, b) ? a : withRoute(a, new Waystone.Route(b.id(), suggestedCost(a, b), warmup, cooldown, ""));
+    Waystone nextB = hasRoute(b, a) ? b : withRoute(b, new Waystone.Route(a.id(), suggestedCost(b, a), warmup, cooldown, ""));
+    saveBoth(p, nextA, nextB, () -> linkNext(p, source, queue, page));
   }
 
   private void routeForm(Player p, Waystone n, Waystone target, int page) {
     staff(p);
     var doc = nodes.get(n.id());
+    var targetDoc = nodes.get(target.id());
+    var cfg = plugin.getConfig();
+    var existing = n.routes().stream().filter(v -> v.target().equals(target.id())).findFirst();
     var r =
-        n.routes().stream()
-            .filter(v -> v.target().equals(target.id()))
-            .findFirst()
-            .orElse(new Waystone.Route(target.id(), 0, 3, 30, ""));
+        existing.orElse(
+            new Waystone.Route(
+                target.id(),
+                suggestedCost(n, target),
+                cfg.getInt("waystones.route-defaults.warmup", 3),
+                cfg.getInt("waystones.route-defaults.cooldown", 30),
+                ""));
+    String both = lang.text("waystones.route-both"), one = lang.text("waystones.route-one");
+    // Making a link two-way is the usual wish, so a new link offers it first.
+    String mode = existing.isPresent() && !hasRoute(target, n) ? one : both;
     var buttons = new ArrayList<NativeDialogs.Button>();
     buttons.add(
         ui.button(
@@ -1098,62 +1349,66 @@ public final class Waystones implements Listener, AutoCloseable {
             "content.save",
             v -> {
               staff(p);
-              if (nodes.get(n.id()) != doc || !nodes.containsKey(target.id()))
+              if (nodes.get(n.id()) != doc
+                  || nodes.get(target.id()) != targetDoc
+                  || !nodes.containsKey(target.id()))
                 throw new IllegalArgumentException("waystones.changed");
-              var next =
-                  new Waystone.Route(
-                      target.id(),
-                      Long.parseLong(v.get("cost")),
-                      Integer.parseInt(v.get("warmup")),
-                      Integer.parseInt(v.get("cooldown")),
-                      v.get("permission"));
-              var list = new ArrayList<>(n.routes());
-              list.removeIf(a -> a.target().equals(target.id()));
-              list.add(next);
-              save(
-                  p,
-                  new Waystone(
-                      n.id(), n.name(), n.anchor(), n.arrival(), n.style(), n.model(), list),
-                  doc.revision(),
-                  () -> routes(p, n.id(), page));
+              String permission = v.get("permission").strip();
+              if (permission.length() > 128)
+                throw new IllegalArgumentException("waystones.route-invalid-permission");
+              long cost = number(v, "cost", 0, 1_000_000_000L);
+              int warmup = (int) number(v, "warmup", 0, 300);
+              int cooldown = (int) number(v, "cooldown", 0, 86400);
+              var forward = withRoute(n, new Waystone.Route(target.id(), cost, warmup, cooldown, permission));
+              if (v.get("mode").equals(both))
+                saveBoth(
+                    p,
+                    forward,
+                    withRoute(target, new Waystone.Route(n.id(), cost, warmup, cooldown, permission)),
+                    () -> routes(p, n.id(), page));
+              else save(p, forward, doc.revision(), () -> routes(p, n.id(), page));
             }));
-    buttons.add(
-        ui.button(
-            "delete",
-            "waystones.unlink",
-            v -> {
-              staff(p);
-              if (nodes.get(n.id()) != doc) throw new IllegalArgumentException("waystones.changed");
-              save(
-                  p,
-                  new Waystone(
-                      n.id(),
-                      n.name(),
-                      n.anchor(),
-                      n.arrival(),
-                      n.style(),
-                      n.model(),
-                      n.routes().stream().filter(a -> !a.target().equals(target.id())).toList()),
-                  doc.revision(),
-                  () -> routes(p, n.id(), page));
-            }));
+    if (existing.isPresent())
+      buttons.add(
+          ui.button(
+              "delete",
+              "waystones.unlink",
+              v -> {
+                staff(p);
+                if (nodes.get(n.id()) != doc || nodes.get(target.id()) != targetDoc)
+                  throw new IllegalArgumentException("waystones.changed");
+                var forward = withoutRoute(n, target.id());
+                if (v.get("mode").equals(both) && hasRoute(target, n))
+                  saveBoth(p, forward, withoutRoute(target, n.id()), () -> routes(p, n.id(), page));
+                else save(p, forward, doc.revision(), () -> routes(p, n.id(), page));
+              }));
     buttons.add(ui.button("back", "common.back", v -> routes(p, n.id(), page)));
     ui.show(
         p,
         lang.render("waystones.route-title", Map.of("from", n.name(), "to", target.name())),
         lang.render("waystones.route-help"),
         List.of(
+            NativeDialogs.Field.select(
+                "mode", lang.render("waystones.route-mode"), mode, List.of(both, one)),
             ui.text("cost", "waystones.cost", "" + r.cost(), 10),
-                ui.text("warmup", "waystones.warmup", "" + r.warmup(), 3),
+            ui.text("warmup", "waystones.warmup", "" + r.warmup(), 3),
             ui.text("cooldown", "waystones.cooldown", "" + r.cooldown(), 5),
-                ui.text("permission", "waystones.permission", r.permission(), 128)),
+            ui.text("permission", "waystones.permission", r.permission(), 128)),
         buttons,
         this::admin);
   }
 
   private void save(Player p, Waystone n, long expected, Runnable after) {
+    save(p, n, expected, after, null);
+  }
+
+  /** {@code failed} runs when the write did not happen (storage error or a busy stone). */
+  private void save(Player p, Waystone n, long expected, Runnable after, Runnable failed) {
     staff(p);
-    if (!writing.add(n.id())) return;
+    if (!writing.add(n.id())) {
+      if (failed != null) failed.run();
+      return;
+    }
     Object session = sessions.get(p.getUniqueId());
     store
         .save(KIND, n.id(), expected, n, p.getUniqueId().toString())
@@ -1169,6 +1424,7 @@ public final class Waystones implements Listener, AutoCloseable {
                       writing.remove(n.id());
                       if (error != null) {
                         if (p.isOnline()) lang.send(p, "errors.storage");
+                        if (failed != null) failed.run();
                         return;
                       }
                       numbers.put(n.id(), revision.number());
@@ -1585,9 +1841,9 @@ public final class Waystones implements Listener, AutoCloseable {
   private void spawn(Waystone n) {
     var entities = new ArrayList<Entity>();
     var at = n.anchor().location();
-    var profile = renderProfile(n.style(), n.model());
+    var profile = profileFor(n);
     var origin = profile.model(at);
-    float scale = (float) profile.scale();
+    float scale = (float) profile.effective();
     try {
       if (n.style().equals("itemsadder"))
         entity(
@@ -1668,8 +1924,8 @@ public final class Waystones implements Listener, AutoCloseable {
           Interaction.class,
           entities,
           e -> {
-            e.setInteractionWidth((float) (profile.width() * profile.scale()));
-            e.setInteractionHeight((float) (profile.height() * profile.scale()));
+            e.setInteractionWidth((float) (profile.width() * profile.effective()));
+            e.setInteractionHeight((float) (profile.height() * profile.effective()));
             e.setResponsive(true);
           },
           n.id());

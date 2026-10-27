@@ -87,6 +87,45 @@ public final class PrivateMessages implements Listener, AutoCloseable {
     return state == null ? List.of() : List.copyOf(state.preferences().ignored().values());
   }
 
+  /** Whether {@code who} ignores {@code target}; false while the preferences are still loading. */
+  public boolean ignores(UUID who, UUID target) {
+    var state = states.get(who);
+    return state != null && state.preferences().ignored().containsKey(target.toString());
+  }
+
+  /**
+   * Adds an entry carried over from another plugin's ignore list (LoveChat's old table).
+   * Returns false while the preferences are still loading, so the caller retries later.
+   */
+  public boolean importIgnore(Player who, UUID target) {
+    var state = states.get(who.getUniqueId());
+    if (state == null || saving.contains(who.getUniqueId())) return false;
+    if (state.preferences().ignored().containsKey(target.toString())) return true;
+    if (state.preferences().ignored().size() >= plugin.getConfig().getInt("messages.max-ignored", 200))
+      return true;
+    String name = Bukkit.getOfflinePlayer(target).getName();
+    change(
+        who,
+        old -> {
+          var ignored = new HashMap<>(old.ignored());
+          ignored.put(target.toString(), name == null ? target.toString() : name);
+          return new Preferences(old.enabled(), ignored);
+        },
+        () -> {});
+    return true;
+  }
+
+  /** Adds or removes one entry for an online player; false while the preferences are loading. */
+  public boolean setIgnored(Player who, UUID target, boolean ignore) {
+    var state = states.get(who.getUniqueId());
+    if (state == null || saving.contains(who.getUniqueId())) return false;
+    boolean present = state.preferences().ignored().containsKey(target.toString());
+    if (present == ignore) return true;
+    if (ignore) return importIgnore(who, target);
+    unignore(who, target.toString(), () -> {});
+    return true;
+  }
+
   public Preferences preferences(Player p) {
     var state = states.get(p.getUniqueId());
     if (state == null) throw new IllegalArgumentException("messages.loading");

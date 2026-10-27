@@ -40,6 +40,13 @@ public final class LoveBridge {
         : OptionalInt.empty();
   }
 
+  /** Changes the politeness-based reputation; false when no reputation provider is installed. */
+  public boolean modifyReputation(java.util.UUID player, int delta) {
+    var s = service(ReputationOracle.class);
+    s.ifPresent(o -> o.modify(player, delta));
+    return s.isPresent();
+  }
+
   public Optional<String> clan(Player p) {
     return service(ProfileOracle.class).flatMap(s -> s.clanTag(p.getUniqueId()));
   }

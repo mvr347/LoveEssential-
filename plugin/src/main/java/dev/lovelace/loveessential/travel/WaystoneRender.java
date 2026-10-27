@@ -18,13 +18,38 @@ public record WaystoneRender(
     double gap,
     double textScale,
     boolean text,
-    String context) {
+    String context,
+    double factor) {
+  /** Shared profile as saved: no per-stone multiplier. */
+  public WaystoneRender(
+      double modelX,
+      double modelY,
+      double modelZ,
+      double scale,
+      double height,
+      double width,
+      double centerX,
+      double centerZ,
+      double gap,
+      double textScale,
+      boolean text,
+      String context) {
+    this(
+        modelX, modelY, modelZ, scale, height, width, centerX, centerZ, gap, textScale, text,
+        context, 1);
+  }
+
+  /** Scale actually used for geometry: the shared profile scale times the stone's own factor. */
+  public double effective() {
+    return scale * (factor > 0 ? factor : 1);
+  }
+
   public WaystoneRender {
     for (double value :
         new double[] {
           modelX, modelY, modelZ, scale, height, width, centerX, centerZ, gap, textScale
         })
-      if (!Double.isFinite(value)) throw new IllegalArgumentException("waystones.render-invalid");
+      if (!Double.isFinite(value) || !Double.isFinite(factor)) throw new IllegalArgumentException("waystones.render-invalid");
     if (Math.abs(modelX) > 8
         || Math.abs(modelY) > 8
         || Math.abs(modelZ) > 8
@@ -32,6 +57,8 @@ public record WaystoneRender(
         || Math.abs(centerZ) > 8
         || scale < .05
         || scale > 4
+        || factor < 0
+        || factor > 40
         || height < .1
         || height > 16
         || width < .1
@@ -43,6 +70,13 @@ public record WaystoneRender(
         || context == null
         || !Set.of("NONE", "FIXED").contains(context))
       throw new IllegalArgumentException("waystones.render-invalid");
+  }
+
+  /** The same geometry grown by one stone's own multiplier; text size stays readable. */
+  public WaystoneRender scaled(double factor) {
+    return new WaystoneRender(
+        modelX, modelY, modelZ, scale, height, width, centerX, centerZ, gap, textScale, text,
+        context, factor);
   }
 
   public static String key(String style, String item) {
@@ -75,11 +109,11 @@ public record WaystoneRender(
   }
 
   public Location model(Location anchor) {
-    return local(anchor, modelX * scale, modelY * scale, modelZ * scale);
+    return local(anchor, modelX * effective(), modelY * effective(), modelZ * effective());
   }
 
   public Location center(Location anchor) {
-    return local(anchor, (modelX + centerX) * scale, modelY * scale, (modelZ + centerZ) * scale);
+    return local(anchor, (modelX + centerX) * effective(), modelY * effective(), (modelZ + centerZ) * effective());
   }
 
   /**
@@ -87,15 +121,15 @@ public record WaystoneRender(
    * Keep that pivot correction separate from the user offset applied to all three entities.
    */
   public Location center(Location anchor, String style) {
-    return center(anchor).subtract(0, (style.equals("itemsadder") ? 1 : 0) * scale, 0);
+    return center(anchor).subtract(0, (style.equals("itemsadder") ? 1 : 0) * effective(), 0);
   }
 
   public Location label(Location anchor, String style) {
-    return center(anchor, style).add(0, height * scale + gap, 0);
+    return center(anchor, style).add(0, height * effective() + gap, 0);
   }
 
   public Location label(Location anchor) {
-    return center(anchor).add(0, height * scale + gap, 0);
+    return center(anchor).add(0, height * effective() + gap, 0);
   }
 
   private static Location local(Location anchor, double x, double y, double z) {

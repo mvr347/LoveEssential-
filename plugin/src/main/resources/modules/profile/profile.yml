@@ -25,10 +25,10 @@ links:
     plugin: LoveSubnames
     command: suffixes
     permission: lovesubnames.use
-  nickname:
+  display:
     plugin: LoveEssential
-    command: nick
-    permission: loveessential.nick
+    command: display
+    permission: ''
   scoreboard:
     plugin: LoveEssential
     command: scoreboard
@@ -62,7 +62,30 @@ links:
     command: trade toggle
     permission: ''
 reports:
+  # 2026-10-27: 5 минут между жалобами одного автора — достаточно, чтобы нельзя было залить
+  # ящик администрации, и не мешает пожаловаться на второго нарушителя после разбирательства.
   cooldown-seconds: 300
+  # 2026-10-27: считаются жалобы от РАЗНЫХ игроков за последние 7 дней. Одиночные и старые
+  # жалобы не накапливаются вечно, а повтор от одного автора не увеличивает счётчик.
+  window-days: 7
+  # 3 разных автора — оповещение онлайн-администрации (право loveessential.reports.notify);
+  # 5 — риск временного бана: в списке жалоб появляется кнопка (право loveessential.reports.ban).
+  # Сам плагин никого не банит: что делать на пороге, решает администратор.
+  notify-threshold: 3
+  danger-threshold: 5
+  # На сколько очков вежливости падает игрок, когда администратор ПОДТВЕРЖДАЕТ жалобу.
+  # Сама подача жалобы репутацию не меняет — защита от сговора против невиновного.
+  confirm-politeness-delta: -100
+  # Сообщать автору итог рассмотрения, если он сейчас онлайн.
+  notify-author: true
+  tempban:
+    # Консольные команды кнопки «Временный бан». Пусто — кнопка скажет, что бан не настроен.
+    # Плейсхолдеры: {player}, {duration}, {reason}. Причина — фиксированный текст ниже, а не
+    # текст жалобы, чтобы игроки не могли подставить свои команды.
+    # Пример для LiteBans: ['tempban {player} {duration} {reason}']
+    commands: []
+    duration: 1d
+    reason: Жалобы игроков
 statistics:
   hide-unavailable: true
   placeholders:
