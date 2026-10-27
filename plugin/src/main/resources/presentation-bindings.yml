@@ -1481,20 +1481,56 @@ bindings:
   path: menus.profile-reports-title.labels.profile-reports.cooldown
 - module: profile
   file: gui.yml
-  key: profile-reports.entry
-  path: menus.profile-reports-title.labels.profile-reports.entry
+  key: profile-reports.subject
+  path: menus.profile-reports-title.labels.profile-reports.subject
+- module: profile
+  file: gui.yml
+  key: profile-reports.open-count
+  path: menus.profile-reports-title.labels.profile-reports.open-count
+- module: profile
+  file: gui.yml
+  key: profile-reports.progress
+  path: menus.profile-reports-title.labels.profile-reports.progress
+- module: profile
+  file: gui.yml
+  key: profile-reports.total
+  path: menus.profile-reports-title.labels.profile-reports.total
+- module: profile
+  file: gui.yml
+  key: profile-reports.level-quiet
+  path: menus.profile-reports-title.labels.profile-reports.level-quiet
+- module: profile
+  file: gui.yml
+  key: profile-reports.level-notify
+  path: menus.profile-reports-title.labels.profile-reports.level-notify
+- module: profile
+  file: gui.yml
+  key: profile-reports.level-danger
+  path: menus.profile-reports-title.labels.profile-reports.level-danger
 - module: profile
   file: gui.yml
   key: profile-reports.author
   path: menus.profile-reports-title.labels.profile-reports.author
 - module: profile
   file: gui.yml
-  key: profile-reports.new
-  path: menus.profile-reports-title.labels.profile-reports.new
+  key: profile-reports.status-open
+  path: menus.profile-reports-title.labels.profile-reports.status-open
 - module: profile
   file: gui.yml
-  key: profile-reports.resolved
-  path: menus.profile-reports-title.labels.profile-reports.resolved
+  key: profile-reports.status-confirmed
+  path: menus.profile-reports-title.labels.profile-reports.status-confirmed
+- module: profile
+  file: gui.yml
+  key: profile-reports.status-rejected
+  path: menus.profile-reports-title.labels.profile-reports.status-rejected
+- module: profile
+  file: gui.yml
+  key: profile-reports.empty
+  path: menus.profile-reports-title.labels.profile-reports.empty
+- module: profile
+  file: gui.yml
+  key: profile-reports.empty-lore
+  path: menus.profile-reports-title.labels.profile-reports.empty-lore
 - module: profile
   file: gui.yml
   key: profile-reports.detail
@@ -1513,8 +1549,56 @@ bindings:
   path: menus.profile-reports-title.labels.profile-reports.target-label
 - module: profile
   file: gui.yml
-  key: profile-reports.resolve
-  path: menus.profile-reports-title.labels.profile-reports.resolve
+  key: profile-reports.confirm
+  path: menus.profile-reports-title.labels.profile-reports.confirm
+- module: profile
+  file: gui.yml
+  key: profile-reports.reject
+  path: menus.profile-reports-title.labels.profile-reports.reject
+- module: profile
+  file: gui.yml
+  key: profile-reports.ban
+  path: menus.profile-reports-title.labels.profile-reports.ban
+- module: profile
+  file: gui.yml
+  key: profile-reports.ban-help
+  path: menus.profile-reports-title.labels.profile-reports.ban-help
+- module: profile
+  file: gui.yml
+  key: profile-reports.ban-confirm
+  path: menus.profile-reports-title.labels.profile-reports.ban-confirm
+- module: profile
+  file: gui.yml
+  key: profile-reports.ban-unconfigured
+  path: menus.profile-reports-title.labels.profile-reports.ban-unconfigured
+- module: profile
+  file: gui.yml
+  key: profile-reports.banned
+  path: menus.profile-reports-title.labels.profile-reports.banned
+- module: profile
+  file: gui.yml
+  key: profile-reports.duplicate
+  path: menus.profile-reports-title.labels.profile-reports.duplicate
+- module: profile
+  file: gui.yml
+  key: profile-reports.alert
+  path: menus.profile-reports-title.labels.profile-reports.alert
+- module: profile
+  file: gui.yml
+  key: profile-reports.alert-danger
+  path: menus.profile-reports-title.labels.profile-reports.alert-danger
+- module: profile
+  file: gui.yml
+  key: profile-reports.summary
+  path: menus.profile-reports-title.labels.profile-reports.summary
+- module: profile
+  file: gui.yml
+  key: profile-reports.outcome-confirmed
+  path: menus.profile-reports-title.labels.profile-reports.outcome-confirmed
+- module: profile
+  file: gui.yml
+  key: profile-reports.outcome-rejected
+  path: menus.profile-reports-title.labels.profile-reports.outcome-rejected
 - module: profile
   file: gui.yml
   key: profile-reports.usage

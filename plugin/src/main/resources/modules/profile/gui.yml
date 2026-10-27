@@ -1005,15 +1005,36 @@ menus:
         sent: <gray>Жалоба отправлена администрации.
         reason-length: '<gray>Опишите ситуацию: от 8 до 1024 символов.'
         cooldown: <gray>Вы недавно отправляли жалобу. Попробуйте позже.
-        entry: <gold>Жалоба на <white><player>
+        subject: <gold>Жалобы на <white><player>
+        open-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
+        progress: '<gray>До порога: <bar> <white><count>/<limit>'
+        total: '<gray>Всего жалоб за всё время: <white><count>'
+        level-quiet: <gray>Пока без оповещений
+        level-notify: <yellow>Администрация оповещена
+        level-danger: <red>Риск временного бана
         author: '<gray>Автор: <white><player>'
-        new: <yellow>Не рассмотрена
-        resolved: <gray>Рассмотрена
+        status-open: <yellow>Не рассмотрена
+        status-confirmed: <green>Подтверждена
+        status-rejected: <gray>Отклонена
+        empty: <gray>Жалоб нет
+        empty-lore: <gray>Когда игроки пожалуются друг на друга, жалобы появятся здесь.
         detail: <gold>Рассмотрение жалобы
-        detail-help: <gray>Это сохранённые сведения. Изменение полей здесь не меняет исходную жалобу.
+        detail-help: <gray>Это сохранённые сведения. Изменение полей здесь не меняет исходную жалобу. «Подтвердить» снижает вежливость игрока, «Отклонить» ничего не меняет.
         author-label: <gold>Автор
         target-label: <gold>Игрок
-        resolve: <gold>Отметить рассмотренной
+        confirm: <green>Подтвердить
+        reject: <red>Отклонить
+        ban: <red>Временный бан
+        ban-help: <gray>Выполнит команды бана из настроек. Решение лучше принимать после просмотра жалоб.
+        ban-confirm: <red>Забанить
+        ban-unconfigured: <gray>Команды бана не заданы в настройках профиля.
+        banned: <gray>Команды бана для <white><player> <gray>выполнены.
+        duplicate: <gray>Вы уже жаловались на этого игрока. Дождитесь решения администрации.
+        alert: '<yellow>Жалобы на <white><player><yellow>: <white><count> <yellow>от разных игроков. Откройте /reports.'
+        alert-danger: '<red>Жалоб на <white><player><red>: <white><count><red>. Возможен временный бан — откройте /reports.'
+        summary: '<yellow>Игроков с <white><threshold>+ <yellow>жалобами: <white><count><yellow>. Откройте /reports.'
+        outcome-confirmed: <gray>Ваша жалоба на <white><player> <gray>рассмотрена и подтверждена. Спасибо!
+        outcome-rejected: <gray>Ваша жалоба на <white><player> <gray>рассмотрена и отклонена.
         usage: <gray>/жалоба <ник>
 frame:
   material: GRAY_STAINED_GLASS_PANE

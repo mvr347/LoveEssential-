@@ -165,9 +165,17 @@ permissions:
     default: op
   loveessential.invsee.edit:
     default: op
+  loveessential.reports.notify:
+    description: Оповещения о жалобах на игроков
+    default: op
+  loveessential.reports.ban:
+    description: Кнопка временного бана в списке жалоб
+    default: op
   loveessential.admin:
     default: op
     children:
+      loveessential.reports.notify: true
+      loveessential.reports.ban: true
       loveessential.worlds.admin: true
       loveessential.worlds.teleport: true
       loveessential.scenarios.admin: true
