@@ -115,6 +115,17 @@ public final class PrivateMessages implements Listener, AutoCloseable {
     return true;
   }
 
+  /** Adds or removes one entry for an online player; false while the preferences are loading. */
+  public boolean setIgnored(Player who, UUID target, boolean ignore) {
+    var state = states.get(who.getUniqueId());
+    if (state == null || saving.contains(who.getUniqueId())) return false;
+    boolean present = state.preferences().ignored().containsKey(target.toString());
+    if (present == ignore) return true;
+    if (ignore) return importIgnore(who, target);
+    unignore(who, target.toString(), () -> {});
+    return true;
+  }
+
   public Preferences preferences(Player p) {
     var state = states.get(p.getUniqueId());
     if (state == null) throw new IllegalArgumentException("messages.loading");
