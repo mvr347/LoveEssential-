@@ -1132,7 +1132,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     String iconKey = title;
     String stateToken =
         switch (id) {
-          case "grammar" -> "lovechat_grammar";
+          case "grammar" -> "lovechatfilter_grammar";
           case "silent" -> "lovechat_silent_mode";
           case "mentions" -> "lovechat_mentions_disabled";
           case "clan-invites" -> "clans_invites_enabled";
@@ -1180,7 +1180,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     String permission = plugin.getConfig().getString("profile.links." + id + ".permission", "");
     return command != null
         && command.testPermissionSilent(viewer)
-        && (Set.of("nickname", "scoreboard").contains(id)
+        && (Set.of("scoreboard").contains(id)
             || permission.isBlank()
             || viewer.hasPermission(permission));
   }
@@ -1203,7 +1203,18 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     if (close) viewer.closeInventory();
     command.execute(
         viewer, command.getName(), parts.length == 1 ? new String[0] : parts[1].split(" +"));
-    placeholders.clear();
+    placeholders.invalidate(viewer.getUniqueId());
+    placeholders.invalidate(target.getUniqueId());
+    // A toggle keeps the menu open: repaint on the next tick so the new state shows at once
+    // instead of waiting for the periodic refresh.
+    if (!close)
+      Bukkit.getScheduler()
+          .runTask(
+              plugin,
+              () -> {
+                var open = menus.get(viewer.getUniqueId());
+                if (open != null && viewer.isOnline() && permitted(open)) repaint(open);
+              });
   }
 
   public void profile(Player viewer, Player target) {
@@ -1417,16 +1428,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             textLines("profile-menu.customization-lore", p, p)));
     link(
         m,
-        20,
-        "nickname",
-        "profile-menu.nickname",
-        "profile-menu.nickname-lore",
-        Material.NAME_TAG,
-        p,
-        true);
-    link(
-        m,
-        24,
+        22,
         "suffixes",
         "profile-menu.suffixes",
         "profile-menu.suffixes-lore",

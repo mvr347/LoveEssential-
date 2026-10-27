@@ -25,10 +25,6 @@ links:
     plugin: LoveSubnames
     command: suffixes
     permission: lovesubnames.use
-  nickname:
-    plugin: LoveEssential
-    command: nick
-    permission: loveessential.nick
   scoreboard:
     plugin: LoveEssential
     command: scoreboard

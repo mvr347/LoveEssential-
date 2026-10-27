@@ -510,6 +510,12 @@ public final class Placeholders {
     return STYLE_ONLY.deserialize(value);
   }
 
+  /** Drops cached values that involve one player, so a toggle shows at once without a global flush. */
+  public void invalidate(UUID player) {
+    String id = player.toString();
+    cache.asMap().keySet().removeIf(k -> k.startsWith(id + ":") || k.contains(":" + id + ":"));
+  }
+
   public void clear() {
     cache.invalidateAll();
     unresolved.clear();

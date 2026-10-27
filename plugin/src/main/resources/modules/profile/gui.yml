@@ -774,7 +774,7 @@ menus:
         title: <gold>Грамматика
         lore:
         - <gray>Автоисправление LoveChat
-        - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+        - '<gray>Состояние: <white><papi:lovechatfilter_grammar:"—">'
         - <green>ЛКМ <dark_gray>— <gray>переключить
       silent:
         material: FEATHER
@@ -824,12 +824,8 @@ menus:
         - <green>ЛКМ <dark_gray>— <gray>открыть свои настройки
         customization-lore:
         - '<gray>Внешний вид: <nickname> <suffix>'
-        - <gray>Цвета, градиенты, сброс ника и пометки.
+        - <gray>Пометки рядом с ником. Ник настраивается в отдельном плагине.
         - <green>ЛКМ <dark_gray>— <gray>открыть персонализацию
-        nickname: <gold>Никнейм
-        nickname-lore:
-        - '<gray>Текущий: <nickname>'
-        - <gray>Цвет, градиент, текст и сброс к стандартному имени.
         suffixes: <gold>Пометки
         suffixes-lore:
         - '<gray>Текущая: <suffix>'
@@ -838,7 +834,7 @@ menus:
         grammar: <gold>Грамматика
         grammar-lore:
         - <gray>Автоисправление LoveChat
-        - '<gray>Состояние: <white><papi:lovechat_grammar:"—">'
+        - '<gray>Состояние: <white><papi:lovechatfilter_grammar:"—">'
         - <green>ЛКМ <dark_gray>— <gray>переключить
         silent: <gold>Тихий режим
         silent-lore:
