@@ -117,7 +117,7 @@ plugins/LoveEssential/
 └── exports/            # Экспорт NPC для переноса
 ```
 
-Доступны 28 модулей: `npc`, `tab`, `home`, `spawn`, `vanish`, `afk`, `skin`, `sitride`, `utilities`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`, `worlds`, `scenarios`, `dialogs`, `scoreboard`, `revive`, `rtp`, `display`.
+Доступны 29 модулей: `npc`, `tab`, `home`, `spawn`, `vanish`, `afk`, `skin`, `sitride`, `utilities`, `nightskip`, `portal`, `hologram`, `traces`, `joinquit`, `motd`, `messages`, `inventory`, `profile`, `nickname`, `crafting`, `starter`, `worlds`, `scenarios`, `dialogs`, `scoreboard`, `revive`, `rtp`, `display`, `calamities`.
 
 `/le module` открывает список: ЛКМ — настройки, ПКМ — включение/отключение. Состояние, заданное командой или GUI, сохраняется в SQLite и имеет приоритет над `enabled` в файле модуля. `/le reload` перечитывает конфиги и язык. Старый монолитный конфиг переносится с копией `config.yml.pre-modules.bak`; плоские файлы модулей — с копиями `*.yml.pre-folders.bak`. Пользовательские тексты и оформление сохраняются.
 

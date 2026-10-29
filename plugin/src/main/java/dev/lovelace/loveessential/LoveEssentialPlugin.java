@@ -49,7 +49,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "revive",
           "rtp",
           "display",
-          "waystones");
+          "waystones",
+          "calamities");
   private MechanicsService mechanics;
 
   public void mechanicsChanged(org.bukkit.entity.Player player) {
@@ -715,6 +716,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     }
     dev.lovelace.loveessential.module.RandomTeleport.validate(config);
     dev.lovelace.loveessential.module.Revive.validate(config);
+    dev.lovelace.loveessential.calamity.CalamityService.validate(config);
     bounded(config, "portal.max-portals", 1, 1024);
     bounded(config, "portal.max-volume", 1, 262144);
     bounded(config, "portal.default-cooldown-seconds", 0, 86400);

@@ -19,6 +19,7 @@
 | `loveessential.worlds.admin` | OP | Создание, импорт, загрузка/выгрузка и изменение миров |
 | `loveessential.worlds.teleport` | Все | Список миров и переход; дополнительно проверяется право конкретного мира |
 | `loveessential.scenarios.admin` | OP | Создание, изменение, запуск и сброс своего журнала сценариев |
+| `loveessential.calamities.admin` | OP | Запуск и остановка бедствий, угроза, болезни игроков, расчёт и журнал (`/calamity`) |
 | `loveessential.dialogs.admin` | OP | Создание и изменение нативных диалогов |
 | `loveessential.content.edit` | OP | GUI-редакторы кастомных крафтов и стартового набора; входит в loveessential.admin |
 | `loveessential.nick.others` | OP | Изменение ника другого онлайн-игрока |

@@ -127,7 +127,12 @@ commands:
     aliases: [ртп]
   display:
     aliases: [оформление]
+  calamity:
+    aliases: [бедствие, беда]
 permissions:
+  loveessential.calamities.admin:
+    description: Запуск, остановка и настройка бедствий
+    default: op
   loveessential.waystones.admin:
     description: Создание и настройка путевых столбов
     default: op
@@ -179,6 +184,7 @@ permissions:
       loveessential.worlds.admin: true
       loveessential.worlds.teleport: true
       loveessential.scenarios.admin: true
+      loveessential.calamities.admin: true
       loveessential.dialogs.admin: true
       loveessential.scoreboard: true
       loveessential.content.edit: true

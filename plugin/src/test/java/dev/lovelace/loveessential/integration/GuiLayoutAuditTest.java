@@ -20,7 +20,7 @@ class GuiLayoutAuditTest {
           "npc", "tab", "home", "spawn", "vanish", "afk", "skin", "sitride",
           "utilities", "nightskip", "portal", "hologram", "traces", "joinquit", "motd",
           "messages", "inventory", "profile", "nickname", "crafting", "starter", "worlds",
-          "scenarios", "dialogs", "scoreboard", "revive", "rtp", "display");
+          "scenarios", "dialogs", "scoreboard", "revive", "rtp", "display", "calamities");
 
   ServerMock server;
   LoveEssentialPlugin plugin;

@@ -520,6 +520,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             case "nightskip" -> Material.LANTERN;
             case "hologram", "motd", "joinquit" -> Material.OAK_SIGN;
             case "traces" -> Material.FEATHER;
+            case "calamities" -> Material.WITHER_ROSE;
             default -> Material.COMPARATOR;
           },
           lang.render("gui.module-names." + id),
