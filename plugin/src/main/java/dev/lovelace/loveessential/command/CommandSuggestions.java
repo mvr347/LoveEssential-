@@ -243,6 +243,31 @@ public final class CommandSuggestions {
       }
       return List.of();
     }
+    if (dev.lovelace.loveessential.module.Comfort.TARGETED.contains(command)
+        && sender.hasPermission("loveessential." + command)) {
+      boolean others = sender.hasPermission("loveessential." + command + ".others");
+      switch (command) {
+        case "gamemode" -> {
+          if (args.length == 1) return List.of("survival", "creative", "adventure", "spectator");
+          return args.length == 2 && others ? players(sender) : List.of();
+        }
+        case "speed" -> {
+          if (args.length == 1) return List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+          return args.length == 2 && others ? players(sender) : List.of();
+        }
+        case "god" -> {
+          if (args.length == 1) {
+            var out = new ArrayList<>(List.of("on", "off"));
+            if (others) out.addAll(players(sender));
+            return out;
+          }
+          return args.length == 2 && others ? players(sender) : List.of();
+        }
+        default -> {
+          return args.length == 1 && others ? players(sender) : List.of();
+        }
+      }
+    }
     if (!(sender instanceof Player p)) return List.of();
     if (command.equals("profile")) {
       if (!plugin.module("profile")) return List.of();
@@ -309,14 +334,6 @@ public final class CommandSuggestions {
     }
     if (command.equals("traces") && args.length == 1 && plugin.module("traces"))
       return List.of("on", "off");
-    if (command.equals("god") && args.length == 1 && sender.hasPermission("loveessential.god"))
-      return List.of("on", "off");
-    if (command.equals("gamemode")
-        && args.length == 1
-        && sender.hasPermission("loveessential.gamemode"))
-      return List.of("survival", "creative", "adventure", "spectator");
-    if (command.equals("speed") && args.length == 1 && sender.hasPermission("loveessential.speed"))
-      return List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
     if (command.equals("skin") && args.length == 1 && plugin.module("skin")) {
       var skins = new ArrayList<>(players(sender));
       skins.add("reset");

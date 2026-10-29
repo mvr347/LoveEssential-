@@ -971,15 +971,15 @@ public final class CalamityService implements Listener, AutoCloseable {
 
   // ---------------------------------------------------------------- commands
 
-  private boolean admin(Player p) {
+  private boolean admin(org.bukkit.command.CommandSender p) {
     return p.hasPermission("loveessential.calamities.admin");
   }
 
-  private void requireAdmin(Player p) {
+  private void requireAdmin(org.bukkit.command.CommandSender p) {
     if (!admin(p)) throw new IllegalArgumentException("errors.permission");
   }
 
-  public void command(Player p, String[] args) {
+  public void command(org.bukkit.command.CommandSender p, String[] args) {
     if (!plugin.module("calamities")) throw new IllegalArgumentException("errors.module-disabled");
     String sub = args.length == 0 ? "info" : args[0].toLowerCase(Locale.ROOT);
     switch (sub) {
@@ -1045,7 +1045,7 @@ public final class CalamityService implements Listener, AutoCloseable {
     throw new IllegalArgumentException("calamity.usage");
   }
 
-  private void startCommand(Player p, String[] args) {
+  private void startCommand(org.bukkit.command.CommandSender p, String[] args) {
     Type t = args.length > 1 ? Type.of(args[1]) : null;
     if (t == null) throw new IllegalArgumentException("calamity.usage");
     if (phase != Phase.IDLE) {
@@ -1065,7 +1065,7 @@ public final class CalamityService implements Listener, AutoCloseable {
             "time", time(saved.duration)));
   }
 
-  private void diseaseCommand(Player p, String[] args) {
+  private void diseaseCommand(org.bukkit.command.CommandSender p, String[] args) {
     Disease d = args.length > 1 ? Disease.of(args[1]) : null;
     if (d == null || args.length < 3) throw new IllegalArgumentException("calamity.usage");
     String target = args[2];
@@ -1088,7 +1088,7 @@ public final class CalamityService implements Listener, AutoCloseable {
         Map.of("name", name(d), "state", cure ? "cure" : "infect", "target", who.getName()));
   }
 
-  private void simulate(Player p, Type t, Severity s) {
+  private void simulate(org.bukkit.command.CommandSender p, Type t, Severity s) {
     double cap = settings.d("cap-percent", 75);
     double power = CalamityRules.strength(0.5, s, 1);
     java.util.function.Function<String, String> pct =
@@ -1108,7 +1108,7 @@ public final class CalamityService implements Listener, AutoCloseable {
             "spawn", pct.apply("natural-spawn")));
   }
 
-  private void info(Player p) {
+  private void info(org.bukkit.command.CommandSender p) {
     switch (phase) {
       case ACTIVE ->
           lang.send(
@@ -1131,7 +1131,7 @@ public final class CalamityService implements Listener, AutoCloseable {
               Map.of("time", time(saved.cooldown)));
     }
     var ill = new ArrayList<String>();
-    for (Disease d : Disease.values()) if (sick(p, d)) ill.add(name(d));
+    if (p instanceof Player player) for (Disease d : Disease.values()) if (sick(player, d)) ill.add(name(d));
     if (!ill.isEmpty())
       lang.send(p, "calamity.status-sick", Map.of("diseases", String.join(", ", ill)));
     if (admin(p)) {

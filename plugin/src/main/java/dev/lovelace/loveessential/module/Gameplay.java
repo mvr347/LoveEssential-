@@ -300,6 +300,11 @@ public final class Gameplay implements Listener, AutoCloseable {
         .toList();
   }
 
+  /** The commands of {@link Comfort#TARGETED}, also from the console. */
+  public void targeted(org.bukkit.command.CommandSender sender, String cmd, String[] args) {
+    comfort.targeted(sender, cmd, args);
+  }
+
   public void command(Player p, String cmd, String[] args) {
     if (Comfort.COMMANDS.contains(cmd)) {
       comfort.command(p, cmd, args);

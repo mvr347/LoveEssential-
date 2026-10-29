@@ -11,7 +11,9 @@ messages:
     passenger-ejected: <gray>Пассажир снят.
     prompt-mode: <yellow>Введите survival, creative, adventure или spectator.
     prompt-speed: <yellow>Введите скорость от 0 до 10. При полёте меняется скорость полёта, иначе — ходьбы.
-    usage: <gray>/sit · /ride [игрок] · /hat · /traces [on|off] · /god [вкл|выкл] · /speed <0–10> · /gamemode <режим>
+    usage: <gray>/sit · /ride [игрок] · /hat · /traces [on|off] · /heal|/feed|/fly|/repair [игрок] · /god [вкл|выкл] [игрок] · /speed <0–10> [игрок] · /gamemode <режим> [игрок]
+    console-target: '<red>Из консоли укажите игрока, например: /heal Steve.'
+    applied: '<gray>Готово: <white><player></white>.'
     healed: <green>Здоровье восстановлено.
     fed: <green>Сытость восстановлена.
     fly-on: <green>Полёт разрешён.
