@@ -131,4 +131,18 @@ class ConsoleCommandsTest {
     console("heal Bob");
     assertEquals(4.0, bob.getHealth(), 1e-9);
   }
+
+  @Test
+  void consoleGetsPlayerNamesAndModesInTabCompletion() {
+    server.addPlayer("Bob");
+    server.getScheduler().performTicks(40);
+    var console = server.getConsoleSender();
+    var heal = plugin.getCommand("heal");
+    assertNotNull(heal);
+    assertTrue(heal.tabComplete(console, "heal", new String[] {""}).contains("Bob"));
+    var gamemode = plugin.getCommand("gamemode");
+    assertNotNull(gamemode);
+    assertTrue(gamemode.tabComplete(console, "gamemode", new String[] {""}).contains("creative"));
+    assertTrue(gamemode.tabComplete(console, "gamemode", new String[] {"creative", ""}).contains("Bob"));
+  }
 }
