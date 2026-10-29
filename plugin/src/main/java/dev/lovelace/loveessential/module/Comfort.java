@@ -7,6 +7,7 @@ import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.storage.SqliteStore;
 import java.util.*;
 import org.bukkit.*;
+import org.bukkit.command.CommandSender;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.type.Stairs;
@@ -23,6 +24,10 @@ import org.bukkit.persistence.PersistentDataType;
 
 /** Temporary vehicles are owned, bounded and removed on every exit path. */
 public final class Comfort implements Listener, AutoCloseable {
+  /** Commands that act on the sender or, given a name, on another player; the console must give a name. */
+  public static final Set<String> TARGETED =
+      Set.of("heal", "feed", "fly", "god", "speed", "gamemode", "repair");
+
   public static final Set<String> COMMANDS =
       Set.of(
           "sit",
@@ -126,6 +131,10 @@ public final class Comfort implements Listener, AutoCloseable {
 
   public void command(Player p, String command, String[] args) {
     MainThread.require();
+    if (TARGETED.contains(command)) {
+      targeted(p, command, args);
+      return;
+    }
     String module =
         Set.of("sit", "lay", "ride", "eject", "hat").contains(command)
             ? "sitride"
@@ -191,6 +200,52 @@ public final class Comfort implements Listener, AutoCloseable {
                           }
                         }));
       }
+      default -> throw new IllegalArgumentException("errors.input");
+    }
+  }
+
+  /**
+   * heal, feed, fly, god, speed, gamemode and repair. Without a name they act on the sender; with one they act on that
+   * player (the sender then needs {@code loveessential.<command>.others}). The console has no self, so it must name a
+   * player. A leading on/off of {@code /god} belongs to the command, not to the target.
+   */
+  public void targeted(CommandSender sender, String command, String[] args) {
+    MainThread.require();
+    Player actor = sender instanceof Player p ? p : null;
+    if (actor != null) {
+      plugin.requireAccess("utilities", actor);
+      if (!love.authenticated(actor)) throw new IllegalArgumentException("errors.access");
+    }
+    if (!sender.hasPermission("loveessential." + command))
+      throw new IllegalArgumentException("errors.permission");
+    int fixed =
+        switch (command) {
+          case "speed", "gamemode" -> 1;
+          case "god" -> args.length > 0 && isSwitchWord(args[0]) ? 1 : 0;
+          default -> 0;
+        };
+    if (args.length < fixed || args.length > fixed + 1)
+      throw new IllegalArgumentException("comfort.usage");
+    Player target;
+    if (args.length == fixed) {
+      if (actor == null) throw new IllegalArgumentException("comfort.console-target");
+      target = actor;
+    } else {
+      target = Bukkit.getPlayerExact(args[fixed]);
+      if (target == null
+          || !target.isOnline()
+          || !love.authenticated(target)
+          || actor != null && !actor.canSee(target)) throw new IllegalArgumentException("players.unavailable");
+      if (target != actor && !sender.hasPermission("loveessential." + command + ".others"))
+        throw new IllegalArgumentException("errors.permission");
+    }
+    apply(target, command, args);
+    if (target != sender)
+      lang.send(sender, "comfort.applied", Map.of("player", target.getName()));
+  }
+
+  private void apply(Player p, String command, String[] args) {
+    switch (command) {
       case "heal" -> {
         p.setHealth(
             Objects.requireNonNull(p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH))
@@ -212,8 +267,7 @@ public final class Comfort implements Listener, AutoCloseable {
         lang.send(p, on ? "comfort.fly-on" : "comfort.fly-off");
       }
       case "god" -> {
-        if (args.length > 1) throw new IllegalArgumentException("comfort.usage");
-        boolean on = args.length == 0 ? !god.contains(p.getUniqueId()) : switchWord(args[0]);
+        boolean on = args.length > 0 && isSwitchWord(args[0]) ? switchWord(args[0]) : !god.contains(p.getUniqueId());
         if (on) {
           god.add(p.getUniqueId());
           p.setFireTicks(0);
@@ -225,7 +279,6 @@ public final class Comfort implements Listener, AutoCloseable {
         lang.send(p, on ? "comfort.god-on" : "comfort.god-off");
       }
       case "speed" -> {
-        if (args.length != 1) throw new IllegalArgumentException("comfort.usage");
         int value = Integer.parseInt(args[0]);
         if (value < 0 || value > 10) throw new IllegalArgumentException("comfort.usage");
         if (p.isFlying()) p.setFlySpeed(value / 10f);
@@ -234,7 +287,6 @@ public final class Comfort implements Listener, AutoCloseable {
         lang.send(p, "common.done");
       }
       case "gamemode" -> {
-        if (args.length != 1) throw new IllegalArgumentException("comfort.usage");
         var mode =
             switch (args[0].toLowerCase(Locale.ROOT)) {
               case "0", "survival", "s" -> GameMode.SURVIVAL;
@@ -257,6 +309,15 @@ public final class Comfort implements Listener, AutoCloseable {
         lang.send(p, "common.done");
       }
       default -> throw new IllegalArgumentException("errors.input");
+    }
+  }
+
+  static boolean isSwitchWord(String word) {
+    try {
+      switchWord(word);
+      return true;
+    } catch (IllegalArgumentException e) {
+      return false;
     }
   }
 

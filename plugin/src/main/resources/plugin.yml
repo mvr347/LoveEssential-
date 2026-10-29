@@ -213,13 +213,20 @@ permissions:
       loveessential.hat: true
       loveessential.traces: true
       loveessential.heal: true
+      loveessential.heal.others: true
       loveessential.display.own: true
       loveessential.feed: true
+      loveessential.feed.others: true
       loveessential.fly: true
+      loveessential.fly.others: true
       loveessential.god: true
+      loveessential.god.others: true
       loveessential.speed: true
+      loveessential.speed.others: true
       loveessential.gamemode: true
+      loveessential.gamemode.others: true
       loveessential.repair: true
+      loveessential.repair.others: true
       loveessential.ride: true
       loveessential.npc.import: true
       loveessential.npc.export: true
@@ -266,20 +273,41 @@ permissions:
     default: true
   loveessential.heal:
     default: op
+  loveessential.heal.others:
+    description: Применять команду к другому игроку и из консоли.
+    default: op
   loveessential.display.own:
     description: Устаревшее право совместимости; управление своими подписями доступно всем.
     default: true
   loveessential.feed:
     default: op
+  loveessential.feed.others:
+    description: Применять команду к другому игроку и из консоли.
+    default: op
   loveessential.fly:
+    default: op
+  loveessential.fly.others:
+    description: Применять команду к другому игроку и из консоли.
     default: op
   loveessential.god:
     default: op
+  loveessential.god.others:
+    description: Применять команду к другому игроку и из консоли.
+    default: op
   loveessential.speed:
+    default: op
+  loveessential.speed.others:
+    description: Применять команду к другому игроку и из консоли.
     default: op
   loveessential.gamemode:
     default: op
+  loveessential.gamemode.others:
+    description: Применять команду к другому игроку и из консоли.
+    default: op
   loveessential.repair:
+    default: op
+  loveessential.repair.others:
+    description: Применять команду к другому игроку и из консоли.
     default: op
   loveessential.revive.downable:
     default: true

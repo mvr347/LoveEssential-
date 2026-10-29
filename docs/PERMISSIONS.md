@@ -9,13 +9,20 @@
 | Право | По умолчанию | Доступ |
 | --- | --- | --- |
 | `loveessential.heal` | OP | Лечение себя |
+| `loveessential.heal.others` | OP | `/heal <игрок>` для другого игрока |
 | `loveessential.display.own` | Все | Устаревшее право совместимости. `/display` управляет своими подписями без отдельного разрешения, даже если этот узел запрещён. |
 | `loveessential.feed` | OP | Восстановление сытости |
+| `loveessential.feed.others` | OP | `/feed <игрок>` для другого игрока |
 | `loveessential.fly` | OP | Разрешение полёта |
+| `loveessential.fly.others` | OP | `/fly <игрок>` для другого игрока |
 | `loveessential.god` | OP | Режим бога (`/god`) |
+| `loveessential.god.others` | OP | `/god <игрок>` для другого игрока |
 | `loveessential.speed` | OP | Скорость ходьбы/полёта |
+| `loveessential.speed.others` | OP | `/speed <0–10> <игрок>` для другого игрока |
 | `loveessential.gamemode` | OP | Свой режим игры |
+| `loveessential.gamemode.others` | OP | `/gamemode <режим> <игрок>` для другого игрока |
 | `loveessential.repair` | OP | Ремонт предмета в руке |
+| `loveessential.repair.others` | OP | `/repair <игрок>` для другого игрока |
 | `loveessential.worlds.admin` | OP | Создание, импорт, загрузка/выгрузка и изменение миров |
 | `loveessential.worlds.teleport` | Все | Список миров и переход; дополнительно проверяется право конкретного мира |
 | `loveessential.scenarios.admin` | OP | Создание, изменение, запуск и сброс своего журнала сценариев |

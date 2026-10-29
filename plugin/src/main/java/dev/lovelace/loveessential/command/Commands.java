@@ -226,6 +226,14 @@ public final class Commands implements CommandExecutor, TabCompleter {
         }
         return true;
       }
+      if (cmd.equals("calamity") && !(sender instanceof Player)) {
+        extensions.calamities.command(sender, args);
+        return true;
+      }
+      if (dev.lovelace.loveessential.module.Comfort.TARGETED.contains(cmd) && !(sender instanceof Player)) {
+        gameplay.targeted(sender, cmd, args);
+        return true;
+      }
       Player p = player(sender);
       if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
       if (Extensions.COMMANDS.contains(cmd)) {
