@@ -121,4 +121,14 @@ class ConsoleCommandsTest {
     server.dispatchCommand(alice, "heal");
     assertEquals(5.0, alice.getHealth(), 1e-9);
   }
+
+  @Test
+  void aDisabledUtilitiesModuleStaysOffForTheConsole() throws Exception {
+    var bob = server.addPlayer("Bob");
+    bob.setHealth(4);
+    var done = plugin.module("utilities", false);
+    waitFor(done::isDone);
+    console("heal Bob");
+    assertEquals(4.0, bob.getHealth(), 1e-9);
+  }
 }

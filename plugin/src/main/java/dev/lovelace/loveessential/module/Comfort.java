@@ -215,6 +215,9 @@ public final class Comfort implements Listener, AutoCloseable {
     if (actor != null) {
       plugin.requireAccess("utilities", actor);
       if (!love.authenticated(actor)) throw new IllegalArgumentException("errors.access");
+    } else if (!plugin.module("utilities")) {
+      // The console has no world or game mode to check, but a switched-off module stays off for it too.
+      throw new IllegalArgumentException("errors.module-disabled");
     }
     if (!sender.hasPermission("loveessential." + command))
       throw new IllegalArgumentException("errors.permission");
