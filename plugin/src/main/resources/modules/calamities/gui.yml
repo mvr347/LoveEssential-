@@ -1,0 +1,47 @@
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+messages:
+  calamity:
+    type-bugs: Нашествие жуков
+    type-infertile: Неплодородность земли
+    type-plague: Чума скота
+    type-undead: Нашествие нечисти
+    disease-hunger: Синдром голода
+    disease-scurvy: Цинга
+    time-day: '<n> д.'
+    time-hour: '<n> ч'
+    time-less: меньше часа
+    severity-mild: лёгкое
+    severity-normal: обычное
+    severity-heavy: тяжёлое
+    omen: '<gold>Знамение: <white><name></white> приближается. Через <time> оно придёт — соберите урожай и загоните скот.'
+    started: '<red>Началось: <white><name></white> (<severity>). Продлится около <time>.'
+    ended: '<green>Закончилось: <white><name></white>. Мир выдыхает.'
+    shortened: '<green>Бедствие ослабло: убито достаточно нечисти.'
+    bar-omen: '<gold>Знамение: <name> — до начала <time>'
+    bar-active: '<name> — осталось <time>'
+    status-idle: '<gray>Сейчас всё спокойно. Следующее бедствие возможно не раньше, чем через <time>.'
+    status-idle-ready: '<gray>Сейчас всё спокойно.'
+    status-active: '<gold><name> (<severity>)</gold> <gray>— осталось <time>, сила <strength>%.'
+    status-omen: '<gold>Знамение: <name> — через <time>.'
+    status-sick: '<red>Вы больны: <diseases>.'
+    status-threat: '<gray>Угроза: <threats>'
+    infected: '<red>Вы заболели: <white><name></white>. <hint>'
+    cured: '<green>Вы выздоровели: <white><name></white>.'
+    hint-hunger: 'Ешьте разное: три разных блюда подряд — и вы поправитесь.'
+    hint-scurvy: 'Съешьте свежее — яблоки, ягоды, морковь, дыню — несколько раз.'
+    admin-started: '<gray>Запущено: <white><name></white> (<severity>) на <time>.'
+    admin-stopped: '<gray>Бедствие остановлено.'
+    admin-nothing: '<gray>Сейчас бедствия нет.'
+    admin-busy: '<red>Уже идёт бедствие. Остановите его: /calamity stop'
+    admin-threat: '<gray>Угроза <white><name></white> теперь <white><value></white>.'
+    admin-disease: '<gray><name>: <state> для <target>.'
+    admin-simulate: '<gray><name> (<severity>) на пике: рост −<growth>%, урожай −<crops>%, размножение −<breeding>%, мясо −<meat>%, спавн −<spawn>%.'
+    admin-log-empty: '<gray>Журнал пуст.'
+    admin-log-line: '<gray><line>'
+    usage: '<gray>/calamity [info | start <тип> [лёгкое|обычное|тяжёлое] [минут] | stop | threat <тип> <0-100> | disease <hunger|scurvy> <on|off|игрок> | simulate <тип> [тяжесть] | log]'

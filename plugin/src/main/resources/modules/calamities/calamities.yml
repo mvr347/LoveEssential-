@@ -1,0 +1,131 @@
+# Тексты находятся в gui.yml рядом с настройками; MiniMessage и подстановки поддерживаются.
+enabled: true
+# 2026-10-29: бедствия действуют на весь мир, но обходят миры из denied-worlds (арены дуэлей, творческие миры).
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+# 2026-10-29: потолок итогового штрафа, %. Даже тяжёлое бедствие с костром и без защит не снижает параметр сильнее:
+# 75 оставляет ферме хотя бы четверть выхода, иначе бедствие необратимо убивает огороды.
+cap-percent: 75
+# С какого числа игроков в сети бедствие бьёт в полную силу. Один игрок получает 60% силы, дальше растёт линейно:
+# так ночь одиночки на пустом сервере не превращается в катастрофу.
+online-full-strength: 8
+# Наигрыш в минутах, до которого штрафы вдвое мягче, а болезни не липнут: первый вечер не должен быть испорчен.
+newcomer-minutes: 300
+# Игровых суток покоя после бедствия. 4 — бедствие в среднем раз в неделю-две и не следует друг за другом.
+cooldown-days: 4
+# Игровых суток между знамениями и началом: игроки успевают собрать урожай и загнать скот.
+omen-days: 1
+# Шанс начала бедствия за игровые сутки без накопленной угрозы (0.08 = 8%). Реальная ждёт 20 минут на сутки.
+base-daily-chance: 0.08
+# Насколько накопленная угроза (0..100) увеличивает суточный шанс: при угрозе 50 шанс = 0.08 + 0.5 * 0.5.
+threat-weight: 0.5
+# На сколько процентов угроза спадает за игровые сутки без причин.
+threat-decay-percent: 15
+# Через сколько суток покоя бедствие может стать тяжёлым даже без вины игроков.
+heavy-after-quiet-days: 12
+# Защита рядом: костёр от жуков, компостер от неплодородия, сено для скота. Радиус в блоках и доля защиты.
+protection:
+  radius: 6
+  share: 0.5
+  cache-seconds: 30
+types:
+  bugs:
+    enabled: true
+    duration-days: 3
+    # 2026-10-29: -35% роста и -25% урожая оставляют фрукты и ягоды как выход: стимул сажать разное.
+    growth: 35
+    crops: 25
+    crop-list: [WHEAT, CARROTS, POTATOES, BEETROOTS]
+  infertile:
+    enabled: true
+    duration-days: 3
+    # Вместе -50% роста и -30% урожая дают ~35% выхода фермы. -70/-50 давали 15% — это стоп земледелию.
+    growth: 50
+    crops: 30
+    breeding: 30
+    meat: 30
+    crop-list: [WHEAT, CARROTS, POTATOES, BEETROOTS, MELON, PUMPKIN, SWEET_BERRY_BUSH, NETHER_WART, COCOA]
+  plague:
+    enabled: true
+    duration-days: 3
+    natural-spawn: 80
+    breeding: 50
+    meat: 40
+  undead:
+    enabled: true
+    duration-days: 2
+# Что выпадает из животных и теряется при неплодородии и чуме.
+meat-items: [BEEF, PORKCHOP, MUTTON, CHICKEN, RABBIT, LEATHER]
+# Урожай не падает ниже этого числа предметов с созревшего растения, чтобы ферму можно было пересадить.
+harvest-minimum: 1
+invasion:
+  # Раз в сколько секунд на каждого игрока приходит новая волна. 150 — каждые две-три минуты.
+  wave-interval-seconds: 150
+  wave-size: 2
+  # Сколько мобов нашествия может быть рядом с одним игроком и на всём сервере.
+  per-player-cap: 6
+  global-cap: 60
+  min-distance: 20
+  max-distance: 30
+  night-only: true
+  # Появляться ли в чужих приватах. Нет — базы остаются безопасными.
+  spawn-in-claims: false
+  mobs: [ZOMBIE, SKELETON, HUSK]
+  # Каждые N убитых мобов нашествия сокращают бедствие на step-percent процентов.
+  kills-per-step: 100
+  step-percent: 10
+  # Сколько убийств одного игрока в час идёт в зачёт, чтобы никто не ускорял конец один.
+  credit-per-player-hour: 60
+# Накопитель угрозы: поведение игроков повышает шанс своего бедствия.
+threat:
+  bugs:
+    # Если за сутки почти всё собранное — одна культура (доля) и собрано не меньше min-harvest.
+    monoculture-share: 0.9
+    min-harvest: 200
+    gain: 40
+  infertile:
+    # Собрано за сутки больше harvest-per-day без удобрения: земля истощается.
+    harvest-per-day: 600
+    gain: 40
+  plague:
+    # Рождений за сутки и число животных одного вида в одном чанке.
+    breeds-per-day: 40
+    crowd-per-chunk: 24
+    gain: 40
+  undead:
+    # Каждая гибель игрока от монстра ночью.
+    night-death-gain: 15
+diseases:
+  hunger:
+    # individual — у заразившихся; world — у всех, пока идёт бедствие-носитель; server — у всех, включено админом.
+    mode: individual
+    # Во сколько раз быстрее убывает сытость.
+    exhaustion-multiplier: 1.5
+    carriers: [bugs, infertile]
+    infect-chance-per-day: 10
+    # Столько одинаковых блюд подряд — шанс заразиться.
+    monotony-foods: 5
+    # Эти блюда насыщают сильнее: добавка очков сытости.
+    double-foods: [HONEY_BOTTLE, MUSHROOM_STEW, RABBIT_STEW, BEETROOT_SOUP, SUSPICIOUS_STEW]
+    bonus-food: 3
+    # Сколько разных блюд подряд излечивают.
+    cure-different-foods: 3
+    immune-days: 2
+  scurvy:
+    mode: individual
+    carriers: [plague, infertile]
+    infect-chance-per-day: 10
+    # Игровых суток без свежей еды — цинга.
+    no-fresh-days: 5
+    fresh-foods: [APPLE, GOLDEN_APPLE, SWEET_BERRIES, GLOW_BERRIES, MELON_SLICE, CARROT, GOLDEN_CARROT, BEETROOT]
+    # Сколько раз съесть свежее, чтобы выздороветь.
+    cure-count: 4
+    # Через сколько суток болезни добавляется слабость.
+    weakness-after-days: 3
+    immune-days: 2

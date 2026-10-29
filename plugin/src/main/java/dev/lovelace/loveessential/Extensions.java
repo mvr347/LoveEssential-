@@ -1,5 +1,6 @@
 package dev.lovelace.loveessential;
 
+import dev.lovelace.loveessential.calamity.CalamityService;
 import dev.lovelace.loveessential.condition.*;
 import dev.lovelace.loveessential.content.ContentLibrary;
 import dev.lovelace.loveessential.dialog.*;
@@ -20,11 +21,12 @@ import org.bukkit.event.HandlerList;
 /** Lifecycle and command routing for optional world/content modules. */
 public final class Extensions implements AutoCloseable {
   public static final Set<String> COMMANDS =
-      Set.of("worlds", "scenario", "dialog", "motd", "scoreboard");
+      Set.of("worlds", "scenario", "dialog", "motd", "scoreboard", "calamity");
   private final LoveEssentialPlugin plugin;
   public final NativeDialogs ui;
   public final Worlds worlds;
   public final Scenarios scenarios;
+  public final CalamityService calamities;
   public final Windows windows;
   public final ScoreboardModule scoreboard;
   public final TabSettings tabSettings;
@@ -53,6 +55,7 @@ public final class Extensions implements AutoCloseable {
     scoreboard =
         new ScoreboardModule(plugin, main, store, lang, love, placeholders, tab, tabSettings);
     scoreboard.nativeDialogs(ui);
+    calamities = new CalamityService(plugin, main, store, lang, love);
     actions.register(
         "world",
         (p, a) -> {
@@ -74,6 +77,11 @@ public final class Extensions implements AutoCloseable {
   public void start() {
     scenarios.start();
     scoreboard.start();
+    try {
+      calamities.start();
+    } catch (RuntimeException e) {
+      plugin.getLogger().warning("calamities: not started: " + e);
+    }
     task = org.bukkit.Bukkit.getScheduler().runTaskTimer(plugin, scenarios::tick, 20, 20);
   }
 
@@ -92,6 +100,7 @@ public final class Extensions implements AutoCloseable {
         windows.motdEditor(p);
       }
       case "scoreboard" -> scoreboard.command(p, args);
+      case "calamity" -> calamities.command(p, args);
       default -> throw new IllegalArgumentException("errors.input");
     }
   }
@@ -102,6 +111,7 @@ public final class Extensions implements AutoCloseable {
       case "scenario" -> scenarios.suggestions(p, args);
       case "dialog" -> windows.suggestions(p, args);
       case "scoreboard" -> scoreboard.suggestions(p, args);
+      case "calamity" -> calamities.suggestions(p, args);
       default -> List.of();
     };
   }
@@ -110,6 +120,7 @@ public final class Extensions implements AutoCloseable {
   public void close() {
     if (task != null) task.cancel();
     scenarios.close();
+    calamities.close();
     worlds.close();
     scoreboard.close();
     tabSettings.close();

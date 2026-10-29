@@ -132,6 +132,7 @@ public final class CommandSuggestions {
                           "ignore",
                           "msgtoggle",
                           "scoreboard",
+                          "calamity",
                           "report")
                       .contains(name)
                   || name.equals("invsee") && sender.hasPermission("loveessential.invsee")))
