@@ -705,6 +705,81 @@ class ReviveTest implements Listener {
             .getCause());
   }
 
+  dev.lovelace.lovecore.api.revive.ReviveService reviveService() {
+    return LoveCore.provider(dev.lovelace.lovecore.api.revive.ReviveService.class, "loveessential")
+        .orElseThrow();
+  }
+
+  ItemStack elixir() {
+    var item = new ItemStack(Material.POTION);
+    var meta = item.getItemMeta();
+    meta.getPersistentDataContainer()
+        .set(
+            new org.bukkit.NamespacedKey("lovebrewing", "revive_potion"),
+            org.bukkit.persistence.PersistentDataType.BYTE,
+            (byte) 1);
+    item.setItemMeta(meta);
+    return item;
+  }
+
+  @Test
+  void theReviveServiceLiftsTheDownedWithHealthByTheFraction() {
+    fall();
+    assertTrue(reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 0.5));
+    assertFalse(oracle().downed(victim.getUniqueId()));
+    assertEquals(10.0, victim.getHealth(), 1e-9);
+    assertTrue(seen.stream().anyMatch(ReviveEvent.class::isInstance));
+  }
+
+  @Test
+  void theReviveServiceNeverGoesBelowTheUsualRevivedHealth() {
+    fall();
+    assertTrue(reviveService().revive(victim.getUniqueId(), null, 0.0));
+    assertEquals(4.0, victim.getHealth(), 1e-9);
+  }
+
+  @Test
+  void theReviveServiceRefusesAPlayerWhoIsNotDowned() {
+    assertFalse(reviveService().revive(victim.getUniqueId(), null, 1.0));
+  }
+
+  @Test
+  void theReviveServiceFindsTheDownedByTheirBody() {
+    fall();
+    assertEquals(
+        java.util.Optional.of(victim.getUniqueId()),
+        reviveService().downedAt(hitbox().getUniqueId()));
+    assertTrue(reviveService().downedAt(helper.getUniqueId()).isEmpty());
+  }
+
+  @Test
+  void aHelperHoldingTheElixirDoesNotPickTheDownedUp() {
+    fall();
+    helper.teleport(victim.getLocation());
+    helper.getInventory().setItemInMainHand(elixir());
+    var click = new PlayerInteractEntityEvent(helper, hitbox(), org.bukkit.inventory.EquipmentSlot.HAND);
+    server.getPluginManager().callEvent(click);
+    assertFalse(click.isCancelled(), "the elixir's own plugin must receive the click");
+    assertFalse(helper.getPassengers().contains(victim));
+  }
+
+  @Test
+  void theDownedMayStartDrinkingTheElixirButNoOtherItem() {
+    fall();
+    var drink =
+        new org.bukkit.event.player.PlayerInteractEvent(
+            victim, org.bukkit.event.block.Action.RIGHT_CLICK_AIR, elixir(), null,
+            org.bukkit.block.BlockFace.SELF);
+    server.getPluginManager().callEvent(drink);
+    assertNotEquals(org.bukkit.event.Event.Result.DENY, drink.useItemInHand());
+    var other =
+        new org.bukkit.event.player.PlayerInteractEvent(
+            victim, org.bukkit.event.block.Action.RIGHT_CLICK_AIR, new ItemStack(Material.POTION),
+            null, org.bukkit.block.BlockFace.SELF);
+    server.getPluginManager().callEvent(other);
+    assertEquals(org.bukkit.event.Event.Result.DENY, other.useItemInHand());
+  }
+
   @Test
   void aDownedPlayerCannotBreakBlocksOrRunCommands() {
     fall();

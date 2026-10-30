@@ -518,6 +518,11 @@ public class LoveEssentialPlugin extends JavaPlugin {
         .getServicesManager()
         .register(
             dev.lovelace.lovecore.api.revive.DownedOracle.class, revive, this, ServicePriority.Normal);
+    // LoveBrew's revive elixir lifts the downed through this contract.
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.revive.ReviveService.class, revive, this, ServicePriority.Normal);
     // Chat (LoveChat) reads the personal tag/suffix choices through this contract.
     getServer()
         .getServicesManager()
