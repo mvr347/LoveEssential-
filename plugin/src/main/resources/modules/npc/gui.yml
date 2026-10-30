@@ -360,6 +360,8 @@ menus:
           - '<gray>Личный выбор: показывать ли теги кланов и пометки других игроков в чате и над головой. /display.'
           calamities:
           - '<gray>Бедствия на весь мир: жуки, неплодородие, чума скота, нечисть; голод и цинга. /calamity.'
+          secrets:
+          - '<gray>Книга тайн: список найденных пасхалок. /secrets.'
           crafting:
           - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
           starter:
@@ -637,6 +639,7 @@ messages:
       rtp: Случайный телепорт
       display: Теги и пометки
       calamities: Бедствия
+      secrets: Книга тайн
       crafting: Рецепты крафта
       starter: Стартовые предметы
       nickname: Никнеймы
@@ -667,6 +670,7 @@ messages:
       rtp: <gold>Случайный телепорт
       display: <gold>Теги и пометки
       calamities: <gold>Бедствия
+      secrets: <gold>Книга тайн
       crafting: <gold>Рецепты крафта
       starter: <gold>Стартовые предметы
       nickname: <gold>Никнеймы

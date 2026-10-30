@@ -67,6 +67,8 @@
 | `%loveessential_y%` | `<y>` | Блочная координата Y |
 | `%loveessential_z%` | `<z>` | Блочная координата Z |
 | `%loveessential_clan%` | `<clan>` | Тег клана через ProfileOracle. Исчезает из TAB и ника, если игрок скрыл тег (`/display`); `%loveessential_display_<где>_<что>_<чьи>%` — сами флаги (`true`, если показано), например `display_chat_clan_own` |
+| `%loveessential_secrets%` | `<secrets>` | Сколько тайн из «Книги тайн» игрок нашёл (`/secrets`) |
+| `%loveessential_secrets_total%` | `<secrets_total>` | Сколько тайн в каталоге; 0, если модуль `secrets` выключен |
 | `%loveessential_reputation%` | `<reputation>` | Репутация через ReputationOracle |
 | `%loveessential_territory%` | `<territory>` | Название владельца территории через TerritoryOracle |
 | `%loveessential_balance%` | `<balance>` | Физические монеты в инвентаре через LoveEconomy |

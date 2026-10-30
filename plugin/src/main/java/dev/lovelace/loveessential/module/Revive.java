@@ -3,6 +3,7 @@ package dev.lovelace.loveessential.module;
 import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
 import dev.lovelace.lovecore.api.revive.DownedOracle;
+import dev.lovelace.lovecore.api.revive.ReviveService;
 import dev.lovelace.lovecore.api.social.ProfileOracle;
 import dev.lovelace.loveessential.LoveEssentialPlugin;
 import dev.lovelace.loveessential.api.Action;
@@ -52,7 +53,7 @@ import org.bukkit.scheduler.BukkitTask;
  * <p>Everything runs on the server thread. The module is off by default; every handler returns at
  * once while it is disabled.
  */
-public final class Revive implements Listener, AutoCloseable, DownedOracle {
+public final class Revive implements Listener, AutoCloseable, DownedOracle, ReviveService {
   public static final String ID = "loveessential";
   private static final double STEP = 0.1;
   private static final int BAR = 16;
@@ -67,6 +68,11 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   private final Map<UUID, UUID> interactionTargets = new HashMap<>();
   private final Map<UUID, DownedDeathEvent.Cause> dying = new HashMap<>();
   private final Map<UUID, Integer> downs = new HashMap<>();
+  /** Lifts since the last real death, for the easter egg after the third one. */
+  private final Map<UUID, Integer> revivesThisLife = new HashMap<>();
+  /** Who each helper has lifted before (in memory, bounded), for the "debt repaid" easter egg. */
+  private final Map<UUID, Set<UUID>> liftedOthers = new HashMap<>();
+  private Secrets secrets;
   private final Map<UUID, Long> lastStart = new HashMap<>();
   private final Map<UUID, Long> notified = new HashMap<>();
   private final Map<UUID, Long> recoveryUntil = new HashMap<>();
@@ -228,6 +234,48 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   public boolean reviving(UUID playerId) {
     var state = states.get(playerId);
     return state != null && state.reviver != null;
+  }
+
+  /**
+   * Lifts a downed player at once, for an outside item such as LoveBrew's revive elixir. A revive
+   * in progress by someone else is refunded, as if they had stopped; the usual protection, events
+   * and messages follow, and health never drops below {@code revived-health}.
+   */
+  @Override
+  public boolean revive(UUID downed, UUID helper, double healthFraction) {
+    dev.lovelace.loveessential.MainThread.require();
+    Player p = Bukkit.getPlayer(downed);
+    State state = states.get(downed);
+    if (!enabled() || p == null || state == null) return false;
+    Player by = helper == null ? null : Bukkit.getPlayer(helper);
+    refund(state);
+    complete(p, state, by);
+    var max = p.getAttribute(Attribute.MAX_HEALTH);
+    double maxHealth = max == null ? 20 : max.getValue();
+    double fraction = Double.isNaN(healthFraction) ? 0 : Math.clamp(healthFraction, 0, 1);
+    p.setHealth(Math.min(maxHealth, Math.max(p.getHealth(), fraction * maxHealth)));
+    return true;
+  }
+
+  @Override
+  public Optional<UUID> downedAt(UUID entityId) {
+    dev.lovelace.loveessential.MainThread.require();
+    return Optional.ofNullable(interactionTargets.get(entityId));
+  }
+
+  /**
+   * Items another plugin lifts the downed with (by default LoveBrew's elixir), recognised by a
+   * persistent data key: the downed may drink one, and a helper holding one is not offered the
+   * usual carry or search, so the item's own plugin handles the click.
+   */
+  private boolean reviveItem(ItemStack item) {
+    if (item == null || !item.hasItemMeta()) return false;
+    var data = item.getItemMeta().getPersistentDataContainer();
+    for (String raw : plugin.getConfig().getStringList(key("revive-items"))) {
+      NamespacedKey id = NamespacedKey.fromString(raw.toLowerCase(Locale.ROOT));
+      if (id != null && data.getKeys().contains(id)) return true;
+    }
+    return false;
   }
 
   /** Values for PlaceholderAPI: {@code %loveessential_revive_status%} and friends. */
@@ -852,6 +900,32 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     cue("revived", p.getLocation());
     cue("revived-extra", p.getLocation());
     fire("revive", p, helper);
+    easterEggs(p, helper);
+  }
+
+  public void secrets(Secrets book) {
+    this.secrets = book;
+  }
+
+  /** Words after the third lift in one life and after a lift by someone the player once lifted. */
+  private void easterEggs(Player revived, Player helper) {
+    if (!flag("easter-eggs", true)) return;
+    var id = revived.getUniqueId();
+    // Entries last until a death or a restart; the cap only stops a very long run from growing the map forever.
+    if (revivesThisLife.size() > 4096) revivesThisLife.clear();
+    if (revivesThisLife.merge(id, 1, Integer::sum) == 3) {
+      revived.sendMessage(lang.render("revive.egg-nine-lives"));
+      if (secrets != null) secrets.discover(id, "nine_lives");
+    }
+    if (helper == null) return;
+    var helperId = helper.getUniqueId();
+    if (liftedOthers.getOrDefault(id, Set.of()).contains(helperId)) {
+      revived.sendMessage(lang.render("revive.egg-debt", Map.of("helper", helper.getName())));
+      if (secrets != null) secrets.discover(id, "debt_repaid");
+    }
+    if (liftedOthers.size() > 2048) liftedOthers.clear();
+    var lifted = liftedOthers.computeIfAbsent(helperId, k -> new HashSet<>());
+    if (lifted.size() < 64) lifted.add(id);
   }
 
   // ------------------------------------------------------------------- price
@@ -993,6 +1067,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       cause = DownedDeathEvent.Cause.DAMAGE;
     }
     downs.remove(p.getUniqueId());
+    revivesThisLife.remove(p.getUniqueId());
     recoveryUntil.remove(p.getUniqueId());
     if (cause == null) return;
     if (!deluxeOwnsInventory()
@@ -1181,7 +1256,10 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
       return;
     }
     Player victim = interactionTarget(e.getRightClicked());
-    if (e.getHand() == EquipmentSlot.HAND && victim != null && interactDowned(p, victim))
+    if (e.getHand() == EquipmentSlot.HAND
+        && victim != null
+        && !reviveItem(p.getInventory().getItemInMainHand())
+        && interactDowned(p, victim))
       e.setCancelled(true);
   }
 
@@ -1246,7 +1324,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
   @EventHandler
   public void interact(PlayerInteractEvent e) {
     if (downedAndBlocked(e.getPlayer(), "items")) {
-      e.setUseItemInHand(Event.Result.DENY);
+      // The block stays out of reach, but a revive item may be drunk.
+      if (!reviveItem(e.getItem())) e.setUseItemInHand(Event.Result.DENY);
       e.setUseInteractedBlock(Event.Result.DENY);
     }
   }
@@ -1391,6 +1470,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle {
     var state = states.get(p.getUniqueId());
     recoveryUntil.remove(p.getUniqueId());
     downs.remove(p.getUniqueId());
+    // The life counter and the rescue history deliberately survive a quit: only a real death ends a life.
     lastStart.remove(p.getUniqueId());
     notified.remove(p.getUniqueId());
     if (state == null) return;

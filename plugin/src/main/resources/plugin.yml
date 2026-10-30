@@ -129,6 +129,8 @@ commands:
     aliases: [оформление]
   calamity:
     aliases: [бедствие, беда]
+  secrets:
+    aliases: [тайны]
 permissions:
   loveessential.calamities.admin:
     description: Запуск, остановка и настройка бедствий
