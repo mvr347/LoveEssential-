@@ -323,6 +323,89 @@ public final class ControlMenus implements Listener, AutoCloseable {
     MenuStyle.open(p, m.inventory);
   }
 
+  private dev.lovelace.loveessential.module.Secrets secrets;
+
+  public void secrets(dev.lovelace.loveessential.module.Secrets book) {
+    this.secrets = book;
+  }
+
+  /** The book of secrets: found ones with their description, the rest as a hint. */
+  public void secretsMenu(Player p, int page) {
+    var m = menu(p, "secrets.gui-title", Map.of(), player -> plugin.module("secrets"));
+    var catalog = secrets.catalog();
+    var foundAt = secrets.foundAt(p.getUniqueId());
+    int capacity = MenuStyle.CONTENT.length;
+    int pages = Math.max(1, (catalog.size() + capacity - 1) / capacity);
+    int shown = Math.max(0, Math.min(page, pages - 1));
+    int from = shown * capacity;
+    int to = Math.min(catalog.size(), from + capacity);
+    var format =
+        java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+            .withZone(java.time.ZoneId.systemDefault());
+    int found = 0;
+    for (var entry : catalog) if (foundAt.containsKey(entry.id())) found++;
+    for (int i = from; i < to; i++) {
+      var entry = catalog.get(i);
+      int slot = MenuStyle.slot(i - from, to - from);
+      Long when = foundAt.get(entry.id());
+      var vars = new HashMap<String, String>();
+      vars.put("name", entry.name());
+      vars.put("hint", entry.hint());
+      if (when != null) {
+        vars.put("date", format.format(java.time.Instant.ofEpochMilli(when)));
+        entry(
+            m,
+            slot,
+            entry.icon(),
+            lang.renderText(lang.text("secrets.tile-found-name"), vars),
+            secretLore(lang.lines("secrets.tile-found-lore"), vars, entry.description()),
+            c -> {});
+      } else {
+        entry(
+            m,
+            slot,
+            Material.BOOK,
+            lang.render("secrets.unknown-name"),
+            secretLore(lang.lines("secrets.tile-unknown-lore"), vars, entry.hint()),
+            c -> {});
+      }
+    }
+    int filled = dev.lovelace.loveessential.module.SecretRules.filled(found, catalog.size());
+    var bar =
+        Component.text("█".repeat(filled), net.kyori.adventure.text.format.NamedTextColor.GREEN)
+            .append(
+                Component.text(
+                    "░".repeat(dev.lovelace.loveessential.module.SecretRules.BAR - filled),
+                    net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY));
+    tile(
+        m,
+        50,
+        Material.ENCHANTED_BOOK,
+        "secrets.progress-name",
+        "secrets.progress-lore",
+        Map.of("found", "" + found, "total", "" + catalog.size()),
+        Map.of("bar", bar),
+        c -> {});
+    navigation(m, p, shown, catalog.size(), capacity, target -> secretsMenu(p, target), () -> {});
+    MenuStyle.open(p, m.inventory);
+  }
+
+  /** Lore from a language list; the line holding {@code <description>} is repeated per wrapped row. */
+  private List<Component> secretLore(List<String> template, Map<String, String> vars, String text) {
+    var lore = new ArrayList<Component>();
+    for (String line : template) {
+      if (!line.contains("<description>") && !line.contains("<hint>")) {
+        lore.add(lang.renderText(line, vars));
+        continue;
+      }
+      for (String row : dev.lovelace.loveessential.module.SecretRules.wrap(text, 38))
+        lore.add(
+            lang.renderText(
+                line.replace("<description>", row).replace("<hint>", row), vars));
+    }
+    return lore;
+  }
+
   private static final String[] VANISH_FILTERS = {"all", "world", "near"};
   private final Map<UUID, Integer> vanishFilter = new HashMap<>();
 
@@ -521,6 +604,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             case "hologram", "motd", "joinquit" -> Material.OAK_SIGN;
             case "traces" -> Material.FEATHER;
             case "calamities" -> Material.WITHER_ROSE;
+            case "secrets" -> Material.ENCHANTED_BOOK;
             default -> Material.COMPARATOR;
           },
           lang.render("gui.module-names." + id),

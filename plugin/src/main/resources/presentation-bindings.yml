@@ -2301,6 +2301,14 @@ bindings:
   path: menus.module-menu-title.labels.module-menu.descriptions.calamities
 - module: npc
   file: gui.yml
+  key: module-menu.descriptions.secrets
+  path: menus.module-menu-title.labels.module-menu.descriptions.secrets
+- module: secrets
+  file: gui.yml
+  key: secrets.gui-title
+  path: menus.secrets-gui-title.title
+- module: npc
+  file: gui.yml
   key: module-menu.descriptions.vanish
   path: menus.module-menu-title.labels.module-menu.descriptions.vanish
 - module: npc

@@ -780,6 +780,66 @@ class ReviveTest implements Listener {
     assertEquals(org.bukkit.event.Event.Result.DENY, other.useItemInHand());
   }
 
+  String drain(PlayerMock player) {
+    var all = new StringBuilder();
+    String line;
+    while ((line = player.nextMessage()) != null) all.append(line).append('\n');
+    return all.toString();
+  }
+
+  @Test
+  void theThirdLiftInOneLifeAddsTheCatPhrase() {
+    plugin.getConfig().set("revive.revived-protection-seconds", 0);
+    drain(victim);
+    for (int lift = 1; lift <= 3; lift++) {
+      fall();
+      assertTrue(reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 1.0));
+      String said = drain(victim);
+      assertEquals(lift == 3, said.contains("Кошка позавидовала"), "lift " + lift + ": " + said);
+    }
+  }
+
+  @Test
+  void theCountStartsOverAfterARealDeath() {
+    plugin.getConfig().set("revive.revived-protection-seconds", 0);
+    for (int lift = 1; lift <= 2; lift++) {
+      fall();
+      reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 1.0);
+    }
+    server.getPluginManager().callEvent(
+        new org.bukkit.event.entity.PlayerDeathEvent(
+            victim, DamageSource.builder(DamageType.GENERIC).build(), new ArrayList<>(), 0,
+            ""));
+    drain(victim);
+    fall();
+    reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 1.0);
+    assertFalse(drain(victim).contains("Кошка позавидовала"), "a new life counts from one");
+  }
+
+  @Test
+  void aLiftByThePlayerYouOnceLiftedPaysTheDebt() {
+    plugin.getConfig().set("revive.revived-protection-seconds", 0);
+    hit(helper, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
+    assertTrue(oracle().downed(helper.getUniqueId()));
+    assertTrue(reviveService().revive(helper.getUniqueId(), victim.getUniqueId(), 1.0));
+    drain(victim);
+    fall();
+    assertTrue(reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 1.0));
+    assertTrue(drain(victim).contains("Долг платежом красен"));
+  }
+
+  @Test
+  void theEasterEggsCanBeSwitchedOff() {
+    plugin.getConfig().set("revive.revived-protection-seconds", 0);
+    plugin.getConfig().set("revive.easter-eggs", false);
+    drain(victim);
+    for (int lift = 1; lift <= 3; lift++) {
+      fall();
+      reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 1.0);
+    }
+    assertFalse(drain(victim).contains("Кошка позавидовала"));
+  }
+
   @Test
   void aDownedPlayerCannotBreakBlocksOrRunCommands() {
     fall();

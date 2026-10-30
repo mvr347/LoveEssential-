@@ -72,6 +72,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
 
   private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
 
+  private dev.lovelace.loveessential.module.Secrets secrets;
+
+  public void secrets(dev.lovelace.loveessential.module.Secrets secrets) {
+    this.secrets = secrets;
+  }
+
   public void display(dev.lovelace.loveessential.module.DisplayPreferences displayPrefs) {
     this.displayPrefs = displayPrefs;
   }
@@ -319,6 +325,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       if (cmd.equals("display")) {
         display(player(sender), args);
+        return true;
+      }
+      if (cmd.equals("secrets")) {
+        if (!plugin.module("secrets")) throw new IllegalArgumentException("errors.permission");
+        if (!secrets.loaded(p.getUniqueId())) throw new IllegalArgumentException("errors.starting");
+        menus.direct(p, () -> menus.secretsMenu(p, 0));
         return true;
       }
       if (cmd.equals("vanish")

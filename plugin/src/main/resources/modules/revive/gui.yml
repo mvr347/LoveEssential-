@@ -23,6 +23,8 @@ messages:
     revived: '<green>Вы снова на ногах'
     revived-by: '<green><reviver> поднял вас'
     revived-helper: '<green>Вы подняли <white><downed>'
+    egg-nine-lives: '<gray>Вас поднимают уже в третий раз за одну жизнь. Кошка позавидовала бы.'
+    egg-debt: '<gray>Долг платежом красен: <white><helper></white> вернул вам то, что вы сделали для него.'
     refused: '<red>Сейчас поднять нельзя'
     no-funds: '<red>Чтобы поднять игрока, нужно: <white><price>'
     price-money: '<amount> монет'

@@ -50,7 +50,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "rtp",
           "display",
           "waystones",
-          "calamities");
+          "calamities",
+          "secrets");
   private MechanicsService mechanics;
 
   public void mechanicsChanged(org.bukkit.entity.Player player) {
@@ -110,6 +111,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   }
 
   private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
+  private dev.lovelace.loveessential.module.Secrets secrets;
   private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
@@ -323,6 +325,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     inventories = new dev.lovelace.loveessential.module.InventoryInspector(this, lang, love);
     revive = new dev.lovelace.loveessential.module.Revive(this, lang, love, actions, inventories);
     displayPrefs = new dev.lovelace.loveessential.module.DisplayPreferences(this, main, store);
+    secrets = new dev.lovelace.loveessential.module.Secrets(this, main, store, lang, love);
+    revive.secrets(secrets);
     profiles =
         new dev.lovelace.loveessential.module.PlayerProfiles(
             this, lang, love, gameplay, store, placeholders, messages, inventories);
@@ -332,6 +336,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
           values.putAll(nicknames.values(id));
           values.putAll(revive.values(id));
           values.putAll(displayPrefs.values(id));
+          values.putAll(secrets.values(id));
           return Map.copyOf(values);
         });
     npcs.vanish(gameplay::vanished);
@@ -367,6 +372,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
         new dev.lovelace.loveessential.gui.ControlMenus(
             this, main, lang, love, npcs, wizard, gameplay, nicknames);
     menus.display(displayPrefs);
+    menus.secrets(secrets);
     content = new dev.lovelace.loveessential.content.ContentLibrary(this, main, store, lang, love);
     starter =
         new dev.lovelace.loveessential.content.StarterItems(this, main, store, lang, love, content);
@@ -410,6 +416,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
             extensions);
     commands.revive(revive);
     commands.display(displayPrefs);
+    commands.secrets(secrets);
     commands.tab(tab);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
@@ -498,6 +505,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     starter.start();
     extensions.start();
     displayPrefs.start();
+    secrets.start();
     // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
     // Registered only now: a plugin that asks earlier gets "no such provider" (a warning at worst), not a
     // provider that answers "no such NPC" while the data is still loading.
@@ -531,6 +539,11 @@ public class LoveEssentialPlugin extends JavaPlugin {
             displayPrefs,
             this,
             ServicePriority.Normal);
+    // Other plugins mark easter eggs found through this contract; the book shows them at /secrets.
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.secrets.SecretBook.class, secrets, this, ServicePriority.Normal);
     getLogger().info(lang.text("logs.ready"));
     Bukkit.getPluginManager().callEvent(new LoveEssentialReadyEvent(essentialApi));
   }
@@ -541,6 +554,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   public boolean ready() {
     return ready;
+  }
+
+  public dev.lovelace.loveessential.module.Secrets secrets() {
+    return secrets;
   }
 
   public boolean module(String name) {
@@ -826,6 +843,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
       if (npcProvider != null) closeSafely("npcProvider", npcProvider::close);
       if (revive != null) closeSafely("revive", revive::close);
       if (displayPrefs != null) closeSafely("displayPrefs", displayPrefs::close);
+      if (secrets != null) closeSafely("secrets", secrets::close);
       if (extensions != null) closeSafely("extensions", extensions::close);
       if (contentMenus != null) closeSafely("contentMenus", contentMenus::close);
       if (starter != null) closeSafely("starter", starter::close);

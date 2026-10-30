@@ -68,6 +68,11 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
   private final Map<UUID, UUID> interactionTargets = new HashMap<>();
   private final Map<UUID, DownedDeathEvent.Cause> dying = new HashMap<>();
   private final Map<UUID, Integer> downs = new HashMap<>();
+  /** Lifts since the last real death, for the easter egg after the third one. */
+  private final Map<UUID, Integer> revivesThisLife = new HashMap<>();
+  /** Who each helper has lifted before (in memory, bounded), for the "debt repaid" easter egg. */
+  private final Map<UUID, Set<UUID>> liftedOthers = new HashMap<>();
+  private Secrets secrets;
   private final Map<UUID, Long> lastStart = new HashMap<>();
   private final Map<UUID, Long> notified = new HashMap<>();
   private final Map<UUID, Long> recoveryUntil = new HashMap<>();
@@ -895,6 +900,30 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
     cue("revived", p.getLocation());
     cue("revived-extra", p.getLocation());
     fire("revive", p, helper);
+    easterEggs(p, helper);
+  }
+
+  public void secrets(Secrets book) {
+    this.secrets = book;
+  }
+
+  /** Words after the third lift in one life and after a lift by someone the player once lifted. */
+  private void easterEggs(Player revived, Player helper) {
+    if (!flag("easter-eggs", true)) return;
+    var id = revived.getUniqueId();
+    if (revivesThisLife.merge(id, 1, Integer::sum) == 3) {
+      revived.sendMessage(lang.render("revive.egg-nine-lives"));
+      if (secrets != null) secrets.discover(id, "nine_lives");
+    }
+    if (helper == null) return;
+    var helperId = helper.getUniqueId();
+    if (liftedOthers.getOrDefault(id, Set.of()).contains(helperId)) {
+      revived.sendMessage(lang.render("revive.egg-debt", Map.of("helper", helper.getName())));
+      if (secrets != null) secrets.discover(id, "debt_repaid");
+    }
+    if (liftedOthers.size() > 2048) liftedOthers.clear();
+    var lifted = liftedOthers.computeIfAbsent(helperId, k -> new HashSet<>());
+    if (lifted.size() < 64) lifted.add(id);
   }
 
   // ------------------------------------------------------------------- price
@@ -1036,6 +1065,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
       cause = DownedDeathEvent.Cause.DAMAGE;
     }
     downs.remove(p.getUniqueId());
+    revivesThisLife.remove(p.getUniqueId());
     recoveryUntil.remove(p.getUniqueId());
     if (cause == null) return;
     if (!deluxeOwnsInventory()
@@ -1438,6 +1468,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
     var state = states.get(p.getUniqueId());
     recoveryUntil.remove(p.getUniqueId());
     downs.remove(p.getUniqueId());
+    revivesThisLife.remove(p.getUniqueId());
+    liftedOthers.remove(p.getUniqueId());
     lastStart.remove(p.getUniqueId());
     notified.remove(p.getUniqueId());
     if (state == null) return;
