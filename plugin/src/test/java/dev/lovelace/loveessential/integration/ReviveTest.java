@@ -829,6 +829,20 @@ class ReviveTest implements Listener {
   }
 
   @Test
+  void theLiftCountSurvivesAReconnect() throws Exception {
+    plugin.getConfig().set("revive.revived-protection-seconds", 0);
+    for (int lift = 1; lift <= 2; lift++) {
+      fall();
+      reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 1.0);
+    }
+    server.getPluginManager().callEvent(new org.bukkit.event.player.PlayerQuitEvent(victim, ""));
+    drain(victim);
+    fall();
+    reviveService().revive(victim.getUniqueId(), helper.getUniqueId(), 1.0);
+    assertTrue(drain(victim).contains("Кошка позавидовала"), "a quit is not a death");
+  }
+
+  @Test
   void theEasterEggsCanBeSwitchedOff() {
     plugin.getConfig().set("revive.revived-protection-seconds", 0);
     plugin.getConfig().set("revive.easter-eggs", false);

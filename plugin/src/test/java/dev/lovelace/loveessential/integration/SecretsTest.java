@@ -125,6 +125,18 @@ class SecretsTest implements Listener {
   }
 
   @Test
+  void theModuleAccessPolicyAppliesToTheCommand() throws Exception {
+    var p = join("Finder");
+    plugin.getConfig().set("secrets.access.denied-worlds", java.util.List.of(p.getWorld().getName()));
+    server.dispatchCommand(p, "secrets");
+    server.getScheduler().performTicks(2);
+    var top = p.getOpenInventory().getTopInventory();
+    assertFalse(
+        top != null && top.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout,
+        "a denied world must not open the book");
+  }
+
+  @Test
   void theMenuOpensForALoadedPlayer() throws Exception {
     var p = join("Finder");
     book().discover(p.getUniqueId(), "toast");

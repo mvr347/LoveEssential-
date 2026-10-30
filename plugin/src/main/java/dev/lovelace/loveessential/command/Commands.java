@@ -328,7 +328,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       if (cmd.equals("secrets")) {
-        if (!plugin.module("secrets")) throw new IllegalArgumentException("errors.permission");
+        plugin.requireAccess("secrets", p);
         if (!secrets.loaded(p.getUniqueId())) throw new IllegalArgumentException("errors.starting");
         menus.direct(p, () -> menus.secretsMenu(p, 0));
         return true;

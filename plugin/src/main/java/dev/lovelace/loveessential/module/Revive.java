@@ -911,6 +911,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
   private void easterEggs(Player revived, Player helper) {
     if (!flag("easter-eggs", true)) return;
     var id = revived.getUniqueId();
+    // Entries last until a death or a restart; the cap only stops a very long run from growing the map forever.
+    if (revivesThisLife.size() > 4096) revivesThisLife.clear();
     if (revivesThisLife.merge(id, 1, Integer::sum) == 3) {
       revived.sendMessage(lang.render("revive.egg-nine-lives"));
       if (secrets != null) secrets.discover(id, "nine_lives");
@@ -1468,8 +1470,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
     var state = states.get(p.getUniqueId());
     recoveryUntil.remove(p.getUniqueId());
     downs.remove(p.getUniqueId());
-    revivesThisLife.remove(p.getUniqueId());
-    liftedOthers.remove(p.getUniqueId());
+    // The life counter and the rescue history deliberately survive a quit: only a real death ends a life.
     lastStart.remove(p.getUniqueId());
     notified.remove(p.getUniqueId());
     if (state == null) return;
