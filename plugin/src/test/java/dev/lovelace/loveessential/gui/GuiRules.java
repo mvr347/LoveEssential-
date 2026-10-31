@@ -47,6 +47,14 @@ public final class GuiRules {
     int footer = size - 9;
     int rows = size / 9;
     boolean row1 = size >= 45;
+    // A menu drawn over artwork has no glass at all: holes are the point, buttons sit where the picture has slots.
+    if (inventory.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout layout
+        && layout.guiId().equals("profile-menu.statistics")) {
+      for (int slot = 0; slot < size; slot++)
+        if (glass(inventory.getItem(slot))) out.add("glass in a frameless menu at " + slot);
+      if (!name(inventory.getItem(size - 1)).contains("Закрыть")) out.add("slot " + (size - 1) + " must be Close");
+      return out;
+    }
     // Header and Footer never have holes.
     for (int slot = 0; slot < 9; slot++)
       if (inventory.getItem(slot) == null) out.add("header slot " + slot + " is empty");

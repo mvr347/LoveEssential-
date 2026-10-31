@@ -3179,14 +3179,6 @@ bindings:
   file: gui.yml
   key: profile-menu.cycle-single
   path: menus.profile-menu-statistics.labels.profile-menu.cycle-single
-- module: profile
-  file: gui.yml
-  key: profile-menu.stats-head
-  path: menus.profile-menu-statistics.labels.profile-menu.stats-head
-- module: profile
-  file: gui.yml
-  key: profile-menu.stats-head-lore
-  path: menus.profile-menu-statistics.labels.profile-menu.stats-head-lore
 aliases:
 - module: profile
   file: profile.yml

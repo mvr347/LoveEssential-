@@ -51,7 +51,12 @@ public final class GuiSettings {
     String inline = plugin.getConfig().getString(path(id) + ".title", "");
     return inline.isBlank()
         ? lang.render(plugin.getConfig().getString(path(id) + ".title-key", id), vars)
-        : lang.renderText(inline, vars);
+        : lang.renderText(ItemsAdderFonts.resolve(inline), vars);
+  }
+
+  /** Menus drawn over a custom background set {@code frame: false}: no glass, the artwork shows through. */
+  public boolean frameless(String id) {
+    return !plugin.getConfig().getBoolean(path(id) + ".frame", true);
   }
 
   public Material frameMaterial(String id) {
@@ -194,10 +199,7 @@ public final class GuiSettings {
         inventory.setItem(
             from,
             frameSlot(from, inventory.getSize())
-                ? MenuStyle.item(
-                    frameMaterial(layout.guiId()),
-                    net.kyori.adventure.text.Component.empty(),
-                    List.of())
+                ? glass(layout.guiId())
                 : null);
         actions.remove(from);
       }
@@ -207,10 +209,7 @@ public final class GuiSettings {
       inventory.setItem(
           slot,
           entry.getValue() == null && frameSlot(slot, inventory.getSize())
-              ? MenuStyle.item(
-                  frameMaterial(layout.guiId()),
-                  net.kyori.adventure.text.Component.empty(),
-                  List.of())
+              ? glass(layout.guiId())
               : entry.getValue());
       if (callbacks.get(slot) != null) actions.put(slot, callbacks.get(slot));
     }
@@ -228,12 +227,7 @@ public final class GuiSettings {
         handlers.add(callbacks.get(slot));
       }
       callbacks.remove(slot);
-      inventory.setItem(
-          slot,
-          MenuStyle.item(
-              frameMaterial(layout.guiId()),
-              net.kyori.adventure.text.Component.empty(),
-              List.of()));
+      inventory.setItem(slot, glass(layout.guiId()));
     }
     int[] positions =
         switch (buttons.size()) {
@@ -282,7 +276,9 @@ public final class GuiSettings {
     }
   }
 
+  /** The frame filler, or null for a menu drawn over artwork that must stay visible. */
   private ItemStack glass(String id) {
+    if (frameless(id)) return null;
     return MenuStyle.item(frameMaterial(id), net.kyori.adventure.text.Component.empty(), List.of());
   }
 
@@ -302,6 +298,8 @@ public final class GuiSettings {
         || module(layout.guiId()).equals("starter")
         // The personal scoreboard menu places its cards and categories by slot, and the catalog fills pages by slot, so they keep their size.
         || layout.guiId().equals("sidebar.menu-title")
+        // The statistics menu is drawn artwork with its buttons at fixed slots, so it never shrinks.
+        || layout.guiId().equals("profile-menu.statistics")
         || layout.guiId().equals("sidebar.catalog-title")) return inventory;
     @SuppressWarnings("unchecked")
     var actions = (Map<Integer, Object>) (Map<?, ?>) layout.guiActions();

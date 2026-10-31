@@ -756,10 +756,21 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   private record Card(String id, List<List<Metric>> sections) {}
 
   /**
-   * The shipped menu has five buttons beside the player's head (three above, two below). An admin who kept the
-   * six categories of the old layout gets all six: the head gives up its slot instead of a category vanishing.
+   * Slots of the 3x3 block reserved for the category buttons (rows 2-4, columns 5-7), by how many buttons
+   * there are. Five, the shipped count, sit like the dots on a die; an admin who kept the six categories
+   * of the old layout still gets all six.
    */
-  private static final int STAT_BUTTONS = 6;
+  private static final int[][] STAT_SLOTS = {
+    {},
+    {23},
+    {22, 24},
+    {13, 23, 33},
+    {13, 15, 31, 33},
+    {13, 15, 23, 31, 33},
+    {13, 15, 22, 24, 31, 33}
+  };
+
+  private static final int STAT_BUTTONS = STAT_SLOTS.length - 1;
 
   private void drawStatistics(Menu m, Player viewer) {
     capture(viewer);
@@ -774,6 +785,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             viewer,
             placeholders.render("profile-menu.heading", viewer, viewer),
             textLines("profile-menu.heading-lore", viewer, viewer)));
+    // Owner's layout for this menu: back and close in the last two slots of the bottom row.
+    int last = m.inventory.getSize() - 1;
+    button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, viewer));
+    button(m, last, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
     var cards = new ArrayList<Card>();
     for (String id : statisticCategories().stream().limit(STAT_BUTTONS).toList()) {
       var sections = metricRows(id, values);
@@ -781,37 +796,17 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     }
     if (cards.isEmpty()) {
       m.inventory.setItem(
-          22,
+          23,
           icon(
               "disabled",
               Material.GRAY_DYE,
               lang.render("profile-menu.stats-empty"),
               List.of(lang.render("profile-menu.integration-unavailable"))));
-      if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
-      return;
+    } else {
+      int[] slots = STAT_SLOTS[cards.size()];
+      for (int i = 0; i < cards.size(); i++) statisticButton(m, cards.get(i), slots[i], values);
     }
-    // Three buttons in the upper work row, the rest below; MenuStyle.slot centres each row.
-    int upper = Math.min(3, cards.size()), lower = cards.size() - upper;
-    for (int i = 0; i < cards.size(); i++) {
-      boolean top = i < upper;
-      int slot =
-          top ? MenuStyle.slot(i, upper) : MenuStyle.slot(i - upper, lower) + 9;
-      statisticButton(m, cards.get(i), slot, values);
-    }
-    // The player's head sits in the middle of the lower row when no button took that slot.
-    if (m.inventory.getItem(31) == null || m.inventory.getItem(31).getType().isAir()
-        || isFrame(m.inventory.getItem(31)))
-      m.inventory.setItem(
-          31,
-          head(
-              viewer,
-              lang.render("profile-menu.stats-head", values),
-              snapshotLines("profile-menu.stats-head-lore", values)));
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
-  }
-
-  private boolean isFrame(ItemStack item) {
-    return item.getType().name().endsWith("_STAINED_GLASS_PANE") && !item.hasItemMeta();
   }
 
   /** One category button: the current section's metrics, a trail of all sections, and left/right to leaf. */
@@ -941,9 +936,9 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     requests.remove(viewer.getUniqueId());
     var m = new Menu(viewer, allowed);
     if (!permitted(m)) throw new IllegalArgumentException("errors.permission");
-    // Profile pages and the statistics menu are 45 slots (two work rows); every other profile menu is 54.
+    // Profile pages are 45 slots (two work rows); the statistics menu and every other profile menu are 54.
     int size =
-        Set.of("profile-menu.title", "public-profile.title", "profile-menu.statistics").contains(title)
+        Set.of("profile-menu.title", "public-profile.title").contains(title)
             ? 45
             : 54;
     if (!Set.of(27, 36, 45, 54).contains(size))
