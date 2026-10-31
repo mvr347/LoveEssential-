@@ -231,7 +231,7 @@ menus:
         complaints-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
         offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
   profile-menu-statistics:
-    size: 45
+    size: 54
     # Версия раскладки статистики (2026-10-31): 5 кнопок-категорий, внутри листаются разделы. Нужна, чтобы
     # неизменённые старые категории заменялись на новые, а изменённые администратором оставались как есть.
     sections-version: 1
@@ -531,11 +531,6 @@ menus:
         metric-line: '<gray><label>: <white><value>'
         cycle-hint: <green>ЛКМ <dark_gray>— <gray>дальше <dark_gray>| <gold>ПКМ <dark_gray>— <gray>назад
         cycle-single: <dark_gray>Один раздел
-        stats-head: <gold>Профиль <dark_gray>| <white><player>
-        stats-head-lore:
-        - '<gray>В игре: <white><playtime_hours> ч <playtime_minutes> мин'
-        - '<gray>Уровень: <white><level>'
-        - '<gray>Репутация: <white><reputation>'
         statistics-lore:
         - <gray>Реальные счётчики Minecraft и сохранённые данные.
         - <gray>Время, бои, путешествия, добыча и торговля.

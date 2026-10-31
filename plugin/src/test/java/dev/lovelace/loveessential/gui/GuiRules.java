@@ -52,9 +52,14 @@ public final class GuiRules {
       if (inventory.getItem(slot) == null) out.add("header slot " + slot + " is empty");
     for (int slot = footer; slot < size; slot++)
       if (inventory.getItem(slot) == null) out.add("footer slot " + slot + " is empty");
+    // The statistics menu is drawn artwork: its owner put category buttons into slots 13-15 of row 1.
+    boolean artwork =
+        inventory.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout layout
+            && layout.guiId().equals("profile-menu.statistics");
     if (row1)
       for (int slot = 9; slot < 18; slot++)
-        if (!glass(inventory.getItem(slot))) out.add("row1 slot " + slot + " is not glass");
+        if (!glass(inventory.getItem(slot)) && !(artwork && slot >= 13 && slot <= 15))
+          out.add("row1 slot " + slot + " is not glass");
     for (int slot : new int[] {1, 8})
       if (!glass(inventory.getItem(slot))) out.add("header slot " + slot + " must be glass");
     // Header controls: only slots 2-7, centered for their count.

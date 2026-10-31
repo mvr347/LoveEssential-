@@ -51,7 +51,7 @@ class StatisticsConfigTest {
     assertEquals(
         List.of("world", "clans", "activities", "combat", "trade"),
         List.copyOf(categories().getKeys(false)));
-    assertEquals(45, resource("modules/profile/gui.yml").getInt(STATS + ".size"));
+    assertEquals(54, resource("modules/profile/gui.yml").getInt(STATS + ".size"));
   }
 
   @Test
@@ -111,7 +111,7 @@ class StatisticsConfigTest {
     for (String key :
         List.of(
             "section-line", "section-current", "section-other", "section-divider", "metric-line",
-            "cycle-hint", "cycle-single", "stats-head", "stats-head-lore"))
+            "cycle-hint", "cycle-single"))
       assertTrue(keys.contains("profile-menu." + key), key);
     var gui = resource("modules/profile/gui.yml");
     assertNotNull(gui.get(STATS + ".labels.profile-menu.section-line"));

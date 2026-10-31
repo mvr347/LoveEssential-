@@ -302,6 +302,8 @@ public final class GuiSettings {
         || module(layout.guiId()).equals("starter")
         // The personal scoreboard menu places its cards and categories by slot, and the catalog fills pages by slot, so they keep their size.
         || layout.guiId().equals("sidebar.menu-title")
+        // The statistics menu is drawn artwork with its buttons at fixed slots, so it never shrinks.
+        || layout.guiId().equals("profile-menu.statistics")
         || layout.guiId().equals("sidebar.catalog-title")) return inventory;
     @SuppressWarnings("unchecked")
     var actions = (Map<Integer, Object>) (Map<?, ?>) layout.guiActions();
