@@ -4,8 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dev.lovelace.loveessential.LoveEssentialPlugin;
 import dev.lovelace.loveessential.gui.GuiRules;
+import dev.lovelace.loveessential.gui.GuiSettings;
+import dev.lovelace.loveessential.lang.Lang;
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.event.inventory.*;
 import org.junit.jupiter.api.*;
@@ -66,6 +71,28 @@ class MenuTextTest {
         for (var line : meta.lore()) out.append(PlainTextComponentSerializer.plainText().serialize(line)).append('\n');
     }
     return out.toString();
+  }
+
+  @Test
+  void itemsAdderLegacyGlyphsRenderInStatisticsTitle() throws Exception {
+    MockBukkit.createMockPlugin("ItemsAdder");
+    var gui = new GuiSettings(plugin, new Lang(plugin));
+    String path = gui.path("profile-menu-statistics") + ".title";
+    // The API returns the exact mixed MiniMessage/legacy string seen on Paper 26.2.
+    plugin.getConfig().set(path, "<white>%img_offset_-8%%img_stats_menu%</white>");
+    Component title = gui.title("profile-menu-statistics", Map.of());
+    assertEquals("\uF808\uE020", PlainTextComponentSerializer.plainText().serialize(title));
+    assertEquals(Component.text("\uF808\uE020", NamedTextColor.WHITE), title.compact());
+
+    // Both aliases work without consuming surrounding MiniMessage tags or literal variables.
+    plugin.getConfig().set(path, "%ia_voidcore:stats_menu%<gold><label></gold>");
+    title = gui.title("profile-menu-statistics", Map.of("label", "<red>Статистика"));
+    assertEquals(
+        "\uE020<red>Статистика", PlainTextComponentSerializer.plainText().serialize(title));
+    assertEquals(
+        Component.text("\uE020", NamedTextColor.WHITE)
+            .append(Component.text("<red>Статистика", NamedTextColor.GOLD)),
+        title.compact());
   }
 
   @Test

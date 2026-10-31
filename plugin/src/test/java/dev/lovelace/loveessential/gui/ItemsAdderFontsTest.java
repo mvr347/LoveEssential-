@@ -29,8 +29,8 @@ class ItemsAdderFontsTest {
     try {
       MockBukkit.createMockPlugin("ItemsAdder");
       assertEquals(
-          "<white>[offset_-8][stats_menu]</white>",
-          ItemsAdderFonts.resolve("%img_offset_-8%%img_stats_menu%"));
+          "<white>[offset][menu]</white>",
+          ItemsAdderFonts.resolve("%img_offset%%img_menu%"));
     } finally {
       MockBukkit.unmock();
     }

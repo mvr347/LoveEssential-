@@ -695,7 +695,8 @@ class PluginLifecycleTest {
                 && profiles.privacy().loaded(viewer.getUniqueId()));
     var skin = target.getPlayerProfile();
     var textures = skin.getTextures();
-    textures.setSkin(java.net.URI.create("https://textures.minecraft.net/texture/abcdef").toURL());
+    textures.setSkin(
+        java.net.URI.create("https://textures.minecraft.net/texture/" + "c".repeat(64)).toURL());
     skin.setTextures(textures);
     target.setPlayerProfile(skin);
     target.setLevel(42);
@@ -740,7 +741,7 @@ class PluginLifecycleTest {
     assertTrue(
         await(store.profile(target.getUniqueId(), "loveessential.player-info"))
             .orElseThrow()
-            .contains("abcdef"));
+            .contains("c".repeat(64)));
   }
 
   <T> T awaitUnchecked(CompletableFuture<T> future) {

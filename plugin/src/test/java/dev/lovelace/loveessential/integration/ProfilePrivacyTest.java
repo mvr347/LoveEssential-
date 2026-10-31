@@ -434,10 +434,39 @@ class ProfilePrivacyTest {
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(url, meta.getPlayerProfile().getTextures().getSkin().toExternalForm());
+    assertNotEquals(target.getUniqueId(), meta.getPlayerProfile().getId());
+    assertTrue(
+        meta.getPlayerProfile().getProperties().stream()
+            .anyMatch(property -> property.getName().equals("textures")));
     assertFalse(lore(viewer).contains("K/D:"));
     assertTrue(viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
     assertFalse(
         title(viewer, 43).contains("Назад"), "direct offline profile has no invented parent");
+  }
+
+  @Test
+  void offlineProfileWithoutUsableSkinUsesOwnerlessFallback() throws Exception {
+    var viewer = player("Viewer");
+    var id = UUID.fromString("276d13c9-b8b6-3421-9c33-4960f44bf2d4");
+    for (String skin : List.of("", "broken", "https://example.com/texture/" + "a".repeat(64))) {
+      await(
+          store.profile(
+              id,
+              "loveessential.player-info",
+              new com.google.gson.Gson().toJson(Map.of("player", "Ada123", "skin_url", skin))));
+      for (int i = 0; i < 2; i++) {
+        viewer.closeInventory();
+        profiles.openProfile(viewer, "Ada123");
+        waitFor(
+            () ->
+                viewer.getOpenInventory().getTopInventory() != null
+                    && viewer.getOpenInventory().getTopInventory().getSize() == 45);
+        var meta =
+            (org.bukkit.inventory.meta.SkullMeta)
+                viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
+        assertNull(meta.getPlayerProfile(), "saved skin: " + skin);
+      }
+    }
   }
 
   @Test
@@ -489,7 +518,8 @@ class ProfilePrivacyTest {
     target.setStatistic(Statistic.PLAY_ONE_MINUTE, 72000);
     var skin = target.getPlayerProfile();
     var textures = skin.getTextures();
-    textures.setSkin(java.net.URI.create("https://textures.minecraft.net/texture/abcd").toURL());
+    textures.setSkin(
+        java.net.URI.create("https://textures.minecraft.net/texture/" + "b".repeat(64)).toURL());
     skin.setTextures(textures);
     target.setPlayerProfile(skin);
     command(viewer, "le profile view Target");

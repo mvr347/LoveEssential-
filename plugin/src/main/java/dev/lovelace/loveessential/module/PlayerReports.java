@@ -271,11 +271,10 @@ public final class PlayerReports implements Listener, AutoCloseable {
   }
 
   private static ItemStack skull(UUID player, Component title, List<Component> lore) {
-    var item = MenuStyle.item(Material.PLAYER_HEAD, title, lore);
-    var meta = (org.bukkit.inventory.meta.SkullMeta) item.getItemMeta();
-    meta.setOwningPlayer(Bukkit.getOfflinePlayer(player));
-    item.setItemMeta(meta);
-    return item;
+    var online = Bukkit.getPlayer(player);
+    return online == null
+        ? MenuStyle.item(Material.PLAYER_HEAD, title, lore)
+        : PlayerProfiles.head(online, title, lore);
   }
 
   private Component bar(int value, int limit) {
