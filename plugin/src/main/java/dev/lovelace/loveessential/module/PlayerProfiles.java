@@ -87,6 +87,8 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     final BooleanSupplier allowed;
     UUID subject;
     String tab = "";
+    /** Which section each statistics button currently shows (category id to index). */
+    final Map<String, Integer> sections = new HashMap<>();
 
     public Object guiRoute() {
       return List.of(menuId, subject == null ? viewer.getUniqueId() : subject);
@@ -252,17 +254,46 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     var aggregate = blockStatistics.get(p.getUniqueId());
     if (aggregate == null
         || System.nanoTime() - aggregate[0] > java.time.Duration.ofSeconds(30).toNanos()) {
-      long mined = 0, used = 0;
-      for (var material : Material.values())
-        if (!material.isLegacy() && material.isBlock()) {
+      long mined = 0, used = 0, crafted = 0, broken = 0;
+      for (var material : Material.values()) {
+        if (material.isLegacy()) continue;
+        if (material.isBlock()) {
           mined += p.getStatistic(Statistic.MINE_BLOCK, material);
           if (material.isItem()) used += p.getStatistic(Statistic.USE_ITEM, material);
         }
-      aggregate = new long[] {System.nanoTime(), mined, used};
+        if (material.isItem()) {
+          crafted += p.getStatistic(Statistic.CRAFT_ITEM, material);
+          if (material.getMaxDurability() > 0) broken += p.getStatistic(Statistic.BREAK_ITEM, material);
+        }
+      }
+      aggregate = new long[] {System.nanoTime(), mined, used, crafted, broken};
       blockStatistics.put(p.getUniqueId(), aggregate);
     }
     m.put("blocks_mined", "" + aggregate[1]);
     m.put("blocks_used", "" + aggregate[2]);
+    m.put("items_crafted", "" + aggregate[3]);
+    m.put("tools_broken", "" + aggregate[4]);
+    // More of Minecraft's own counters, for the statistics sections (distances in km, falls in metres).
+    m.put("sessions", "" + p.getStatistic(Statistic.LEAVE_GAME));
+    m.put("sleeps", "" + p.getStatistic(Statistic.SLEEP_IN_BED));
+    m.put("boat_km", number(p.getStatistic(Statistic.BOAT_ONE_CM) / 100000.0));
+    m.put("horse_km", number(p.getStatistic(Statistic.HORSE_ONE_CM) / 100000.0));
+    m.put("minecart_km", number(p.getStatistic(Statistic.MINECART_ONE_CM) / 100000.0));
+    m.put("crouch_km", number(p.getStatistic(Statistic.CROUCH_ONE_CM) / 100000.0));
+    m.put("fall_m", number(p.getStatistic(Statistic.FALL_ONE_CM) / 100.0));
+    m.put("items_dropped", "" + p.getStatistic(Statistic.DROP_COUNT));
+    m.put("items_enchanted", "" + p.getStatistic(Statistic.ITEM_ENCHANTED));
+    m.put("villager_talks", "" + p.getStatistic(Statistic.TALKED_TO_VILLAGER));
+    m.put("bell_rings", "" + p.getStatistic(Statistic.BELL_RING));
+    m.put("shield_blocked", number(p.getStatistic(Statistic.DAMAGE_BLOCKED_BY_SHIELD) / 10.0));
+    m.put("target_hits", "" + p.getStatistic(Statistic.TARGET_HIT));
+    // The server tax rates, in percent: for trading with the server and between players.
+    love.service(dev.lovelace.lovecore.api.economy.TaxOracle.class)
+        .ifPresent(
+            tax -> {
+              m.put("tax_rate", number(tax.rate(p.getUniqueId()) * 100.0));
+              m.put("trade_tax_rate", number(tax.tradeRate(p.getUniqueId()) * 100.0));
+            });
     long seconds = p.getStatistic(Statistic.PLAY_ONE_MINUTE) / 20L;
     m.put("playtime_seconds", "" + seconds);
     m.put("playtime_hours", "" + seconds / 3600);
@@ -675,6 +706,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     if (details == null) return groups;
     for (String detail : details.getKeys(false)) {
       String prefix = path + ".details." + detail;
+      // A section can belong to its own plugin (a category mixes several): without it the section is left out.
+      String owner = plugin.getConfig().getString(prefix + ".plugin", "");
+      if (!owner.isBlank()
+          && !love.installed(owner)
+          && plugin.getConfig().getBoolean("profile.statistics.hide-unavailable", true)) continue;
       String loreKey =
           plugin.getConfig().getString(prefix + ".lore-key", "profile-stats." + id + "." + detail + ".lore");
       String group =
@@ -695,24 +731,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     return groups;
   }
 
-  private String metricTexture(String variable) {
-    String configured = plugin.getConfig().getString("profile.gui.metric-textures." + variable, "");
-    if (!configured.isBlank()) return configured;
-    return switch (variable) {
-      case "playtime_hours", "playtime_minutes", "first_join_local", "last_seen_local",
-          "time_since_death_hours" -> "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb";
-      case "balance", "duels_money_won", "activities_money_won", "villager_trades" ->
-          "fae6344cebacd21d8c6ca0d2e34b3c3492dc79bf443140d12a50887ae3eb7f8f";
-      case "deaths", "duels_losses", "hunt_failed", "contracts_failed", "activities_losses",
-          "activities_money_lost", "damage_taken" ->
-          "c618731e063379aebf82f1d64c419c90d7f0c1648c548e9b6151b1baba66d723";
-      case "kills", "mob_kills", "duels_wins", "duels_winrate", "hunt_completed",
-          "contracts_completed", "contracts_success_rate", "activities_wins", "kd_ratio" ->
-          "badc048a7ce78f7dad72a07da27d85c0916881e5522eeed1e3daf217a38c1a";
-      default -> "d0d5a4eba140cbb34d45e40d62dd3f7e6584b2ab0b4155a0bcc603d5d750f793";
-    };
-  }
-
   private static ItemStack glow(ItemStack item) {
     var meta = item.getItemMeta();
     meta.setEnchantmentGlintOverride(true);
@@ -720,7 +738,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     return item;
   }
 
-  /** Own statistics: one tab per category in the header, one item per metric below. */
+  /** Own statistics: one button per category, each leafing through its sections in the lore. */
   public void statistics(Player viewer, Player target) {
     if (!canView(viewer, target)) throw new IllegalArgumentException("profile-menu.hidden");
     if (!viewer.equals(target)) {
@@ -733,6 +751,12 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     drawStatistics(m, viewer);
     show(m);
   }
+
+  /** A category that has something to show, with its sections as lists of metrics. */
+  private record Card(String id, List<List<Metric>> sections) {}
+
+  /** At most five buttons fit the two work rows beside the player's head (three above, two below). */
+  private static final int STAT_BUTTONS = 5;
 
   private void drawStatistics(Menu m, Player viewer) {
     capture(viewer);
@@ -747,58 +771,12 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             viewer,
             placeholders.render("profile-menu.heading", viewer, viewer),
             textLines("profile-menu.heading-lore", viewer, viewer)));
-    // At most six tabs fit the header controls (gui_gen); extra categories are left out.
-    var ids = statisticCategories().stream().limit(6).toList();
-    if (ids.isEmpty()) {
-      MenuStyle.apply(viewer, m.inventory);
-      return;
+    var cards = new ArrayList<Card>();
+    for (String id : statisticCategories().stream().limit(STAT_BUTTONS).toList()) {
+      var sections = metricRows(id, values);
+      if (!sections.isEmpty()) cards.add(new Card(id, sections));
     }
-    if (!ids.contains(m.tab)) m.tab = ids.getFirst();
-    for (int i = 0; i < ids.size(); i++) {
-      String id = ids.get(i), path = statisticPath(id);
-      boolean current = id.equals(m.tab);
-      String title = plugin.getConfig().getString(path + ".title-key", "profile-stats." + id + ".title");
-      String texture =
-          plugin.getConfig().getString(path + ".texture", plugin.getConfig().getString(
-              "profile.gui.textures.profile-menu.statistics", ""));
-      var tab =
-          MenuStyle.head(
-              texture.isBlank() ? metricTexture("") : texture,
-              lang.render(title, values),
-              List.of(
-                  lang.render("gui.separator"),
-                  lang.render(current ? "profile-menu.tab-current" : "gui.click.open")));
-      m.inventory.setItem(1 + i, current ? glow(tab) : tab);
-      m.actions.put(
-          1 + i,
-          () -> {
-            m.tab = id;
-            repaint(m);
-          });
-    }
-    var rows = metricRows(m.tab, values);
-    // Up to three groups keep one row each; more are poured into rows of seven.
-    var layout = new ArrayList<List<Metric>>();
-    if (rows.size() <= 3 && rows.stream().allMatch(r -> r.size() <= 7)) layout.addAll(rows);
-    else {
-      var flat = rows.stream().flatMap(List::stream).toList();
-      for (int i = 0; i < flat.size() && layout.size() < 3; i += 7)
-        layout.add(flat.subList(i, Math.min(flat.size(), i + 7)));
-    }
-    for (int r = 0; r < layout.size(); r++) {
-      var row = layout.get(r);
-      for (int i = 0; i < row.size(); i++) {
-        var metric = row.get(i);
-        int slot = MenuStyle.slot(i, row.size()) + r * 9;
-        m.inventory.setItem(
-            slot,
-            MenuStyle.head(
-                metricTexture(metric.variable()),
-                lang.renderText("<gold>" + metric.label() + ": <white>" + metric.value(), values),
-                List.of(lang.render(metric.group()))));
-      }
-    }
-    if (layout.isEmpty())
+    if (cards.isEmpty()) {
       m.inventory.setItem(
           22,
           icon(
@@ -806,7 +784,97 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
               Material.GRAY_DYE,
               lang.render("profile-menu.stats-empty"),
               List.of(lang.render("profile-menu.integration-unavailable"))));
+      if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
+      return;
+    }
+    // Three buttons in the upper work row, the rest below; MenuStyle.slot centres each row.
+    int upper = Math.min(3, cards.size()), lower = cards.size() - upper;
+    for (int i = 0; i < cards.size(); i++) {
+      boolean top = i < upper;
+      int slot =
+          top ? MenuStyle.slot(i, upper) : MenuStyle.slot(i - upper, lower) + 9;
+      statisticButton(m, cards.get(i), slot, values);
+    }
+    // The player's head sits in the middle of the lower row when no button took that slot.
+    if (m.inventory.getItem(31) == null || m.inventory.getItem(31).getType().isAir()
+        || isFrame(m.inventory.getItem(31)))
+      m.inventory.setItem(
+          31,
+          head(
+              viewer,
+              lang.render("profile-menu.stats-head", values),
+              snapshotLines("profile-menu.stats-head-lore", values)));
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
+  }
+
+  private boolean isFrame(ItemStack item) {
+    return item.getType().name().endsWith("_STAINED_GLASS_PANE") && !item.hasItemMeta();
+  }
+
+  /** One category button: the current section's metrics, a trail of all sections, and left/right to leaf. */
+  private void statisticButton(Menu m, Card card, int slot, Map<String, String> values) {
+    String id = card.id(), path = statisticPath(id);
+    int count = card.sections().size();
+    int index = StatCycle.clamp(m.sections.getOrDefault(id, 0), count);
+    var current = card.sections().get(index);
+    String title = plugin.getConfig().getString(path + ".title-key", "profile-stats." + id + ".title");
+    String texture =
+        plugin
+            .getConfig()
+            .getString(
+                path + ".texture",
+                plugin
+                    .getConfig()
+                    .getString(
+                        "profile.gui.textures.profile-menu.statistics",
+                        "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb"));
+
+    var lore = new ArrayList<Component>();
+    lore.add(
+        lang.renderText(
+            lang.text("profile-menu.section-line"),
+            Map.of(
+                "name",
+                plain(lang.render(current.getFirst().group(), values)),
+                "index",
+                String.valueOf(index + 1),
+                "count",
+                String.valueOf(count))));
+    if (count > 1) {
+      var trail = Component.text();
+      for (int i = 0; i < count; i++) {
+        if (i > 0) trail.append(lang.render("profile-menu.section-divider"));
+        String name = plain(lang.render(card.sections().get(i).getFirst().group(), values));
+        trail.append(
+            lang.renderText(
+                lang.text(i == index ? "profile-menu.section-current" : "profile-menu.section-other"),
+                Map.of("name", name)));
+      }
+      lore.add(trail.build());
+    }
+    lore.add(lang.render("gui.separator"));
+    for (var metric : current)
+      lore.add(
+          lang.renderText(
+              lang.text("profile-menu.metric-line"),
+              Map.of("label", metric.label(), "value", plain(lang.renderText(metric.value(), values)))));
+    lore.add(lang.render("gui.separator"));
+    lore.add(lang.render(count > 1 ? "profile-menu.cycle-hint" : "profile-menu.cycle-single"));
+
+    m.inventory.setItem(slot, MenuStyle.head(texture, lang.render(title, values), lore));
+    if (count > 1)
+      m.choices.put(
+          slot,
+          click -> {
+            int now = StatCycle.clamp(m.sections.getOrDefault(id, 0), count);
+            m.sections.put(
+                id, click == ClickType.RIGHT ? StatCycle.previous(now, count) : StatCycle.next(now, count));
+            repaint(m);
+          });
+  }
+
+  private static String plain(Component component) {
+    return PlainTextComponentSerializer.plainText().serialize(component);
   }
 
   private Map<String, String> displayValues(Map<String, String> source) {
@@ -870,8 +938,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     requests.remove(viewer.getUniqueId());
     var m = new Menu(viewer, allowed);
     if (!permitted(m)) throw new IllegalArgumentException("errors.permission");
-    // Profile pages are 45 slots (two work rows); every other profile menu is 54.
-    int size = Set.of("profile-menu.title", "public-profile.title").contains(title) ? 45 : 54;
+    // Profile pages and the statistics menu are 45 slots (two work rows); every other profile menu is 54.
+    int size =
+        Set.of("profile-menu.title", "public-profile.title", "profile-menu.statistics").contains(title)
+            ? 45
+            : 54;
     if (!Set.of(27, 36, 45, 54).contains(size))
       throw new IllegalArgumentException("gui-layout.invalid");
     m.resume =

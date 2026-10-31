@@ -144,6 +144,16 @@ class ProfilePrivacyTest {
             p.getOpenInventory().getTopInventory().getItem(slot).getItemMeta().displayName());
   }
 
+  /** The lore of one slot of the open menu as plain text, one line per row. */
+  String slotLore(PlayerMock p, int slot) {
+    var lore = p.getOpenInventory().getTopInventory().getItem(slot).getItemMeta().lore();
+    return lore == null
+        ? ""
+        : lore.stream()
+            .map(line -> PlainTextComponentSerializer.plainText().serialize(line))
+            .collect(java.util.stream.Collectors.joining("\n"));
+  }
+
   void enablePapi() throws Exception {
     MockBukkit.createMockPlugin("PlaceholderAPI");
     var unsafeType = Class.forName("sun.misc.Unsafe");
@@ -315,7 +325,7 @@ class ProfilePrivacyTest {
     assertTrue(lore(viewer).contains("Общая статистика"));
     assertFalse(lore(viewer).contains("K/D:"));
     assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
-    click(viewer, named(viewer, "Мир и выживание")); // public summary has no drill-down
+    click(viewer, named(viewer, "Мир")); // public summary has no drill-down
     assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
     command(target, "profile");
     assertEquals("Настройки", title(target, 4));
@@ -325,35 +335,71 @@ class ProfilePrivacyTest {
             title(target, named(target, "Статистика")),
             title(target, named(target, "Активность и приватность"))));
     click(target, named(target, "Статистика"));
-    assertEquals(54, target.getOpenInventory().getTopInventory().getSize());
-    // One metric is one item with its value in the name; the world tab holds all four groups.
-    String metrics = titles(target);
-    assertTrue(metrics.contains("Убийств игроков: 9"), metrics);
-    assertTrue(metrics.contains("K/D: 3.0"), metrics);
-    assertTrue(metrics.contains("В игре: 1 ч 0 мин"), metrics);
-    assertTrue(metrics.contains("Добыто блоков: 17"), metrics);
+    assertEquals(45, target.getOpenInventory().getTopInventory().getSize());
+    // One button per category; the numbers are in the lore of its current section.
+    int world = named(target, "Мир"), combat = named(target, "Сражения");
+    String general = slotLore(target, world);
+    assertTrue(general.contains("Раздел: Общее (1/4)"), general);
+    assertTrue(general.contains("В игре: 1 ч 0 мин"), general);
+    String fights = slotLore(target, combat);
+    assertTrue(fights.contains("Убийств игроков: 9"), fights);
+    assertTrue(fights.contains("K/D: 3.0"), fights);
+    // The block counters are on the third section of the world button.
+    click(target, world);
+    click(target, world);
+    String building = slotLore(target, world);
+    assertTrue(building.contains("Раздел: Строительство (3/4)"), building);
+    assertTrue(building.contains("Блоков добыто: 17"), building);
     click(target, target.getOpenInventory().getTopInventory().getSize() - 2);
     assertEquals("Настройки", title(target, 4));
   }
 
   @Test
-  void statisticTabsSwitchCategoriesAndResetAfterClosing() throws Exception {
-    MockBukkit.createMockPlugin("LoveDuels");
+  void statisticButtonsLeafThroughTheirSectionsInACircle() throws Exception {
+    for (String name :
+        List.of(
+            "LoveClans", "LoveActivities", "LoveContracts", "LoveBrewing", "LoveDuels", "LoveHunt",
+            "LoveTrades", "LoveShops")) MockBukkit.createMockPlugin(name);
     var p = player("Reader");
     command(p, "profile stats");
     var inventory = p.getOpenInventory().getTopInventory();
-    assertEquals(54, inventory.getSize());
-    int world = named(p, "Мир и выживание"), duels = named(p, "Дуэли");
-    assertTrue(world >= 1 && world <= 8 && duels >= 1 && duels <= 8, "tabs live in the header");
-    String firstWorld = titles(p);
-    assertTrue(firstWorld.contains("Убийств игроков"));
-    click(p, duels);
-    String onDuels = titles(p);
-    assertNotEquals(firstWorld, onDuels);
-    assertTrue(onDuels.contains("Процент побед"), onDuels);
-    click(p, inventory.getSize() - 1);
+    assertEquals(45, inventory.getSize());
+    // Three buttons above, two below, the player's head in the middle of the lower row.
+    assertEquals(
+        List.of("Мир", "Кланы", "Активности", "Сражения", "Торговля"),
+        List.of(20, 22, 24, 30, 32).stream()
+            .map(slot -> title(p, slot))
+            .toList());
+    assertEquals(Material.PLAYER_HEAD, inventory.getItem(31).getType());
+
+    String first = slotLore(p, 20);
+    assertTrue(first.contains("Раздел: Общее (1/4)"), first);
+    assertTrue(first.contains("Общее › Передвижение › Строительство › Выживание"), first);
+    click(p, 20);
+    assertTrue(slotLore(p, 20).contains("Раздел: Передвижение (2/4)"), slotLore(p, 20));
+    click(p, 20);
+    click(p, 20);
+    assertTrue(slotLore(p, 20).contains("Раздел: Выживание (4/4)"), slotLore(p, 20));
+    click(p, 20);
+    assertEquals(first, slotLore(p, 20), "after the last section comes the first");
+    click(p, 20, ClickType.RIGHT);
+    assertTrue(slotLore(p, 20).contains("Раздел: Выживание (4/4)"), slotLore(p, 20));
+    // Buttons leaf independently of each other.
+    assertTrue(slotLore(p, 32).contains("Раздел: Общее (1/3)"), slotLore(p, 32));
     command(p, "profile stats");
-    assertEquals(firstWorld, titles(p));
+    assertEquals(first, slotLore(p, 20), "closing the menu forgets the position");
+  }
+
+  @Test
+  void aCategoryOfAnAbsentPluginAndItsSectionsAreLeftOut() throws Exception {
+    var p = player("Reader");
+    command(p, "profile stats");
+    String titles = titles(p);
+    assertFalse(titles.contains("Кланы"), titles);
+    assertFalse(titles.contains("Активности"), titles);
+    // Fights and trading keep the sections that need no other plugin.
+    assertTrue(slotLore(p, named(p, "Сражения")).contains("Раздел: Общее (1/1)"));
+    assertFalse(slotLore(p, named(p, "Сражения")).contains("Дуэли"));
   }
 
   @Test
@@ -398,7 +444,7 @@ class ProfilePrivacyTest {
             viewer.getOpenInventory().getTopInventory() != null
                 && viewer.getOpenInventory().getTopInventory().getSize() == 45);
     var menu = viewer.getOpenInventory().getTopInventory();
-    click(viewer, named(viewer, "Мир и выживание"));
+    click(viewer, named(viewer, "Мир"));
     assertSame(menu, viewer.getOpenInventory().getTopInventory());
     target.reconnect();
     waitFor(() -> profiles.privacy().loaded(target.getUniqueId()));
@@ -445,7 +491,7 @@ class ProfilePrivacyTest {
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
-    click(viewer, named(viewer, "Мир и выживание"));
+    click(viewer, named(viewer, "Мир"));
     assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
   }
 

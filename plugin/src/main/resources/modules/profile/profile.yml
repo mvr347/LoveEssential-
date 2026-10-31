@@ -113,6 +113,56 @@ statistics:
     activities_winrate: loveactivities_winrate_total
     activities_money_won: loveactivities_won_money_total
     activities_money_lost: loveactivities_lost_money_total
+    # 2026-10-31: значения для статистики профиля (кланы, пивоварение, трейды, торговые точки).
+    clan_name: clans_name
+    clan_tag: clans_tag
+    clan_rank: clans_rank_display
+    clan_joined: clans_joined
+    clan_members: clans_members
+    clan_territories: clans_territories
+    clan_influence: clans_influence
+    clan_level: clans_level
+    clan_xp: clans_xp
+    clan_upgrade_points: clans_upgrade_points
+    clan_spirit_level: clans_spirit_level
+    clan_spirit_mastery: clans_spirit_mastery
+    clan_wars_won: clans_wars_won
+    clan_wars_lost: clans_wars_lost
+    clan_sieges_won: clans_sieges_won
+    clan_sieges_lost: clans_sieges_lost
+    clan_raids_won: clans_raids_won
+    clan_raids_lost: clans_raids_lost
+    brew_level: lovebrew_level
+    brew_exp: lovebrew_exp
+    brew_speed: lovebrew_speed_level
+    brew_quality: lovebrew_quality_level
+    brew_total: lovebrew_total_brewed
+    brew_sold: lovebrew_total_sold
+    brew_earned: lovebrew_total_earned
+    brew_specialty: lovebrew_brewer_specialty
+    brew_reputation: lovebrew_reputation
+    brew_toasts: lovebrew_toasts
+    contracts_active: lovecontracts_active_name
+    contracts_fine: lovecontracts_pending_fine
+    duels_total: loveduels_total
+    duels_royal_wins: loveduels_royal_wins
+    hunt_active: lovehunt_active_count
+    hunt_mine: lovehunt_mine_count
+    trades_total: lovetrades_trades_total
+    trades_items_sent: lovetrades_items_sent
+    trades_items_received: lovetrades_items_received
+    trades_items_lost: lovetrades_items_lost_to_tax
+    trades_partners: lovetrades_partners
+    trades_tax_percent: lovetrades_tax_percent
+    shop_points: loveshops_points
+    shop_sales: loveshops_sales_total
+    shop_revenue: loveshops_revenue_total
+    shop_rating: loveshops_rating
+    shop_trader_level: loveshops_trader_level
+    shop_sold: loveshops_total_sold
+    shop_bought: loveshops_total_bought
+    banker_fee: loveshops_banker_fee
+    buyer_bonus: loveshops_buyer_bonus
 access:
   allowed-worlds: []
   denied-worlds: []

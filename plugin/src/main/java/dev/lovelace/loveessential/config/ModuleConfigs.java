@@ -121,6 +121,15 @@ public final class ModuleConfigs {
                   && oldLang.contains(key)
                   && !gui.contains("texts." + key)) gui.set("texts." + key, oldLang.get(key));
         }
+        // 2026-10-31: the statistics menu has five category buttons. Categories nobody edited are replaced by
+        // the new ones (the old file is kept); edited categories stay and keep working in the new layout.
+        if (id.equals("profile")
+            && Files.exists(guiFile(id))
+            && unchangedLegacyStatistics(gui, resource("legacy/profile-statistics-2026-10-30.yml"))) {
+          backup(guiFile(id), ".pre-stat-sections.bak");
+          gui.set(STATISTICS + ".categories", null);
+          gui.set(STATISTICS + ".size", null);
+        }
         fillIn("modules/" + id + "/gui.yml", gui, guiDefaults);
         repairMappedLines(gui);
         String beforeDisplay = id.equals("display") ? gui.saveToString() : null;
@@ -592,6 +601,19 @@ public final class ModuleConfigs {
           }
         });
     return merged;
+  }
+
+  private static final String STATISTICS = "menus.profile-menu-statistics";
+
+  /**
+   * Whether the installed statistics categories are still exactly the ones shipped before the five-button
+   * layout, so they can be swapped for the new ones without losing anything an admin wrote.
+   */
+  static boolean unchangedLegacyStatistics(YamlConfiguration gui, ConfigurationSection legacy) {
+    if (gui.getInt(STATISTICS + ".sections-version", 0) >= 1) return false;
+    Object installed = snapshot(gui.get(STATISTICS + ".categories"));
+    Object shipped = snapshot(legacy.get(STATISTICS + ".categories"));
+    return installed instanceof Map && Objects.equals(installed, shipped);
   }
 
   /** {@link #fill} that names the file in the error, so the admin knows which one to open. */
