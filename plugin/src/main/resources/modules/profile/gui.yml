@@ -231,7 +231,10 @@ menus:
         complaints-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
         offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
   profile-menu-statistics:
-    size: 54
+    size: 45
+    # Версия раскладки статистики (2026-10-31): 5 кнопок-категорий, внутри листаются разделы. Нужна, чтобы
+    # неизменённые старые категории заменялись на новые, а изменённые администратором оставались как есть.
+    sections-version: 1
     title: <gold>Статистика
     categories:
       world:
@@ -240,14 +243,19 @@ menus:
         activity-sensitive: true
         details:
           visits:
-            title: <gold>Время и визиты
+            title: <gold>Общее
             lore:
             - <dark_gray>Подробности категории
             - ''
             - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
             - '<gray>Первый вход: <first_join_local>'
-            - '<gray>Последние данные: <last_seen_local>'
-            - '<gray>Часовой пояс: Europe/Kiev'
+            - '<gray>Последний вход: <last_seen_local>'
+            - '<gray>Сессий: <sessions>'
+            - '<gray>Уровень: <level>'
+            - '<gray>Опыта всего: <total_exp>'
+            - '<gray>Смертей: <deaths>'
+            - '<gray>После смерти: <time_since_death_hours> ч'
+            - '<gray>Спал в кровати: <sleeps>'
           movement:
             title: <gold>Передвижение
             lore:
@@ -257,28 +265,33 @@ menus:
             - '<gray>Бегом: <sprint_km> км'
             - '<gray>Вплавь: <swim_km> км'
             - '<gray>На элитрах: <fly_km> км'
+            - '<gray>На лодке: <boat_km> км'
+            - '<gray>Верхом: <horse_km> км'
+            - '<gray>В вагонетке: <minecart_km> км'
+            - '<gray>Крадясь: <crouch_km> км'
+            - '<gray>Падение: <fall_m> м'
             - '<gray>Прыжков: <jumps>'
           mining:
-            title: <gold>Добыча и использование
+            title: <gold>Строительство
             lore:
             - <dark_gray>Подробности категории
             - ''
-            - '<gray>Добыто блоков: <blocks_mined>'
-            - '<gray>Использовано предметов-блоков: <blocks_used>'
-            - <gray>Использование включает установки и другие действия.
+            - '<gray>Блоков добыто: <blocks_mined>'
+            - '<gray>Блоков использовано: <blocks_used>'
+            - '<gray>Предметов скрафчено: <items_crafted>'
+            - '<gray>Сломано инструментов: <tools_broken>'
+            - '<gray>Выброшено предметов: <items_dropped>'
+            - '<gray>Зачаровано предметов: <items_enchanted>'
           survival:
-            title: <gold>Выживание и бои
+            title: <gold>Выживание
             lore:
             - <dark_gray>Подробности категории
             - ''
-            - '<gray>Убийств игроков: <kills>'
-            - '<gray>Побеждено мобов: <mob_kills>'
-            - '<gray>Смертей: <deaths>'
-            - '<gray>K/D: <kd_ratio>'
-            - '<gray>Нанесено урона: <damage_dealt>'
-            - '<gray>Получено урона: <damage_taken>'
-            - '<gray>После смерти: <time_since_death_hours> ч'
-        title: <gold>Мир и выживание
+            - '<gray>Поймано рыбы: <fish_caught>'
+            - '<gray>Разведено животных: <animals_bred>'
+            - '<gray>Разговоров с жителями: <villager_talks>'
+            - '<gray>Звонков в колокол: <bell_rings>'
+        title: <gold>Мир
         summary:
         - <dark_gray>Личная статистика
         - ''
@@ -291,186 +304,238 @@ menus:
         - ''
         - '<gray>В игре: <playtime_hours> ч <playtime_minutes> мин'
         - '<gray>Первый вход: <first_join_local>'
-      duels:
+      clans:
         enabled: true
-        plugin: LoveDuels
+        plugin: LoveClans
         activity-sensitive: false
         details:
-          results:
-            title: <gold>Результаты
+          general:
+            title: <gold>Общее
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Клан: <clan_name>'
+            - '<gray>Тег: <clan_tag>'
+            - '<gray>Ранг: <clan_rank>'
+            - '<gray>Вступил: <clan_joined>'
+            - '<gray>Участников: <clan_members>'
+            - '<gray>Территорий: <clan_territories>'
+            - '<gray>Влияние: <clan_influence>'
+          perfection:
+            title: <gold>Совершенство
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Уровень клана: <clan_level>'
+            - '<gray>Опыт клана: <clan_xp>'
+            - '<gray>Очков улучшений: <clan_upgrade_points>'
+            - '<gray>Уровень духа: <clan_spirit_level>'
+            - '<gray>Мастерство духа: <clan_spirit_mastery>'
+          wars:
+            title: <gold>Войны
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Войн выиграно: <clan_wars_won>'
+            - '<gray>Войн проиграно: <clan_wars_lost>'
+            - '<gray>Осад выиграно: <clan_sieges_won>'
+            - '<gray>Осад проиграно: <clan_sieges_lost>'
+            - '<gray>Рейдов выиграно: <clan_raids_won>'
+            - '<gray>Рейдов проиграно: <clan_raids_lost>'
+        title: <gold>Кланы
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>Клан: <clan_name>'
+        - '<gray>Ранг: <clan_rank>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>Клан: <clan_name>'
+      activities:
+        enabled: true
+        plugin: ''
+        activity-sensitive: false
+        details:
+          games:
+            title: <gold>Игры
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Побед: <activities_wins>'
+            - '<gray>Поражений: <activities_losses>'
+            - '<gray>Процент побед: <activities_winrate>'
+            - '<gray>Выиграно: <activities_money_won>'
+            - '<gray>Проиграно: <activities_money_lost>'
+            plugin: LoveActivities
+          contracts:
+            title: <gold>Контракты
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Выполнено: <contracts_completed>'
+            - '<gray>За сегодня: <contracts_daily_completed>'
+            - '<gray>Провалено: <contracts_failed>'
+            - '<gray>Принято: <contracts_accepted>'
+            - '<gray>Процент успеха: <contracts_success_rate>'
+            - '<gray>Серия: <contracts_streak>'
+            - '<gray>Лучшая серия: <contracts_best_streak>'
+            - '<gray>Активный: <contracts_active>'
+            - '<gray>Штраф: <contracts_fine>'
+            plugin: LoveContracts
+          brewing:
+            title: <gold>Пивоварение
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Уровень: <brew_level>'
+            - '<gray>Опыт: <brew_exp>'
+            - '<gray>Скорость: <brew_speed>'
+            - '<gray>Качество: <brew_quality>'
+            - '<gray>Сварено: <brew_total>'
+            - '<gray>Продано: <brew_sold>'
+            - '<gray>Заработано: <brew_earned>'
+            - '<gray>Специализация: <brew_specialty>'
+            - '<gray>Репутация пивовара: <brew_reputation>'
+            - '<gray>Тостов: <brew_toasts>'
+            plugin: LoveBrewing
+        title: <gold>Активности
+        summary:
+        - <dark_gray>Личная статистика
+        - ''
+        - '<gray>Контрактов выполнено: <contracts_completed>'
+        - '<gray>Сварено напитков: <brew_total>'
+        - <dark_gray><st>─────────────────────
+        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
+        public:
+        - <dark_gray>Общая статистика
+        - ''
+        - '<gray>Контрактов выполнено: <contracts_completed>'
+      combat:
+        enabled: true
+        plugin: ''
+        activity-sensitive: false
+        details:
+          general:
+            title: <gold>Общее
+            lore:
+            - <dark_gray>Подробности категории
+            - ''
+            - '<gray>Убийств игроков: <kills>'
+            - '<gray>Побеждено мобов: <mob_kills>'
+            - '<gray>K/D: <kd_ratio>'
+            - '<gray>Нанесено урона: <damage_dealt>'
+            - '<gray>Получено урона: <damage_taken>'
+            - '<gray>Заблокировано щитом: <shield_blocked>'
+            - '<gray>Попаданий в мишень: <target_hits>'
+          duels:
+            title: <gold>Дуэли
             lore:
             - <dark_gray>Подробности категории
             - ''
             - '<gray>Побед: <duels_wins>'
             - '<gray>Поражений: <duels_losses>'
             - '<gray>Процент побед: <duels_winrate>'
-          streaks:
-            title: <gold>Серии
-            lore:
-            - <dark_gray>Подробности категории
-            - ''
-            - '<gray>Текущая серия: <duels_streak>'
+            - '<gray>Всего боёв: <duels_total>'
+            - '<gray>Серия: <duels_streak>'
             - '<gray>Лучшая серия: <duels_best_streak>'
-          rewards:
-            title: <gold>Честь и награды
-            lore:
-            - <dark_gray>Подробности категории
-            - ''
             - '<gray>Честь: <duels_honor>'
             - '<gray>Выиграно: <duels_money_won>'
-        title: <gold>Дуэли
-        summary:
-        - <dark_gray>Личная статистика
-        - ''
-        - '<gray>Побед: <duels_wins>'
-        - '<gray>Честь: <duels_honor>'
-        - <dark_gray><st>─────────────────────
-        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-        public:
-        - <dark_gray>Общая статистика
-        - ''
-        - '<gray>Побед: <duels_wins>'
-        - '<gray>Честь: <duels_honor>'
-      hunt:
-        enabled: true
-        plugin: LoveHunt
-        activity-sensitive: false
-        details:
-          orders:
-            title: <gold>Заказы
-            lore:
-            - <dark_gray>Подробности категории
-            - ''
-            - '<gray>Выполнено: <hunt_completed>'
-            - '<gray>Провалено: <hunt_failed>'
-          rating:
-            title: <gold>Рейтинг
+            - '<gray>Королевских побед: <duels_royal_wins>'
+            plugin: LoveDuels
+          hunt:
+            title: <gold>Охота
             lore:
             - <dark_gray>Подробности категории
             - ''
             - '<gray>Рейтинг: <hunt_rating>'
             - '<gray>Ранг: <hunt_rank>'
-            - '<gray>Модификатор награды: <hunt_reward_modifier>%'
-        title: <gold>Охота
+            - '<gray>Модификатор награды: <hunt_reward_modifier>'
+            - '<gray>Выполнено: <hunt_completed>'
+            - '<gray>Провалено: <hunt_failed>'
+            - '<gray>Активных заказов: <hunt_active>'
+            - '<gray>Мои заказы: <hunt_mine>'
+            plugin: LoveHunt
+        title: <gold>Сражения
         summary:
         - <dark_gray>Личная статистика
         - ''
-        - '<gray>Ранг: <hunt_rank>'
-        - '<gray>Выполнено: <hunt_completed>'
+        - '<gray>Убийств игроков: <kills>'
+        - '<gray>Побед в дуэлях: <duels_wins>'
         - <dark_gray><st>─────────────────────
         - <green>ЛКМ <dark_gray>— <gray>открыть подробности
         public:
         - <dark_gray>Общая статистика
         - ''
-        - '<gray>Ранг: <hunt_rank>'
-        - '<gray>Выполнено: <hunt_completed>'
-      contracts:
-        enabled: true
-        plugin: LoveContracts
-        activity-sensitive: false
-        details:
-          completed:
-            title: <gold>Выполнение
-            lore:
-            - <dark_gray>Подробности категории
-            - ''
-            - '<gray>Выполнено всего: <contracts_completed>'
-            - '<gray>Сегодня: <contracts_daily_completed>'
-            - '<gray>Принято: <contracts_accepted>'
-            - '<gray>Провалено: <contracts_failed>'
-            - '<gray>Успешность: <contracts_success_rate>'
-          streaks:
-            title: <gold>Серии контрактов
-            lore:
-            - <dark_gray>Подробности категории
-            - ''
-            - '<gray>Текущая: <contracts_streak>'
-            - '<gray>Лучшая: <contracts_best_streak>'
-        title: <gold>Контракты
-        summary:
-        - <dark_gray>Личная статистика
-        - ''
-        - '<gray>Выполнено: <contracts_completed>'
-        - '<gray>Успешность: <contracts_success_rate>'
-        - <dark_gray><st>─────────────────────
-        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-        public:
-        - <dark_gray>Общая статистика
-        - ''
-        - '<gray>Выполнено: <contracts_completed>'
-        - '<gray>Успешность: <contracts_success_rate>'
-      activities:
-        enabled: true
-        plugin: LoveActivities
-        activity-sensitive: false
-        details:
-          results:
-            title: <gold>Общие результаты
-            lore:
-            - <dark_gray>Подробности категории
-            - ''
-            - '<gray>Побед: <activities_wins>'
-            - '<gray>Поражений: <activities_losses>'
-            - '<gray>Побед: <activities_winrate>'
-          money:
-            title: <gold>Итоги наград
-            lore:
-            - <dark_gray>Подробности категории
-            - ''
-            - '<gray>Выиграно: <activities_money_won>'
-            - '<gray>Проиграно: <activities_money_lost>'
-        title: <gold>Активности
-        summary:
-        - <dark_gray>Личная статистика
-        - ''
-        - '<gray>Побед: <activities_wins>'
-        - '<gray>Побед: <activities_winrate>'
-        - <dark_gray><st>─────────────────────
-        - <green>ЛКМ <dark_gray>— <gray>открыть подробности
-        public:
-        - <dark_gray>Общая статистика
-        - ''
-        - '<gray>Побед: <activities_wins>'
-        - '<gray>Побед: <activities_winrate>'
-      economy:
+        - '<gray>Убийств игроков: <kills>'
+      trade:
         enabled: true
         plugin: ''
         activity-sensitive: false
         details:
-          fishing:
-            title: <gold>Рыбалка и животные
+          general:
+            title: <gold>Общее
             lore:
             - <dark_gray>Подробности категории
             - ''
-            - '<gray>Поймано рыбы: <fish_caught>'
-            - '<gray>Разведено животных: <animals_bred>'
-          villagers:
-            title: <gold>Торговля с жителями
+            - '<gray>Налог сервера: <tax_rate>%'
+            - '<gray>Налог на обмен: <trade_tax_rate>%'
+            - '<gray>Налог трейдов: <trades_tax_percent>%'
+            - '<gray>Комиссия банкира: <banker_fee>%'
+            - '<gray>Бонус скупщика: <buyer_bonus>%'
+            - '<gray>Сделок с жителями: <villager_trades>'
+          trades:
+            title: <gold>Трейды
             lore:
             - <dark_gray>Подробности категории
             - ''
-            - '<gray>Совершено сделок: <villager_trades>'
-          wallet:
-            title: <gold>Кошелёк
+            - '<gray>Трейдов: <trades_total>'
+            - '<gray>Отдано предметов: <trades_items_sent>'
+            - '<gray>Получено предметов: <trades_items_received>'
+            - '<gray>Потеряно на налоге: <trades_items_lost>'
+            - '<gray>Партнёров: <trades_partners>'
+            plugin: LoveTrades
+          points:
+            title: <gold>Торговая точка
             lore:
             - <dark_gray>Подробности категории
             - ''
-            - '<gray>Баланс: <balance> <currency>'
-        title: <gold>Хозяйство
+            - '<gray>Торговых точек: <shop_points>'
+            - '<gray>Продаж: <shop_sales>'
+            - '<gray>Выручка: <shop_revenue>'
+            - '<gray>Оценка: <shop_rating>'
+            - '<gray>Уровень торговца: <shop_trader_level>'
+            - '<gray>Продано всего: <shop_sold>'
+            - '<gray>Куплено всего: <shop_bought>'
+            plugin: LoveShops
+        title: <gold>Торговля
         summary:
         - <dark_gray>Личная статистика
         - ''
-        - '<gray>Поймано рыбы: <fish_caught>'
         - '<gray>Сделок с жителями: <villager_trades>'
         - <dark_gray><st>─────────────────────
         - <green>ЛКМ <dark_gray>— <gray>открыть подробности
         public:
         - <dark_gray>Общая статистика
         - ''
-        - '<gray>Поймано рыбы: <fish_caught>'
         - '<gray>Сделок с жителями: <villager_trades>'
     labels:
       profile-menu:
+        # Кнопка категории: раздел (имя и номер), цепочка разделов, строка показателя и подсказки листания.
+        section-line: '<dark_gray>Раздел: <white><name> <dark_gray>(<index>/<count>)'
+        section-current: <yellow><name>
+        section-other: <dark_gray><name>
+        section-divider: '<dark_gray> › '
+        metric-line: '<gray><label>: <white><value>'
+        cycle-hint: <green>ЛКМ <dark_gray>— <gray>дальше <dark_gray>| <gold>ПКМ <dark_gray>— <gray>назад
+        cycle-single: <dark_gray>Один раздел
+        stats-head: <gold>Профиль <dark_gray>| <white><player>
+        stats-head-lore:
+        - '<gray>В игре: <white><playtime_hours> ч <playtime_minutes> мин'
+        - '<gray>Уровень: <white><level>'
+        - '<gray>Репутация: <white><reputation>'
         statistics-lore:
         - <gray>Реальные счётчики Minecraft и сохранённые данные.
         - <gray>Время, бои, путешествия, добыча и торговля.
