@@ -457,7 +457,10 @@ class ProfilePrivacyTest {
       for (int i = 0; i < 2; i++) {
         viewer.closeInventory();
         profiles.openProfile(viewer, "Ada123");
-        waitFor(() -> viewer.getOpenInventory().getTopInventory().getSize() == 45);
+        waitFor(
+            () ->
+                viewer.getOpenInventory().getTopInventory() != null
+                    && viewer.getOpenInventory().getTopInventory().getSize() == 45);
         var meta =
             (org.bukkit.inventory.meta.SkullMeta)
                 viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
