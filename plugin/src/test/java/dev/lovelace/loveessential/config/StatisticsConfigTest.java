@@ -52,6 +52,7 @@ class StatisticsConfigTest {
         List.of("world", "clans", "activities", "combat", "trade"),
         List.copyOf(categories().getKeys(false)));
     assertEquals(54, resource("modules/profile/gui.yml").getInt(STATS + ".size"));
+    assertFalse(resource("modules/profile/gui.yml").getBoolean(STATS + ".frame", true), "drawn background: no glass");
   }
 
   @Test

@@ -372,10 +372,14 @@ class ProfilePrivacyTest {
             .map(slot -> title(p, slot))
             .toList());
     // Opened straight from the command the menu is a root: no Back (it appears when opened from the profile).
-    assertTrue(inventory.getItem(52).getType().name().endsWith("GLASS_PANE"));
+    assertNull(inventory.getItem(52));
     assertTrue(title(p, 53).contains("Закрыть"), title(p, 53));
     for (int slot : List.of(22, 24, 32)) assertNull(inventory.getItem(slot), "slot " + slot);
-    assertTrue(inventory.getItem(14).getType().name().endsWith("GLASS_PANE"));
+    // Frameless: the drawn background shows, so there is no glass anywhere.
+    for (int slot = 0; slot < inventory.getSize(); slot++)
+      assertTrue(
+          inventory.getItem(slot) == null || !inventory.getItem(slot).getType().name().endsWith("GLASS_PANE"),
+          "glass at " + slot);
 
     String first = slotLore(p, 13);
     assertTrue(first.contains("Раздел: Общее (1/4)"), first);

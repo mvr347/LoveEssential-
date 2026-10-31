@@ -297,6 +297,9 @@ public final class MenuStyle {
             Component.empty(),
             List.of());
     inventory.clear();
+    if (settings != null
+        && inventory.getHolder() instanceof GuiLayout layout
+        && settings.frameless(layout.guiId())) return;
     for (int i = 0; i < (inventory.getSize() >= 45 ? 18 : 9); i++) inventory.setItem(i, filler);
     for (int i = inventory.getSize() - 9; i < inventory.getSize(); i++)
       inventory.setItem(i, filler);
