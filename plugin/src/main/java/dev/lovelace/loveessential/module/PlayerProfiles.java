@@ -755,8 +755,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   /** A category that has something to show, with its sections as lists of metrics. */
   private record Card(String id, List<List<Metric>> sections) {}
 
-  /** At most five buttons fit the two work rows beside the player's head (three above, two below). */
-  private static final int STAT_BUTTONS = 5;
+  /**
+   * The shipped menu has five buttons beside the player's head (three above, two below). An admin who kept the
+   * six categories of the old layout gets all six: the head gives up its slot instead of a category vanishing.
+   */
+  private static final int STAT_BUTTONS = 6;
 
   private void drawStatistics(Menu m, Player viewer) {
     capture(viewer);
