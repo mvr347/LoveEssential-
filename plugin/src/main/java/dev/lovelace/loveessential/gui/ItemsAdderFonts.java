@@ -21,8 +21,9 @@ public final class ItemsAdderFonts {
     String tagged =
         text.replaceAll("%img_([a-zA-Z0-9_:-]+)%", ":$1:").replaceAll("%ia_([a-zA-Z0-9_:-]+)%", ":$1:");
     try {
-      var fonts = Class.forName("dev.lone.itemsadder.api.FontImages");
-      Object result = fonts.getMethod("replacePlaceholders", String.class).invoke(null, tagged);
+      // FontImages is a package in the ItemsAdder API; the entry point is its FontImageWrapper class.
+      var fonts = Class.forName("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
+      Object result = fonts.getMethod("replaceFontImages", String.class).invoke(null, tagged);
       return result instanceof String resolved ? "<white>" + resolved + "</white>" : text;
     } catch (ReflectiveOperationException | LinkageError failure) {
       LOG.log(Level.FINE, "ItemsAdder font images unavailable: " + failure.getMessage());

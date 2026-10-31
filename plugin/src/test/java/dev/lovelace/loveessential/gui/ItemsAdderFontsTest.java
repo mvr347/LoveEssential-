@@ -22,4 +22,17 @@ class ItemsAdderFontsTest {
       MockBukkit.unmock();
     }
   }
+
+  @Test
+  void withItemsAdderTheTokensBecomeGlyphsUnderAWhiteTag() {
+    MockBukkit.mock();
+    try {
+      MockBukkit.createMockPlugin("ItemsAdder");
+      assertEquals(
+          "<white>[offset_-8][stats_menu]</white>",
+          ItemsAdderFonts.resolve("%img_offset_-8%%img_stats_menu%"));
+    } finally {
+      MockBukkit.unmock();
+    }
+  }
 }
