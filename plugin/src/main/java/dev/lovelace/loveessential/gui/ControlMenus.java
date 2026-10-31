@@ -496,15 +496,12 @@ public final class ControlMenus implements Listener, AutoCloseable {
             "mode", lang.text("vanish.mode-" + target.getGameMode().name().toLowerCase(Locale.ROOT)),
             "afk", lang.text(gameplay.afk(target) ? "vanish.afk-yes" : "vanish.afk-no"));
     var item =
-        MenuStyle.item(
-            Material.PLAYER_HEAD,
+        dev.lovelace.loveessential.module.PlayerProfiles.head(
+            target,
             lang.renderText(lang.text("vanish.player"), vars, Map.of()),
             lang.lines("vanish.player-lore").stream()
                 .map(text -> lang.renderText(text, vars, Map.of()))
                 .toList());
-    var meta = (org.bukkit.inventory.meta.SkullMeta) item.getItemMeta();
-    meta.setPlayerProfile(target.getPlayerProfile());
-    item.setItemMeta(meta);
     m.inventory.setItem(slot, item);
     m.actions.put(
         slot,

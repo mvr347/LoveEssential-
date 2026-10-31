@@ -22,7 +22,6 @@ import org.bukkit.event.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.*;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.scheduler.BukkitTask;
 
 public final class PlayerProfiles implements Listener, AutoCloseable {
@@ -528,35 +527,12 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
   private ItemStack savedHead(Saved saved) {
     var vars = savedValues(saved);
-    var item =
-        MenuStyle.item(
-            Material.PLAYER_HEAD,
-            lang.render("profile-menu.saved-heading", vars),
-            lang.lines("profile-menu.saved-heading-lore").stream()
-                .map(t -> lang.renderText(t, vars))
-                .toList());
-    String url = saved.data().getOrDefault("skin_url", "");
-    if (!url.isBlank()) {
-      try {
-        var uri = java.net.URI.create(url);
-        if ("textures.minecraft.net".equalsIgnoreCase(uri.getHost())
-            && uri.getPath().matches("/texture/[a-fA-F0-9]{32,64}")) {
-          var profile =
-              Bukkit.createProfile(saved.id(), saved.data().getOrDefault("player", "Player"));
-          var textures = profile.getTextures();
-          textures.setSkin(
-              uri.toURL(),
-              org.bukkit.profile.PlayerTextures.SkinModel.valueOf(
-                  saved.data().getOrDefault("skin_model", "classic").toUpperCase(Locale.ROOT)));
-          profile.setTextures(textures);
-          var meta = (SkullMeta) item.getItemMeta();
-          meta.setPlayerProfile(profile);
-          item.setItemMeta(meta);
-        }
-      } catch (java.net.MalformedURLException | IllegalArgumentException ignored) {
-      }
-    }
-    return item;
+    return skinHead(
+        saved.data().getOrDefault("skin_url", ""),
+        lang.render("profile-menu.saved-heading", vars),
+        lang.lines("profile-menu.saved-heading-lore").stream()
+            .map(t -> lang.renderText(t, vars))
+            .toList());
   }
 
   private void offlineProfile(Player viewer, Saved saved) {
@@ -913,11 +889,22 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   public static ItemStack head(Player target, Component title, List<Component> lore) {
-    var item = MenuStyle.item(Material.PLAYER_HEAD, title, lore);
-    var meta = (SkullMeta) item.getItemMeta();
-    meta.setPlayerProfile(target.getPlayerProfile());
-    item.setItemMeta(meta);
-    return item;
+    var skin = target.getPlayerProfile().getTextures().getSkin();
+    return skinHead(skin == null ? "" : skin.toExternalForm(), title, lore);
+  }
+
+  /** Never give a skull an account identity: Paper may try to complete it through Mojang. */
+  private static ItemStack skinHead(String url, Component title, List<Component> lore) {
+    try {
+      var uri = java.net.URI.create(url);
+      if (("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme()))
+          && "textures.minecraft.net".equalsIgnoreCase(uri.getHost())
+          && uri.getPath().matches("/texture/[a-fA-F0-9]{32,64}"))
+        return MenuStyle.head(uri.getPath().substring(9), title, lore);
+    } catch (IllegalArgumentException ignored) {
+      // Missing or invalid saved textures use an ownerless fallback, without a network lookup.
+    }
+    return MenuStyle.item(Material.PLAYER_HEAD, title, lore);
   }
 
   private boolean visible(Player viewer, Player target) {

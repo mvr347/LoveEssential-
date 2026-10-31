@@ -101,9 +101,7 @@ class VanishTest {
       var item = inventory.getItem(slot);
       if (item != null
           && item.getType() == Material.PLAYER_HEAD
-          && item.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta skull
-          && skull.getPlayerProfile() != null
-          && !"LoveTexture".equals(skull.getPlayerProfile().getName())) return slot;
+          && server.getPlayerExact(GuiRules.name(item)) != null) return slot;
     }
     return -1;
   }
@@ -133,11 +131,13 @@ class VanishTest {
     for (int slot = 9; slot < top.getSize() - 9; slot++) {
       var item = top.getItem(slot);
       if (item != null
-          && item.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta skull
-          && skull.getPlayerProfile() != null
-          && !"LoveTexture".equals(skull.getPlayerProfile().getName())) {
+          && item.getType() == Material.PLAYER_HEAD
+          && server.getPlayerExact(GuiRules.name(item)) != null) {
         listed++;
-        assertEquals("Target", skull.getPlayerProfile().getName(), "the viewer is not listed");
+        assertEquals("Target", GuiRules.name(item), "the viewer is not listed");
+        assertNull(
+            ((org.bukkit.inventory.meta.SkullMeta) item.getItemMeta()).getPlayerProfile(),
+            "an untextured list entry must not trigger an account lookup");
       }
     }
     assertEquals(1, listed);
