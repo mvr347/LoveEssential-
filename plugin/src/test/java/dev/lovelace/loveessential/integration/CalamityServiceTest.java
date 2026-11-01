@@ -254,8 +254,11 @@ class CalamityServiceTest {
     var field = LoveEssentialPlugin.class.getDeclaredField("store");
     field.setAccessible(true);
     var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
-    String saved = store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join().orElseThrow();
-    assertEquals(0, com.google.gson.JsonParser.parseString(saved).getAsJsonObject().get("cooldown").getAsLong());
+    waitFor(() -> store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join()
+        .map(json -> com.google.gson.JsonParser.parseString(json).getAsJsonObject())
+        .map(json -> json.has("clockAt") && json.get("clockAt").getAsLong() == wall.get()
+            && json.get("cooldown").getAsLong() == 0)
+        .orElse(false));
   }
 
   @Test
@@ -282,8 +285,11 @@ class CalamityServiceTest {
     var field = LoveEssentialPlugin.class.getDeclaredField("store");
     field.setAccessible(true);
     var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
-    String saved = store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join().orElseThrow();
-    assertEquals(13L * 86_400_000 / 50, com.google.gson.JsonParser.parseString(saved).getAsJsonObject().get("cooldown").getAsLong());
+    waitFor(() -> store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join()
+        .map(json -> com.google.gson.JsonParser.parseString(json).getAsJsonObject())
+        .map(json -> json.has("clockAt") && json.get("clockAt").getAsLong() == wall.get()
+            && json.get("cooldown").getAsLong() == 13L * 86_400_000 / 50)
+        .orElse(false));
   }
 
   @Test
