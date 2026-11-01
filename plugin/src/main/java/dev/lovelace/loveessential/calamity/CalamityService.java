@@ -425,6 +425,7 @@ public final class CalamityService implements Listener, AutoCloseable {
   /** Starts the calamity; {@code override} is a duration in ticks, or 0 for the configured one. */
   private void begin(Type t, Severity s, long override) {
     phase = Phase.ACTIVE;
+    saved.clockAt = nowMillis.getAsLong();
     saved.nextAutomaticAt = CalamityClock.deadline(nowMillis.getAsLong(), settings.d("cooldown-days", 14));
     type = t;
     severity = s;

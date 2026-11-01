@@ -259,6 +259,18 @@ class CalamityServiceTest {
   }
 
   @Test
+  void aManualStartDoesNotInheritTheOldIdleClock() {
+    var admin = admin();
+    wall.addAndGet(15L * 86_400_000);
+    service.command(admin, new String[] {"start", "plague", "normal", "1"});
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.ACTIVE, service.phase());
+    wall.addAndGet(65_000);
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.IDLE, service.phase());
+  }
+
+  @Test
   void aRestoredOmenCarriesOfflineTimeThroughTheEventIntoItsCooldown() throws Exception {
     plugin.getConfig().set("calamities.types.plague.duration-minutes", 1);
     var restore = CalamityService.class.getDeclaredMethod("restore", String.class);
