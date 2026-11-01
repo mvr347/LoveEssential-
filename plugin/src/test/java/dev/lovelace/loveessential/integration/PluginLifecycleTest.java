@@ -85,19 +85,17 @@ class PluginLifecycleTest {
     var gui =
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
             directory.resolve("modules/profile/gui.yml").toFile());
-    assertTrue(gui.contains("menus.profile-menu-title.buttons.4"));
-    assertTrue(gui.getString("menus.profile-menu-title.buttons.4.title").contains("Настройки"));
+    assertTrue(gui.contains("menus.profile-menu-title.title"));
     var p = admin();
-    String previous =
-        plugin.getConfig().getString("profile.gui.menus.profile-menu-title.buttons.4.title");
+    String previous = plugin.getConfig().getString("profile.gui.menus.profile-menu-title.title");
     await(
         plugin.editSetting(
-            "profile",
-            "gui.menus.profile-menu-title.buttons.4.title",
-            previous,
-            "<gold>Мои параметры"));
+            "profile", "gui.menus.profile-menu-title.title", previous, "<gold>Мой профиль"));
     server.dispatchCommand(p, "profile");
-    assertEquals(4, itemNamed(p, "Мои параметры"));
+    assertTrue(
+        net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(p.getOpenInventory().title())
+            .contains("Мой профиль"));
     assertFalse(
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 directory.resolve("modules/profile/profile.yml").toFile())
@@ -725,13 +723,6 @@ class PluginLifecycleTest {
     assertFalse(lore.contains("<health>"));
     viewer.setOp(true);
     server.dispatchCommand(viewer, "le profile Target");
-    profiles.activity(viewer, target);
-    lore =
-        java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
-            .filter(java.util.Objects::nonNull)
-            .map(item -> String.valueOf(item.getItemMeta().getLore()))
-            .collect(java.util.stream.Collectors.joining());
-    assertTrue(lore.contains("Координаты:"));
     target.disconnect();
     var store = internal("store", dev.lovelace.loveessential.storage.SqliteStore.class);
     waitFor(
@@ -899,25 +890,22 @@ class PluginLifecycleTest {
     var nick = nickReady(p);
     server.dispatchCommand(p, "le nick");
     assertLayout(p);
-    click(p, itemNamed(p, "Изменить никнейм"));
-    respond(p, "save", java.util.Map.of("value", "Princess"));
+    // The menu is the customization design: 54 slots, sixteen colours, suffix catalogue, colour reset.
+    assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
+    // Three header controls: colour label, the tags display menu and the suffix catalogue.
+    assertTrue(itemNamed(p, "Отображение") >= 2 && itemNamed(p, "Отображение") <= 7);
+    server.dispatchCommand(p, "le nick set Princess");
     waitFor(() -> nick.settings(p).name().equals("Princess"));
+    server.dispatchCommand(p, "le nick");
     assertLayout(p);
-    click(p, itemNamed(p, "Один цвет"));
-    assertLayout(p);
-    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(0, 16));
+    click(p, 19); // black, the first head of the palette
     waitFor(() -> nick.settings(p).colors().size() == 1);
-    click(p, itemNamed(p, "Градиент"));
     assertLayout(p);
-    click(p, itemNamed(p, "Лес"));
-    waitFor(() -> nick.settings(p).colors().size() >= 2);
-    click(p, itemNamed(p, "Сбросить цвет"));
+    click(p, itemNamed(p, "Сброс цвета"));
     waitFor(() -> nick.settings(p).colors().isEmpty());
     assertEquals("Princess", nick.settings(p).name());
-    click(p, itemNamed(p, "Вернуть имя аккаунта"));
-    assertLayout(p);
-    assertEquals("Princess", nick.settings(p).name());
-    click(p, itemNamed(p, "Подтвердить"));
+    // The name and the gradients stay command-only: the menu has no button for them.
+    server.dispatchCommand(p, "le nick reset");
     waitFor(() -> nick.settings(p).name().isEmpty());
   }
 

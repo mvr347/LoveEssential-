@@ -115,6 +115,12 @@ final class PersonalSidebar implements Listener, AutoCloseable {
       draw(this);
     }
 
+    /** The main menu has no parent when opened from the profile settings link, so Back returns there. */
+    @Override
+    public Runnable guiBack() {
+      return kind == Kind.MAIN ? () -> Bukkit.dispatchCommand(player, "profile settings") : null;
+    }
+
     @Override
     public Runnable guiReopen() {
       return () -> open(player);
@@ -360,7 +366,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     menu.clicks.clear();
     MenuStyle.frame(menu.inventory);
     if (slot == null) return;
-    menu.inventory.setItem(0, MenuStyle.head(HEAD, MenuStyle.title(lang, menu.id, Map.of()), List.of()));
+    // Slot 0 stays the frame glass: the layout menus have no badge head.
     switch (menu.kind) {
       case MAIN -> drawMain(menu, p, slot.state);
       case CATALOG -> drawCatalog(menu, p, slot.state);

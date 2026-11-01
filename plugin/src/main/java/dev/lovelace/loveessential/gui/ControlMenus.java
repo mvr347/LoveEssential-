@@ -83,6 +83,13 @@ public final class ControlMenus implements Listener, AutoCloseable {
     final Map<Integer, Consumer<ClickType>> actions = new HashMap<>();
     final Predicate<Player> allowed;
     boolean root;
+    /** Back for a menu with no parent (see {@link GuiLayout#guiBack()}). */
+    Runnable back;
+
+    public Runnable guiBack() {
+      return back;
+    }
+
     Map<String, String> variables = Map.of();
     Runnable reopen;
     Object route;
@@ -1791,59 +1798,121 @@ public final class ControlMenus implements Listener, AutoCloseable {
     MenuStyle.open(p, m.inventory);
   }
 
+  /** The sixteen palette heads of the customization menu, in the order of its grid. */
+  private static final java.util.LinkedHashMap<String, String> NICK_COLORS = nickColors();
+
+  private static java.util.LinkedHashMap<String, String> nickColors() {
+    var map = new java.util.LinkedHashMap<String, String>();
+    map.put("black", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2ZhNGRkYTZkMTlhMWZlMmQ5ODhkNjVkZWM1MzQyOTUwNTMwODE2NmM5MDY3YjY4YTQ3NzBjYTVjNDM2Y2Y5NCJ9fX0=");
+    map.put("dark_blue", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvM2YzZTQwNjI5MTE3NGQyNGNkZjBmOTUzZjhhMTc0YTgyYmIzNDg5ZGNlOGY2NzlhNDQzZWYxYWFlMDE2OTA2MSJ9fX0=");
+    map.put("dark_green", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmRlZDQxYjU4NTZiZjhiNWVmMDY2MGEyZmY2ZTA3ODA5NmQ5OTg1NzAxNjZiNzc2ZmQ2YjFiYTRjZDA5MDhmNCJ9fX0=");
+    map.put("dark_aqua", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMWZhZGY3NDFhYjc2Y2QzNjIwYWQxNjEzMDAyMDJkN2I1OWEzMzA1MWU1OTY3ZTRiNjE5NGJhYzQwYmIyODBmZiJ9fX0=");
+    map.put("dark_red", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTkxMjdjYjdiZDNhOTg5ZDcyYzJlNWM0MjZlMWNjMTQ0NmI1ZTZkZTc0MTRkNDI3ODNmMmZlNmJhZGIxNzdkNCJ9fX0=");
+    map.put("dark_purple", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmE5NGNiMjVkZTYyOGNhMzU5YjJmNmVhNWE4ODY4Y2JlMjY1OTVlZWRiMmJmZmI3NTA5NjdhZDFlZTE4NTAifX19");
+    map.put("gold", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWUzMDQ4MGVkMjgzNGY1YjdjYzgxZGNiMWRjN2U0NzY2NzkyNDMwYzQ5ZGFkNGRiY2QxMGE5M2M1ZTE0NTdiYyJ9fX0=");
+    map.put("gray", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTUyODhkZGM5MTFhNzVmNzdjM2E1ZDMzNjM2NWE4ZjhiMTM5ZmE1MzkzMGI0YjZlZTEzOTg3NWM4MGNlMzY2YyJ9fX0=");
+    map.put("dark_gray", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWRmMjFmNTMyMTIyNTY2YWY4OTNkYTI3ODgwYTFiNjA5NWMzNTcxMmYyOWEzNzhjZmVjYzdmZTJiMTMyOGFiNCJ9fX0=");
+    map.put("blue", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjFhZjQ2ZmViZDQ1YzBmNGQ4MWU4ZmExYjY2YjI3NWQ4OWUyNzJiMmFkNTVjOTc4NTUzYTk5YzczM2UxZmYifX19");
+    map.put("green", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzc0NzJkNjA4ODIxZjQ1YTg4MDUzNzZlYzBjNmZmY2I3ODExNzgyOWVhNWY5NjAwNDFjMmEwOWQxMGUwNGNiNCJ9fX0=");
+    map.put("aqua", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTYzZTY2NDZmMWMwZDQxZmQzYmY1NTg0YTFjZTA0NGY1YzQ2ZDU5ODI1OGRiNDYyMTYxMTc4NTlmNTdhZjE5NyJ9fX0=");
+    map.put("red", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjk1M2IxMmEwOTQ2YjYyOWI0YzA4ODlkNDFmZDI2ZWQyNmZiNzI5ZDRkNTE0YjU5NzI3MTI0YzM3YmI3MGQ4ZCJ9fX0=");
+    map.put("light_purple", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk3MDEyZWQ2YTkyYjA1ZWEwZjE5NDk1MDc0ODU0NGUwNzViYWEyODc4MWNhMzczZDFiMjdlMjhjMjY5NTNjIn19fQ==");
+    map.put("yellow", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGQ5MDUyNjlhY2NhYjI0YjExOTI0ZWJhOGJkOTI5OTFiOGQ4NWNlNDI3NjAyN2ExNjM2YzkzMWI2ZDA2Yzg5ZSJ9fX0=");
+    map.put("white", "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2ZhNGRkYTZkMTlhMWZlMmQ5ODhkNjVkZWM1MzQyOTUwNTMwODE2NmM5MDY3YjY4YTQ3NzBjYTVjNDM2Y2Y5NCJ9fX0=");
+    return map;
+  }
+
+  /** Grid of the palette: two rows of seven, then two heads on the last row. */
+  private static final int[] NICK_COLOR_SLOTS = {
+    19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 39, 41
+  };
+
+  /** The player's active mark from LoveSubnames, or a dash when that plugin or the mark is absent. */
+  private static String currentSuffix(Player p) {
+    if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) return "—";
+    String value =
+        me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(p, "%lovesubnames_current%");
+    return value == null || value.isBlank() || value.startsWith("%") ? "—" : value;
+  }
+
+  /** Customization menu (the reference design): sixteen colours, the suffix catalogue and a reset. */
   public void nickname(Player p) {
     nicknames.settings(p);
     var m = menu(p, "nick.title", Map.of(), nicknames::canUse);
+    // Opened from the profile the menu leads back to it.
+    m.back = () -> Bukkit.dispatchCommand(p, "profile");
+    String plain = nicknames.values(p.getUniqueId()).getOrDefault("nickname_plain", p.getName());
+    var preview = dev.lovelace.loveessential.module.Nicknames.render(plain, List.of());
+    var current = nicknames.display(p);
+    String suffix = currentSuffix(p);
     m.inventory.setItem(
-        4,
+        0,
         dev.lovelace.loveessential.module.PlayerProfiles.head(
             p,
-            nicknames.display(p),
-            List.of(
-                lang.render("nick.real-name", Map.of("name", p.getName())),
-                lang.render("nick.preview"))));
-    put(
-        m,
-        19,
-        Material.NAME_TAG,
-        "nick.set",
-        "gui.click.edit",
-        c ->
-            ask(
-                p,
-                "nick.prompt-name",
-                nicknames::canUse,
-                value -> nicknameChange(p, "set", value),
-                () -> nickname(p)));
-    put(m, 21, Material.YELLOW_DYE, "nick.color", "gui.click.open", c -> nicknameColors(p));
-    put(
-        m,
-        23,
-        Material.FIREWORK_STAR,
-        "nick.gradient",
-        "gui.click.open",
-        c -> nicknameGradients(p, 0));
-    put(
-        m,
-        25,
-        Material.MILK_BUCKET,
-        "nick.clear-style",
-        "gui.click.run",
-        c -> nicknameChange(p, "color", "reset"));
-    put(
-        m,
-        31,
-        Material.BARRIER,
-        "nick.reset",
-        "gui.click.run",
-        c ->
-            confirm(
-                p,
-                "nick.reset",
-                () -> nicknameChange(p, "reset"),
-                () -> nickname(p),
-                nicknames::canUse));
-    navigation(m, p, 0, 0, n -> {}, () -> home(p));
+            lang.renderText(lang.text("nick.head"), Map.of("name", p.getName())),
+            lang.lines("nick.head-lore").stream()
+                .map(line -> lang.renderText(line, Map.of("suffix", suffix), Map.of("preview", current)))
+                .toList()));
+    m.actions.put(0, click -> Bukkit.dispatchCommand(p, "profile"));
+    // Two header controls, centred on slots 3 and 5.
+    m.inventory.setItem(
+        3,
+        MenuStyle.head(
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=",
+            lang.render("nick.label"),
+            lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
+    // The tags and marks other players see: LoveEssential's own /display menu, opened as a child of this one.
+    m.inventory.setItem(
+        4,
+        MenuStyle.item(
+            Material.COMPARATOR,
+            lang.render("profile-menu.display"),
+            lang.lines("profile-menu.display-lore").stream()
+                .map(l -> lang.renderText(l, Map.of()))
+                .toList()));
+    m.actions.put(4, click -> MenuStyle.action(p, () -> Bukkit.dispatchCommand(p, "display")));
+    boolean catalogue = Bukkit.getPluginCommand("suffixes") != null;
+    var suffixLore =
+        new ArrayList<>(
+            lang.lines("nick.suffixes-lore").stream()
+                .map(l -> lang.renderText(l, Map.of("suffix", suffix)))
+                .toList());
+    if (!catalogue) suffixLore.add(lang.render("profile-menu.integration-unavailable"));
+    m.inventory.setItem(
+        5,
+        MenuStyle.head(
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ==",
+            lang.render("nick.suffixes"),
+            suffixLore));
+    if (catalogue)
+      m.actions.put(
+          5,
+          click -> {
+            p.closeInventory();
+            Bukkit.dispatchCommand(p, "suffixes profile");
+          });
+    int index = 0;
+    for (var color : NICK_COLORS.entrySet()) {
+      String name = color.getKey();
+      var shade = dev.lovelace.loveessential.module.Nicknames.color(name);
+      var title = lang.render("nick.colors." + name).append(lang.render("nick.color-suffix")).color(shade);
+      var sample = dev.lovelace.loveessential.module.Nicknames.render(plain, List.of(name));
+      var lore =
+          lang.lines("nick.color-lore").stream()
+              .map(line -> lang.renderText(line, Map.of(), Map.of("preview", sample)))
+              .toList();
+      int slot = NICK_COLOR_SLOTS[index++];
+      m.inventory.setItem(slot, MenuStyle.head(color.getValue(), title, lore));
+      m.actions.put(slot, click -> nicknameChange(p, "color", name));
+    }
+    // Extra footer button: standard() moves it next to Back.
+    m.inventory.setItem(
+        50,
+        MenuStyle.head(
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGVlN2I0YTMyMDJiNWI1OWVkYWMxNDk3N2IzMTg4OTBhNGM3NzVmMTFkNGJlZTA1MzQ4YjFhNmNiOTQyOWYxYiJ9fX0=",
+            lang.render("nick.reset-color"),
+            lang.lines("nick.reset-color-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
+    m.actions.put(50, click -> nicknameChange(p, "color", "reset"));
     MenuStyle.open(p, m.inventory);
   }
 

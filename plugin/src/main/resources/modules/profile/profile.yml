@@ -1,5 +1,8 @@
 enabled: true
 refresh-ticks: 40
+# Команда кнопки «Назад» в корневом меню, когда его открыли как /profile back (2026-11-01). Хаб-меню сервера
+# открывает профиль с этим аргументом, чтобы игрок мог вернуться. Пусто — кнопки «Назад» нет.
+back-command: menu
 persist-seconds: 300
 privacy:
   default-visible: true
@@ -8,10 +11,17 @@ links:
   account:
     plugin: LoveAuth
     command: loveauth account
+    # 2026-11-01: аргумент, с которым плагин открывается из профиля: LoveAuth возвращает игрока этой командой.
+    from-profile: profile
+    permission: ''
+  customization:
+    plugin: LoveEssential
+    command: le nick
     permission: ''
   behavior:
     plugin: LoveBehavior
     command: behavior
+    from-profile: mainmenu
     permission: lovebehavior.behavior
   reputation:
     plugin: LoveBehavior
@@ -24,6 +34,7 @@ links:
   suffixes:
     plugin: LoveSubnames
     command: suffixes
+    from-profile: profile
     permission: lovesubnames.use
   display:
     plugin: LoveEssential

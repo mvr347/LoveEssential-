@@ -10,6 +10,50 @@ menus:
     title: <gold>Никнейм и оформление
     labels:
       nick:
+        head: '<gold>Профиль <dark_gray>| <white><name>'
+        head-lore:
+        - '<dark_gray>Личные настройки внешнего вида'
+        - ''
+        - '<dark_gray>▪ <gray>Текущий стиль:'
+        - '  <gray>Ник: <preview>'
+        - '  <gray>Пометка: <suffix>'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>открыть профиль'
+        label: '<gold>Цвет ника <dark_gray>| <green>Выбор'
+        label-lore:
+        - '<dark_gray>Настройка окраски имени'
+        - ''
+        - '<dark_gray>▪ <gray>Инструкция:'
+        - '  <gray>Выберите желаемый оттенок в сетке ниже.'
+        - '  <gray>Цвет отображается в чате, табе и над головой.'
+        suffixes: '<gold>Пометки <dark_gray>| <yellow>Каталог'
+        suffixes-lore:
+        - '<dark_gray>Титулы и пометки персонажа'
+        - ''
+        - '<dark_gray>▪ <gray>Статус:'
+        - '  <gray>Активная пометка: <suffix>'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>открыть каталог пометок'
+        color-lore:
+        - '<dark_gray>Палитра персонализации'
+        - ''
+        - '<dark_gray>▪ <gray>Предпросмотр:'
+        - '  <gray>Отображение: <preview>'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>выбрать этот цвет'
+        color-suffix: ' цвет'
+        reset-color: '<red>Сброс цвета'
+        reset-color-lore:
+        - '<dark_gray>Стандартный стиль'
+        - ''
+        - '<dark_gray>▪ <gray>Действие:'
+        - '  <gray>Сбросить кастомный цвет ника.'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>вернуть стандартный ник'
         profile-name: '<gray>Никнейм: <nickname>'
         set: <gold>Изменить никнейм
         clear-style: <gold>Сбросить цвет и градиент

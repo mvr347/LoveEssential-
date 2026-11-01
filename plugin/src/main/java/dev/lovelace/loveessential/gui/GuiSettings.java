@@ -269,6 +269,11 @@ public final class GuiSettings {
           back,
           MenuStyle.button(lang, Material.ARROW, "common.back", "gui.separator", "gui.click.open"));
       layout.guiPut(back, () -> MenuStyle.back(p));
+    } else if (layout.guiBack() != null) {
+      inventory.setItem(
+          back,
+          MenuStyle.button(lang, Material.ARROW, "common.back", "gui.separator", "gui.click.open"));
+      layout.guiPut(back, layout.guiBack());
     }
     if (layout.guiId().equals("sidebar.slots-title")) {
       inventory.setItem(0, glass(layout.guiId()));
@@ -300,6 +305,8 @@ public final class GuiSettings {
         || layout.guiId().equals("sidebar.menu-title")
         // The statistics menu is drawn artwork with its buttons at fixed slots, so it never shrinks.
         || layout.guiId().equals("profile-menu.statistics")
+        // The settings menu groups its switches by row, so it keeps its 54 slots.
+        || layout.guiId().equals("profile-menu.settings")
         || layout.guiId().equals("sidebar.catalog-title")) return inventory;
     @SuppressWarnings("unchecked")
     var actions = (Map<Integer, Object>) (Map<?, ?>) layout.guiActions();

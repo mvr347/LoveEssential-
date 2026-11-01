@@ -128,7 +128,8 @@ class PersonalScoreboardTest {
     var top = a.getOpenInventory().getTopInventory();
     assertEquals("sidebar.menu-title", idOf(top));
     assertEquals(54, top.getSize());
-    assertEquals(List.of(), GuiRules.violations(top, false));
+    // The layout menu leads back to the profile settings, so it shows Back even when opened as a root.
+    assertEquals(List.of(), GuiRules.violations(top, true));
     assertEquals(List.of(), GuiRules.unresolvedText(top));
     // Cards 1 and 2 hold the preset lines, card 3 is an empty slot.
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[0])).contains("Имя"));
@@ -158,7 +159,8 @@ class PersonalScoreboardTest {
     var top = a.getOpenInventory().getTopInventory();
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[1])).contains("Онлайн"));
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[2])).contains("Слот 3"));
-    assertEquals(List.of(), GuiRules.violations(top, false));
+    // The layout menu leads back to the profile settings, so it shows Back even when opened as a root.
+    assertEquals(List.of(), GuiRules.violations(top, true));
 
     var store = store();
     waitFor(

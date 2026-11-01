@@ -1,13 +1,7 @@
 refresh-ticks: 20
 menus:
   profile-menu-title:
-    size: 45
-    buttons:
-      '4':
-        enabled: true
-        slot: 4
-        texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
-        title: <gold>Настройки
+    size: 27
     title: <gold>Профиль <dark_gray>| <white><player>
     textures:
       profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
@@ -106,6 +100,61 @@ menus:
         - '<gray>Клан: <gold><clan>'
         - '<gray>Пометка: <suffix>'
         - <green>ЛКМ <dark_gray>— <gray>обновить информацию
+        root-customization: <gold>Персонализация
+        root-head-lore:
+        - <dark_gray>Личная карточка игрока
+        - ''
+        - '<dark_gray>▪ <gray>Данные:'
+        - '  <gray>Клан: <gold><clan>'
+        - '  <gray>Ранг: <yellow><papi:clans_rank_display:"—">'
+        root-account-lore:
+        - <dark_gray>Учётная запись
+        - ''
+        - '<dark_gray>▪ <gray>Разделы:'
+        - '  <gray>Пароль, привязка почты, активные сессии.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть настройки безопасности
+        root-settings-lore:
+        - <dark_gray>Параметры персонажа
+        - ''
+        - '<dark_gray>▪ <gray>Разделы:'
+        - '  <gray>Чат, грамматика, тихий режим, уведомления.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть настройки
+        root-customization-lore:
+        - <dark_gray>Внешний вид ника
+        - ''
+        - '<dark_gray>▪ <gray>Разделы:'
+        - '  <gray>Цвета ника и пометки.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть меню персонализации
+        root-statistics-lore:
+        - <dark_gray>Достижения и прогресс
+        - ''
+        - '<dark_gray>▪ <gray>Разделы:'
+        - '  <gray>Мир, кланы, активности, сражения, торговля.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть статистику
+        root-adaptations-lore:
+        - <dark_gray>Путь и прогресс
+        - ''
+        - '<dark_gray>▪ <gray>Разделы:'
+        - '  <gray>Адаптации к миру и бестиарий.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть адаптации
+        root-behavior-lore:
+        - <dark_gray>Репутация на сервере
+        - ''
+        - '<dark_gray>▪ <gray>Разделы:'
+        - '  <gray>Вежливость, стиль игры, полученные оценки.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть меню поведения
         account: <gold>Безопасность
         account-lore:
         - <gray>Учётная запись LoveAuth
@@ -230,6 +279,45 @@ menus:
         complaints: <red>Жалобы на игрока
         complaints-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
         offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
+  profile-menu-notify:
+    size: 27
+    title: <gold>Каналы уведомлений
+    labels:
+      profile-menu:
+        notify-head-lore:
+        - '<dark_gray>Настройки оповещений'
+        - ''
+        - '<dark_gray>▪ <gray>Каналы:'
+        - '  <gray>Чат, Actionbar, всплывающий Title.'
+        notify-title-on: '<gold>Канал: <name> <dark_gray>| <green>Включен'
+        notify-title-off: '<gray>Канал: <name> <dark_gray>| <gray>Выключен'
+        notify-lore-on:
+        - '<dark_gray><category>'
+        - ''
+        - '<dark_gray>▪ <gray>Функция:'
+        - '  <gray><function>'
+        - '  <green>✓ <gray>Статус: <green>Активно'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<red>ЛКМ <dark_gray>— <gray>отключить оповещения'
+        notify-lore-off:
+        - '<dark_gray><category>'
+        - ''
+        - '<dark_gray>▪ <gray>Функция:'
+        - '  <gray><function>'
+        - '  <red>✕ <gray>Статус: <gray>Отключено'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>включить оповещения'
+        notify-chat-name: 'Чат'
+        notify-chat-category: 'Оповещения в чат'
+        notify-chat-function: 'Доставка системных сообщений в общий чат.'
+        notify-actionbar-name: 'Actionbar'
+        notify-actionbar-category: 'Оповещения над панелью'
+        notify-actionbar-function: 'Компактные сообщения над инвентарём.'
+        notify-title-name: 'Title'
+        notify-title-category: 'Всплывающие титры'
+        notify-title-function: 'Крупный важный текст по центру экрана.'
   profile-menu-statistics:
     size: 54
     # Без стекла (2026-10-31): меню нарисовано поверх фона ItemsAdder, серые панели закрывали бы рисунок.
@@ -840,48 +928,108 @@ menus:
       grammar:
         material: WRITABLE_BOOK
         link: grammar
-        title: <gold>Грамматика
+        title: '<gold>Грамматика <dark_gray>| <white><papi:lovechatfilter_grammar:"—">'
         lore:
-        - <gray>Автоисправление LoveChat
-        - '<gray>Состояние: <white><papi:lovechatfilter_grammar:"—">'
-        - <green>ЛКМ <dark_gray>— <gray>переключить
+        - <dark_gray>Модуль фильтрации чата
+        - ''
+        - <dark_gray>▪ <gray>Функция:
+        - '  <gray>Автоисправление орфографии сообщений.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>переключить автоисправление
       silent:
         material: FEATHER
         link: silent
-        title: <gold>Тихий режим
+        title: '<gold>Тихий режим <dark_gray>| <white><papi:lovechat_silent_mode:"—">'
         lore:
-        - '<gray>Состояние: <white><papi:lovechat_silent_mode:"—">'
-        - <green>ЛКМ <dark_gray>— <gray>переключить
+        - <dark_gray>Режим концентрации
+        - ''
+        - <dark_gray>▪ <gray>Функция:
+        - '  <gray>Блокировка всех входящих сообщений чата.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>переключить тихий режим
       mentions:
         material: NOTE_BLOCK
         link: mentions
         title: <gold>Упоминания
         lore:
-        - '<gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
-        - <green>ЛКМ <dark_gray>— <gray>переключить
+        - <dark_gray>Звуковые оповещения
+        - ''
+        - <dark_gray>▪ <gray>Функция:
+        - '  <gray>Звуковой сигнал при теге ника (@ник).'
+        - '  <gray>Блокировка упоминаний: <white><papi:lovechat_mentions_disabled:"—">'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>переключить упоминания
       channel:
         material: PAPER
         link: channel
-        title: <gold>Канал чата
+        title: '<gold>Канал чата <dark_gray>| <white><papi:lovechat_channel:"—">'
         lore:
-        - '<gray>Сейчас: <white><papi:lovechat_channel:"—">'
+        - <dark_gray>Маршрутизация сообщений
+        - ''
+        - <dark_gray>▪ <gray>Текущий режим:
+        - '  <gray>Канал: <white><papi:lovechat_channel:"—">'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
         - <green>ЛКМ <dark_gray>— <gray>переключить локальный/глобальный канал
       clan-invites:
         material: WHITE_BANNER
         link: clan-invites
-        title: <gold>Приглашения в клан
+        title: '<gold>Приглашения в клан <dark_gray>| <white><papi:clans_invites_enabled:"—">'
         lore:
-        - '<gray>Разрешены: <white><papi:clans_invites_enabled:"—">'
-        - <green>ЛКМ <dark_gray>— <gray>переключить
+        - <dark_gray>Взаимодействие с кланами
+        - ''
+        - <dark_gray>▪ <gray>Функция:
+        - '  <gray>Приём инвайтов и приглашений в кланы.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>переключить приглашения
       player-trades:
         material: EMERALD
         link: player-trades
-        title: <gold>Обмен с игроками
+        title: '<gold>Обмен с игроками <dark_gray>| <white><papi:lovetrades_requests_enabled:"—">'
         lore:
-        - '<gray>Разрешён: <white><papi:lovetrades_requests_enabled:"—">'
-        - <green>ЛКМ <dark_gray>— <gray>переключить
+        - <dark_gray>Торговля между игроками
+        - ''
+        - <dark_gray>▪ <gray>Функция:
+        - '  <gray>Приём запросов на безопасный обмен.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>переключить запросы
     labels:
       profile-menu:
+        settings-head-lore:
+        - '<dark_gray>Персональные настройки'
+        - ''
+        - '<dark_gray>▪ <gray>Статус:'
+        - '  <gray>Клан: <gold><clan>'
+        - '  <gray>Ранг: <yellow><papi:clans_rank_display:"—">'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>открыть профиль'
+        filter: '<gold>Фильтр <dark_gray>| <white><name>'
+        filter-lore: '<dark_gray>Какие настройки показывать'
+        filter-all: 'Все'
+        filter-chat: 'Чат'
+        filter-interaction: 'Взаимодействие'
+        filter-privacy: 'Приватность'
+        filter-interface: 'Интерфейс'
+        filter-current: '<yellow><name>'
+        filter-other: '<dark_gray><name>'
+        filter-divider: '<dark_gray> › '
+        filter-hint: '<green>ЛКМ <dark_gray>— <gray>дальше <dark_gray>| <gold>ПКМ <dark_gray>— <gray>назад'
+        notifications: '<gold>Уведомления'
+        notifications-lore:
+        - '<dark_gray>Каналы оповещений'
+        - ''
+        - '<dark_gray>▪ <gray>Назначение:'
+        - '  <gray>Каналы доставки системных сообщений'
+        - '  <gray>(чат, actionbar, всплывающий title).'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>открыть настройки'
         settings-overview: <gold>Настройте игру под себя
         settings-overview-lore:
         - <gray>Верхний ряд — приватность, ЛС и интерфейс.

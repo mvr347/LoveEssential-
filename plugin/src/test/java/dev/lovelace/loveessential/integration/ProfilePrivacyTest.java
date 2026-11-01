@@ -282,22 +282,27 @@ class ProfilePrivacyTest {
     var p = player("Owner");
     command(p, "profile settings");
     var inventory = p.getOpenInventory().getTopInventory();
-    for (String tab : List.of("Чат", "ЛС и обмен", "Уведомления", "Отображение", "Приватность", "Табло"))
-      assertEquals(Material.PLAYER_HEAD, inventory.getItem(named(p, tab)).getType(), tab);
-    String text = lore(p);
-    click(p, named(p, "ЛС и обмен"));
-    text += lore(p);
+    assertEquals(54, inventory.getSize());
+    // One filter button in the header, three rows of switches below it.
+    assertTrue(title(p, 4).contains("Фильтр"), title(p, 4));
+    // The state of a switch is in its title, so titles count as well as lore.
+    String text = lore(p) + titles(p);
+    for (int i = 0; i < 4; i++) {
+      click(p, 4);
+      text += lore(p) + titles(p);
+    }
     assertTrue(text.contains("Да") || text.contains("Включено"), text);
     assertTrue(text.contains("Выключено"));
     assertTrue(text.contains("Глобальный"));
-    assertFalse(text.contains("yes"));
+    // (The mocked PlaceholderAPI answers "yes" to the clan rank in the head too.)
+    assertFalse(text.replace("Ранг: §eyes", "").contains("yes"));
     assertFalse(text.contains("false"));
     assertEquals(
         "yes", internal("placeholders", Placeholders.class).papi(p, p, "%clans_invites_enabled%"));
     command(p, "profile");
     var meta =
         (org.bukkit.inventory.meta.SkullMeta)
-            p.getOpenInventory().getTopInventory().getItem(4).getItemMeta();
+            p.getOpenInventory().getTopInventory().getItem(named(p, "Настройки")).getItemMeta();
     // MockBukkit does not decode texture properties into URLs. Assert the exact client payload.
     String expected = plugin.getConfig().getString("profile.gui.textures.profile-menu.settings");
     assertTrue(
@@ -328,12 +333,11 @@ class ProfilePrivacyTest {
     click(viewer, named(viewer, "Мир")); // public summary has no drill-down
     assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
     command(target, "profile");
-    assertEquals("Настройки", title(target, 4));
-    assertEquals(
-        List.of("Статистика", "Активность и приватность"),
-        List.of(
-            title(target, named(target, "Статистика")),
-            title(target, named(target, "Активность и приватность"))));
+    assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
+    assertEquals("Настройки", title(target, named(target, "Настройки")));
+    assertEquals("Статистика", title(target, named(target, "Статистика")));
+    assertFalse(titles(target).contains("Активность"), titles(target));
+    assertFalse(lore(target).contains("обновить"), lore(target));
     click(target, named(target, "Статистика"));
     assertEquals(54, target.getOpenInventory().getTopInventory().getSize());
     // One button per category; the numbers are in the lore of its current section.
@@ -352,7 +356,7 @@ class ProfilePrivacyTest {
     assertTrue(building.contains("Блоков добыто: 17"), building);
     // Back is the second to last slot of the menu.
     click(target, 52);
-    assertEquals("Настройки", title(target, 4));
+    assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
   }
 
   @Test
@@ -410,6 +414,22 @@ class ProfilePrivacyTest {
     // Fights and trading keep the sections that need no other plugin.
     assertTrue(slotLore(p, named(p, "Сражения")).contains("Раздел: Общее"));
     assertFalse(slotLore(p, named(p, "Сражения")).contains("Дуэли"));
+  }
+
+  @Test
+  void rootProfileHasBackOnlyWhenOpenedWithTheBackArgument() throws Exception {
+    var p = player("Reader");
+    command(p, "profile");
+    var inventory = p.getOpenInventory().getTopInventory();
+    assertEquals(27, inventory.getSize());
+    assertFalse(lore(p).contains("обновить"), "the head no longer promises a refresh");
+    assertTrue(inventory.getItem(25).getType().name().endsWith("GLASS_PANE"), "root has no Back");
+    command(p, "profile back");
+    assertTrue(title(p, 25).contains("Назад"), title(p, 25));
+    assertTrue(title(p, 26).contains("Закрыть"), title(p, 26));
+    plugin.getConfig().set("profile.back-command", "");
+    command(p, "profile back");
+    assertTrue(p.getOpenInventory().getTopInventory().getItem(25).getType().name().endsWith("GLASS_PANE"));
   }
 
   @Test
@@ -553,7 +573,7 @@ class ProfilePrivacyTest {
             && viewer.getOpenInventory().getTopInventory().getSize() == 45);
     assertFalse(server.getCommandMap().tabComplete(viewer, "le profile view ").contains("Owner"));
     command(owner, "profile");
-    assertEquals(45, owner.getOpenInventory().getTopInventory().getSize());
+    assertEquals(27, owner.getOpenInventory().getTopInventory().getSize());
     command(viewer, "profile list");
     assertFalse(lore(viewer).contains("Owner"));
     command(owner, "profile show");
@@ -581,7 +601,6 @@ class ProfilePrivacyTest {
     click(owner, named(owner, "Адаптации"));
     assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu", calls.getLast());
     command(owner, "profile settings");
-    click(owner, named(owner, "Приватность"));
     assertTrue(title(owner, named(owner, "Профиль доступен")).contains("доступен"));
     assertTrue(title(owner, named(owner, "Активность скрыта")).contains("скрыта"));
     click(owner, named(owner, "Активность скрыта"));
@@ -593,7 +612,6 @@ class ProfilePrivacyTest {
   void guiHasIndependentPersistentPrivacyTogglesAndNoReputationOnSelf() throws Exception {
     var owner = player("Owner");
     command(owner, "profile settings");
-    click(owner, named(owner, "Приватность"));
     click(owner, named(owner, "Профиль доступен"));
     waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
     assertTrue(profiles.privacy().preferences(owner).activityVisible());
@@ -660,7 +678,8 @@ class ProfilePrivacyTest {
     assertEquals(List.of("LoveBehavior:rep:Viewer:Target"), calls);
     command(viewer, "profile");
     click(viewer, named(viewer, "Поведение"));
-    assertEquals("LoveBehavior:behavior:Viewer:", calls.getLast());
+    // Opened from the profile the plugin gets its "came from profile" argument.
+    assertEquals("LoveBehavior:behavior:Viewer:mainmenu", calls.getLast());
   }
 
   @Test
@@ -675,7 +694,7 @@ class ProfilePrivacyTest {
     assertTrue(calls.isEmpty());
     command(viewer, "profile");
     click(viewer, named(viewer, "Безопасность"));
-    assertEquals(List.of("LoveBehavior:account:Viewer:"), calls);
+    assertEquals(List.of("LoveBehavior:account:Viewer:profile"), calls);
   }
 
   @Test
@@ -721,11 +740,12 @@ class ProfilePrivacyTest {
     var p = player("Owner");
     command(p, "profile settings");
     click(p, named(p, "Уведомления"));
-    click(p, named(p, "Канал: чат"));
+    assertEquals(27, p.getOpenInventory().getTopInventory().getSize());
+    click(p, named(p, "Канал: Чат"));
     assertEquals(1, channels.size());
-    click(p, named(p, "Над панелью"));
+    click(p, named(p, "Канал: Actionbar"));
     assertTrue(channels.contains(dev.lovelace.lovecore.api.notify.LoveNotify.Channel.ACTION_BAR));
-    click(p, named(p, "Канал: чат"));
+    click(p, named(p, "Канал: Чат"));
     assertFalse(channels.contains(dev.lovelace.lovecore.api.notify.LoveNotify.Channel.CHAT));
     assertEquals(1, channels.size());
   }
