@@ -3319,6 +3319,46 @@ bindings:
   file: gui.yml
   key: profile-menu.notify
   path: menus.profile-menu-notify.title
+- module: nickname
+  file: gui.yml
+  key: nick.head
+  path: menus.nick-title.labels.nick.head
+- module: nickname
+  file: gui.yml
+  key: nick.head-lore
+  path: menus.nick-title.labels.nick.head-lore
+- module: nickname
+  file: gui.yml
+  key: nick.label
+  path: menus.nick-title.labels.nick.label
+- module: nickname
+  file: gui.yml
+  key: nick.label-lore
+  path: menus.nick-title.labels.nick.label-lore
+- module: nickname
+  file: gui.yml
+  key: nick.suffixes
+  path: menus.nick-title.labels.nick.suffixes
+- module: nickname
+  file: gui.yml
+  key: nick.suffixes-lore
+  path: menus.nick-title.labels.nick.suffixes-lore
+- module: nickname
+  file: gui.yml
+  key: nick.color-lore
+  path: menus.nick-title.labels.nick.color-lore
+- module: nickname
+  file: gui.yml
+  key: nick.color-suffix
+  path: menus.nick-title.labels.nick.color-suffix
+- module: nickname
+  file: gui.yml
+  key: nick.reset-color
+  path: menus.nick-title.labels.nick.reset-color
+- module: nickname
+  file: gui.yml
+  key: nick.reset-color-lore
+  path: menus.nick-title.labels.nick.reset-color-lore
 aliases:
 - module: profile
   file: profile.yml

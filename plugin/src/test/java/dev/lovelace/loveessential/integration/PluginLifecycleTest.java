@@ -890,25 +890,20 @@ class PluginLifecycleTest {
     var nick = nickReady(p);
     server.dispatchCommand(p, "le nick");
     assertLayout(p);
-    click(p, itemNamed(p, "Изменить никнейм"));
-    respond(p, "save", java.util.Map.of("value", "Princess"));
+    // The menu is the customization design: 54 slots, sixteen colours, suffix catalogue, colour reset.
+    assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
+    server.dispatchCommand(p, "le nick set Princess");
     waitFor(() -> nick.settings(p).name().equals("Princess"));
+    server.dispatchCommand(p, "le nick");
     assertLayout(p);
-    click(p, itemNamed(p, "Один цвет"));
-    assertLayout(p);
-    click(p, dev.lovelace.loveessential.gui.MenuStyle.slot(0, 16));
+    click(p, 19); // black, the first head of the palette
     waitFor(() -> nick.settings(p).colors().size() == 1);
-    click(p, itemNamed(p, "Градиент"));
     assertLayout(p);
-    click(p, itemNamed(p, "Лес"));
-    waitFor(() -> nick.settings(p).colors().size() >= 2);
-    click(p, itemNamed(p, "Сбросить цвет"));
+    click(p, itemNamed(p, "Сброс цвета"));
     waitFor(() -> nick.settings(p).colors().isEmpty());
     assertEquals("Princess", nick.settings(p).name());
-    click(p, itemNamed(p, "Вернуть имя аккаунта"));
-    assertLayout(p);
-    assertEquals("Princess", nick.settings(p).name());
-    click(p, itemNamed(p, "Подтвердить"));
+    // The name and the gradients stay command-only: the menu has no button for them.
+    server.dispatchCommand(p, "le nick reset");
     waitFor(() -> nick.settings(p).name().isEmpty());
   }
 

@@ -417,6 +417,22 @@ class ProfilePrivacyTest {
   }
 
   @Test
+  void rootProfileHasBackOnlyWhenOpenedWithTheBackArgument() throws Exception {
+    var p = player("Reader");
+    command(p, "profile");
+    var inventory = p.getOpenInventory().getTopInventory();
+    assertEquals(27, inventory.getSize());
+    assertFalse(lore(p).contains("обновить"), "the head no longer promises a refresh");
+    assertTrue(inventory.getItem(25).getType().name().endsWith("GLASS_PANE"), "root has no Back");
+    command(p, "profile back");
+    assertTrue(title(p, 25).contains("Назад"), title(p, 25));
+    assertTrue(title(p, 26).contains("Закрыть"), title(p, 26));
+    plugin.getConfig().set("profile.back-command", "");
+    command(p, "profile back");
+    assertTrue(p.getOpenInventory().getTopInventory().getItem(25).getType().name().endsWith("GLASS_PANE"));
+  }
+
+  @Test
   void offlineProfileLoadsSqlSnapshotSkinAndPublicSummary() throws Exception {
     var viewer = player("Viewer");
     var target = player("Target");
