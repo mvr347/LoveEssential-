@@ -270,7 +270,10 @@ class VanishTest {
     seer.addAttachment(plugin, "loveessential.vanish.see", true);
     gameplay.applyVanish();
     // The loading visibility lease is intentionally stronger than vanish-see permission.
-    waitFor(() -> seer.canSee(admin));
+    var profilesField = LoveEssentialPlugin.class.getDeclaredField("profiles");
+    profilesField.setAccessible(true);
+    var profiles = (dev.lovelace.loveessential.module.PlayerProfiles) profilesField.get(plugin);
+    waitFor(() -> seer.canSee(admin) && profiles.privacy().loaded(admin.getUniqueId()));
     var seen = server.getCommandMap().tabComplete(seer, "le profile ");
     assertTrue(seen != null && seen.contains("Staff"), String.valueOf(seen));
   }
