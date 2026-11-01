@@ -1220,6 +1220,9 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     // Opened from the profile: the plugin gets its "came from profile" argument, so it can show Back.
     String fromProfile = plugin.getConfig().getString("profile.links." + id + ".from-profile", "").strip();
     if (close && !fromProfile.isBlank() && !fromProfile.contains("\n")) value = value + " " + fromProfile;
+    // The command the opened menu runs for its Back button; the plugin checks that it exists.
+    String backArgument = plugin.getConfig().getString("profile.links." + id + ".back-argument", "").strip();
+    if (close && !backArgument.isBlank() && !backArgument.contains("\n")) value = value + " " + backArgument;
     String[] parts = value.split(" ", 2);
     var command = linkCommand(id);
     if (command == null) throw new IllegalArgumentException("profile-menu.integration-unavailable");
@@ -1418,16 +1421,12 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         boolean activityOn = prefs != null && prefs.activityVisible();
         draws.add(
             slot ->
-                toggle(m, slot, profileOn,
-                    profileOn ? "profile-menu.visibility-on" : "profile-menu.visibility-off",
-                    "profile-menu.visibility-help",
-                    () -> changePrivacy(p, false, "toggle", () -> repaintNext(p))));
+                switchCard(m, slot, "visibility", profileOn, "enabled", "disabled",
+                    () -> changePrivacy(p, false, "toggle", () -> repaintNext(p)), true));
         draws.add(
             slot ->
-                toggle(m, slot, activityOn,
-                    activityOn ? "profile-menu.activity-on" : "profile-menu.activity-off",
-                    "profile-menu.activity-help",
-                    () -> changePrivacy(p, true, "toggle", () -> repaintNext(p))));
+                switchCard(m, slot, "activity", activityOn, "enabled", "disabled",
+                    () -> changePrivacy(p, true, "toggle", () -> repaintNext(p)), true));
       }
       default -> {
         draws.add(
@@ -1437,7 +1436,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         draws.add(
             slot ->
                 link(m, slot, "scoreboard", "profile-menu.scoreboard",
-                    "profile-menu.scoreboard-lore", Material.MAP, p, true));
+                    "profile-menu.settings-scoreboard-lore", Material.MAP, p, true));
       }
     }
     return draws;
@@ -1491,25 +1490,23 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     if (menus.get(p.getUniqueId()) == m) MenuStyle.apply(p, m.inventory);
   }
 
-  /** The one header control: left click moves the filter forward, right click back. */
+  /** The one header control, in the style of the clan lists: options with the current one marked, LMB/RMB. */
   private void drawFilter(Menu m, Player p) {
     int count = SETTINGS_FILTERS.size();
     int index = Math.max(0, SETTINGS_FILTERS.indexOf(m.tab));
     var lore = new ArrayList<Component>();
     lore.add(lang.render("profile-menu.filter-lore"));
     lore.add(Component.empty());
-    var trail = Component.text();
-    for (int i = 0; i < count; i++) {
-      if (i > 0) trail.append(lang.render("profile-menu.filter-divider"));
-      trail.append(
+    lore.add(lang.render("profile-menu.filter-options"));
+    for (int i = 0; i < count; i++)
+      lore.add(
           lang.renderText(
               lang.text(i == index ? "profile-menu.filter-current" : "profile-menu.filter-other"),
               Map.of("name", plain(lang.render("profile-menu.filter-" + SETTINGS_FILTERS.get(i))))));
-    }
-    lore.add(trail.build());
     lore.add(Component.empty());
     lore.add(lang.render("gui.separator"));
-    lore.add(lang.render("profile-menu.filter-hint"));
+    lore.add(lang.render("profile-menu.filter-next"));
+    lore.add(lang.render("profile-menu.filter-previous"));
     m.inventory.setItem(
         4,
         icon(
@@ -1599,6 +1596,16 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         String state = placeholders.papi(p, p, "%lovechat_channel%").toLowerCase(Locale.ROOT);
         if (state.equals("global") || state.contains("глоб")) linkId = "channel-local";
       }
+      if (id.equals("channel")) {
+        final String configured = controls.getString(path + "link", id);
+        draws.add(slot -> drawChannel(m, p, slot, configured));
+        continue;
+      }
+      if (SWITCHES.contains(id)) {
+        final String configured = controls.getString(path + "link", id);
+        draws.add(slot -> drawSwitch(m, p, slot, id, configured));
+        continue;
+      }
       final String link = linkId;
       final Material icon = material;
       draws.add(
@@ -1614,6 +1621,73 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                   false));
     }
     return draws;
+  }
+
+  /** Switches drawn in the reference style: state in the title, a check or a cross, the opposite action. */
+  private static final Set<String> SWITCHES =
+      Set.of("grammar", "silent", "mentions", "clan-invites", "player-trades");
+
+  private String switchToken(String id) {
+    return switch (id) {
+      case "grammar" -> "lovechatfilter_grammar";
+      case "silent" -> "lovechat_silent_mode";
+      case "mentions" -> "lovechat_mentions_disabled";
+      case "clan-invites" -> "clans_invites_enabled";
+      default -> "lovetrades_requests_enabled";
+    };
+  }
+
+  /** {@code link} is the integration the control is configured to run; it defaults to the control's own id. */
+  private void drawSwitch(Menu m, Player p, int slot, String id, String link) {
+    String state = placeholders.papi(p, p, "%" + switchToken(id) + "%").toLowerCase(Locale.ROOT);
+    boolean on = state.equals("yes") || state.equals("true");
+    if (id.equals("mentions")) on = state.equals("no") || state.equals("false");
+    switchCard(m, slot, id, on, "profile-menu." + id, "disabled", () -> invoke(link, p, p, false), linkAvailable(link, p));
+  }
+
+  /**
+   * One two-state switch. The words come from {@code profile.switch-texts.<id>}, the layout from the
+   * {@code switch-*} language templates, so every switch reads the same way.
+   */
+  private void switchCard(
+      Menu m, int slot, String id, boolean on, String iconOn, String iconOff, Runnable action, boolean available) {
+    var texts = plugin.getConfig().getConfigurationSection("profile.switch-texts." + id);
+    var vars = new HashMap<String, Component>();
+    if (texts != null)
+      for (String key : texts.getKeys(false))
+        vars.put(key, lang.renderText(texts.getString(key, ""), Map.of()));
+    var title = lang.renderText(lang.text(on ? "profile-menu.switch-title-on" : "profile-menu.switch-title-off"), Map.of(), vars);
+    var lore = new ArrayList<Component>();
+    for (String line : lang.lines(on ? "profile-menu.switch-lore-on" : "profile-menu.switch-lore-off"))
+      lore.add(lang.renderText(line, Map.of(), vars));
+    if (!available) lore.add(lang.render("profile-menu.integration-unavailable"));
+    m.inventory.setItem(slot, icon(on ? iconOn : iconOff, Material.LEVER, title, lore));
+    m.actions.put(slot, action);
+  }
+
+  /** The chat channel has three states, each with its own words (reference: local, global, admin). */
+  private void drawChannel(Menu m, Player p, int slot, String configured) {
+    String state = placeholders.papi(p, p, "%lovechat_channel%").toLowerCase(Locale.ROOT);
+    if (state.contains("глоб")) state = "global";
+    if (!Set.of("local", "global", "admin").contains(state)) state = "local";
+    var texts = plugin.getConfig().getConfigurationSection("profile.switch-texts.channel." + state);
+    var vars = new HashMap<String, Component>();
+    if (texts != null)
+      for (String key : texts.getKeys(false))
+        vars.put(key, lang.renderText(texts.getString(key, ""), Map.of()));
+    var lore = new ArrayList<Component>();
+    for (String line : lang.lines("profile-menu.channel-switch-lore")) lore.add(lang.renderText(line, Map.of(), vars));
+    // The stock pair switches local <-> global; a customised link is used as it is, in both directions.
+    String linkId = !configured.equals("channel") ? configured : state.equals("local") ? "channel" : "channel-local";
+    if (!linkAvailable(linkId, p)) lore.add(lang.render("profile-menu.integration-unavailable"));
+    m.inventory.setItem(
+        slot,
+        icon(
+            "profile-menu.channel-" + state,
+            Material.PAPER,
+            lang.renderText(lang.text("profile-menu.channel-switch-title"), Map.of(), vars),
+            lore));
+    m.actions.put(slot, () -> invoke(linkId, p, p, false));
   }
 
   private void drawAlerts(Menu m, Player p) {

@@ -291,7 +291,9 @@ class ProfilePrivacyTest {
       click(p, 4);
       text += lore(p) + titles(p);
     }
-    assertTrue(text.contains("Да") || text.contains("Включено"), text);
+    assertTrue(text.contains("Разрешены") && text.contains("Включены"), text);
+    // The reference wording: a check for the active state, a cross for the inactive one.
+    assertTrue(text.contains("✓") && text.contains("✕"), text);
     assertTrue(text.contains("Выключено"));
     assertTrue(text.contains("Глобальный"));
     // (The mocked PlaceholderAPI answers "yes" to the clan rank in the head too.)
@@ -599,11 +601,11 @@ class ProfilePrivacyTest {
     owner.addAttachment(plugin, "loveadaptation.use", true);
     command(owner, "profile");
     click(owner, named(owner, "Адаптации"));
-    assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu", calls.getLast());
+    assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu profile", calls.getLast());
     command(owner, "profile settings");
-    assertTrue(title(owner, named(owner, "Профиль доступен")).contains("доступен"));
-    assertTrue(title(owner, named(owner, "Активность скрыта")).contains("скрыта"));
-    click(owner, named(owner, "Активность скрыта"));
+    assertTrue(title(owner, named(owner, "Видимость профиля")).contains("Открыт"));
+    assertTrue(title(owner, named(owner, "Видимость активности")).contains("Скрыта"));
+    click(owner, named(owner, "Видимость активности"));
     waitFor(() -> profiles.privacy().preferences(owner).activityVisible());
     assertTrue(profiles.privacy().preferences(owner).profileVisible());
   }
@@ -612,7 +614,7 @@ class ProfilePrivacyTest {
   void guiHasIndependentPersistentPrivacyTogglesAndNoReputationOnSelf() throws Exception {
     var owner = player("Owner");
     command(owner, "profile settings");
-    click(owner, named(owner, "Профиль доступен"));
+    click(owner, named(owner, "Видимость профиля"));
     waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
     assertTrue(profiles.privacy().preferences(owner).activityVisible());
     var doc =
@@ -679,7 +681,7 @@ class ProfilePrivacyTest {
     command(viewer, "profile");
     click(viewer, named(viewer, "Поведение"));
     // Opened from the profile the plugin gets its "came from profile" argument.
-    assertEquals("LoveBehavior:behavior:Viewer:mainmenu", calls.getLast());
+    assertEquals("LoveBehavior:behavior:Viewer:mainmenu profile", calls.getLast());
   }
 
   @Test
