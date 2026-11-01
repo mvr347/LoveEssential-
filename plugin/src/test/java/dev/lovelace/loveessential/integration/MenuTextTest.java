@@ -166,12 +166,18 @@ class MenuTextTest {
     var enabled = plugin.module("nightskip", true);
     waitFor(enabled::isDone);
     enabled.join();
+    sleeper.getWorld().setTime(13000);
     var vanilla = new org.bukkit.event.world.TimeSkipEvent(sleeper.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.NIGHT_SKIP, 10000);
     server.getPluginManager().callEvent(vanilla);
     assertTrue(vanilla.isCancelled());
     var custom = new org.bukkit.event.world.TimeSkipEvent(sleeper.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.CUSTOM, 10000);
     server.getPluginManager().callEvent(custom);
     assertFalse(custom.isCancelled());
+    sleeper.getWorld().setTime(6000);
+    var stormSleep = new org.bukkit.event.world.TimeSkipEvent(sleeper.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.NIGHT_SKIP, 1000);
+    server.getPluginManager().callEvent(stormSleep);
+    assertFalse(stormSleep.isCancelled(), "daytime thunderstorm sleep must retain its vanilla behavior");
+    sleeper.getWorld().setTime(13000);
     var disabled = plugin.module("nightskip", false);
     waitFor(disabled::isDone);
     disabled.join();

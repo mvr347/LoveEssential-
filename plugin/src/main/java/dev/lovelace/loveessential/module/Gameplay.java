@@ -439,6 +439,7 @@ public final class Gameplay implements Listener, AutoCloseable {
   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
   public void vanillaNightSkip(org.bukkit.event.world.TimeSkipEvent event) {
     if (event.getSkipReason() == org.bukkit.event.world.TimeSkipEvent.SkipReason.NIGHT_SKIP
+        && event.getWorld().getTime() >= NIGHT_START
         && enabled.test("nightskip")
         && event.getWorld().getPlayers().stream()
             .anyMatch(p -> ((LoveEssentialPlugin) plugin).allows("nightskip", p))) {
