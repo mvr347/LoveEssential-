@@ -184,7 +184,11 @@ class GuiAuditTest {
     for (int cycle = 0; cycle < 50; cycle++) {
       server.dispatchCommand(player, "profile");
       var root = player.getOpenInventory().getTopInventory();
-      click(player, 4);
+      int settingsSlot = -1;
+      for (int slot = 0; slot < root.getSize(); slot++)
+        if (root.getItem(slot) != null && name(player, slot).contains("Настройки")) settingsSlot = slot;
+      assertTrue(settingsSlot >= 0, "settings button on the profile");
+      click(player, settingsSlot);
       var settings = player.getOpenInventory().getTopInventory();
       assertNotSame(root, settings);
       assertTrue(name(player, settings.getSize() - 2).contains("Назад"));

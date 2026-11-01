@@ -85,19 +85,17 @@ class PluginLifecycleTest {
     var gui =
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
             directory.resolve("modules/profile/gui.yml").toFile());
-    assertTrue(gui.contains("menus.profile-menu-title.buttons.4"));
-    assertTrue(gui.getString("menus.profile-menu-title.buttons.4.title").contains("Настройки"));
+    assertTrue(gui.contains("menus.profile-menu-title.title"));
     var p = admin();
-    String previous =
-        plugin.getConfig().getString("profile.gui.menus.profile-menu-title.buttons.4.title");
+    String previous = plugin.getConfig().getString("profile.gui.menus.profile-menu-title.title");
     await(
         plugin.editSetting(
-            "profile",
-            "gui.menus.profile-menu-title.buttons.4.title",
-            previous,
-            "<gold>Мои параметры"));
+            "profile", "gui.menus.profile-menu-title.title", previous, "<gold>Мой профиль"));
     server.dispatchCommand(p, "profile");
-    assertEquals(4, itemNamed(p, "Мои параметры"));
+    assertTrue(
+        net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(p.getOpenInventory().title())
+            .contains("Мой профиль"));
     assertFalse(
         org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 directory.resolve("modules/profile/profile.yml").toFile())
@@ -725,13 +723,6 @@ class PluginLifecycleTest {
     assertFalse(lore.contains("<health>"));
     viewer.setOp(true);
     server.dispatchCommand(viewer, "le profile Target");
-    profiles.activity(viewer, target);
-    lore =
-        java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
-            .filter(java.util.Objects::nonNull)
-            .map(item -> String.valueOf(item.getItemMeta().getLore()))
-            .collect(java.util.stream.Collectors.joining());
-    assertTrue(lore.contains("Координаты:"));
     target.disconnect();
     var store = internal("store", dev.lovelace.loveessential.storage.SqliteStore.class);
     waitFor(

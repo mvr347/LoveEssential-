@@ -26,6 +26,11 @@ public interface GuiLayout extends InventoryHolder {
     return null;
   }
 
+  /** A Back action for a menu with no parent in the navigation chain (opened as a root with a way out). */
+  default Runnable guiBack() {
+    return null;
+  }
+
   default void guiInventory(org.bukkit.inventory.Inventory value) {
     throw new UnsupportedOperationException();
   }
