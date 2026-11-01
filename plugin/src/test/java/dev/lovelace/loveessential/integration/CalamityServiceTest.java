@@ -244,6 +244,37 @@ class CalamityServiceTest {
   }
 
   @Test
+  void anOfflinePeriodLongerThanTheEventAndCooldownDoesNotRestartTheCooldown() throws Exception {
+    var admin = admin();
+    service.command(admin, new String[] {"start", "plague", "normal", "1"});
+    admin.disconnect();
+    wall.addAndGet(15L * 86_400_000);
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.IDLE, service.phase());
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    String saved = store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join().orElseThrow();
+    assertEquals(0, com.google.gson.JsonParser.parseString(saved).getAsJsonObject().get("cooldown").getAsLong());
+  }
+
+  @Test
+  void aRestoredOmenCarriesOfflineTimeThroughTheEventIntoItsCooldown() throws Exception {
+    plugin.getConfig().set("calamities.types.plague.duration-minutes", 1);
+    var restore = CalamityService.class.getDeclaredMethod("restore", String.class);
+    restore.setAccessible(true);
+    restore.invoke(service, "{\"phase\":\"OMEN\",\"type\":\"plague\",\"severity\":\"NORMAL\",\"duration\":1200,\"clockAt\":" + wall.get() + "}");
+    wall.addAndGet(86_400_000 + 120_000);
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.IDLE, service.phase());
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    String saved = store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join().orElseThrow();
+    assertEquals(13L * 86_400_000 / 50, com.google.gson.JsonParser.parseString(saved).getAsJsonObject().get("cooldown").getAsLong());
+  }
+
+  @Test
   void theStateIsSavedSoARestartKeepsTheCalamity() throws Exception {
     var admin = admin();
     service.command(admin, new String[] {"start", "undead", "heavy", "30"});

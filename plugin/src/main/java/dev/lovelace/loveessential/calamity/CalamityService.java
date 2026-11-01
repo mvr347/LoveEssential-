@@ -306,11 +306,17 @@ public final class CalamityService implements Listener, AutoCloseable {
       }
       case OMEN -> {
         saved.elapsed += elapsed;
-        if (saved.elapsed >= saved.duration) begin(type, severity, 0);
+        if (saved.elapsed >= saved.duration) {
+          long overdue = saved.elapsed - saved.duration;
+          begin(type, severity, 0);
+          saved.nextAutomaticAt = CalamityClock.deadline(now - overdue * 50, settings.d("cooldown-days", 14));
+          saved.elapsed = overdue;
+          if (saved.elapsed >= saved.duration) end(saved.elapsed - saved.duration);
+        }
       }
       case ACTIVE -> {
         saved.elapsed += elapsed;
-        if (saved.elapsed >= saved.duration) end();
+        if (saved.elapsed >= saved.duration) end(saved.elapsed - saved.duration);
       }
     }
     if (saved.dayClock >= CalamityClock.DAY_TICKS && !players.isEmpty()) {
@@ -435,11 +441,16 @@ public final class CalamityService implements Listener, AutoCloseable {
   }
 
   private void end() {
+    end(0);
+  }
+
+  /** Carry offline time past the event's end into its cooldown, rather than restarting the pause. */
+  private void end(long overdueTicks) {
     Type finished = type;
     phase = Phase.IDLE;
     saved.elapsed = 0;
     saved.duration = 0;
-    saved.cooldown = Math.round(settings.d("cooldown-days", 14) * CalamityClock.DAY_TICKS);
+    saved.cooldown = Math.max(0, Math.round(settings.d("cooldown-days", 14) * CalamityClock.DAY_TICKS) - overdueTicks);
     saved.quietDays = 0;
     strength = 0;
     if (finished != null) {
@@ -474,6 +485,10 @@ public final class CalamityService implements Listener, AutoCloseable {
   }
 
   /** Remaining real days, hours and minutes. */
+  private long remainingCooldownTicks() {
+    return Math.max(saved.cooldown, Math.max(0, saved.nextAutomaticAt - nowMillis.getAsLong()) / 50);
+  }
+
   String time(long ticks) {
     long days = ticks / CalamityClock.DAY_TICKS;
     long hours = (ticks % CalamityClock.DAY_TICKS) / 72000;
@@ -1138,8 +1153,8 @@ public final class CalamityService implements Listener, AutoCloseable {
       default ->
           lang.send(
               p,
-              saved.cooldown > 0 ? "calamity.status-idle" : "calamity.status-idle-ready",
-              Map.of("time", time(saved.cooldown)));
+              remainingCooldownTicks() > 0 ? "calamity.status-idle" : "calamity.status-idle-ready",
+              Map.of("time", time(remainingCooldownTicks())));
     }
     var ill = new ArrayList<String>();
     if (p instanceof Player player) for (Disease d : Disease.values()) if (sick(player, d)) ill.add(name(d));
