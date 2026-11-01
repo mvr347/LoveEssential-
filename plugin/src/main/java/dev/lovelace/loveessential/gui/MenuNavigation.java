@@ -28,6 +28,10 @@ public final class MenuNavigation implements Listener, AutoCloseable {
     plugin.getServer().getPluginManager().registerEvents(this, plugin);
   }
 
+  public void forget(Player player) {
+    routes.invalidate(player.getUniqueId());
+  }
+
   public void command(Player player) {
     if (!acting.contains(player.getUniqueId())) routes.invalidate(player.getUniqueId());
   }
