@@ -104,11 +104,15 @@ public final class ActionEngine {
     register(
         "command",
         (p, a) -> {
-          String command = a.getOrDefault("value", "");
-          String root = command.split(" ", 2)[0].toLowerCase(Locale.ROOT);
-          if (!plugin.getConfig().getStringList("actions.allowed-player-commands").contains(root)
-              || command.contains("\n")
-              || command.contains("\r")) return false;
+          String command;
+          try {
+            command =
+                PlayerCommand.validated(
+                    a.get("value"),
+                    plugin.getConfig().getStringList("actions.allowed-player-commands"));
+          } catch (IllegalArgumentException invalid) {
+            return false;
+          }
           if (a.containsKey("plugin") && !love.installed(a.get("plugin"))) return false;
           return p.performCommand(command.replace("{player}", p.getName()));
         });

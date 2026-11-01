@@ -419,6 +419,10 @@ navigation:
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
 messages:
+  npc-command:
+    prompt: <yellow>Введите команду с / или без него. Сейчас она будет сохранена как действие NPC, а не выполнена. Для выхода нажмите кнопку отмены ниже.
+    invalid: <red>Введите одну непустую команду, например spawn. Переносы строк и управляющие символы запрещены.
+    denied: <red>Эта команда не разрешена для NPC. Добавьте её имя без / в actions.allowed-player-commands файла modules/npc/npc.yml. Команда не добавлена; можно повторить ввод или отменить.
   lang-version: 2
   common:
     back: <gray>Назад

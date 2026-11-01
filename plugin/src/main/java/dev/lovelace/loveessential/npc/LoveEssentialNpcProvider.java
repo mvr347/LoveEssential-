@@ -51,6 +51,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   private volatile NpcService npcs;
 
   private volatile HologramService holograms;
+  private final Set<String> deleting = ConcurrentHashMap.newKeySet();
   private final Map<String, CompletableFuture<?>> tails = new ConcurrentHashMap<>();
   /** Latest requested definition per id, so reads right after a write see the write. */
   private final Map<String, NpcDefinition> optimistic = new ConcurrentHashMap<>();
@@ -92,6 +93,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   @Override
   public void close() {
     HandlerList.unregisterAll(this);
+    deleting.clear();
     if (npcs != null) npcs.spawnGate(definition -> true);
   }
 
@@ -101,6 +103,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
   }
 
   private Optional<NpcDefinition> view(String id) {
+    if (deleting.contains(id)) return Optional.empty();
     var pending = optimistic.get(id);
     if (pending != null) return Optional.of(pending);
     var service = npcs;
@@ -150,11 +153,12 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
         .whenComplete(
             (result, error) -> {
               optimistic.remove(id, saved);
-              if (error != null)
+              if (error != null && !shutdownCancellation(error))
                 plugin
                     .getLogger()
                     .log(java.util.logging.Level.WARNING, "NPC " + id + " was not created", error);
-              else if (!spec.hologram().isEmpty()) new Handle(id).hologram(spec.hologram());
+              else if (result != null && !deleting.contains(id) && !spec.hologram().isEmpty())
+                new Handle(id).hologram(spec.hologram());
             });
     return new Handle(id);
   }
@@ -164,23 +168,28 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
     if (key == null) return false;
     var found = view(key.trim());
     if (found.isEmpty()) return false;
+    MainThread.require();
     String id = found.get().id();
     optimistic.remove(id);
-    chain(
-            id,
-            () -> {
-              var current = npcs.get(id);
-              return current.isEmpty()
-                  ? CompletableFuture.completedFuture(null)
-                  : npcs.delete(id, current.get().revision(), "provider");
-            })
+    deleting.add(id);
+    // Do not queue behind a future that still needs the main thread to apply a prior save.
+    var removed = npcs.deleteLatest(id, "provider");
+    var tail = tails.getOrDefault(id, CompletableFuture.completedFuture(null));
+    removed.whenComplete(
+        (v, error) -> {
+          if (error != null)
+            plugin
+                .getLogger()
+                .log(java.util.logging.Level.WARNING, "NPC " + key + " was not removed", error);
+        });
+    CompletableFuture.allOf(removed.handle((v, e) -> null), tail.handle((v, e) -> null))
         .whenComplete(
-            (v, error) -> {
-              if (error != null)
-                plugin
-                    .getLogger()
-                    .log(java.util.logging.Level.WARNING, "NPC " + key + " was not removed", error);
-            });
+            (v, e) ->
+                main.execute(
+                    () -> {
+                      npcs.finishRemoval(id, !removed.isCompletedExceptionally());
+                      deleting.remove(id);
+                    }));
     removeHologram(id);
     return true;
   }
@@ -190,36 +199,52 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
     var ids = new TreeSet<>(optimistic.keySet());
     if (npcs != null) npcs.all().forEach(n -> ids.add(n.id()));
     var result = new ArrayList<NpcHandle>();
-    for (var id : ids) result.add(new Handle(id));
+    for (var id : ids) if (!deleting.contains(id)) result.add(new Handle(id));
     return result;
   }
 
   /** Runs saves for one NPC strictly one after another. */
   private <T> CompletableFuture<T> chain(String id, java.util.function.Supplier<CompletableFuture<T>> step) {
     var result = new CompletableFuture<T>();
-    var queued = tails.compute(
-        id,
-        (key, tail) -> {
-          CompletableFuture<?> before =
-              tail == null ? CompletableFuture.completedFuture(null) : tail.handle((v, e) -> null);
-          var next =
-              before.thenCompose(
-                  ignored ->
-                      main.call(step).thenCompose(java.util.function.Function.identity()));
-          next.whenComplete(
-              (value, error) -> {
-                if (error != null) result.completeExceptionally(error);
-                else {
-                  @SuppressWarnings("unchecked")
-                  T typed = (T) value;
-                  result.complete(typed);
-                }
-              });
-          return next;
-        });
+    var queued =
+        tails.compute(
+            id,
+            (key, tail) -> {
+              CompletableFuture<?> before =
+                  tail == null
+                      ? CompletableFuture.completedFuture(null)
+                      : tail.handle((v, e) -> null);
+              var next =
+                  before.thenCompose(
+                      ignored ->
+                          main.call(
+                                  () ->
+                                      deleting.contains(id)
+                                          ? CompletableFuture.<T>completedFuture(null)
+                                          : step.get())
+                              .thenCompose(java.util.function.Function.identity()));
+              next.whenComplete(
+                  (value, error) -> {
+                    if (error != null) result.completeExceptionally(error);
+                    else {
+                      @SuppressWarnings("unchecked")
+                      T typed = (T) value;
+                      result.complete(typed);
+                    }
+                  });
+              return next;
+            });
     // Attach outside compute: a synchronously completed step must not mutate the same map recursively.
     queued.whenComplete((value, error) -> tails.remove(id, queued));
     return result;
+  }
+
+  private static boolean shutdownCancellation(Throwable error) {
+    while ((error instanceof java.util.concurrent.CompletionException
+            || error instanceof java.util.concurrent.ExecutionException)
+        && error.getCause() != null) error = error.getCause();
+    return error instanceof java.util.concurrent.CancellationException
+        && "plugin-disabled".equals(error.getMessage());
   }
 
   private void change(String id, UnaryOperator<NpcDefinition> edit) {
@@ -238,7 +263,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
         .whenComplete(
             (saved, error) -> {
               optimistic.remove(id, predicted);
-              if (error != null)
+              if (error != null && !shutdownCancellation(error))
                 plugin
                     .getLogger()
                     .log(java.util.logging.Level.WARNING, "NPC " + id + " was not updated", error);
@@ -301,12 +326,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
     @Override
     public String name() {
       return view(id)
-          .map(
-              n ->
-                  n.nameKey().startsWith("@inline:")
-                      ? PlainTextComponentSerializer.plainText()
-                          .serialize(MINI.deserialize(n.nameKey().substring(8)))
-                      : n.nameKey())
+          .map(n -> PlainTextComponentSerializer.plainText().serialize(npcs.displayName(n)))
           .orElse(id);
     }
 
@@ -356,7 +376,10 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
     public void setSkin(String playerName) {
       change(
           id,
-          n -> n.withSetting("skin", playerName).withSetting("skin-value", null).withSetting("skin-signature", null));
+          n ->
+              n.withSetting("skin", playerName)
+                  .withSetting("skin-value", null)
+                  .withSetting("skin-signature", null));
     }
 
     @Override

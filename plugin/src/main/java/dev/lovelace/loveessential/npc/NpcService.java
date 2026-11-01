@@ -280,6 +280,11 @@ public final class NpcService implements Listener, AutoCloseable {
     return List.copyOf(definitions.values());
   }
 
+  /** Same resolved text as the entity name, including names published by the NPC editor. */
+  public net.kyori.adventure.text.Component displayName(NpcDefinition definition) {
+    return lang.render(definition.nameKey());
+  }
+
   public NpcValidator validator(Predicate<String> text) {
     return new NpcValidator(text, conditions::known, actions::known);
   }
@@ -292,21 +297,13 @@ public final class NpcService implements Listener, AutoCloseable {
     MainThread.require();
     validate(npc);
     return store
-        .save("npc", npc.id(), expected, npc.revision(expected + 1), actor)
+        .saveNpc(npc.id(), expected, npc.revision(expected + 1), actor)
         .thenCompose(
-            revision ->
-                store
-                    .npcNumbers(List.of(npc.id()))
-                    .thenApply(
-                        allocated -> {
-                          numbers.putAll(allocated);
-                          return revision;
-                        }))
-        .thenCompose(
-            rev ->
+            result ->
                 main.call(
                     () -> {
-                      var saved = npc.revision(rev);
+                      var saved = npc.revision(result.revision());
+                      numbers.put(npc.id(), result.number());
                       var previous = definitions.put(npc.id(), saved);
                       remove(npc.id());
                       Bukkit.getPluginManager().callEvent(new NpcChangedEvent(previous, saved));
@@ -345,6 +342,26 @@ public final class NpcService implements Listener, AutoCloseable {
             v ->
                 main.call(
                     () -> {
+                      deleted(id);
+                      return null;
+                    }));
+  }
+
+  /** Persistence must finish even when shutdown discards the optional main-thread cleanup. */
+  public CompletableFuture<Void> deleteLatest(String id, String actor) {
+    MainThread.require();
+    hide(id);
+    return store.deleteNpcLatest(id, actor);
+  }
+
+  /** Runs after the provider's earlier saves have settled, never on the SQLite writer. */
+  public void finishRemoval(String id, boolean saved) {
+    MainThread.require();
+    if (saved) deleted(id);
+    else show(id);
+  }
+
+  private void deleted(String id) {
                       var previous = definitions.remove(id);
                       numbers.remove(id);
                       spawnFailures.remove(id);
@@ -353,8 +370,7 @@ public final class NpcService implements Listener, AutoCloseable {
                           .removeIf(key -> key.equals(id) || key.startsWith(id + ":"));
                       remove(id);
                       Bukkit.getPluginManager().callEvent(new NpcChangedEvent(previous, null));
-                      return null;
-                    }));
+    hidden.remove(id);
   }
 
   public Registration interaction(String id, int priority, InteractionProvider p) {
@@ -524,7 +540,7 @@ public final class NpcService implements Listener, AutoCloseable {
     e.setGravity(n.flag("gravity", true));
     e.setGlowing(n.flag("glowing", false));
     e.setSilent(n.flag("silent", true));
-    e.customName(lang.render(n.nameKey()));
+    e.customName(displayName(n));
     e.setCustomNameVisible(n.flag("name-visible", true));
     e.setVisibleByDefault(false);
     if (e instanceof Mannequin m) {
@@ -538,7 +554,9 @@ public final class NpcService implements Listener, AutoCloseable {
         var profile = ResolvableProfile.resolvableProfile();
         profile.addProperty(
             new com.destroystokyo.paper.profile.ProfileProperty(
-                "textures", n.option("skin-value", ""), n.option("skin-signature", "").isBlank() ? null : n.option("skin-signature", "")));
+                "textures",
+                n.option("skin-value", ""),
+                n.option("skin-signature", "").isBlank() ? null : n.option("skin-signature", "")));
         m.setProfile(profile.build());
       } else if (!skin.isBlank()) {
         var profile = ResolvableProfile.resolvableProfile();

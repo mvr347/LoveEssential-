@@ -1083,6 +1083,85 @@ class PluginLifecycleTest {
             .text(api.npc("universal").orElseThrow().nameKey()));
   }
 
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"spawn", "/spawn"})
+  void commandCanBeAddedThroughNpcActionButtons(String input) throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le npc create command_test");
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
+    server.dispatchCommand(p, "le npc page 6");
+    click(p, itemNamed(p, "Действия по клику"));
+    click(p, itemNamed(p, "Разрешённая команда игрока"));
+    ChatInput.submit(server, p, "op {player}");
+    assertTrue(drain(p).contains("Эта команда не разрешена для NPC"));
+    if (input.startsWith("/")) {
+      var event = new org.bukkit.event.player.PlayerCommandPreprocessEvent(p, input);
+      server.getPluginManager().callEvent(event);
+      assertTrue(event.isCancelled(), "the command must be recorded, not executed during editing");
+    } else ChatInput.submit(server, p, input);
+    server.dispatchCommand(p, "le npc publish");
+    var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
+    waitFor(() -> api.npc("command_test").isPresent());
+    assertEquals(
+        java.util.List.of(new Action("command", java.util.Map.of("value", "spawn"))),
+        api.npc("command_test").orElseThrow().actions());
+  }
+
+  @Test
+  void commandInputKeepsTokenCheckedCancelButtonUsable() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "le npc create cancelled_command");
+    waitFor(
+        () ->
+            p.getOpenInventory().getTopInventory() != null
+                && p.getOpenInventory().getTopInventory().getSize() >= 27);
+    server.dispatchCommand(p, "le npc page 6");
+    click(p, itemNamed(p, "Действия по клику"));
+    click(p, itemNamed(p, "Разрешённая команда игрока"));
+    String cancel = cancelButton(p);
+    var event = new org.bukkit.event.player.PlayerCommandPreprocessEvent(p, "/" + cancel);
+    server.getPluginManager().callEvent(event);
+    assertFalse(event.isCancelled());
+    server.dispatchCommand(p, cancel);
+    assertNotNull(p.getOpenInventory().getTopInventory(), drain(p));
+    assertLayout(p);
+    server.dispatchCommand(p, "le npc publish");
+    var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
+    waitFor(() -> api.npc("cancelled_command").isPresent());
+    assertEquals(java.util.List.of(), api.npc("cancelled_command").orElseThrow().actions());
+  }
+
+  @Test
+  void savedSlashCommandRunsAsTheClickingPlayerWithPlayerSubstitution() throws Exception {
+    var actor = server.addPlayer("Clicker");
+    var count = new java.util.concurrent.atomic.AtomicInteger();
+    server
+        .getCommandMap()
+        .register(
+            "test",
+            new org.bukkit.command.Command("npcprobe") {
+              public boolean execute(
+                  org.bukkit.command.CommandSender sender, String label, String[] args) {
+                assertSame(actor, sender);
+                assertFalse(actor.isOp());
+                assertArrayEquals(new String[] {"Clicker"}, args);
+                count.incrementAndGet();
+                return true;
+              }
+            });
+    plugin.getConfig().set("actions.allowed-player-commands", java.util.List.of("npcprobe"));
+    var engine = internal("actions", dev.lovelace.loveessential.condition.ActionEngine.class);
+    assertTrue(
+        engine.execute(
+            actor,
+            java.util.List.of(
+                new Action("command", java.util.Map.of("value", "/npcprobe {player}")))));
+    assertEquals(1, count.get());
+  }
+
   @Test
   void invalidWizardInputKeepsPromptAndShowsParameterDetails() throws Exception {
     var p = admin();

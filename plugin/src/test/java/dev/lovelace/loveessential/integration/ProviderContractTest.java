@@ -84,7 +84,9 @@ class ProviderContractTest implements Listener {
 
   @Test
   void numericAliasesAlwaysReturnTheStableKeyAndRemovalUsesThatKey() throws Exception {
-    var handle = provider().create(NpcSpec.at(Component.text("Banker"), here()).withType(EntityType.VILLAGER));
+    var handle =
+        provider()
+            .create(NpcSpec.at(Component.text("Banker"), here()).withType(EntityType.VILLAGER));
     var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
     waitFor(() -> api.npc(handle.key()).isPresent());
     var field = LoveEssentialPlugin.class.getDeclaredField("npcs");
@@ -95,15 +97,149 @@ class ProviderContractTest implements Listener {
     var alias = provider().byKey(" " + number + " ").orElseThrow();
     assertEquals(handle.key(), alias.key());
     alias.tag("banker", "yes");
-    waitFor(() -> api.npc(handle.key()).map(n -> "yes".equals(n.settings().get("tag.banker"))).orElse(false));
+    waitFor(
+        () ->
+            api.npc(handle.key())
+                .map(n -> "yes".equals(n.settings().get("tag.banker")))
+                .orElse(false));
     assertTrue(provider().remove(number));
     waitFor(() -> api.npc(handle.key()).isEmpty());
     assertTrue(provider().byKey(handle.key()).isEmpty());
   }
 
   @Test
+  void removalBehindPendingEditsSurvivesShutdownWithoutMainThreadCallbacks() throws Exception {
+    var provider = provider();
+    var npc =
+        provider.create(
+            NpcSpec.at(Component.text("Caravan"), here()).withType(EntityType.VILLAGER));
+    var api =
+        server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
+    waitFor(() -> api.npc(npc.key()).isPresent());
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    var writerField = store.getClass().getDeclaredField("writer");
+    writerField.setAccessible(true);
+    var writer = (java.util.concurrent.ThreadPoolExecutor) writerField.get(store);
+    var entered = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    writer.execute(
+        () -> {
+          entered.countDown();
+          try {
+            release.await();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        });
+    assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS));
+    var warnings = new java.util.concurrent.CopyOnWriteArrayList<String>();
+    var logger =
+        new java.util.logging.Handler() {
+          public void publish(java.util.logging.LogRecord record) {
+            warnings.add(record.getMessage());
+          }
+
+          public void flush() {}
+
+          public void close() {}
+        };
+    plugin.getLogger().addHandler(logger);
+    var database = plugin.getDataFolder().toPath().resolve("loveessential.db");
+    try {
+      npc.setName(Component.text("Renamed caravan"));
+      npc.tag("test", "queued edit");
+      assertTrue(provider.remove(npc.key()));
+      assertTrue(provider.byKey(npc.key()).isEmpty());
+      dev.lovelace.loveessential.MainThread.stop(plugin);
+    } finally {
+      release.countDown();
+    }
+    try {
+      server.getPluginManager().disablePlugin(plugin);
+      try (var reopened = new dev.lovelace.loveessential.storage.SqliteStore(database, 64)) {
+        assertEquals(
+            0, reopened.npcNumber(npc.key()).get(5, java.util.concurrent.TimeUnit.SECONDS));
+        assertTrue(
+            reopened
+                .get("npc", npc.key(), dev.lovelace.loveessential.api.NpcDefinition.class)
+                .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                .isEmpty());
+      }
+      assertTrue(
+          warnings.stream()
+              .noneMatch(m -> m.contains("was not removed") || m.contains("was not updated")),
+          warnings.toString());
+    } finally {
+      plugin.getLogger().removeHandler(logger);
+    }
+  }
+
+  @Test
+  void immediateRemovalWinsOverPendingCreationAndDoesNotRecreateItsNumber() throws Exception {
+    var provider = provider();
+    var npc =
+        provider.create(
+            NpcSpec.at(Component.text("Transient"), here()).withType(EntityType.VILLAGER));
+    npc.tag("queued", "edit");
+    assertTrue(provider.remove(npc.key()));
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    var barrier = store.profile(java.util.UUID.randomUUID(), "test.barrier", "done");
+    waitFor(barrier::isDone);
+    barrier.join();
+    server.getScheduler().performTicks(5);
+    assertTrue(provider.byKey(npc.key()).isEmpty());
+    assertTrue(
+        store
+            .get("npc", npc.key(), dev.lovelace.loveessential.api.NpcDefinition.class)
+            .get(5, java.util.concurrent.TimeUnit.SECONDS)
+            .isEmpty());
+    assertEquals(0, store.npcNumber(npc.key()).get(5, java.util.concurrent.TimeUnit.SECONDS));
+  }
+
+  @Test
+  void editorNameIsResolvedBeforeAnEventNpcIsRemovedAndRecreated() throws Exception {
+    var provider = provider();
+    var handle =
+        provider.create(
+            NpcSpec.at(Component.text("Караванщик"), here()).withType(EntityType.VILLAGER));
+    var api =
+        server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
+    waitFor(() -> api.npc(handle.key()).isPresent());
+    var langField = LoveEssentialPlugin.class.getDeclaredField("lang");
+    langField.setAccessible(true);
+    var lang = (dev.lovelace.loveessential.lang.Lang) langField.get(plugin);
+    String nameKey = "npc.names." + handle.key() + "_edited";
+    lang.putAll(Map.of(nameKey, "<gold>Весемир</gold>"));
+    var field = LoveEssentialPlugin.class.getDeclaredField("npcs");
+    field.setAccessible(true);
+    var npcs = (dev.lovelace.loveessential.npc.NpcService) field.get(plugin);
+    var old = api.npc(handle.key()).orElseThrow();
+    var renamed = npcs.save(old.withNameKey(nameKey), old.revision(), "wizard");
+    waitFor(renamed::isDone);
+    renamed.join();
+    // The editor persists a lang key, not @inline:; integrations need the rendered name.
+    assertEquals("Весемир", handle.name());
+    lang.reload();
+    assertEquals("Весемир", provider.byKey(handle.key()).orElseThrow().name());
+    String savedSpawnPointName = handle.name();
+    assertTrue(provider.remove(handle.key()));
+    waitFor(() -> api.npc(handle.key()).isEmpty());
+    var next =
+        provider.create(
+            NpcSpec.at(Component.text(savedSpawnPointName), here()).withType(EntityType.VILLAGER));
+    waitFor(() -> api.npc(next.key()).isPresent());
+    assertEquals("Весемир", next.name());
+  }
+
+  @Test
   void externalDeletionDoesNotLeaveAProviderOnlyGhost() throws Exception {
-    var handle = provider().create(NpcSpec.at(Component.text("Temporary"), here()).withType(EntityType.VILLAGER));
+    var handle =
+        provider()
+            .create(NpcSpec.at(Component.text("Temporary"), here()).withType(EntityType.VILLAGER));
     var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
     waitFor(() -> api.npc(handle.key()).isPresent());
     var snapshot = api.npc(handle.key()).orElseThrow();
@@ -124,7 +260,9 @@ class ProviderContractTest implements Listener {
   void bothContractsAreFoundByNameAndOnlyByTheirOwnName() {
     assertEquals("loveessential", provider().providerId());
     assertTrue(LoveCore.provider(NpcProvider.class, "citizens").isEmpty());
-    assertEquals("loveessential", LoveCore.provider(PresenceOracle.class, "loveessential").orElseThrow().providerId());
+    assertEquals(
+        "loveessential",
+        LoveCore.provider(PresenceOracle.class, "loveessential").orElseThrow().providerId());
     assertTrue(LoveCore.provider(PresenceOracle.class, "cmi").isEmpty());
   }
 
@@ -153,7 +291,8 @@ class ProviderContractTest implements Listener {
 
   @Test
   void quickConsecutiveChangesAreAllSavedWithoutRevisionConflicts() throws Exception {
-    var handle = provider().create(NpcSpec.at(Component.text("A"), here()).withType(EntityType.VILLAGER));
+    var handle =
+        provider().create(NpcSpec.at(Component.text("A"), here()).withType(EntityType.VILLAGER));
     handle.setName(Component.text("B"));
     handle.tag("one", "1");
     handle.tag("two", "2");
@@ -162,18 +301,23 @@ class ProviderContractTest implements Listener {
     waitFor(
         () ->
             api.npc(handle.key())
-                .map(n -> "2".equals(n.settings().get("tag.two")) && "true".equals(n.settings().get("look-at")))
+                .map(
+                    n ->
+                        "2".equals(n.settings().get("tag.two"))
+                            && "true".equals(n.settings().get("look-at")))
                 .orElse(false));
     var stored = api.npc(handle.key()).orElseThrow();
     assertEquals("1", stored.settings().get("tag.one"));
     assertEquals("@inline:B", stored.nameKey());
     handle.tag("one", null);
-    waitFor(() -> api.npc(handle.key()).map(n -> !n.settings().containsKey("tag.one")).orElse(false));
+    waitFor(
+        () -> api.npc(handle.key()).map(n -> !n.settings().containsKey("tag.one")).orElse(false));
   }
 
   @Test
   void removingDeletesTheNpc() throws Exception {
-    var handle = provider().create(NpcSpec.at(Component.text("Gone"), here()).withType(EntityType.VILLAGER));
+    var handle =
+        provider().create(NpcSpec.at(Component.text("Gone"), here()).withType(EntityType.VILLAGER));
     var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
     waitFor(() -> api.npc(handle.key()).isPresent());
     assertTrue(provider().remove(handle.key()));
@@ -183,7 +327,9 @@ class ProviderContractTest implements Listener {
 
   @Test
   void clicksAreRelayedAsTheSharedEventAndItsCancellationReaches() throws Exception {
-    var handle = provider().create(NpcSpec.at(Component.text("Clicked"), here()).withType(EntityType.VILLAGER));
+    var handle =
+        provider()
+            .create(NpcSpec.at(Component.text("Clicked"), here()).withType(EntityType.VILLAGER));
     var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
     waitFor(() -> api.npc(handle.key()).isPresent());
     var player = server.addPlayer("Clicker");
@@ -224,7 +370,8 @@ class ProviderContractTest implements Listener {
 
   @Test
   void despawnAndSpawnReportTheWorldStateAndHidingTwiceIsHarmless() throws Exception {
-    var handle = provider().create(NpcSpec.at(Component.text("Shy"), here()).withType(EntityType.VILLAGER));
+    var handle =
+        provider().create(NpcSpec.at(Component.text("Shy"), here()).withType(EntityType.VILLAGER));
     var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
     waitFor(() -> api.npc(handle.key()).isPresent());
     assertFalse(handle.despawn(), "nothing was in the world, so despawn reports false");
@@ -235,19 +382,34 @@ class ProviderContractTest implements Listener {
 
   @Test
   void skinNameReadsTheNameSkinSettingAndIsEmptyForTextures() throws Exception {
-    var named = provider().create(NpcSpec.at(Component.text("Named"), here()).withType(EntityType.VILLAGER).withSkinName("Notch"));
-    var plain = provider().create(NpcSpec.at(Component.text("Plain"), here()).withType(EntityType.VILLAGER));
+    var named =
+        provider()
+            .create(
+                NpcSpec.at(Component.text("Named"), here())
+                    .withType(EntityType.VILLAGER)
+                    .withSkinName("Notch"));
+    var plain =
+        provider()
+            .create(NpcSpec.at(Component.text("Plain"), here()).withType(EntityType.VILLAGER));
     assertEquals(java.util.Optional.of("Notch"), named.skinName());
     assertTrue(plain.skinName().isEmpty());
     // A valid base64 fixture must reach storage; the optimistic view alone can hide a rejected save.
     String texture = java.util.Base64.getEncoder().encodeToString("{\"textures\":{}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
     named.setSkin(new SkinTexture(texture, "c2lnbmF0dXJl"));
     var api = server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
-    waitFor(() -> api.npc(named.key()).map(n -> texture.equals(n.settings().get("skin-value"))).orElse(false));
+    waitFor(
+        () ->
+            api.npc(named.key())
+                .map(n -> texture.equals(n.settings().get("skin-value")))
+                .orElse(false));
     waitFor(() -> named.skinName().isEmpty());
     assertTrue(named.skinName().isEmpty(), "a texture skin has no nickname");
     named.setSkin("Dinnerbone");
-    waitFor(() -> api.npc(named.key()).map(n -> "Dinnerbone".equals(n.settings().get("skin"))).orElse(false));
+    waitFor(
+        () ->
+            api.npc(named.key())
+                .map(n -> "Dinnerbone".equals(n.settings().get("skin")))
+                .orElse(false));
     assertEquals(java.util.Optional.of("Dinnerbone"), named.skinName());
   }
 }

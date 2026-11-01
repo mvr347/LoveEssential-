@@ -215,7 +215,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
       Component instruction,
       String example,
       String current,
-      Runnable back) {}
+      Runnable back,
+      boolean command) {}
 
   private static final class Menu extends RoutedMenu {
     final int step;
@@ -565,6 +566,18 @@ public final class NpcWizard implements Listener, AutoCloseable {
       String current,
       BiConsumer<Player, String> consumer,
       Runnable back) {
+    ask(p, context, instruction, example, current, consumer, back, false);
+  }
+
+  private void ask(
+      Player p,
+      Component context,
+      Component instruction,
+      String example,
+      String current,
+      BiConsumer<Player, String> consumer,
+      Runnable back,
+      boolean command) {
     require(p);
     p.closeInventory();
     var prompt =
@@ -576,7 +589,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
             instruction,
             example,
             current,
-            back);
+            back,
+            command);
     prompts.put(p.getUniqueId(), prompt);
     sendPrompt(p, prompt);
   }
@@ -1479,6 +1493,23 @@ public final class NpcWizard implements Listener, AutoCloseable {
   }
 
   private void buildAction(Player p, String type) {
+    if (type.equals("command")) {
+      ask(
+          p,
+          lang.render("wizard.action-types.command"),
+          lang.render("npc-command.prompt"),
+          lang.text("input.operation-examples.wizard.action-types.command.value"),
+          "",
+          (who, value) -> {
+            String command =
+                dev.lovelace.loveessential.condition.PlayerCommand.validated(
+                    value, plugin.getConfig().getStringList("actions.allowed-player-commands"));
+            appendAction(require(who), new Action("command", Map.of("value", command)));
+          },
+          () -> show(p),
+          true);
+      return;
+    }
     if (type.equals("message") || type.equals("actionbar")) {
       ask(
           p,
@@ -1973,6 +2004,20 @@ public final class NpcWizard implements Listener, AutoCloseable {
         || e.getView().getTopInventory().getHolder() instanceof ActionMenu
         || e.getView().getTopInventory().getHolder() instanceof ChoiceMenu
         || e.getView().getTopInventory().getHolder() instanceof EditorMenu) e.setCancelled(true);
+  }
+
+  @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+  public void commandInput(PlayerCommandPreprocessEvent event) {
+    var prompt = prompts.get(event.getPlayer().getUniqueId());
+    if (prompt == null || !prompt.command()) return;
+    String value = event.getMessage();
+    // The real cancellation button must still reach the token-checked command handler.
+    String line = value.startsWith("/") ? value.substring(1) : value;
+    if (line.startsWith("loveessential:loveessential cancel ")) return;
+    event.setCancelled(true);
+    input(
+        event.getPlayer(),
+        value.equalsIgnoreCase("/cancel") || value.equalsIgnoreCase("/отмена") ? "cancel" : value);
   }
 
   @EventHandler(priority = EventPriority.LOWEST)

@@ -169,7 +169,19 @@ public final class SqliteStore implements AutoCloseable {
         });
   }
 
+  public record SavedRevision(long revision, int number) {}
+
   public <T> CompletableFuture<Long> save(
+      String kind, String id, long expected, T value, String actor) {
+    return saveDocument(kind, id, expected, value, actor).thenApply(SavedRevision::revision);
+  }
+
+  public <T> CompletableFuture<SavedRevision> saveNpc(
+      String id, long expected, T value, String actor) {
+    return saveDocument("npc", id, expected, value, actor);
+  }
+
+  private <T> CompletableFuture<SavedRevision> saveDocument(
       String kind, String id, long expected, T value, String actor) {
     String json = gson.toJson(value);
     return write(
@@ -221,11 +233,11 @@ public final class SqliteStore implements AutoCloseable {
               seq.setLong(3, next);
               seq.executeUpdate();
             }
-            if (kind.equals("npc")) allocateNumber(c, id);
+            int number = kind.equals("npc") ? allocateNumber(c, id) : 0;
             if (kind.equals("waystone")) allocateNumber(c, "waystone_numbers", id);
             audit(c, kind, id, next, actor, "save");
             c.commit();
-            return next;
+            return new SavedRevision(next, number);
           } catch (Exception e) {
             c.rollback();
             throw e;
@@ -261,15 +273,40 @@ public final class SqliteStore implements AutoCloseable {
   }
 
   public CompletableFuture<Void> delete(String kind, String id, long expected, String actor) {
+    return delete(kind, id, expected, actor, false);
+  }
+
+  /** Terminal provider removal, ordered after accepted writes and independent of UI callbacks. */
+  public CompletableFuture<Void> deleteNpcLatest(String id, String actor) {
+    return delete("npc", id, 0, actor, true);
+  }
+
+  private CompletableFuture<Void> delete(
+      String kind, String id, long expected, String actor, boolean latest) {
     return write(
         c -> {
           c.setAutoCommit(false);
           try {
+            long revision = expected;
+            if (latest) {
+              try (var query =
+                  c.prepareStatement("SELECT revision FROM documents WHERE kind=? AND id=?")) {
+                query.setString(1, kind);
+                query.setString(2, id);
+                try (var row = query.executeQuery()) {
+                  if (!row.next()) {
+                    c.commit();
+                    return null;
+                  }
+                  revision = row.getLong(1);
+                }
+              }
+            }
             try (var s =
                 c.prepareStatement("DELETE FROM documents WHERE kind=? AND id=? AND revision=?")) {
               s.setString(1, kind);
               s.setString(2, id);
-              s.setLong(3, expected);
+              s.setLong(3, revision);
               if (s.executeUpdate() != 1) throw new Conflict();
             }
             if (kind.equals("npc"))
@@ -282,7 +319,7 @@ public final class SqliteStore implements AutoCloseable {
                 statement.setString(1, id);
                 statement.executeUpdate();
               }
-            audit(c, kind, id, expected, actor, "delete");
+            audit(c, kind, id, revision, actor, "delete");
             c.commit();
             return null;
           } catch (Exception e) {
@@ -318,6 +355,19 @@ public final class SqliteStore implements AutoCloseable {
       insert.executeUpdate();
     }
     return number;
+  }
+
+  /** Reads an already allocated number without recreating it after a concurrent deletion. */
+  public CompletableFuture<Integer> npcNumber(String id) {
+    return read(
+        c -> {
+          try (var query = c.prepareStatement("SELECT number FROM npc_numbers WHERE id=?")) {
+            query.setString(1, id);
+            try (var row = query.executeQuery()) {
+              return row.next() ? row.getInt(1) : 0;
+            }
+          }
+        });
   }
 
   public CompletableFuture<Map<String, Integer>> npcNumbers(Collection<String> ids) {
