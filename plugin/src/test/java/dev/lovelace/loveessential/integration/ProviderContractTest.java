@@ -201,6 +201,41 @@ class ProviderContractTest implements Listener {
   }
 
   @Test
+  void editorNameIsResolvedBeforeAnEventNpcIsRemovedAndRecreated() throws Exception {
+    var provider = provider();
+    var handle =
+        provider.create(
+            NpcSpec.at(Component.text("Караванщик"), here()).withType(EntityType.VILLAGER));
+    var api =
+        server.getServicesManager().load(dev.lovelace.loveessential.api.LoveEssentialService.class);
+    waitFor(() -> api.npc(handle.key()).isPresent());
+    var langField = LoveEssentialPlugin.class.getDeclaredField("lang");
+    langField.setAccessible(true);
+    var lang = (dev.lovelace.loveessential.lang.Lang) langField.get(plugin);
+    String nameKey = "npc.names." + handle.key() + "_edited";
+    lang.putAll(Map.of(nameKey, "<gold>Весемир</gold>"));
+    var field = LoveEssentialPlugin.class.getDeclaredField("npcs");
+    field.setAccessible(true);
+    var npcs = (dev.lovelace.loveessential.npc.NpcService) field.get(plugin);
+    var old = api.npc(handle.key()).orElseThrow();
+    var renamed = npcs.save(old.withNameKey(nameKey), old.revision(), "wizard");
+    waitFor(renamed::isDone);
+    renamed.join();
+    // The editor persists a lang key, not @inline:; integrations need the rendered name.
+    assertEquals("Весемир", handle.name());
+    lang.reload();
+    assertEquals("Весемир", provider.byKey(handle.key()).orElseThrow().name());
+    String savedSpawnPointName = handle.name();
+    assertTrue(provider.remove(handle.key()));
+    waitFor(() -> api.npc(handle.key()).isEmpty());
+    var next =
+        provider.create(
+            NpcSpec.at(Component.text(savedSpawnPointName), here()).withType(EntityType.VILLAGER));
+    waitFor(() -> api.npc(next.key()).isPresent());
+    assertEquals("Весемир", next.name());
+  }
+
+  @Test
   void externalDeletionDoesNotLeaveAProviderOnlyGhost() throws Exception {
     var handle =
         provider()

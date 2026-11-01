@@ -326,12 +326,7 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
     @Override
     public String name() {
       return view(id)
-          .map(
-              n ->
-                  n.nameKey().startsWith("@inline:")
-                      ? PlainTextComponentSerializer.plainText()
-                          .serialize(MINI.deserialize(n.nameKey().substring(8)))
-                      : n.nameKey())
+          .map(n -> PlainTextComponentSerializer.plainText().serialize(npcs.displayName(n)))
           .orElse(id);
     }
 

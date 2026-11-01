@@ -280,6 +280,11 @@ public final class NpcService implements Listener, AutoCloseable {
     return List.copyOf(definitions.values());
   }
 
+  /** Same resolved text as the entity name, including names published by the NPC editor. */
+  public net.kyori.adventure.text.Component displayName(NpcDefinition definition) {
+    return lang.render(definition.nameKey());
+  }
+
   public NpcValidator validator(Predicate<String> text) {
     return new NpcValidator(text, conditions::known, actions::known);
   }
@@ -535,7 +540,7 @@ public final class NpcService implements Listener, AutoCloseable {
     e.setGravity(n.flag("gravity", true));
     e.setGlowing(n.flag("glowing", false));
     e.setSilent(n.flag("silent", true));
-    e.customName(lang.render(n.nameKey()));
+    e.customName(displayName(n));
     e.setCustomNameVisible(n.flag("name-visible", true));
     e.setVisibleByDefault(false);
     if (e instanceof Mannequin m) {
