@@ -115,7 +115,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
       draw(this);
     }
 
-    /** The main menu has no parent when opened from the profile settings link, so Back returns there. */
+    /** The navigation service supplies the actual parent; commands do not invent one. */
     @Override
     public Runnable guiBack() {
       return null;
@@ -407,7 +407,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
                 lang.render("sidebar.slot-empty-name", Map.of("n", Integer.toString(i + 1))),
                 lines("sidebar.slot-empty-lore", Map.of())),
             click -> {
-              // Left click opens the catalog too, for clients without a middle button.
+              // The empty card opens the catalog with the documented left click.
               if (click != ClickType.LEFT) return;
               feedback(p, true);
               openCatalog(p, -1);
