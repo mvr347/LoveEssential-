@@ -18,6 +18,34 @@ public final class TeleportService {
   private final SqliteStore store;
   private final Lang lang;
   private final LoveBridge love;
+
+  private record PortalCommand(
+      UUID player, dev.lovelace.loveessential.portal.PortalDefinition region) {}
+
+  private PortalCommand portalCommand;
+
+  /** Scoped to synchronous command dispatch; an RTP request captures its own immutable region. */
+  public boolean portalCommand(
+      Player player,
+      dev.lovelace.loveessential.portal.PortalDefinition region,
+      java.util.function.BooleanSupplier command) {
+    MainThread.require();
+    var previous = portalCommand;
+    portalCommand = new PortalCommand(player.getUniqueId(), region);
+    try {
+      return command.getAsBoolean();
+    } finally {
+      portalCommand = previous;
+    }
+  }
+
+  public dev.lovelace.loveessential.portal.PortalDefinition portalCommandRegion(Player player) {
+    MainThread.require();
+    return portalCommand != null && portalCommand.player().equals(player.getUniqueId())
+        ? portalCommand.region()
+        : null;
+  }
+
   /** One in-flight move per player; a newer request replaces (and refuses) the older one. */
   private record Attempt(Consumer<Boolean> outcome) {}
 

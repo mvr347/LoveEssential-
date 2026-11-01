@@ -63,6 +63,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     long due;
     int shownSecond = -1;
     boolean faded;
+    dev.lovelace.loveessential.portal.PortalDefinition portalRegion;
   }
 
   private final LoveEssentialPlugin plugin;
@@ -138,6 +139,7 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     World destination = destination(p.getWorld());
     plugin.requireDestination(ID, destination.getName());
     var session = new Session();
+    session.portalRegion = teleport.portalCommandRegion(p);
     session.start = p.getLocation();
     sessions.put(p.getUniqueId(), session);
     store
@@ -197,6 +199,12 @@ public final class RandomTeleport implements Listener, AutoCloseable {
       sessions.remove(p.getUniqueId());
       return;
     }
+    if (session.portalRegion != null
+        && !session.portalRegion.contains(
+            dev.lovelace.loveessential.api.Position.of(p.getLocation()))) {
+      cancel(p, "rtp.moved");
+      return;
+    }
     session.point = point;
     session.start = p.getLocation();
     session.warming = true;
@@ -209,11 +217,14 @@ public final class RandomTeleport implements Listener, AutoCloseable {
   @EventHandler(ignoreCancelled = true)
   public void onMove(PlayerMoveEvent e) {
     var session = sessions.get(e.getPlayer().getUniqueId());
-    if (session == null || !session.warming || e.getTo() == null) return;
+    if (session == null || e.getTo() == null || (!session.warming && session.portalRegion == null))
+      return;
     var to = e.getTo();
     boolean moved =
-        !to.getWorld().equals(session.start.getWorld())
-            || to.distance(session.start) > cancelDistance();
+        session.portalRegion != null
+            ? !session.portalRegion.contains(dev.lovelace.loveessential.api.Position.of(to))
+            : !to.getWorld().equals(session.start.getWorld())
+                || to.distance(session.start) > cancelDistance();
     if (moved) cancel(e.getPlayer(), "rtp.moved");
   }
 
@@ -649,26 +660,30 @@ public final class RandomTeleport implements Listener, AutoCloseable {
         throw new dev.lovelace.loveessential.config.ConfigError(key + ": BLINDNESS или DARKNESS");
     for (String key : List.of("rtp.effects.start-sound", "rtp.effects.arrive-sound"))
       if (c.contains(key) && !c.getString(key, "").isBlank() && sound(c.getString(key, "")) == null)
-        throw new dev.lovelace.loveessential.config.ConfigError(key + ": неизвестный звук «" + c.getString(key) + "»");
+        throw new dev.lovelace.loveessential.config.ConfigError(
+            key + ": неизвестный звук «" + c.getString(key) + "»");
     String particle = c.getString("rtp.effects.arrive-particles", "");
     if (!particle.isBlank()) {
       try {
         Particle.valueOf(particle.toUpperCase(Locale.ROOT));
       } catch (IllegalArgumentException e) {
-        throw new dev.lovelace.loveessential.config.ConfigError("rtp.effects.arrive-particles: неизвестные частицы «" + particle + "»");
+        throw new dev.lovelace.loveessential.config.ConfigError(
+            "rtp.effects.arrive-particles: неизвестные частицы «" + particle + "»");
       }
     }
   }
 
   private static void validateWorld(ConfigurationSection c, String base) {
     if (!(c.get(base + "enabled", false) instanceof Boolean))
-      throw new dev.lovelace.loveessential.config.ConfigError(base + "enabled: ожидается true или false");
+      throw new dev.lovelace.loveessential.config.ConfigError(
+          base + "enabled: ожидается true или false");
     decimal(c, base + "center-x", -30_000_000, 30_000_000);
     decimal(c, base + "center-z", -30_000_000, 30_000_000);
     decimal(c, base + "min-radius", 0, 100_000);
     decimal(c, base + "max-radius", 1, 100_000);
     if (c.getDouble(base + "min-radius", 200) >= c.getDouble(base + "max-radius", 2000))
-      throw new dev.lovelace.loveessential.config.ConfigError(base + "min-radius должен быть меньше max-radius");
+      throw new dev.lovelace.loveessential.config.ConfigError(
+          base + "min-radius должен быть меньше max-radius");
     String shape = c.getString(base + "shape", "circle");
     if (!shape.equals("circle") && !shape.equals("square"))
       throw new dev.lovelace.loveessential.config.ConfigError(base + "shape: circle или square");
@@ -676,7 +691,8 @@ public final class RandomTeleport implements Listener, AutoCloseable {
     bounded(c, base + "min-y", -2032, 2031);
     bounded(c, base + "max-y", -2032, 2031);
     if (c.getInt(base + "min-y", 60) >= c.getInt(base + "max-y", 220))
-      throw new dev.lovelace.loveessential.config.ConfigError(base + "min-y должен быть меньше max-y");
+      throw new dev.lovelace.loveessential.config.ConfigError(
+          base + "min-y должен быть меньше max-y");
   }
 
   private static void bounded(ConfigurationSection c, String path, double min, double max) {
@@ -767,9 +783,18 @@ public final class RandomTeleport implements Listener, AutoCloseable {
       }
     }
     var at = p.getLocation();
-    var vars = Map.of("x", Integer.toString(at.getBlockX()), "y", Integer.toString(at.getBlockY()), "z", Integer.toString(at.getBlockZ()));
+    var vars =
+        Map.of(
+            "x",
+            Integer.toString(at.getBlockX()),
+            "y",
+            Integer.toString(at.getBlockY()),
+            "z",
+            Integer.toString(at.getBlockZ()));
     if (plugin.getConfig().getBoolean("rtp.effects.title", true))
-      p.showTitle(net.kyori.adventure.title.Title.title(lang.render("rtp.arrived-title"), lang.render("rtp.arrived-subtitle", vars)));
+      p.showTitle(
+          net.kyori.adventure.title.Title.title(
+              lang.render("rtp.arrived-title"), lang.render("rtp.arrived-subtitle", vars)));
     p.sendActionBar(lang.render("rtp.arrived-actionbar", vars));
   }
 }

@@ -276,6 +276,96 @@ class RandomTeleportTest {
 
   // --- warmup ----------------------------------------------------------------------------
 
+  dev.lovelace.loveessential.portal.PortalDefinition commandPortal() {
+    return new dev.lovelace.loveessential.portal.PortalDefinition(
+        "rtp-gate",
+        "gate",
+        new dev.lovelace.loveessential.api.Position(world.getUID(), -3, 63, -3, 0, 0),
+        new dev.lovelace.loveessential.api.Position(world.getUID(), 3, 66, 3, 0, 0),
+        null,
+        true,
+        "",
+        List.of(),
+        0,
+        0,
+        true,
+        false,
+        "PORTAL",
+        "#ffffff",
+        true,
+        1,
+        List.of(
+            new dev.lovelace.loveessential.api.Action(
+                "portal-command", Map.of("sender", "player", "value", "rtp"))));
+  }
+
+  void activatePortal(PlayerMock player) throws Exception {
+    plugin.getConfig().set("portal.allowed-player-commands", List.of("rtp"));
+    var gameplay = internal("gameplay", Gameplay.class);
+    var activate =
+        gameplay
+            .portals()
+            .getClass()
+            .getDeclaredMethod(
+                "activate",
+                org.bukkit.entity.Player.class,
+                dev.lovelace.loveessential.portal.PortalDefinition.class);
+    activate.setAccessible(true);
+    activate.invoke(gameplay.portals(), player, commandPortal());
+  }
+
+  @Test
+  void portalRtpAllowsWalkingWithinItsRegionAndStillArrives() throws Exception {
+    var p = join("PortalWalker", origin());
+    activatePortal(p);
+    untilWarming(p);
+    var from = p.getLocation();
+    server.getPluginManager().callEvent(new PlayerMoveEvent(p, from, from.clone().add(2, 0, 0)));
+    assertFalse(sessions().isEmpty(), "walking inside the command portal must not cancel RTP");
+    assertNull(
+        teleportService().portalCommandRegion(p), "dispatch context must already be cleared");
+    waitFor(() -> heard(p, "Вы перенесены"));
+  }
+
+  @Test
+  void leavingPortalCancelsWithoutChargingAndDoesNotChangeLaterManualRtp() throws Exception {
+    var balance = new AtomicLong(1000);
+    payWith(balance);
+    setConfig("cost", 100);
+    var p = join("PortalExit", origin());
+    activatePortal(p);
+    untilWarming(p);
+    var from = p.getLocation();
+    server.getPluginManager().callEvent(new PlayerMoveEvent(p, from, from.clone().add(5, 0, 0)));
+    assertTrue(sessions().isEmpty());
+    assertTrue(heard(p, "Перенос отменён: вы сдвинулись"));
+    assertEquals(1000, balance.get());
+    seen.clear();
+    server.dispatchCommand(p, "rtp");
+    untilWarming(p);
+    server.getPluginManager().callEvent(new PlayerMoveEvent(p, from, from.clone().add(2, 0, 0)));
+    assertTrue(sessions().isEmpty(), "manual RTP retains its movement rule");
+  }
+
+  @Test
+  void commandRegionIsScopedToOnePlayerAndClearedOnExceptions() {
+    var p = join("Origin", origin());
+    var other = join("Other", origin());
+    assertThrows(
+        IllegalStateException.class,
+        () ->
+            teleportService()
+                .portalCommand(
+                    p,
+                    commandPortal(),
+                    () -> {
+                      assertNotNull(teleportService().portalCommandRegion(p));
+                      assertNull(teleportService().portalCommandRegion(other));
+                      throw new IllegalStateException("failed command");
+                    }));
+    assertNull(teleportService().portalCommandRegion(p));
+  }
+
   @Test
   void aMoveDuringTheWarmupCancelsTheRequestAndTakesNoMoney() throws Exception {
     var balance = new AtomicLong(1000);
