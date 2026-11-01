@@ -165,10 +165,10 @@ public final class LoveEssentialNpcProvider implements NpcProvider, Listener, Au
 
   @Override
   public boolean remove(String key) {
-    MainThread.require();
     if (key == null) return false;
     var found = view(key.trim());
     if (found.isEmpty()) return false;
+    MainThread.require();
     String id = found.get().id();
     optimistic.remove(id);
     deleting.add(id);
