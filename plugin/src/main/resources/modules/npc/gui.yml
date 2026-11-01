@@ -1654,7 +1654,7 @@ messages:
     back: <aqua>[Назад]
     edit: <aqua>[Редактировать]
     saved: <green>Изменения сохранены.
-    prefix: <dark_gray>[<gold>Сервер<dark_gray>] <reset>
+    prefix: '<gradient:#FFCC55:#FFAA00>Сервер</gradient> <white>»</white> '
     commands: <aqua>[Команды]
     reply: <aqua>[Ответить]
   input-extra:

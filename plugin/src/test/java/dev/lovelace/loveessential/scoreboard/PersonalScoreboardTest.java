@@ -128,8 +128,8 @@ class PersonalScoreboardTest {
     var top = a.getOpenInventory().getTopInventory();
     assertEquals("sidebar.menu-title", idOf(top));
     assertEquals(54, top.getSize());
-    // The layout menu leads back to the profile settings, so it shows Back even when opened as a root.
-    assertEquals(List.of(), GuiRules.violations(top, true));
+    // A command-opened layout has no invented parent.
+    assertEquals(List.of(), GuiRules.violations(top, false));
     assertEquals(List.of(), GuiRules.unresolvedText(top));
     // Cards 1 and 2 hold the preset lines, card 3 is an empty slot.
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[0])).contains("Имя"));
@@ -149,18 +149,18 @@ class PersonalScoreboardTest {
     var id = a.getUniqueId();
     personal.state(id).replaceWith(List.of(new PersonalState.Entry("name", 0), new PersonalState.Entry("world", 0), new PersonalState.Entry("online", 0)));
     openMenu(a);
-    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.LEFT);
-    assertEquals(List.of("world", "name", "online"), personal.state(id).ids(), "LMB moves a card up");
+    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.SHIFT_LEFT);
+    assertEquals(List.of("world", "name", "online"), personal.state(id).ids(), "Shift+LMB moves a card up");
     assertTrue(name(a.getOpenInventory().getTopInventory().getItem(PersonalLayout.CARD_SLOTS[0])).contains("Мир"));
-    click(a, PersonalLayout.CARD_SLOTS[0], ClickType.RIGHT);
-    assertEquals(List.of("name", "world", "online"), personal.state(id).ids(), "RMB moves a card down");
-    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.SHIFT_RIGHT);
+    click(a, PersonalLayout.CARD_SLOTS[0], ClickType.SHIFT_RIGHT);
+    assertEquals(List.of("name", "world", "online"), personal.state(id).ids(), "Shift+RMB moves a card down");
+    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.RIGHT);
     assertEquals(List.of("name", "online"), personal.state(id).ids(), "removing the middle one moves the next up");
     var top = a.getOpenInventory().getTopInventory();
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[1])).contains("Онлайн"));
     assertTrue(name(top.getItem(PersonalLayout.CARD_SLOTS[2])).contains("Слот 3"));
-    // The layout menu leads back to the profile settings, so it shows Back even when opened as a root.
-    assertEquals(List.of(), GuiRules.violations(top, true));
+    // A command-opened layout has no invented parent.
+    assertEquals(List.of(), GuiRules.violations(top, false));
 
     var store = store();
     waitFor(
@@ -179,10 +179,10 @@ class PersonalScoreboardTest {
   }
 
   @Test
-  void middleClickOnAnEmptySlotOpensTheCatalogAndPickingAddsTheLine() throws Exception {
+  void leftClickOnAnEmptySlotOpensTheCatalogAndPickingAddsTheLine() throws Exception {
     var a = join("Alice");
     openMenu(a);
-    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.MIDDLE);
+    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.LEFT);
     var catalog = a.getOpenInventory().getTopInventory();
     assertEquals("sidebar.catalog-title", idOf(catalog));
     assertEquals(54, catalog.getSize());
@@ -196,14 +196,14 @@ class PersonalScoreboardTest {
   }
 
   @Test
-  void middleClickOnACardReplacesThatSlotAndPickingAPlacedLineSwaps() throws Exception {
+  void leftClickOnACardReplacesThatSlotAndPickingAPlacedLineSwaps() throws Exception {
     var a = join("Alice");
     var id = a.getUniqueId();
     openMenu(a);
-    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.MIDDLE);
+    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.LEFT);
     click(a, slotNamed(a.getOpenInventory().getTopInventory(), 9, 45, "Онлайн"), ClickType.LEFT);
     assertEquals(List.of("name", "online"), personal.state(id).ids(), "the world line is replaced");
-    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.MIDDLE);
+    click(a, PersonalLayout.CARD_SLOTS[1], ClickType.LEFT);
     click(a, slotNamed(a.getOpenInventory().getTopInventory(), 9, 45, "Имя"), ClickType.LEFT);
     assertEquals(List.of("online", "name"), personal.state(id).ids(), "a line that is already placed swaps");
   }
@@ -212,7 +212,7 @@ class PersonalScoreboardTest {
   void theCatalogFiltersByCategoryAndSortsWithLeftAndRightClicks() throws Exception {
     var a = join("Alice");
     openMenu(a);
-    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.MIDDLE);
+    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.LEFT);
     var catalog = a.getOpenInventory().getTopInventory();
     int filter = slotNamed(catalog, 1, 8, "Фильтр");
     int sort = slotNamed(catalog, 1, 8, "Сортировка");

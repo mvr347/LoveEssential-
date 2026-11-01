@@ -25,6 +25,7 @@ class CalamityServiceTest {
   ServerMock server;
   LoveEssentialPlugin plugin;
   CalamityService service;
+  final java.util.concurrent.atomic.AtomicLong wall = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
 
   @BeforeEach
   void setup() throws Exception {
@@ -42,6 +43,9 @@ class CalamityServiceTest {
     var field = LoveEssentialPlugin.class.getDeclaredField("extensions");
     field.setAccessible(true);
     service = ((Extensions) field.get(plugin)).calamities;
+    var clockField = CalamityService.class.getDeclaredField("nowMillis");
+    clockField.setAccessible(true);
+    clockField.set(service, (java.util.function.LongSupplier) wall::get);
     server.getScheduler().performTicks(40);
   }
 
@@ -67,7 +71,8 @@ class CalamityServiceTest {
 
   /** Runs the clock until the calamity is in its flat, full-strength middle. */
   void toPeak() {
-    server.getScheduler().performTicks(700);
+    wall.addAndGet(35_000);
+    server.getScheduler().performTicks(20);
   }
 
   @Test
@@ -112,21 +117,22 @@ class CalamityServiceTest {
   void aCalamityEndsOnItsOwnAndLeavesACooldown() {
     var admin = admin();
     service.command(admin, new String[] {"start", "plague", "normal", "1"});
-    server.getScheduler().performTicks(1300);
+    wall.addAndGet(65_000);
+    server.getScheduler().performTicks(20);
     assertEquals(Phase.IDLE, service.phase());
     assertEquals(0, service.strength());
   }
 
   @Test
-  void timeStandsStillWhileNobodyIsOnline() {
+  void realTimeContinuesWithoutPlayersAndServerTicksDoNotAccelerateIt() {
     var admin = admin();
     service.command(admin, new String[] {"start", "plague", "normal", "1"});
-    admin.disconnect();
     server.getScheduler().performTicks(3000);
-    assertEquals(Phase.ACTIVE, service.phase(), "a one-minute calamity must not run out unseen");
-    admin();
-    server.getScheduler().performTicks(1300);
-    assertEquals(Phase.IDLE, service.phase());
+    assertEquals(Phase.ACTIVE, service.phase(), "server ticks cannot accelerate the real clock");
+    admin.disconnect();
+    wall.addAndGet(65_000);
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.IDLE, service.phase(), "real time continues without players");
   }
 
   @Test
@@ -235,6 +241,55 @@ class CalamityServiceTest {
     assertTrue(service.sick(bob, Disease.HUNGER));
     service.command(admin, new String[] {"stop"});
     assertFalse(service.sick(bob, Disease.HUNGER));
+  }
+
+  @Test
+  void anOfflinePeriodLongerThanTheEventAndCooldownDoesNotRestartTheCooldown() throws Exception {
+    var admin = admin();
+    service.command(admin, new String[] {"start", "plague", "normal", "1"});
+    admin.disconnect();
+    wall.addAndGet(15L * 86_400_000);
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.IDLE, service.phase());
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    waitFor(() -> store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join()
+        .map(json -> com.google.gson.JsonParser.parseString(json).getAsJsonObject())
+        .map(json -> json.has("clockAt") && json.get("clockAt").getAsLong() == wall.get()
+            && json.get("cooldown").getAsLong() == 0)
+        .orElse(false));
+  }
+
+  @Test
+  void aManualStartDoesNotInheritTheOldIdleClock() {
+    var admin = admin();
+    wall.addAndGet(15L * 86_400_000);
+    service.command(admin, new String[] {"start", "plague", "normal", "1"});
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.ACTIVE, service.phase());
+    wall.addAndGet(65_000);
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.IDLE, service.phase());
+  }
+
+  @Test
+  void aRestoredOmenCarriesOfflineTimeThroughTheEventIntoItsCooldown() throws Exception {
+    plugin.getConfig().set("calamities.types.plague.duration-minutes", 1);
+    var restore = CalamityService.class.getDeclaredMethod("restore", String.class);
+    restore.setAccessible(true);
+    restore.invoke(service, "{\"phase\":\"OMEN\",\"type\":\"plague\",\"severity\":\"NORMAL\",\"duration\":1200,\"clockAt\":" + wall.get() + "}");
+    wall.addAndGet(86_400_000 + 120_000);
+    server.getScheduler().performTicks(20);
+    assertEquals(Phase.IDLE, service.phase());
+    var field = LoveEssentialPlugin.class.getDeclaredField("store");
+    field.setAccessible(true);
+    var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
+    waitFor(() -> store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join()
+        .map(json -> com.google.gson.JsonParser.parseString(json).getAsJsonObject())
+        .map(json -> json.has("clockAt") && json.get("clockAt").getAsLong() == wall.get()
+            && json.get("cooldown").getAsLong() == 13L * 86_400_000 / 50)
+        .orElse(false));
   }
 
   @Test

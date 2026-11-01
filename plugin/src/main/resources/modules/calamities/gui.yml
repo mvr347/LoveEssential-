@@ -15,7 +15,7 @@ messages:
     disease-scurvy: Цинга
     time-day: '<n> д.'
     time-hour: '<n> ч'
-    time-less: меньше часа
+    time-less: меньше минуты
     severity-mild: лёгкое
     severity-normal: обычное
     severity-heavy: тяжёлое
@@ -45,3 +45,4 @@ messages:
     admin-log-empty: '<gray>Журнал пуст.'
     admin-log-line: '<gray><line>'
     usage: '<gray>/calamity [info | start <тип> [лёгкое|обычное|тяжёлое] [минут] | stop | threat <тип> <0-100> | disease <hunger|scurvy> <on|off|игрок> | simulate <тип> [тяжесть] | log]'
+    time-minute: <n> мин.

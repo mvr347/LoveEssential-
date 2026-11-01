@@ -100,6 +100,7 @@ public final class ModuleConfigs {
           fill(legacy, actions);
         }
         fillIn("modules/" + id + "/" + id + ".yml", module, legacy);
+        if (id.equals("calamities")) migrateCalamityClock(module);
         if (id.equals("scoreboard")) migrateScoreboard(module);
         var gui = read(guiFile(id));
         if (module.isConfigurationSection("gui")) fill(gui, module.getConfigurationSection("gui"));
@@ -622,6 +623,19 @@ public final class ModuleConfigs {
   }
 
   /** {@link #fill} that names the file in the error, so the admin knows which one to open. */
+  /** Retain custom real durations when replacing legacy game-day units with explicit minutes. */
+  static void migrateCalamityClock(YamlConfiguration module) {
+    if (!module.contains("omen-minutes") && module.get("omen-days") instanceof Number)
+      module.set("omen-minutes", module.getDouble("omen-days") * 20);
+    module.set("omen-days", null);
+    for (String type : List.of("bugs", "infertile", "plague", "undead")) {
+      String root = "types." + type + ".";
+      if (!module.contains(root + "duration-minutes") && module.contains(root + "duration-days"))
+        module.set(root + "duration-minutes", module.getDouble(root + "duration-days") * 20);
+      module.set(root + "duration-days", null);
+    }
+  }
+
   private static void fillIn(String file, YamlConfiguration target, ConfigurationSection defaults) {
     try {
       fill(target, defaults);

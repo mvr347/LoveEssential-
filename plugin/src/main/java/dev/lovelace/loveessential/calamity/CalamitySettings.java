@@ -86,7 +86,8 @@ final class CalamitySettings {
   }
 
   long durationTicks(Type t) {
-    return Math.max(1, Math.round(c.getDouble("types." + t.key + ".duration-days", 3) * CalamityRules.DAY_TICKS));
+    return Math.max(1, Math.round(c.getDouble("types." + t.key + ".duration-minutes",
+        c.getDouble("types." + t.key + ".duration-days", 3) * 20) * 1200));
   }
 
   private final Map<String, Boolean> worlds = new java.util.concurrent.ConcurrentHashMap<>();
@@ -130,6 +131,7 @@ final class CalamitySettings {
     range(c, "newcomer-minutes", 0, 525600);
     range(c, "cooldown-days", 0, 3650);
     range(c, "omen-days", 0, 365);
+    range(c, "omen-minutes", 0, 525600);
     range(c, "base-daily-chance", 0, 1);
     range(c, "threat-weight", 0, 10);
     range(c, "threat-decay-percent", 0, 100);
@@ -140,6 +142,7 @@ final class CalamitySettings {
     range(c, "harvest-minimum", 0, 64);
     for (Type t : Type.values()) {
       range(c, "types." + t.key + ".duration-days", 0.05, 365);
+      range(c, "types." + t.key + ".duration-minutes", 1, 525600);
       for (String key : List.of("growth", "crops", "breeding", "meat", "natural-spawn"))
         range(c, "types." + t.key + "." + key, 0, 1000);
     }

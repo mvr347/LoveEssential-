@@ -1411,8 +1411,9 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       case "interaction" -> {
         draws.add(
             slot ->
-                card(m, slot, Material.WRITABLE_BOOK, "messages.settings",
-                    "profile-menu.messages-lore", p, () -> preferences(p, 0)));
+                switchCard(m, slot, "messages", messages.loaded(p.getUniqueId()) && messages.preferences(p).enabled(),
+                    "enabled", "disabled", () -> messages.toggle(p, () -> repaintNext(p)),
+                    messages.loaded(p.getUniqueId())));
         draws.addAll(controlDraws(m, p, "dm"));
       }
       case "privacy" -> {
@@ -1887,8 +1888,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
               () -> {
                 if (menus.get(m.viewer.getUniqueId()) != m || !permitted(m)) return;
                 try {
+                  m.viewer.playSound(m.viewer.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 1f, 1.4f);
                   MenuStyle.action(m.viewer, action);
                 } catch (IllegalArgumentException error) {
+                  m.viewer.playSound(m.viewer.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BASS, 0.6f, 0.6f);
                   lang.error(m.viewer, error);
                 }
               });

@@ -741,7 +741,7 @@ class ProfilePrivacyTest {
             ServicePriority.Normal);
     var p = player("Owner");
     command(p, "profile settings");
-    click(p, named(p, "Уведомления"));
+    click(p, named(p, "Оповещения"));
     assertEquals(27, p.getOpenInventory().getTopInventory().getSize());
     click(p, named(p, "Канал: Чат"));
     assertEquals(1, channels.size());

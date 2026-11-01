@@ -436,6 +436,17 @@ public final class Gameplay implements Listener, AutoCloseable {
    * Runs every tick, so the sky moves in small steps (a step every few ticks makes it jump). A sleeping
    * player never counts as away: lying in bed is exactly what makes the idle timer run out.
    */
+  @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST, ignoreCancelled = true)
+  public void vanillaNightSkip(org.bukkit.event.world.TimeSkipEvent event) {
+    if (event.getSkipReason() == org.bukkit.event.world.TimeSkipEvent.SkipReason.NIGHT_SKIP
+        && event.getWorld().getTime() >= NIGHT_START
+        && enabled.test("nightskip")
+        && event.getWorld().getPlayers().stream()
+            .anyMatch(p -> ((LoveEssentialPlugin) plugin).allows("nightskip", p))) {
+      event.setCancelled(true);
+    }
+  }
+
   private void nightSkip() {
     if (!enabled.test("nightskip")) {
       skipping.clear();
@@ -464,6 +475,10 @@ public final class Gameplay implements Listener, AutoCloseable {
       }
       skipping.add(w.getUID());
       w.setFullTime(w.getFullTime() + step);
+      if (w.getTime() < NIGHT_START) {
+        skipping.remove(w.getUID());
+        for (var sleeper : w.getPlayers()) if (sleeper.isSleeping()) sleeper.wakeup(false);
+      }
     }
   }
 
