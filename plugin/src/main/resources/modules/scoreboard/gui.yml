@@ -55,6 +55,7 @@ messages:
     slot-variant: '<yellow>Shift + ЛКМ <dark_gray>— <gray>формат: <white><variant>'
     unavailable: '<dark_gray>▪ <red>Недоступно:'
     reason-plugin: '  <gray>Плагин не установлен'
+    reason-hunter-pass: '  <gray>Нужен купленный билет охотника'
     reason-full: '  <gray>Все <max> слотов заняты'
     slot-empty-lore:
     - <dark_gray>Свободный слот
