@@ -118,7 +118,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     /** The main menu has no parent when opened from the profile settings link, so Back returns there. */
     @Override
     public Runnable guiBack() {
-      return kind == Kind.MAIN ? () -> Bukkit.dispatchCommand(player, "profile settings") : null;
+      return null;
     }
 
     @Override
@@ -402,30 +402,29 @@ final class PersonalSidebar implements Listener, AutoCloseable {
         set(
             menu,
             slot,
-            MenuStyle.item(
-                Material.GRAY_DYE,
+            guiHead(
+                "slot-empty",
                 lang.render("sidebar.slot-empty-name", Map.of("n", Integer.toString(i + 1))),
                 lines("sidebar.slot-empty-lore", Map.of())),
             click -> {
               // Left click opens the catalog too, for clients without a middle button.
-              if (click != ClickType.MIDDLE && click != ClickType.LEFT) return;
+              if (click != ClickType.LEFT) return;
               feedback(p, true);
               openCatalog(p, -1);
             });
         continue;
       }
       set(menu, slot, card(p, item, index, state), click -> {
-        if (click == ClickType.MIDDLE) {
+        if (click == ClickType.LEFT) {
           feedback(p, true);
           openCatalog(p, index);
           return;
         }
         boolean changed =
             switch (click) {
-              case LEFT -> state.moveUp(item.id());
-              case RIGHT -> state.moveDown(item.id());
-              case SHIFT_RIGHT -> state.disable(item.id());
-              case SHIFT_LEFT -> cycle(state, item);
+              case SHIFT_LEFT -> state.moveUp(item.id());
+              case SHIFT_RIGHT -> state.moveDown(item.id());
+              case RIGHT -> state.disable(item.id());
               default -> false;
             };
         changed(menu, p, changed);
@@ -435,7 +434,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   private void toggleBoard(Menu menu, Player p, PersonalState state, ClickType click) {
     if (!simple(click)) return;
-    if (state.ids().isEmpty()) {
+    if (!hasUsableSelection(p, state)) {
       feedback(p, false);
       return;
     }
@@ -628,13 +627,22 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     return lang.lines(key).stream().map(text -> lang.renderText(text, vars)).toList();
   }
 
+  private ItemStack guiHead(String key, Component name, List<Component> lore) {
+    return MenuStyle.head(plugin.getConfig().getString("scoreboard.gui.textures." + key, ""), name, lore);
+  }
+
+  private boolean hasUsableSelection(Player p, PersonalState state) {
+    return state.ids().stream().map(catalog::item).filter(Objects::nonNull)
+        .anyMatch(item -> status(p, item) == Status.AVAILABLE);
+  }
+
   private ItemStack switchButton(Player p, PersonalState state) {
     String key =
-        state.ids().isEmpty()
+        !hasUsableSelection(p, state)
             ? "empty"
             : host.enabledFor(p.getUniqueId()) ? "on" : "off";
-    return MenuStyle.item(
-        key.equals("on") ? Material.LIME_DYE : key.equals("off") ? Material.RED_DYE : Material.BARRIER,
+    return guiHead(
+        "toggle-" + key,
         line("sidebar.toggle-" + key, Map.of()),
         lines("sidebar.toggle-" + key + "-lore", Map.of()));
   }
@@ -659,14 +667,14 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     if (resolved.isEmpty()) {
       lore.add(line("sidebar.preset-unavailable", Map.of()));
       lore.add(line("sidebar.preset-unavailable-reason", Map.of()));
-      return MenuStyle.item(Material.BARRIER, Component.text(name, NamedTextColor.DARK_GRAY), lore);
+      return guiHead("layout", Component.text(name, NamedTextColor.DARK_GRAY), lore);
     }
     if (PersonalCatalog.sameSet(state.entries(), resolved)) {
       lore.add(line("sidebar.preset-active", Map.of()));
-      return MenuStyle.item(Material.LIME_DYE, Component.text(name, NamedTextColor.GREEN), lore);
+      return guiHead("layout", Component.text(name, NamedTextColor.GREEN), lore);
     }
     lore.add(line("sidebar.preset-click", Map.of()));
-    return MenuStyle.item(Material.BOOK, Component.text(name, NamedTextColor.YELLOW), lore);
+    return guiHead("layout", Component.text(name, NamedTextColor.YELLOW), lore);
   }
 
   private List<Component> description(Item item) {
@@ -677,20 +685,21 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   /** Name and description of a line that cannot be used, with the reason and the trailing actions. */
   private ItemStack locked(Item item, Status status, List<Component> trailing) {
-    var lore = description(item);
-    lore.add(lang.render("gui.separator"));
+    var lore = new ArrayList<Component>(trailing);
+    lore.add(Component.empty());
+    lore.addAll(description(item));
+    lore.add(Component.empty());
     lore.add(line("sidebar.unavailable", Map.of()));
     if (status == Status.MISSING_PLUGIN) lore.add(line("sidebar.reason-plugin", Map.of()));
     else if (item.requirement() != null && !item.requirement().reason().isBlank())
       lore.add(legacy(item.requirement().reason()));
-    lore.addAll(trailing);
-    return MenuStyle.item(Material.BARRIER, Component.text(plain(item.name()), NamedTextColor.DARK_GRAY), lore);
+    return guiHead("placeholder-locked", Component.text(plain(item.name()), NamedTextColor.DARK_GRAY), lore);
   }
 
 
   private ItemStack presetsButton() {
-    return MenuStyle.item(
-        Material.BOOK,
+    return guiHead(
+        "layouts-button",
         line("sidebar.presets-title-button", Map.of()),
         lines("sidebar.presets-lore", Map.of("count", Integer.toString(catalog.presets().size()))));
   }
@@ -706,8 +715,8 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     lore.add(lang.render("gui.separator"));
     lore.add(line("sidebar.cycle-next", Map.of()));
     lore.add(line("sidebar.cycle-previous", Map.of()));
-    return MenuStyle.item(
-        icon,
+    return guiHead(
+        kind,
         line("sidebar.cycle-name", Map.of("name", lang.text("sidebar." + kind + "-title"), "current", labels.get(current))),
         lore);
   }
@@ -741,37 +750,41 @@ final class PersonalSidebar implements Listener, AutoCloseable {
       locked.addAll(actions);
       return locked(item, status, locked);
     }
-    var lore = description(item);
+    var lore = new ArrayList<Component>(info);
+    lore.add(Component.empty());
+    lore.addAll(description(item));
+    lore.add(Component.empty());
     lore.add(lang.render("gui.separator"));
-    lore.addAll(info);
     if (full) {
       lore.add(line("sidebar.unavailable", Map.of()));
       lore.add(line("sidebar.reason-full", Map.of("max", Integer.toString(catalog.max()))));
     }
     lore.addAll(actions);
-    return MenuStyle.item(
-        active ? Material.LIME_DYE : full ? Material.BARRIER : Material.GRAY_DYE,
+    return guiHead(
+        active ? "placeholder-selected" : full ? "placeholder-locked" : "placeholder",
         Component.text(
             plain(item.name()), active ? NamedTextColor.GREEN : full ? NamedTextColor.DARK_GRAY : NamedTextColor.GRAY),
         lore);
   }
 
   private ItemStack card(Player p, Item item, int index, PersonalState state) {
-    var actions = new ArrayList<Component>();
-    if (index > 0) actions.add(line("sidebar.slot-up", Map.of()));
-    if (index < state.ids().size() - 1) actions.add(line("sidebar.slot-down", Map.of()));
-    if (item.variants().size() > 1)
-      actions.add(
-          line("sidebar.slot-variant", Map.of("variant", plain(item.variantName(state.variant(item.id()))))));
-    actions.add(line("sidebar.slot-catalog", Map.of()));
-    actions.add(line("sidebar.slot-remove", Map.of()));
-    var status = status(p, item);
-    if (status != Status.AVAILABLE) return locked(item, status, actions);
-    var lore = description(item);
-    lore.add(lang.render("gui.separator"));
+    var lore = new ArrayList<Component>();
     lore.add(line("sidebar.slot-label", Map.of("n", Integer.toString(index + 1))));
-    lore.addAll(actions);
-    return MenuStyle.item(Material.LIME_DYE, Component.text(plain(item.name()), NamedTextColor.GREEN), lore);
+    lore.add(Component.empty());
+    lore.addAll(description(item));
+    lore.add(Component.empty());
+    lore.add(lang.render("gui.separator"));
+    var status = status(p, item);
+    if (status != Status.AVAILABLE) {
+      lore.add(line("sidebar.unavailable", Map.of()));
+      if (status == Status.MISSING_PLUGIN) lore.add(line("sidebar.reason-plugin", Map.of()));
+      else if (item.requirement() != null) lore.add(legacy(item.requirement().reason()));
+    }
+    lore.add(line("sidebar.slot-catalog", Map.of()));
+    lore.add(line("sidebar.slot-remove", Map.of()));
+    if (index > 0) lore.add(line("sidebar.slot-up", Map.of()));
+    if (index < state.ids().size() - 1) lore.add(line("sidebar.slot-down", Map.of()));
+    return guiHead("slot-filled", Component.text(plain(item.name()), NamedTextColor.GREEN), lore);
   }
 
   // ---------------------------------------------------------------- events

@@ -128,4 +128,56 @@ class MenuTextTest {
     assertFalse(text.contains("{") || text.contains("="), "a map printed as text: " + text);
     assertEquals(java.util.List.of(), GuiRules.unresolvedText(top));
   }
+  @Test
+  void settingsReturnThroughTheActualParentAndDirectSidebarHasNoBack() throws Exception {
+    var player = server.addPlayer("SettingsOwner");
+    player.setOp(true);
+    var enabled = plugin.module("scoreboard", true);
+    waitFor(enabled::isDone);
+    enabled.join();
+    server.getScheduler().performTicks(5);
+    server.dispatchCommand(player, "profile settings");
+    server.getScheduler().performTicks(2);
+    for (int i=0; i<4; i++) click(player, 4);
+    var settings = player.getOpenInventory().getTopInventory();
+    assertTrue(GuiRules.name(settings.getItem(4)).contains("Интерфейс"));
+    int board = -1;
+    for (int i=0; i<settings.getSize(); i++)
+      if (GuiRules.name(settings.getItem(i)).contains("Боковая панель")) board=i;
+    assertTrue(board>=0);
+    click(player, board);
+    var sidebar = player.getOpenInventory().getTopInventory();
+    assertEquals("sidebar.menu-title", ((dev.lovelace.loveessential.gui.GuiLayout) sidebar.getHolder()).guiId());
+    click(player, sidebar.getSize()-2);
+    assertEquals("profile-menu.settings", ((dev.lovelace.loveessential.gui.GuiLayout) player.getOpenInventory().getTopInventory().getHolder()).guiId());
+    var returned = player.getOpenInventory().getTopInventory();
+    assertTrue(GuiRules.name(returned.getItem(4)).contains("Интерфейс"));
+    assertFalse(GuiRules.name(returned.getItem(returned.getSize()-2)).contains("Назад"));
+    server.dispatchCommand(player, "le scoreboard edit");
+    server.getScheduler().performTicks(2);
+    var direct = player.getOpenInventory().getTopInventory();
+    assertFalse(GuiRules.name(direct.getItem(direct.getSize()-2)).contains("Назад"));
+  }
+
+  @Test
+  void smoothNightSkipCancelsOnlyTheVanillaJumpWhileEnabled() throws Exception {
+    var sleeper = server.addPlayer("Sleeper");
+    sleeper.setOp(true);
+    var enabled = plugin.module("nightskip", true);
+    waitFor(enabled::isDone);
+    enabled.join();
+    var vanilla = new org.bukkit.event.world.TimeSkipEvent(sleeper.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.NIGHT_SKIP, 10000);
+    server.getPluginManager().callEvent(vanilla);
+    assertTrue(vanilla.isCancelled());
+    var custom = new org.bukkit.event.world.TimeSkipEvent(sleeper.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.CUSTOM, 10000);
+    server.getPluginManager().callEvent(custom);
+    assertFalse(custom.isCancelled());
+    var disabled = plugin.module("nightskip", false);
+    waitFor(disabled::isDone);
+    disabled.join();
+    var ordinary = new org.bukkit.event.world.TimeSkipEvent(sleeper.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.NIGHT_SKIP, 10000);
+    server.getPluginManager().callEvent(ordinary);
+    assertFalse(ordinary.isCancelled());
+  }
+
 }

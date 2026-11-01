@@ -126,6 +126,10 @@ public final class PrivateMessages implements Listener, AutoCloseable {
     return true;
   }
 
+  public boolean loaded(UUID player) {
+    return states.containsKey(player);
+  }
+
   public Preferences preferences(Player p) {
     var state = states.get(p.getUniqueId());
     if (state == null) throw new IllegalArgumentException("messages.loading");

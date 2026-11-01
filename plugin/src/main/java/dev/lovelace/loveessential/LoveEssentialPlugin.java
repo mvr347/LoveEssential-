@@ -184,6 +184,16 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   @Override
   public void onEnable() {
+        // Apply the bundled style update before any module reads its documents.
+        try {
+            Class.forName("dev.lovelace.lovecore.gui.GuiStyles")
+                    .getMethod("migrate", org.bukkit.plugin.java.JavaPlugin.class).invoke(null, this);
+        } catch (java.lang.reflect.InvocationTargetException error) {
+            throw new IllegalStateException("Обновление оформления остановлено; проверьте конфиги и резервные копии", error.getCause());
+        } catch (ReflectiveOperationException error) {
+            getLogger().warning("Оформление не обновлено: обновите LoveCore. Причина: " + error);
+        }
+
     MainThread.require();
     main = new MainThread(this);
     configFiles = new dev.lovelace.loveessential.config.ModuleConfigs(this);

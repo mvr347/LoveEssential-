@@ -7,11 +7,11 @@ menus:
       profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=
       profile-menu.settings: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
       profile-menu.customization: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzU0NWM0YWE5N2MxOWJlZDdjYWMxODE3ZmM1MTAzZmU4ZGQ1ODlmYTEyMDgzNWEzZTRlMTJmMzUyMjMwYTVhNiJ9fX0=
-      profile-menu.adaptations: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
+      profile-menu.adaptations: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTk3ZTRlMjdhMDRhZmE1ZjA2MTA4MjY1YTliZmI3OTc2MzAzOTFjN2YzZDg4MGQyNDRmNjEwYmIxZmYzOTNkOCJ9fX0=
       profile-menu.reputation: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmFlNjM0NGNlYmFjZDIxZDhjNmNhMGQyZTM0YjNjMzQ5MmRjNzliZjQ0MzE0MGQxMmE1MDg4N2FlM2ViN2Y4ZiJ9fX0=
-      profile-menu.statistics: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODNkODc0ZWI4YzRjNjk3YjNmODMyYmQ4NzQ0MjZmZGY2ZDIxYmFlMzM5ZjMxNzExMDgxZmRlNTk4MzgzODZlMSJ9fX0=
-      profile-menu.notifications: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg2NWVlOWM3MDg3NjkwZGRjMjA2NTRmZTZhYzNmNjBlMzI3NmZkYzM3ODgzNTAyYzUzM2U3YjljY2I2NGIzZCJ9fX0=
-      profile-menu.scoreboard: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODY3MjA4NWZmNWRmMGVlODUyMTM2ZTJkNDFhNzY5MjI5MjkxZDY2NmIyOGU5ZmIwNGQ2YzkyZjE1OGU0MmJiIn19fQ==
+      profile-menu.statistics: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTgxOGQxY2M1M2MyNzVjMjk0ZjVkZmI1NTkxNzRkZDkzMWZjNTE2YTg1YWY2MWExZGUyNTZhZWQ4YmNhNWU3In19fQ==
+      profile-menu.notifications: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDYxNzhhZDUxZmQ1MmIxOWQwYTM4ODg3MTBiZDkyMDY4ZTkzMzI1MmFhYzZiMTNjNzZlN2U2ZWE1ZDMyMjYifX19
+      profile-menu.scoreboard: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTk4ODQxOWRkNWIzODZmNjk4YTk2OTEzZGIxZDk3YzI0MThlMTZkNDE2ZDdmNDM5ZDQ4YWNkNDFlM2E0MzZjZSJ9fX0=
       profile-menu.grammar: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
       profile-menu.silent: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
       profile-menu.mentions: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==
@@ -33,7 +33,7 @@ menus:
         tab-chat-lore: <gray>Грамматика, тихий режим, упоминания, канал.
         tab-dm: <gold>ЛС и обмен
         tab-dm-lore: <gray>Личные сообщения, игнор, приглашения и обмен.
-        tab-alerts: <gold>Уведомления
+        tab-alerts: <gold>Оповещения
         tab-alerts-lore: <gray>Где показывать системные сообщения.
         tab-display: <gold>Отображение
         tab-display-lore: <gray>Что видно в табе, чате и над головой.
@@ -44,8 +44,13 @@ menus:
         stats-empty: <gray>Данных пока нет
         display: <gold>Отображение
         display-lore:
-        - <gray>Теги, суффиксы и подписи в табе и чате.
-        - <green>ЛКМ <dark_gray>— <gray>открыть настройки отображения
+        - <dark_gray>Оформление профиля
+        - ''
+        - <gray>Выберите, где видны ваша пометка,
+        - <gray>клановый тег и подпись.
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть отображение
         open-behavior: <gold>Открыть LoveBehavior
         no-data: —
         saved-activity-lore:
@@ -265,6 +270,7 @@ menus:
         - '<gray>Статус: <white><papi:loveadaptation_travel_status:"—">'
         - '<gray>Прогресс: <white><papi:loveadaptation_travel_progress:"—">'
         - <papi:loveadaptation_travel_bar:"—">
+        notifications: <gold>Оповещения
   public-profile-title:
     size: 45
     title: <gold>Профиль <dark_gray>| <white><player>
@@ -1018,7 +1024,7 @@ menus:
         filter-interface: 'Интерфейс'
         filter-current: '  <green>▶ <name>'
         filter-other: '    <gray><name>'
-        notifications: '<gold>Уведомления'
+        notifications: '<gold>Оповещения'
         notifications-lore:
         - '<dark_gray>Каналы оповещений'
         - ''

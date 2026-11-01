@@ -48,10 +48,10 @@ messages:
     preset-unavailable: <red>Недоступно сейчас
     preset-unavailable-reason: <gray>Ни одна строка раскладки сейчас недоступна
     slot-empty-name: '<gray>Слот <n> <dark_gray>• <gray>пусто'
-    slot-label: '<dark_gray>▪ <gray>Слот <n>'
-    slot-up: <green>ЛКМ <dark_gray>— <gray>выше
-    slot-down: <gold>ПКМ <dark_gray>— <gray>ниже
-    slot-remove: <red>СКМ <gray>или <yellow>Shift + ПКМ <dark_gray>— <gray>убрать
+    slot-label: '<dark_gray>Выбранный вами слот <n>'
+    slot-up: <yellow>Shift + ЛКМ <dark_gray>— <gray>поднять
+    slot-down: <yellow>Shift + ПКМ <dark_gray>— <gray>опустить
+    slot-remove: <gold>ПКМ <dark_gray>— <gray>убрать
     slot-variant: '<yellow>Shift + ЛКМ <dark_gray>— <gray>формат: <white><variant>'
     unavailable: '<dark_gray>▪ <red>Недоступно:'
     reason-plugin: '  <gray>Плагин не установлен'
@@ -59,10 +59,11 @@ messages:
     slot-empty-lore:
     - <dark_gray>Свободный слот
     - ''
-    - <dark_gray>▪ <gray>Выберите строку в каталоге
+    - <gray>Добавьте строку из каталога.
+    - ''
     - <dark_gray><st>─────────────────────</st>
-    - <green>ЛКМ <gray>или <yellow>СКМ <dark_gray>— <gray>открыть каталог
-    slot-catalog: <yellow>СКМ <dark_gray>— <gray>каталог строк
+    - <green>ЛКМ <dark_gray>— <gray>выбрать строку
+    slot-catalog: <green>ЛКМ <dark_gray>— <gray>заменить строку
     presets-title-button: <gold>Раскладки
     presets-lore:
     - <dark_gray>Быстрые наборы строк
@@ -91,3 +92,16 @@ messages:
     catalog-replace: '<green>ЛКМ <dark_gray>— <gray>поставить в слот <n>'
     catalog-swap: '<green>ЛКМ <dark_gray>— <gray>поменять местами со слотом <n>'
     catalog-here: <dark_gray>Эта строка уже в выбранном слоте
+textures:
+  slot-empty: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjhkZGY4M2VhN2YwOGE3MmE1MmFjMjFkYzc0MDBhMDYxN2FjMmNiZTIxYTMxNzA0OGY0MmU3ZjI0OTk0NDgwZSJ9fX0=
+  slot-filled: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=
+  layouts-button: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg2NWVlOWM3MDg3NjkwZGRjMjA2NTRmZTZhYzNmNjBlMzI3NmZkYzM3ODgzNTAyYzUzM2U3YjljY2I2NGIzZCJ9fX0=
+  layout: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTk4ODQxOWRkNWIzODZmNjk4YTk2OTEzZGIxZDk3YzI0MThlMTZkNDE2ZDdmNDM5ZDQ4YWNkNDFlM2E0MzZjZSJ9fX0=
+  placeholder: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTZkN2I3MjA0YmVhMWZmMGRmNzkzMGJkNDU1OWEzMGI1ZWE1NTllNTYyNDI5NDY5NGU4NjdiZjdiNWFlMDM2MSJ9fX0=
+  placeholder-selected: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWQxMTJjOTVmZTVjYzc0OGYwZWM1Mzk3ODE4OTQ3NzhmOGIzYWJjMzRhOTE4MGQ1ZTRmMGUxOTM2ZjdjN2E4YyJ9fX0=
+  placeholder-locked: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTNhNWMzMzY3OTRmMzNlNTUxYmI5Njc3YzExMjBhNTFkM2MwMTMxZjAwNTg5MGNlYjAyMDhkMGE2OTlhOTkzZCJ9fX0=
+  toggle-off: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNmU5NDZhYzQ2OGZhM2ViODAxZjVkZWQ2NGUzY2Y2YTkyZTMyNTUzZjRmZjcwZjk4NGMyYzdmMDE0NTY0OWMxNSJ9fX0=
+  toggle-on: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTg2MTI5MmUwMGEzNmRlMTNmNDJjZDk5ZWRlNjhiMTlmZjU4NGVhODYyYjBjNDMzYzgwNDMwMDU5NDBhYjc4ZiJ9fX0=
+  toggle-empty: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5ODg1MjNmMjYzMWRlNWNiMDFmZGVhMzg3MDViNjRlYjkwNjY2N2Q4ZDk5YmNiODU5YTBhMTZkYjU5MWE3OCJ9fX0=
+  filter: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGViODFlZjg5MDIzNzk2NTBiYTc5ZjQ1NzIzZDZiOWM4ODgzODhhMDBmYzRlMTkyZjM0NTRmZTE5Mzg4MmVlMSJ9fX0=
+  sort: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjU3YzdlOTZhODAyYzI3MDgwYzdmODA1MzgxNDM2OGVhOTRkZjg2NDQ1OTEyMGU1MTU1NzE4YjUwM2MzZWQ3In19fQ==
