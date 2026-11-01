@@ -1861,6 +1861,16 @@ public final class ControlMenus implements Listener, AutoCloseable {
             "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=",
             lang.render("nick.label"),
             lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
+    // The tags and marks other players see: LoveEssential's own /display menu, opened as a child of this one.
+    m.inventory.setItem(
+        4,
+        MenuStyle.item(
+            Material.COMPARATOR,
+            lang.render("profile-menu.display"),
+            lang.lines("profile-menu.display-lore").stream()
+                .map(l -> lang.renderText(l, Map.of()))
+                .toList()));
+    m.actions.put(4, click -> MenuStyle.action(p, () -> Bukkit.dispatchCommand(p, "display")));
     boolean catalogue = Bukkit.getPluginCommand("suffixes") != null;
     var suffixLore =
         new ArrayList<>(

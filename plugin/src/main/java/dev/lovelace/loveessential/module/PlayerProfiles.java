@@ -1438,19 +1438,30 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             slot ->
                 link(m, slot, "scoreboard", "profile-menu.scoreboard",
                     "profile-menu.scoreboard-lore", Material.MAP, p, true));
-        draws.add(
-            slot ->
-                link(m, slot, "display", "profile-menu.display", "profile-menu.display-lore",
-                    Material.COMPARATOR, p, true));
       }
     }
     return draws;
   }
 
-  /** Slots of a row of {@code count} buttons; four sit in pairs around the middle, like the reference. */
-  private static int settingsSlot(int row, int index, int count) {
-    int column = count == 4 ? new int[] {2, 3, 5, 6}[index] : MenuStyle.slot(index, count) % 9;
-    return 18 + row * 9 + column;
+  /**
+   * Slot of button {@code index} among {@code count} buttons whose first row is {@code row} of the work
+   * area; more than seven buttons continue on the next rows. Four sit in pairs around the middle, like the
+   * reference. Null when the slot would fall into the footer.
+   */
+  private static Integer settingsSlot(int row, int index, int count) {
+    int slot;
+    if (count == 4) slot = 18 + row * 9 + new int[] {2, 3, 5, 6}[index];
+    else slot = MenuStyle.slot(index, count) + row * 9;
+    return slot < 45 ? slot : null;
+  }
+
+  /** Draws a group starting at {@code row}; returns the first free row below it. */
+  private int placeGroup(List<java.util.function.IntConsumer> draws, int row) {
+    for (int i = 0; i < draws.size(); i++) {
+      Integer slot = settingsSlot(row, i, draws.size());
+      if (slot != null) draws.get(i).accept(slot);
+    }
+    return row + Math.max(1, (draws.size() + 6) / 7);
   }
 
   private void drawSettings(Menu m, Player p) {
@@ -1467,18 +1478,15 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     m.actions.put(0, () -> profile(p, p));
     drawFilter(m, p);
     if (m.tab.equals("all")) {
-      // Chat on the first row, interaction and privacy on the second, the interface on the third.
-      var chat = settingsGroup(m, p, "chat");
-      for (int i = 0; i < chat.size(); i++) chat.get(i).accept(settingsSlot(0, i, chat.size()));
+      // Chat first, then interaction with privacy, then the interface; a long group takes more rows.
+      int row = placeGroup(settingsGroup(m, p, "chat"), 0);
       var middle = new ArrayList<java.util.function.IntConsumer>();
       middle.addAll(settingsGroup(m, p, "interaction"));
       middle.addAll(settingsGroup(m, p, "privacy"));
-      for (int i = 0; i < middle.size(); i++) middle.get(i).accept(settingsSlot(1, i, middle.size()));
-      var rest = settingsGroup(m, p, "interface");
-      for (int i = 0; i < rest.size(); i++) rest.get(i).accept(settingsSlot(2, i, rest.size()));
+      row = placeGroup(middle, row);
+      placeGroup(settingsGroup(m, p, "interface"), row);
     } else {
-      var only = settingsGroup(m, p, m.tab);
-      for (int i = 0; i < only.size(); i++) only.get(i).accept(settingsSlot(0, i, only.size()));
+      placeGroup(settingsGroup(m, p, m.tab), 0);
     }
     if (menus.get(p.getUniqueId()) == m) MenuStyle.apply(p, m.inventory);
   }

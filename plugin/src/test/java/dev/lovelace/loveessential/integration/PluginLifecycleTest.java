@@ -892,6 +892,8 @@ class PluginLifecycleTest {
     assertLayout(p);
     // The menu is the customization design: 54 slots, sixteen colours, suffix catalogue, colour reset.
     assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
+    // Three header controls: colour label, the tags display menu and the suffix catalogue.
+    assertTrue(itemNamed(p, "Отображение") >= 2 && itemNamed(p, "Отображение") <= 7);
     server.dispatchCommand(p, "le nick set Princess");
     waitFor(() -> nick.settings(p).name().equals("Princess"));
     server.dispatchCommand(p, "le nick");
