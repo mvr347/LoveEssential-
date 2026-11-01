@@ -111,7 +111,7 @@ class StatisticsConfigTest {
     for (var entry : bindings.getMapList("bindings")) keys.add(String.valueOf(entry.get("key")));
     for (String key :
         List.of(
-            "section-line", "section-current", "section-other", "section-divider", "metric-line",
+            "section-line", "metric-line", "statistics-button",
             "cycle-hint", "cycle-single"))
       assertTrue(keys.contains("profile-menu." + key), key);
     var gui = resource("modules/profile/gui.yml");

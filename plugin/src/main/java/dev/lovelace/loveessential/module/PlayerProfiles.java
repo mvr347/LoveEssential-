@@ -732,18 +732,18 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   private record Card(String id, List<List<Metric>> sections) {}
 
   /**
-   * Slots of the 3x3 block reserved for the category buttons (rows 2-4, columns 5-7), by how many buttons
+   * Slots of the 3x3 block reserved for the category buttons (rows 1-3, columns 5-7, counting from 0), by how many buttons
    * there are. Five, the shipped count, sit like the dots on a die; an admin who kept the six categories
    * of the old layout still gets all six.
    */
   private static final int[][] STAT_SLOTS = {
     {},
-    {23},
-    {22, 24},
-    {13, 23, 33},
-    {13, 15, 31, 33},
-    {13, 15, 23, 31, 33},
-    {13, 15, 22, 24, 31, 33}
+    {24},
+    {23, 25},
+    {14, 24, 34},
+    {14, 16, 32, 34},
+    {14, 16, 24, 32, 34},
+    {14, 16, 23, 25, 32, 34}
   };
 
   private static final int STAT_BUTTONS = STAT_SLOTS.length - 1;
@@ -755,12 +755,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     MenuStyle.frame(m.inventory);
     m.actions.clear();
     m.choices.clear();
-    m.inventory.setItem(
-        0,
-        head(
-            viewer,
-            placeholders.render("profile-menu.heading", viewer, viewer),
-            textLines("profile-menu.heading-lore", viewer, viewer)));
     // Owner's layout for this menu: back and close in the last two slots of the bottom row.
     int last = m.inventory.getSize() - 1;
     button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, viewer));
@@ -772,7 +766,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     }
     if (cards.isEmpty()) {
       m.inventory.setItem(
-          23,
+          24,
           icon(
               "disabled",
               Material.GRAY_DYE,
@@ -807,32 +801,14 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     lore.add(
         lang.renderText(
             lang.text("profile-menu.section-line"),
-            Map.of(
-                "name",
-                plain(lang.render(current.getFirst().group(), values)),
-                "index",
-                String.valueOf(index + 1),
-                "count",
-                String.valueOf(count))));
-    if (count > 1) {
-      var trail = Component.text();
-      for (int i = 0; i < count; i++) {
-        if (i > 0) trail.append(lang.render("profile-menu.section-divider"));
-        String name = plain(lang.render(card.sections().get(i).getFirst().group(), values));
-        trail.append(
-            lang.renderText(
-                lang.text(i == index ? "profile-menu.section-current" : "profile-menu.section-other"),
-                Map.of("name", name)));
-      }
-      lore.add(trail.build());
-    }
-    lore.add(lang.render("gui.separator"));
+            Map.of("name", plain(lang.render(current.getFirst().group(), values)))));
+    lore.add(Component.empty());
     for (var metric : current)
       lore.add(
           lang.renderText(
               lang.text("profile-menu.metric-line"),
               Map.of("label", metric.label(), "value", plain(lang.renderText(metric.value(), values)))));
-    lore.add(lang.render("gui.separator"));
+    lore.add(Component.empty());
     lore.add(lang.render(count > 1 ? "profile-menu.cycle-hint" : "profile-menu.cycle-single"));
 
     m.inventory.setItem(slot, MenuStyle.head(texture, lang.render(title, values), lore));
@@ -1382,7 +1358,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                   m,
                   slot,
                   Material.KNOWLEDGE_BOOK,
-                  "profile-menu.statistics",
+                  "profile-menu.statistics-button",
                   "profile-menu.statistics-lore",
                   target,
                   () -> statistics(viewer, viewer)));

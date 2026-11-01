@@ -801,6 +801,10 @@ bindings:
   path: menus.profile-menu-settings.labels.profile-menu.settings-overview-lore
 - module: profile
   file: gui.yml
+  key: profile-menu.statistics-button
+  path: menus.profile-menu-statistics.labels.profile-menu.statistics-button
+- module: profile
+  file: gui.yml
   key: profile-menu.statistics-lore
   path: menus.profile-menu-statistics.labels.profile-menu.statistics-lore
 - module: profile
@@ -3155,18 +3159,6 @@ bindings:
   file: gui.yml
   key: profile-menu.section-line
   path: menus.profile-menu-statistics.labels.profile-menu.section-line
-- module: profile
-  file: gui.yml
-  key: profile-menu.section-current
-  path: menus.profile-menu-statistics.labels.profile-menu.section-current
-- module: profile
-  file: gui.yml
-  key: profile-menu.section-other
-  path: menus.profile-menu-statistics.labels.profile-menu.section-other
-- module: profile
-  file: gui.yml
-  key: profile-menu.section-divider
-  path: menus.profile-menu-statistics.labels.profile-menu.section-divider
 - module: profile
   file: gui.yml
   key: profile-menu.metric-line
