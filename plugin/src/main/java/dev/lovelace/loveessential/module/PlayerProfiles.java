@@ -1597,11 +1597,13 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         if (state.equals("global") || state.contains("глоб")) linkId = "channel-local";
       }
       if (id.equals("channel")) {
-        draws.add(slot -> drawChannel(m, p, slot));
+        final String configured = controls.getString(path + "link", id);
+        draws.add(slot -> drawChannel(m, p, slot, configured));
         continue;
       }
       if (SWITCHES.contains(id)) {
-        draws.add(slot -> drawSwitch(m, p, slot, id));
+        final String configured = controls.getString(path + "link", id);
+        draws.add(slot -> drawSwitch(m, p, slot, id, configured));
         continue;
       }
       final String link = linkId;
@@ -1635,11 +1637,12 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     };
   }
 
-  private void drawSwitch(Menu m, Player p, int slot, String id) {
+  /** {@code link} is the integration the control is configured to run; it defaults to the control's own id. */
+  private void drawSwitch(Menu m, Player p, int slot, String id, String link) {
     String state = placeholders.papi(p, p, "%" + switchToken(id) + "%").toLowerCase(Locale.ROOT);
     boolean on = state.equals("yes") || state.equals("true");
     if (id.equals("mentions")) on = state.equals("no") || state.equals("false");
-    switchCard(m, slot, id, on, "profile-menu." + id, "disabled", () -> invoke(id, p, p, false), linkAvailable(id, p));
+    switchCard(m, slot, id, on, "profile-menu." + id, "disabled", () -> invoke(link, p, p, false), linkAvailable(link, p));
   }
 
   /**
@@ -1663,7 +1666,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   /** The chat channel has three states, each with its own words (reference: local, global, admin). */
-  private void drawChannel(Menu m, Player p, int slot) {
+  private void drawChannel(Menu m, Player p, int slot, String configured) {
     String state = placeholders.papi(p, p, "%lovechat_channel%").toLowerCase(Locale.ROOT);
     if (state.contains("глоб")) state = "global";
     if (!Set.of("local", "global", "admin").contains(state)) state = "local";
@@ -1674,7 +1677,8 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         vars.put(key, lang.renderText(texts.getString(key, ""), Map.of()));
     var lore = new ArrayList<Component>();
     for (String line : lang.lines("profile-menu.channel-switch-lore")) lore.add(lang.renderText(line, Map.of(), vars));
-    String linkId = state.equals("local") ? "channel" : "channel-local";
+    // The stock pair switches local <-> global; a customised link is used as it is, in both directions.
+    String linkId = !configured.equals("channel") ? configured : state.equals("local") ? "channel" : "channel-local";
     if (!linkAvailable(linkId, p)) lore.add(lang.render("profile-menu.integration-unavailable"));
     m.inventory.setItem(
         slot,
