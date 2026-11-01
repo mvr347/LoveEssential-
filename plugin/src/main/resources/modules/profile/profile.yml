@@ -22,6 +22,8 @@ links:
     plugin: LoveBehavior
     command: behavior
     from-profile: mainmenu
+    # 2026-11-01: команда «Назад» передаётся аргументом, поэтому правка config.yml самого плагина не нужна.
+    back-argument: profile
     permission: lovebehavior.behavior
   reputation:
     plugin: LoveBehavior
@@ -30,6 +32,7 @@ links:
   adaptations:
     plugin: LoveAdaptation
     command: loveadaptation mainmenu
+    back-argument: profile
     permission: loveadaptation.use
   suffixes:
     plugin: LoveSubnames
@@ -72,6 +75,93 @@ links:
     plugin: LoveTrades
     command: trade toggle
     permission: ''
+# Тексты переключателей меню настроек (2026-11-01): слова для шаблонов switch-* в gui.yml. Один набор на
+# переключатель: так «Грамматика | Включено» и «Тихий режим | Выключен» читаются одинаково, а смысл
+# (категория, функция, действие) меняется только здесь, без правки шаблонов. Цвета тегами MiniMessage.
+switch-texts:
+  grammar:
+    name: Грамматика
+    category: Модуль фильтрации чата
+    function: Автоисправление орфографии сообщений.
+    'on': <green>Включено
+    'off': <gray>Выключено
+    status-on: <green>Активно
+    status-off: <gray>Отключено
+    action-off: выключить автоисправление
+    action-on: включить автоисправление
+  silent:
+    name: Тихий режим
+    category: Режим концентрации
+    function: Блокировка всех входящих сообщений чата.
+    'on': <green>Включен
+    'off': <gray>Выключен
+    status-on: <green>Активен
+    status-off: <gray>Отключен
+    action-off: выключить тихий режим
+    action-on: включить тихий режим
+  mentions:
+    name: Упоминания
+    category: Звуковые оповещения
+    function: Звуковой сигнал при теге ника (@ник).
+    'on': <green>Включены
+    'off': <gray>Выключены
+    status-on: <green>Активно
+    status-off: <gray>Отключено
+    action-off: выключить упоминания
+    action-on: включить упоминания
+  clan-invites:
+    name: Приглашения в клан
+    category: Взаимодействие с кланами
+    function: Прием инвайтов и приглашений в кланы.
+    'on': <green>Разрешены
+    'off': <red>Заблокированы
+    status-on: <green>Разрешено
+    status-off: <red>Заблокировано
+    action-off: заблокировать приглашения
+    action-on: разрешить приглашения
+  player-trades:
+    name: Обмен с игроками
+    category: Торговля между игроками
+    function: Прием запросов на безопасный обмен.
+    'on': <green>Разрешен
+    'off': <red>Заблокирован
+    status-on: <green>Разрешено
+    status-off: <red>Заблокировано
+    action-off: заблокировать запросы
+    action-on: разрешить запросы
+  visibility:
+    name: Видимость профиля
+    category: Приватность
+    function: Доступ других игроков к вашему профилю.
+    'on': <green>Открыт
+    'off': <gray>Скрыт
+    status-on: <green>Открыт
+    status-off: <gray>Скрыт
+    action-off: скрыть профиль от других
+    action-on: открыть профиль другим
+  activity:
+    name: Видимость активности
+    category: Приватность
+    function: Время игры, состояние и местоположение в профиле.
+    'on': <green>Открыта
+    'off': <gray>Скрыта
+    status-on: <green>Открыта
+    status-off: <gray>Скрыта
+    action-off: скрыть активность
+    action-on: показать активность
+  channel:
+    local:
+      label: <yellow>Локальный
+      detail: <yellow>Локальный <dark_gray>(100 блоков)
+      action: переключить на Глобальный
+    global:
+      label: <green>Глобальный
+      detail: <green>Глобальный <dark_gray>(весь мир)
+      action: переключить на Локальный
+    admin:
+      label: <red>Администрация
+      detail: <red>Админ-чат
+      action: вернуться в Локальный
 reports:
   # 2026-10-27: 5 минут между жалобами одного автора — достаточно, чтобы нельзя было залить
   # ящик администрации, и не мешает пожаловаться на второго нарушителя после разбирательства.

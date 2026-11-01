@@ -3245,14 +3245,6 @@ bindings:
   path: menus.profile-menu-settings.labels.profile-menu.filter-other
 - module: profile
   file: gui.yml
-  key: profile-menu.filter-divider
-  path: menus.profile-menu-settings.labels.profile-menu.filter-divider
-- module: profile
-  file: gui.yml
-  key: profile-menu.filter-hint
-  path: menus.profile-menu-settings.labels.profile-menu.filter-hint
-- module: profile
-  file: gui.yml
   key: profile-menu.notifications
   path: menus.profile-menu-settings.labels.profile-menu.notifications
 - module: profile
@@ -3359,6 +3351,46 @@ bindings:
   file: gui.yml
   key: nick.reset-color-lore
   path: menus.nick-title.labels.nick.reset-color-lore
+- module: profile
+  file: gui.yml
+  key: profile-menu.switch-title-on
+  path: menus.profile-menu-settings.labels.profile-menu.switch-title-on
+- module: profile
+  file: gui.yml
+  key: profile-menu.switch-title-off
+  path: menus.profile-menu-settings.labels.profile-menu.switch-title-off
+- module: profile
+  file: gui.yml
+  key: profile-menu.switch-lore-on
+  path: menus.profile-menu-settings.labels.profile-menu.switch-lore-on
+- module: profile
+  file: gui.yml
+  key: profile-menu.switch-lore-off
+  path: menus.profile-menu-settings.labels.profile-menu.switch-lore-off
+- module: profile
+  file: gui.yml
+  key: profile-menu.channel-switch-title
+  path: menus.profile-menu-settings.labels.profile-menu.channel-switch-title
+- module: profile
+  file: gui.yml
+  key: profile-menu.channel-switch-lore
+  path: menus.profile-menu-settings.labels.profile-menu.channel-switch-lore
+- module: profile
+  file: gui.yml
+  key: profile-menu.settings-scoreboard-lore
+  path: menus.profile-menu-settings.labels.profile-menu.settings-scoreboard-lore
+- module: profile
+  file: gui.yml
+  key: profile-menu.filter-options
+  path: menus.profile-menu-settings.labels.profile-menu.filter-options
+- module: profile
+  file: gui.yml
+  key: profile-menu.filter-next
+  path: menus.profile-menu-settings.labels.profile-menu.filter-next
+- module: profile
+  file: gui.yml
+  key: profile-menu.filter-previous
+  path: menus.profile-menu-settings.labels.profile-menu.filter-previous
 aliases:
 - module: profile
   file: profile.yml

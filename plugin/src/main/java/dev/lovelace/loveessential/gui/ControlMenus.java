@@ -1889,7 +1889,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
           5,
           click -> {
             p.closeInventory();
-            Bukkit.dispatchCommand(p, "suffixes profile");
+            Bukkit.dispatchCommand(p, "suffixes le nick");
           });
     int index = 0;
     for (var color : NICK_COLORS.entrySet()) {
