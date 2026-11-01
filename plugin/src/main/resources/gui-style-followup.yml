@@ -1,0 +1,29 @@
+# Обновление 02.11.2026: резервная копия .pre-style-20261102.bak; пользовательские значения сохраняются.
+version: 20261102
+updates:
+- file: modules/scoreboard/gui.yml
+  path: messages.sidebar.profile-name
+  before:
+  value: <gold>Профиль <dark_gray>| <white><player>
+  preserve-custom: true
+- file: modules/scoreboard/gui.yml
+  path: messages.sidebar.profile-lore
+  before:
+  value:
+  - <dark_gray>Личное табло
+  - ''
+  - '<dark_gray>▪ <gray>Выбор строк:'
+  - '  <gray>Выбрано: <white><count> <dark_gray>/ <white><max>'
+  preserve-custom: true
+- file: modules/nightskip/nightskip.yml
+  path: max-multiplier
+  before: 30
+  value: 38
+  preserve-custom: true
+- file: modules/profile/gui.yml
+  path: menus.profile-menu-statistics.labels.profile-menu.cycle-hint
+  before: <green>ЛКМ <dark_gray>— <gray>дальше <dark_gray>| <gold>ПКМ <dark_gray>— <gray>назад
+  value:
+  - <green>ЛКМ <dark_gray>— <gray>следующий раздел
+  - <gold>ПКМ <dark_gray>— <gray>предыдущий раздел
+  preserve-custom: true

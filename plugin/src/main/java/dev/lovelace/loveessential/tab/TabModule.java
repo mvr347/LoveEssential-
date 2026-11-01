@@ -317,6 +317,26 @@ public final class TabModule implements Listener, AutoCloseable {
             .runTaskTimer(plugin, this::update, 1, Math.max(2, interval("refresh-ticks", 10)));
   }
 
+  /**
+   * Reapply list name/order after Paper publishes a new player profile. Never changes visibility.
+   */
+  public void refreshProfile(Player player) {
+    MainThread.require();
+    listState.remove(player.getUniqueId());
+    if (!enabled || !player.isOnline() || passive() || !plugin.allows("tab", player)) return;
+    var targets = new HashMap<UUID, Target>();
+    var players = new ArrayList<Player>(Bukkit.getOnlinePlayers());
+    for (var current : players) targets.put(current.getUniqueId(), target(current));
+    var ordered = sorted(players, targets);
+    int index = ordered.indexOf(player);
+    if (index >= 0)
+      listEntry(
+          targets.get(player.getUniqueId()),
+          index,
+          plugin.getConfig().getBoolean("tab.sorting-enabled", true),
+          plugin.getConfig().getBoolean("tab.name-enabled", true));
+  }
+
   /** Placeholder TTLs and output replacements are read from tab.yml once per (re)load. */
   private void applyConfiguration() {
     var tab = section("");

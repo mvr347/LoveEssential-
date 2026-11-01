@@ -624,7 +624,9 @@ menus:
         # Кнопка категории: раздел (имя и номер), цепочка разделов, строка показателя и подсказки листания.
         section-line: '<dark_gray>Раздел: <white><name>'
         metric-line: '<gray><label>: <white><value>'
-        cycle-hint: <green>ЛКМ <dark_gray>— <gray>дальше <dark_gray>| <gold>ПКМ <dark_gray>— <gray>назад
+        cycle-hint:
+        - <green>ЛКМ <dark_gray>— <gray>следующий раздел
+        - <gold>ПКМ <dark_gray>— <gray>предыдущий раздел
         cycle-single: <dark_gray>Один раздел
         # Название кнопки «Статистика» в меню профиля (2026-11-01). Отдельно от заголовка меню: заголовок
         # несёт картинку ItemsAdder, и на кнопке она показывалась жёлтым квадратом или картинкой.

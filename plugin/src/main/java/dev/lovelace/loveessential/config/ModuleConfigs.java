@@ -149,6 +149,9 @@ public final class ModuleConfigs {
         // The multi-home limit was never used: a home is a single point.
         if (id.equals("home")) module.set("default-limit", null);
         var moduleDefaults = resource("modules/" + id + "/" + id + ".yml");
+        if (id.equals("scoreboard")
+            && migrateHuntPass(module, moduleDefaults)
+            && Files.exists(configFile(id))) backup(configFile(id), ".pre-hunter-pass.bak");
         var defaultsTexts = moduleDefaults.getConfigurationSection("texts");
         if (!Files.exists(configFile(id)) && defaultsTexts != null)
           for (String key : defaultsTexts.getKeys(true))
@@ -622,7 +625,22 @@ public final class ModuleConfigs {
     return installed instanceof Map && Objects.equals(installed, shipped);
   }
 
-  /** {@link #fill} that names the file in the error, so the admin knows which one to open. */
+  /** Add the requested ticket once, keeping all existing rows and later administrator removals. */
+  static boolean migrateHuntPass(YamlConfiguration module, YamlConfiguration defaults) {
+    if (module.getInt("catalog-version", 0) >= 1) return false;
+    boolean added = false;
+    var ticket = defaults.getConfigurationSection("placeholders.hunt_pass");
+    if (ticket != null
+        && module.isConfigurationSection("placeholders")
+        && module.isConfigurationSection("categories.hunt")
+        && !module.contains("placeholders.hunt_pass")) {
+      module.createSection("placeholders.hunt_pass", (Map<String, Object>) snapshot(ticket));
+      added = true;
+    }
+    module.set("catalog-version", 1);
+    return added;
+  }
+
   /** Retain custom real durations when replacing legacy game-day units with explicit minutes. */
   static void migrateCalamityClock(YamlConfiguration module) {
     if (!module.contains("omen-minutes") && module.get("omen-days") instanceof Number)
@@ -636,6 +654,7 @@ public final class ModuleConfigs {
     }
   }
 
+  /** {@link #fill} that names the file in the error, so the admin knows which one to open. */
   private static void fillIn(String file, YamlConfiguration target, ConfigurationSection defaults) {
     try {
       fill(target, defaults);

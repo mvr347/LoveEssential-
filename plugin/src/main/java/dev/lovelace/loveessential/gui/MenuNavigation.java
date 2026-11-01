@@ -15,7 +15,7 @@ public final class MenuNavigation implements Listener, AutoCloseable {
   private static final class Route {
     Inventory current;
     final ArrayDeque<Inventory> parents = new ArrayDeque<>();
-    boolean returning, suspended;
+    boolean returning, suspended, external;
   }
 
   private final LoveEssentialPlugin plugin;
@@ -26,6 +26,10 @@ public final class MenuNavigation implements Listener, AutoCloseable {
   public MenuNavigation(LoveEssentialPlugin plugin) {
     this.plugin = plugin;
     plugin.getServer().getPluginManager().registerEvents(this, plugin);
+  }
+
+  public void forget(Player player) {
+    routes.invalidate(player.getUniqueId());
   }
 
   public void command(Player player) {
@@ -44,6 +48,34 @@ public final class MenuNavigation implements Listener, AutoCloseable {
   public void suspend(Player player) {
     var route = routes.getIfPresent(player.getUniqueId());
     if (route != null) route.suspended = true;
+  }
+
+  public void external(Player player) {
+    var route = routes.getIfPresent(player.getUniqueId());
+    if (route != null) {
+      route.external = true;
+      route.suspended = true;
+    }
+  }
+
+  /**
+   * A known foreign menu's Back command returns to the actual saved parent, including its context.
+   */
+  public boolean resumeExternal(Player player, String screen) {
+    var route = routes.getIfPresent(player.getUniqueId());
+    if (route == null || !route.external || screen.isBlank()) return false;
+    Inventory target = null;
+    if (route.current != null
+        && route.current.getHolder() instanceof GuiLayout current
+        && current.guiId().equals(screen)) target = route.current;
+    if (target == null)
+      for (var candidate : route.parents)
+        if (candidate.getHolder() instanceof GuiLayout layout && layout.guiId().equals(screen))
+          target = candidate;
+    if (target == null || !((GuiLayout) target.getHolder()).guiAllowed(player)) return false;
+    if (target != route.current) while (route.parents.removeLast() != target) {}
+    restore(player, route, target);
+    return true;
   }
 
   public void attach(Player player, Inventory inventory) {
@@ -75,6 +107,7 @@ public final class MenuNavigation implements Listener, AutoCloseable {
     route.current = inventory;
     route.returning = false;
     route.suspended = false;
+    route.external = false;
   }
 
   public void special(Player player, Inventory inventory) {
@@ -112,9 +145,22 @@ public final class MenuNavigation implements Listener, AutoCloseable {
       }
       return;
     }
+    restore(player, route, inventory);
+  }
+
+  private void restore(Player player, Route route, Inventory inventory) {
+    var layout = (GuiLayout) inventory.getHolder();
     route.returning = true;
-    layout.guiResume();
-    MenuStyle.open(player, inventory);
+    route.current = inventory;
+    route.external = false;
+    route.suspended = false;
+    try {
+      layout.guiResume();
+      // Resume may rebuild/resize the parent's inventory. Never reopen its stale copy.
+      MenuStyle.open(player, layout.getInventory());
+    } finally {
+      route.returning = false;
+    }
   }
 
   @EventHandler
@@ -125,7 +171,23 @@ public final class MenuNavigation implements Listener, AutoCloseable {
       return;
     }
     var route = routes.getIfPresent(player.getUniqueId());
-    if (route == null || route.current != event.getInventory() || route.suspended) return;
+    if (route == null) return;
+    if (route.external && !(event.getInventory().getHolder() instanceof GuiLayout)) {
+      plugin
+          .getServer()
+          .getScheduler()
+          .runTask(
+              plugin,
+              () -> {
+                if (routes.getIfPresent(player.getUniqueId()) == route
+                    && route.external
+                    && player.getOpenInventory().getTopInventory().getType()
+                        == org.bukkit.event.inventory.InventoryType.CRAFTING)
+                  routes.invalidate(player.getUniqueId());
+              });
+      return;
+    }
+    if (route.current != event.getInventory() || route.suspended) return;
     plugin
         .getServer()
         .getScheduler()

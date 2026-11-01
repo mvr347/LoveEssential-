@@ -61,6 +61,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
   enum Status {
     AVAILABLE,
     MISSING_PLUGIN,
+    HUNTER_PASS,
     REQUIREMENT
   }
 
@@ -268,6 +269,14 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   Status status(Player p, Item item) {
     if (!installed(item)) return Status.MISSING_PLUGIN;
+    if (item.category().equals("hunt") || item.expansions().contains("lovehunt")) {
+      if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")
+          || !PlaceholderAPI.isRegistered("lovehunt")) return Status.MISSING_PLUGIN;
+      // This is an access check, not display text: read live ownership without the text cache
+      // or configurable output replacements. Missing/old expansions fail closed.
+      String owned = PlaceholderAPI.setPlaceholders(p, "%lovehunt_has_pass%");
+      if (owned == null || !owned.strip().equalsIgnoreCase("true")) return Status.HUNTER_PASS;
+    }
     var req = item.requirement();
     if (req != null) {
       String value = placeholders.papi(p, p, req.placeholder()).strip();
@@ -386,6 +395,14 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   private void drawMain(Menu menu, Player p, PersonalState state) {
     var c = catalog;
+    menu.inventory.setItem(
+        0,
+        dev.lovelace.loveessential.module.PlayerProfiles.head(
+            p,
+            lang.render("sidebar.profile-name", Map.of("player", p.getName())),
+            lines(
+                "sidebar.profile-lore",
+                Map.of("count", "" + state.ids().size(), "max", "" + c.max()))));
     if (!c.presets().isEmpty())
       set(menu, 1, presetsButton(), click -> {
         if (click != ClickType.LEFT) return;
@@ -459,16 +476,23 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     for (int i = 0; i < positions.length; i++) {
       var preset = presets.get(i);
       var resolved = resolve(preset, p);
-      set(menu, positions[i], presetButton(preset, resolved, state), click -> {
-        if (click != ClickType.LEFT) return;
-        boolean changed = !resolved.isEmpty() && !PersonalCatalog.sameSet(state.entries(), resolved);
-        if (changed) {
-          state.replaceWith(resolved);
-          saved(p);
-        }
-        feedback(p, changed);
-        if (changed) open(p);
-      });
+      set(
+          menu,
+          positions[i],
+          presetButton(preset, resolved, state),
+          click -> {
+            if (click != ClickType.LEFT) return;
+            // Ownership can change while the preset menu remains open.
+            var current = resolve(preset, p);
+            boolean changed =
+                !current.isEmpty() && !PersonalCatalog.sameSet(state.entries(), current);
+            if (changed) {
+              state.replaceWith(current);
+              saved(p);
+            }
+            feedback(p, changed);
+            if (changed) open(p);
+          });
     }
   }
 
@@ -484,23 +508,34 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     for (String id : categoryIds)
       labels.add(id.isEmpty() ? lang.text("sidebar.filter-all") : plain(c.categories().get(id).name()));
     int filterIndex = categoryIds.indexOf(view.filter);
-    set(menu, 1, cycleButton("filter", Material.HOPPER, labels, filterIndex), click -> {
-      if (!simple(click)) return;
-      view.filter = categoryIds.get(CatalogView.step(filterIndex, categoryIds.size(), click == ClickType.LEFT));
-      menu.page = 0;
-      feedback(p, true);
-      refresh(menu);
-    });
+    set(
+        menu,
+        1,
+        cycleButton(
+            "filter", labels, filterIndex, view.filter.equals("hunt") ? "hunt-filter" : "filter"),
+        click -> {
+          if (!simple(click)) return;
+          view.filter =
+              categoryIds.get(
+                  CatalogView.step(filterIndex, categoryIds.size(), click == ClickType.LEFT));
+          menu.page = 0;
+          feedback(p, true);
+          refresh(menu);
+        });
     var sorts = CatalogView.Sort.values();
     var sortLabels = new ArrayList<String>();
     for (var sort : sorts) sortLabels.add(lang.text("sidebar.sort-" + sort.name().toLowerCase(Locale.ROOT)));
-    set(menu, 2, cycleButton("sort", Material.COMPARATOR, sortLabels, view.sort.ordinal()), click -> {
-      if (!simple(click)) return;
-      view.sort = CatalogView.step(view.sort, sorts, click == ClickType.LEFT);
-      menu.page = 0;
-      feedback(p, true);
-      refresh(menu);
-    });
+    set(
+        menu,
+        2,
+        cycleButton("sort", sortLabels, view.sort.ordinal(), "sort"),
+        click -> {
+          if (!simple(click)) return;
+          view.sort = CatalogView.step(view.sort, sorts, click == ClickType.LEFT);
+          menu.page = 0;
+          feedback(p, true);
+          refresh(menu);
+        });
 
     var categoryOrder = new ArrayList<>(c.categories().keySet());
     var rows = new ArrayList<CatalogView.Row>();
@@ -520,20 +555,25 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     for (int i = range[0]; i < range[1]; i++) {
       Item item = c.item(sorted.get(i));
       if (item == null) continue;
-      set(menu, PersonalLayout.FLAT_SLOTS[i - range[0]], catalogItem(p, item, state, menu.target), click -> {
-        boolean changed;
-        if (click == ClickType.SHIFT_LEFT) changed = cycle(state, item);
-        else if (click == ClickType.LEFT) {
-          changed = choose(p, state, item, menu.target);
-          if (changed) {
-            feedback(p, true);
-            saved(p);
-            open(p);
-            return;
-          }
-        } else changed = false;
-        changed(menu, p, changed);
-      });
+      set(
+          menu,
+          PersonalLayout.FLAT_SLOTS[i - range[0]],
+          catalogItem(p, item, state, menu.target),
+          click -> {
+            boolean changed;
+            if (click == ClickType.SHIFT_LEFT)
+              changed = status(p, item) == Status.AVAILABLE && cycle(state, item);
+            else if (click == ClickType.LEFT) {
+              changed = choose(p, state, item, menu.target);
+              if (changed) {
+                feedback(p, true);
+                saved(p);
+                open(p);
+                return;
+              }
+            } else changed = false;
+            changed(menu, p, changed);
+          });
     }
     if (menu.page > 0)
       set(
@@ -691,6 +731,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     lore.add(Component.empty());
     lore.add(line("sidebar.unavailable", Map.of()));
     if (status == Status.MISSING_PLUGIN) lore.add(line("sidebar.reason-plugin", Map.of()));
+    else if (status == Status.HUNTER_PASS) lore.add(line("sidebar.reason-hunter-pass", Map.of()));
     else if (item.requirement() != null && !item.requirement().reason().isBlank())
       lore.add(legacy(item.requirement().reason()));
     return guiHead("placeholder-locked", Component.text(plain(item.name()), NamedTextColor.DARK_GRAY), lore);
@@ -704,8 +745,11 @@ final class PersonalSidebar implements Listener, AutoCloseable {
         lines("sidebar.presets-lore", Map.of("count", Integer.toString(catalog.presets().size()))));
   }
 
-  /** A filter or sort switch: the current option rides in the name, all options are listed in the lore. */
-  private ItemStack cycleButton(String kind, Material icon, List<String> labels, int current) {
+  /**
+   * A filter or sort switch: the current option rides in the name, all options are listed in the
+   * lore.
+   */
+  private ItemStack cycleButton(String kind, List<String> labels, int current, String texture) {
     var lore = new ArrayList<Component>();
     lore.add(line("sidebar.cycle-subtitle", Map.of()));
     lore.add(Component.empty());
@@ -716,8 +760,11 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     lore.add(line("sidebar.cycle-next", Map.of()));
     lore.add(line("sidebar.cycle-previous", Map.of()));
     return guiHead(
-        kind,
-        line("sidebar.cycle-name", Map.of("name", lang.text("sidebar." + kind + "-title"), "current", labels.get(current))),
+        texture,
+        line(
+            "sidebar.cycle-name",
+            Map.of(
+                "name", lang.text("sidebar." + kind + "-title"), "current", labels.get(current))),
         lore);
   }
 
@@ -760,10 +807,17 @@ final class PersonalSidebar implements Listener, AutoCloseable {
       lore.add(line("sidebar.reason-full", Map.of("max", Integer.toString(catalog.max()))));
     }
     lore.addAll(actions);
+    String texture = active ? "placeholder-selected" : full ? "placeholder-locked" : "placeholder";
+    if (item.id().equals("hunt_pass") && !full)
+      texture =
+          placeholders.papi(p, p, "%lovehunt_has_pass%").equalsIgnoreCase("true")
+              ? "hunt-ticket-owned"
+              : "hunt-ticket";
     return guiHead(
-        active ? "placeholder-selected" : full ? "placeholder-locked" : "placeholder",
+        texture,
         Component.text(
-            plain(item.name()), active ? NamedTextColor.GREEN : full ? NamedTextColor.DARK_GRAY : NamedTextColor.GRAY),
+            plain(item.name()),
+            active ? NamedTextColor.GREEN : full ? NamedTextColor.DARK_GRAY : NamedTextColor.GRAY),
         lore);
   }
 
@@ -778,6 +832,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     if (status != Status.AVAILABLE) {
       lore.add(line("sidebar.unavailable", Map.of()));
       if (status == Status.MISSING_PLUGIN) lore.add(line("sidebar.reason-plugin", Map.of()));
+      else if (status == Status.HUNTER_PASS) lore.add(line("sidebar.reason-hunter-pass", Map.of()));
       else if (item.requirement() != null) lore.add(legacy(item.requirement().reason()));
     }
     lore.add(line("sidebar.slot-catalog", Map.of()));

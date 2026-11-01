@@ -62,6 +62,23 @@ public class LoveEssentialPlugin extends JavaPlugin {
     if (mechanics != null) mechanics.pulse(player);
   }
 
+  /** A texture change can reset the client's list entry; restore our formatting immediately. */
+  public void skinChanged(org.bukkit.entity.Player player) {
+    MainThread.require();
+    mechanicsPulse(player);
+    if (profiles != null) profiles.skinChanged(player);
+    if (tab != null) {
+      tab.refreshProfile(player);
+      getServer()
+          .getScheduler()
+          .runTask(
+              this,
+              () -> {
+                if (player.isOnline() && tab != null) tab.refreshProfile(player);
+              });
+    }
+  }
+
   private final dev.lovelace.loveessential.concurrent.VirtualIoExecutor io =
       new dev.lovelace.loveessential.concurrent.VirtualIoExecutor("love-io-", 8, 256);
   private final Object startupResources = new Object();

@@ -104,7 +104,6 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       String cmd = command.getName();
-      if (sender instanceof Player actor) dev.lovelace.loveessential.gui.MenuStyle.command(actor);
       boolean inputCommand =
           cmd.equals("loveessential")
               && args.length > 0
@@ -114,6 +113,24 @@ public final class Commands implements CommandExecutor, TabCompleter {
         extensions.ui.cancel(p);
         menus.cancelInput(p);
         wizard.cancelInput(p);
+      }
+      if (sender instanceof Player actor) {
+        String screen =
+            args.length == 0 && cmd.equals("profile")
+                ? "profile-menu.title"
+                : args.length == 0 && cmd.equals("nick")
+                    ? "nick.title"
+                    : cmd.equals("loveessential")
+                            && args.length == 1
+                            && args[0].equalsIgnoreCase("profile")
+                        ? "profile-menu.title"
+                        : cmd.equals("loveessential")
+                                && args.length == 1
+                                && args[0].equalsIgnoreCase("nick")
+                            ? "nick.title"
+                            : "";
+        if (dev.lovelace.loveessential.gui.MenuStyle.resumeExternal(actor, screen)) return true;
+        dev.lovelace.loveessential.gui.MenuStyle.command(actor);
       }
       if (cmd.equals("revive")) {
         revive.command(sender, args);

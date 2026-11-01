@@ -273,4 +273,19 @@ class TabIntegrationTest {
         new dev.lovelace.loveessential.tab.PlaceholderRefresh(200, java.util.Map.of()),
         java.util.Map.of());
   }
+
+  @Test
+  void changingTheSkinImmediatelyRestoresTheTabEntryWithoutChangingVisibility() throws Exception {
+    var alice = player("Alice", "world");
+    var bob = player("Bob", "world");
+    settle(20);
+    var tab = internal("tab", TabModule.class);
+    var expected = alice.playerListName();
+    bob.hidePlayer(plugin, alice);
+    alice.playerListName(net.kyori.adventure.text.Component.text("reset-by-profile"));
+    tab.refreshProfile(alice);
+    assertEquals(expected, alice.playerListName());
+    assertFalse(bob.canSee(alice));
+    assertEquals(alice.getUniqueId(), alice.getPlayerProfile().getId());
+  }
 }

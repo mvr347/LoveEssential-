@@ -19,10 +19,19 @@ class PersonalScoreboardTest {
   ServerMock server;
   LoveEssentialPlugin plugin;
   PersonalSidebar personal;
+  me.clip.placeholderapi.PlaceholderAPIPlugin papi;
+  final java.util.Map<java.util.UUID, String> passes = new java.util.HashMap<>();
 
   @BeforeEach
   void setup() throws Exception {
-    server = MockBukkit.mock();
+    server =
+        MockBukkit.mock(
+            new ServerMock() {
+              @Override
+              public String getBukkitVersion() {
+                return "26.2-R0.1-SNAPSHOT";
+              }
+            });
     server.addSimpleWorld("world");
     MockBukkit.createMockPlugin("LoveCore");
     plugin = MockBukkit.load(LoveEssentialPlugin.class);
@@ -56,7 +65,15 @@ class PersonalScoreboardTest {
   }
 
   @AfterEach
-  void close() {
+  void close() throws Exception {
+    if (papi != null) {
+      var enabled = org.bukkit.plugin.java.JavaPlugin.class.getDeclaredField("isEnabled");
+      enabled.setAccessible(true);
+      enabled.setBoolean(papi, false);
+      var instance = me.clip.placeholderapi.PlaceholderAPIPlugin.class.getDeclaredField("instance");
+      instance.setAccessible(true);
+      instance.set(null, null);
+    }
     MockBukkit.unmock();
   }
 
@@ -299,5 +316,208 @@ class PersonalScoreboardTest {
     tick(2);
     var top = a.getOpenInventory().getTopInventory();
     assertTrue(top == null || !(top.getHolder() instanceof GuiLayout), "no menu without a catalog");
+  }
+
+  /** Use the real PAPI parser and registry without its network/metrics startup. */
+  void enableHunt() throws Exception {
+    MockBukkit.createMockPlugin("PlaceholderAPI");
+    var unsafeType = Class.forName("sun.misc.Unsafe");
+    var unsafe = unsafeType.getDeclaredField("theUnsafe");
+    unsafe.setAccessible(true);
+    papi =
+        (me.clip.placeholderapi.PlaceholderAPIPlugin)
+            unsafeType
+                .getMethod("allocateInstance", Class.class)
+                .invoke(unsafe.get(null), me.clip.placeholderapi.PlaceholderAPIPlugin.class);
+    for (var entry :
+        java.util.Map.of(
+                "server",
+                server,
+                "dataFolder",
+                new java.io.File(plugin.getDataFolder(), "papi-fixture"),
+                "description",
+                new org.bukkit.plugin.PluginDescriptionFile(
+                    "PlaceholderAPI",
+                    "2.11.6",
+                    me.clip.placeholderapi.PlaceholderAPIPlugin.class.getName()),
+                "logger",
+                java.util.logging.Logger.getLogger("PAPI-sidebar-fixture"))
+            .entrySet()) {
+      var member = org.bukkit.plugin.java.JavaPlugin.class.getDeclaredField(entry.getKey());
+      member.setAccessible(true);
+      member.set(papi, entry.getValue());
+    }
+    var manager = new me.clip.placeholderapi.expansion.manager.LocalExpansionManager(papi);
+    var managerField = papi.getClass().getDeclaredField("localExpansionManager");
+    managerField.setAccessible(true);
+    managerField.set(papi, manager);
+    var field = manager.getClass().getDeclaredField("expansions");
+    field.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    var expansions =
+        (java.util.Map<String, me.clip.placeholderapi.expansion.PlaceholderExpansion>)
+            field.get(manager);
+    expansions.put(
+        "lovehunt",
+        new me.clip.placeholderapi.expansion.PlaceholderExpansion() {
+          public String getIdentifier() {
+            return "lovehunt";
+          }
+
+          public String getAuthor() {
+            return "test";
+          }
+
+          public String getVersion() {
+            return "1";
+          }
+
+          @Override
+          public String onPlaceholderRequest(org.bukkit.entity.Player p, String params) {
+            return params.equals("has_pass")
+                ? passes.getOrDefault(p.getUniqueId(), "false")
+                : "Следопыт";
+          }
+        });
+    var enabled = org.bukkit.plugin.java.JavaPlugin.class.getDeclaredField("isEnabled");
+    enabled.setAccessible(true);
+    enabled.setBoolean(papi, true);
+    var instance = papi.getClass().getDeclaredField("instance");
+    instance.setAccessible(true);
+    instance.set(null, papi);
+  }
+
+  void huntLines() {
+    plugin.getConfig().set("scoreboard.categories.hunt.display-name", "&2Охота");
+    line("hunter", "&2Ранг охотника", "&7Ранг: %lovehunt_rank%", "hunt");
+    line("custom_hunt", "&2Заказы охотника", "&7Заказы: %lovehunt_completed%", "general");
+    line("hunt_builtin", "&2Имя охотника", "&7Охотник: %player%", "hunt");
+    personal.reload();
+  }
+
+  @Test
+  void huntRequiresAPurchasedPassForEveryPickIncludingCustomRowsAndOperators() throws Exception {
+    huntLines();
+    var a = join("Alice");
+    assertEquals(
+        PersonalSidebar.Status.MISSING_PLUGIN,
+        personal.status(a, personal.catalog().item("hunter")));
+    enableHunt();
+    a.setOp(true);
+    for (String response : List.of("false", "", "%lovehunt_has_pass%", "Нет требуется")) {
+      passes.put(a.getUniqueId(), response);
+      for (String id : List.of("hunter", "custom_hunt", "hunt_builtin"))
+        assertEquals(
+            PersonalSidebar.Status.HUNTER_PASS, personal.status(a, personal.catalog().item(id)));
+    }
+    openMenu(a);
+    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.LEFT);
+    var top = a.getOpenInventory().getTopInventory();
+    int row = slotNamed(top, 9, 45, "Ранг охотника");
+    assertTrue(row >= 0);
+    assertTrue(
+        top.getItem(row).getItemMeta().lore().stream()
+            .map(PlainTextComponentSerializer.plainText()::serialize)
+            .anyMatch(text -> text.contains("купленный билет охотника")));
+    click(a, row, ClickType.LEFT);
+    assertFalse(personal.state(a.getUniqueId()).has("hunter"));
+    passes.put(a.getUniqueId(), "true");
+    click(a, row, ClickType.LEFT);
+    assertTrue(personal.state(a.getUniqueId()).has("hunter"));
+    assertEquals(
+        PersonalSidebar.Status.AVAILABLE,
+        personal.status(a, personal.catalog().item("custom_hunt")));
+    var b = join("Bob");
+    assertEquals(
+        PersonalSidebar.Status.HUNTER_PASS, personal.status(b, personal.catalog().item("hunter")));
+  }
+
+  @Test
+  void defaultsAndAnAlreadyOpenPresetCannotBypassLivePassOwnership() throws Exception {
+    enableHunt();
+    huntLines();
+    var config = plugin.getConfig();
+    config.set("scoreboard.presets.hunting.name", "&2Охотничья");
+    config.set("scoreboard.presets.hunting.placeholders", List.of("name", "hunter", "custom_hunt"));
+    config.set("scoreboard.default-preset", "hunting");
+    personal.reload();
+    var a = join("Alice");
+    assertEquals(List.of("name"), personal.state(a.getUniqueId()).ids());
+    passes.put(a.getUniqueId(), "true");
+    personal.state(a.getUniqueId()).replaceWith(List.of(new PersonalState.Entry("world", 0)));
+    openMenu(a);
+    click(a, slotNamed(a.getOpenInventory().getTopInventory(), 2, 8, "Раскладки"), ClickType.LEFT);
+    var top = a.getOpenInventory().getTopInventory();
+    int preset = slotNamed(top, 9, top.getSize() - 9, "Охотничья");
+    assertTrue(preset >= 0);
+    passes.put(a.getUniqueId(), "false");
+    click(a, preset, ClickType.LEFT);
+    assertEquals(List.of("name"), personal.state(a.getUniqueId()).ids());
+  }
+
+  @Test
+  void losingThePassHidesHuntRowsWithoutDeletingTheSavedChoice() throws Exception {
+    enableHunt();
+    huntLines();
+    var a = join("Alice");
+    passes.put(a.getUniqueId(), "true");
+    personal
+        .state(a.getUniqueId())
+        .replaceWith(
+            List.of(
+                new PersonalState.Entry("name", 0), new PersonalState.Entry("hunt_builtin", 0)));
+    assertTrue(
+        personal.content(a).orElseThrow().lines().stream()
+            .map(PlainTextComponentSerializer.plainText()::serialize)
+            .anyMatch(text -> text.contains("Охотник:")));
+    passes.put(a.getUniqueId(), "false");
+    assertTrue(
+        personal.content(a).orElseThrow().lines().stream()
+            .map(PlainTextComponentSerializer.plainText()::serialize)
+            .noneMatch(text -> text.contains("Охотник:")));
+    assertTrue(personal.state(a.getUniqueId()).has("hunt_builtin"));
+    passes.put(a.getUniqueId(), "true");
+    assertTrue(
+        personal.content(a).orElseThrow().lines().stream()
+            .map(PlainTextComponentSerializer.plainText()::serialize)
+            .anyMatch(text -> text.contains("Охотник:")));
+  }
+
+  @Test
+  void returningFromCatalogAndPresetsKeepsTheOriginalProfileSettingsParent() throws Exception {
+    var a = join("Alice");
+    var f = LoveEssentialPlugin.class.getDeclaredField("profiles");
+    f.setAccessible(true);
+    var profiles = (dev.lovelace.loveessential.module.PlayerProfiles) f.get(plugin);
+    waitFor(() -> profiles.privacy().loaded(a.getUniqueId()));
+    server.dispatchCommand(a, "profile");
+    tick(2);
+    var root = a.getOpenInventory().getTopInventory();
+    click(a, slotNamed(root, 9, root.getSize() - 9, "Настройки"), ClickType.LEFT);
+    var settings = a.getOpenInventory().getTopInventory();
+    click(a, slotNamed(settings, 18, settings.getSize() - 9, "Боковая панель"), ClickType.LEFT);
+    assertEquals("sidebar.menu-title", idOf(a.getOpenInventory().getTopInventory()));
+    for (int cycle = 0; cycle < 3; cycle++) {
+      click(a, PersonalLayout.CARD_SLOTS[2], ClickType.LEFT);
+      var cat = a.getOpenInventory().getTopInventory();
+      assertEquals("sidebar.catalog-title", idOf(cat));
+      click(a, cat.getSize() - 2, ClickType.LEFT);
+      var board = a.getOpenInventory().getTopInventory();
+      assertEquals("sidebar.menu-title", idOf(board));
+      assertTrue(name(board.getItem(board.getSize() - 2)).contains("Назад"));
+    }
+    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.LEFT);
+    var selected = a.getOpenInventory().getTopInventory();
+    click(a, slotNamed(selected, 18, 45, "Онлайн"), ClickType.LEFT);
+    assertTrue(name(a.getOpenInventory().getTopInventory().getItem(52)).contains("Назад"));
+    click(a, slotNamed(a.getOpenInventory().getTopInventory(), 2, 8, "Раскладки"), ClickType.LEFT);
+    var presets = a.getOpenInventory().getTopInventory();
+    click(a, presets.getSize() - 2, ClickType.LEFT);
+    var board = a.getOpenInventory().getTopInventory();
+    assertTrue(name(board.getItem(board.getSize() - 2)).contains("Назад"));
+    click(a, board.getSize() - 2, ClickType.LEFT);
+    assertSame(settings, a.getOpenInventory().getTopInventory());
+    click(a, settings.getSize() - 2, ClickType.LEFT);
+    assertSame(root, a.getOpenInventory().getTopInventory());
   }
 }
