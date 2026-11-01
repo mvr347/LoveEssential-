@@ -339,7 +339,7 @@ class ProfilePrivacyTest {
     // One button per category; the numbers are in the lore of its current section.
     int world = named(target, "Мир"), combat = named(target, "Сражения");
     String general = slotLore(target, world);
-    assertTrue(general.contains("Раздел: Общее (1/4)"), general);
+    assertTrue(general.contains("Раздел: Общее"), general);
     assertTrue(general.contains("В игре: 1 ч 0 мин"), general);
     String fights = slotLore(target, combat);
     assertTrue(fights.contains("Убийств игроков: 9"), fights);
@@ -348,7 +348,7 @@ class ProfilePrivacyTest {
     click(target, world);
     click(target, world);
     String building = slotLore(target, world);
-    assertTrue(building.contains("Раздел: Строительство (3/4)"), building);
+    assertTrue(building.contains("Раздел: Строительство"), building);
     assertTrue(building.contains("Блоков добыто: 17"), building);
     // Back is the second to last slot of the menu.
     click(target, 52);
@@ -368,35 +368,36 @@ class ProfilePrivacyTest {
     // Five buttons sit like the dots on a die in the 3x3 block; no head, back and close in the last row.
     assertEquals(
         List.of("Мир", "Кланы", "Активности", "Сражения", "Торговля"),
-        List.of(13, 15, 23, 31, 33).stream()
+        List.of(14, 16, 24, 32, 34).stream()
             .map(slot -> title(p, slot))
             .toList());
     // Opened straight from the command the menu is a root: no Back (it appears when opened from the profile).
     assertNull(inventory.getItem(52));
     assertTrue(title(p, 53).contains("Закрыть"), title(p, 53));
-    for (int slot : List.of(22, 24, 32)) assertNull(inventory.getItem(slot), "slot " + slot);
+    for (int slot : List.of(15, 23, 25, 33)) assertNull(inventory.getItem(slot), "slot " + slot);
     // Frameless: the drawn background shows, so there is no glass anywhere.
     for (int slot = 0; slot < inventory.getSize(); slot++)
       assertTrue(
           inventory.getItem(slot) == null || !inventory.getItem(slot).getType().name().endsWith("GLASS_PANE"),
           "glass at " + slot);
 
-    String first = slotLore(p, 13);
-    assertTrue(first.contains("Раздел: Общее (1/4)"), first);
-    assertTrue(first.contains("Общее › Передвижение › Строительство › Выживание"), first);
-    click(p, 13);
-    assertTrue(slotLore(p, 13).contains("Раздел: Передвижение (2/4)"), slotLore(p, 13));
-    click(p, 13);
-    click(p, 13);
-    assertTrue(slotLore(p, 13).contains("Раздел: Выживание (4/4)"), slotLore(p, 13));
-    click(p, 13);
-    assertEquals(first, slotLore(p, 13), "after the last section comes the first");
-    click(p, 13, ClickType.RIGHT);
-    assertTrue(slotLore(p, 13).contains("Раздел: Выживание (4/4)"), slotLore(p, 13));
+    String first = slotLore(p, 14);
+    assertTrue(first.contains("Раздел: Общее"), first);
+    assertFalse(first.contains("›"), first);
+    assertFalse(first.contains("(1/"), first);
+    click(p, 14);
+    assertTrue(slotLore(p, 14).contains("Раздел: Передвижение"), slotLore(p, 14));
+    click(p, 14);
+    click(p, 14);
+    assertTrue(slotLore(p, 14).contains("Раздел: Выживание"), slotLore(p, 14));
+    click(p, 14);
+    assertEquals(first, slotLore(p, 14), "after the last section comes the first");
+    click(p, 14, ClickType.RIGHT);
+    assertTrue(slotLore(p, 14).contains("Раздел: Выживание"), slotLore(p, 14));
     // Buttons leaf independently of each other.
-    assertTrue(slotLore(p, 33).contains("Раздел: Общее (1/3)"), slotLore(p, 33));
+    assertTrue(slotLore(p, 34).contains("Раздел: Общее"), slotLore(p, 34));
     command(p, "profile stats");
-    assertEquals(first, slotLore(p, 13), "closing the menu forgets the position");
+    assertEquals(first, slotLore(p, 14), "closing the menu forgets the position");
   }
 
   @Test
@@ -407,7 +408,7 @@ class ProfilePrivacyTest {
     assertFalse(titles.contains("Кланы"), titles);
     assertFalse(titles.contains("Активности"), titles);
     // Fights and trading keep the sections that need no other plugin.
-    assertTrue(slotLore(p, named(p, "Сражения")).contains("Раздел: Общее (1/1)"));
+    assertTrue(slotLore(p, named(p, "Сражения")).contains("Раздел: Общее"));
     assertFalse(slotLore(p, named(p, "Сражения")).contains("Дуэли"));
   }
 

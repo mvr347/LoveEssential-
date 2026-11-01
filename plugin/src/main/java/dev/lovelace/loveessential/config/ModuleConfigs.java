@@ -212,6 +212,11 @@ public final class ModuleConfigs {
    */
   private static final Map<String, Map<String, List<String>>> RETIRED_TEXTS =
       Map.of(
+          // 2026-11-01: the statistics button shows the section name only, without its number in the circle.
+          "profile",
+          Map.of(
+              "menus.profile-menu-statistics.labels.profile-menu.section-line",
+              List.of("<dark_gray>Раздел: <white><name> <dark_gray>(<index>/<count>)")),
           // /display now changes the owner's signature for everyone, including themselves.
           "display",
           Map.of(
