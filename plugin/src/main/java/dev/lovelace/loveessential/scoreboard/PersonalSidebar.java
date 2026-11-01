@@ -484,23 +484,34 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     for (String id : categoryIds)
       labels.add(id.isEmpty() ? lang.text("sidebar.filter-all") : plain(c.categories().get(id).name()));
     int filterIndex = categoryIds.indexOf(view.filter);
-    set(menu, 1, cycleButton("filter", Material.HOPPER, labels, filterIndex), click -> {
-      if (!simple(click)) return;
-      view.filter = categoryIds.get(CatalogView.step(filterIndex, categoryIds.size(), click == ClickType.LEFT));
-      menu.page = 0;
-      feedback(p, true);
-      refresh(menu);
-    });
+    set(
+        menu,
+        1,
+        cycleButton(
+            "filter", labels, filterIndex, view.filter.equals("hunt") ? "hunt-filter" : "filter"),
+        click -> {
+          if (!simple(click)) return;
+          view.filter =
+              categoryIds.get(
+                  CatalogView.step(filterIndex, categoryIds.size(), click == ClickType.LEFT));
+          menu.page = 0;
+          feedback(p, true);
+          refresh(menu);
+        });
     var sorts = CatalogView.Sort.values();
     var sortLabels = new ArrayList<String>();
     for (var sort : sorts) sortLabels.add(lang.text("sidebar.sort-" + sort.name().toLowerCase(Locale.ROOT)));
-    set(menu, 2, cycleButton("sort", Material.COMPARATOR, sortLabels, view.sort.ordinal()), click -> {
-      if (!simple(click)) return;
-      view.sort = CatalogView.step(view.sort, sorts, click == ClickType.LEFT);
-      menu.page = 0;
-      feedback(p, true);
-      refresh(menu);
-    });
+    set(
+        menu,
+        2,
+        cycleButton("sort", sortLabels, view.sort.ordinal(), "sort"),
+        click -> {
+          if (!simple(click)) return;
+          view.sort = CatalogView.step(view.sort, sorts, click == ClickType.LEFT);
+          menu.page = 0;
+          feedback(p, true);
+          refresh(menu);
+        });
 
     var categoryOrder = new ArrayList<>(c.categories().keySet());
     var rows = new ArrayList<CatalogView.Row>();
@@ -704,8 +715,11 @@ final class PersonalSidebar implements Listener, AutoCloseable {
         lines("sidebar.presets-lore", Map.of("count", Integer.toString(catalog.presets().size()))));
   }
 
-  /** A filter or sort switch: the current option rides in the name, all options are listed in the lore. */
-  private ItemStack cycleButton(String kind, Material icon, List<String> labels, int current) {
+  /**
+   * A filter or sort switch: the current option rides in the name, all options are listed in the
+   * lore.
+   */
+  private ItemStack cycleButton(String kind, List<String> labels, int current, String texture) {
     var lore = new ArrayList<Component>();
     lore.add(line("sidebar.cycle-subtitle", Map.of()));
     lore.add(Component.empty());
@@ -716,8 +730,11 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     lore.add(line("sidebar.cycle-next", Map.of()));
     lore.add(line("sidebar.cycle-previous", Map.of()));
     return guiHead(
-        kind,
-        line("sidebar.cycle-name", Map.of("name", lang.text("sidebar." + kind + "-title"), "current", labels.get(current))),
+        texture,
+        line(
+            "sidebar.cycle-name",
+            Map.of(
+                "name", lang.text("sidebar." + kind + "-title"), "current", labels.get(current))),
         lore);
   }
 
@@ -760,10 +777,17 @@ final class PersonalSidebar implements Listener, AutoCloseable {
       lore.add(line("sidebar.reason-full", Map.of("max", Integer.toString(catalog.max()))));
     }
     lore.addAll(actions);
+    String texture = active ? "placeholder-selected" : full ? "placeholder-locked" : "placeholder";
+    if (item.id().equals("hunt_pass") && !full)
+      texture =
+          placeholders.papi(p, p, "%lovehunt_has_pass%").equalsIgnoreCase("true")
+              ? "hunt-ticket-owned"
+              : "hunt-ticket";
     return guiHead(
-        active ? "placeholder-selected" : full ? "placeholder-locked" : "placeholder",
+        texture,
         Component.text(
-            plain(item.name()), active ? NamedTextColor.GREEN : full ? NamedTextColor.DARK_GRAY : NamedTextColor.GRAY),
+            plain(item.name()),
+            active ? NamedTextColor.GREEN : full ? NamedTextColor.DARK_GRAY : NamedTextColor.GRAY),
         lore);
   }
 

@@ -1,4 +1,7 @@
 menus:
+  portal-ui-particle-catalog:
+    size: 54
+    title: <gold>Частицы портала
   portal-ui-actions:
     size: 54
     title: <gold>Действия портала
@@ -82,3 +85,270 @@ navigation:
     texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+
+messages:
+  portal-guide:
+    need-corner: <red>Сначала выберите блок этой точки.
+    heading: <gold>Шаг <step> из <total> <dark_gray>| <yellow><name>
+    steps:
+      name: Название
+      first: Первый угол
+      second: Второй угол
+      action: Действие портала
+      effects: Частицы и оформление
+      access: Условия входа
+      review: Проверка и публикация
+    context: <gold>Мастер портала
+    start: <gold>Пошаговый мастер
+    start-help: <green>ЛКМ <dark_gray>— <gray>настроить портал кнопками в чате
+    help:
+      name: <gray>Дайте порталу понятное название. Технический ключ назначается автоматически.
+      first: '<gray>Выберите первый угол области: встаньте на нужный блок или выберите его ПКМ.'
+      second: <gray>Выберите противоположный угол в том же мире. Вся область между блоками станет порталом.
+      action: <gray>Назначьте телепортацию, команды или оба варианта. Команды выполняются по очереди.
+      effects: <gray>Выберите эффект и проверьте его в мире. У многих частиц цвет фиксирован.
+      access: <gray>Настройте ограничения и задержки. Значения по умолчанию можно оставить.
+      review: <gray>Черновик уже сохранён. Портал начнёт работать только после публикации.
+    current-name: '<gray>Название: <white><value>'
+    appearance: '<gray>Эффект: <white><particle> <dark_gray>| <gray>Цвет: <white><color> <dark_gray>| <gray>Шаг: <white><spacing>
+      <dark_gray>| <gray><fill>'
+    timing: '<gray>Повторный вход: <white><cooldown> с <dark_gray>| <gray>Активация: <white><warmup> с'
+    summary: '<gray>Название: <white><name> <dark_gray>| <gray>Объём: <white><volume> блоков <dark_gray>| <gray>Действий:
+      <white><actions> <dark_gray>| <white><particle>'
+    filled: Заполнение
+    outline: Контур
+    stale: <gray>Эта кнопка устарела. <yellow>[Продолжить мастер]
+    paused: '<gray>Черновик сохранён. Продолжить: <click:run_command:''/loveessential:loveessential portal wizard''><yellow>[Мастер
+      портала]</yellow></click>'
+    bad-color: '<red>Укажите шесть цифр HEX, например B68CFF или #B68CFF.'
+    inputs:
+      name: <gray>Напишите название портала в чат. Поддерживается MiniMessage; до 128 символов.
+      color: '<gray>Введите цвет HEX из шести символов. Например: #B68CFF. Частицы с фиксированным цветом его не используют.'
+      spacing: <gray>Введите расстояние между частицами от 0.2 до 4 блоков. Чем меньше шаг, тем плотнее эффект.
+      command-player: <gray>Напишите команду игрока в чат — можно с /. Она сохранится для портала и сейчас не выполнится.
+        Права игрока сохраняются.
+      command-console: <gray>Напишите команду консоли в чат — можно с /. Она должна быть разрешена в allowed-console-commands;
+        сейчас не выполнится.
+      search: '<gray>Введите часть русского названия или кода частицы. Например: искра или flame.'
+    examples:
+      name: <gold>Дорога к приключениям
+      color: '#B68CFF'
+      spacing: '0.5'
+      command-player: /le rtp world
+      command-console: spawn {player}
+      search: искра
+    buttons:
+      name: <green>[Ввести название]
+      next: <green>[Далее]
+      here: <green>[Установить здесь]
+      select: <green>[Выбрать блок]
+      back: <gold>[Назад]
+      input-back: <gold>[Вернуться к шагу]
+      pause: <gold>[Сохранить и выйти]
+      discard: <red>[Удалить черновик]
+      confirm-discard: <red>[Подтвердить удаление]
+      destination: <green>[Телепортировать сюда]
+      command-player: <green>[Команда игрока]
+      command-console: <green>[Команда консоли]
+      clear-destination: <green>[Убрать телепортацию]
+      clear-actions: <green>[Убрать действия]
+      particles: <green>[Выбрать частицы]
+      color: <green>[Цвет]
+      fill: <green>[Контур / заполнение]
+      spacing: <green>[Плотность]
+      preview: <green>[Предпросмотр]
+      access: <green>[Настроить условия]
+      publish: <green>[Опубликовать]
+      editor: <green>[Расширенный редактор]
+    hovers:
+      name: <gray>Написать название в чат
+      next: <gray>Сохранить и перейти к следующему шагу
+      here: <gray>Использовать блок под вашими ногами
+      select: <gray>Нажать ПКМ по нужному блоку в мире
+      back: <gray>Вернуться к предыдущему шагу
+      input-back: <gray>Отменить текущий ввод, сохранив черновик
+      pause: <gray>Продолжить позже через /портал мастер
+      discard: <gray>Подтвердить удаление несохранённых изменений
+      confirm-discard: <gray>Удаляется только черновик; опубликованный портал сохраняется
+      destination: <gray>Использовать вашу позицию и направление взгляда
+      command-player: <gray>Выполнить с обычными правами вошедшего игрока
+      command-console: <gray>Только команды из разрешённого списка консоли
+      clear-destination: <gray>Оставить только команды портала
+      clear-actions: <gray>Очистить действия в черновике
+      particles: <gray>Каталог всех частиц с поиском и категориями
+      color: <gray>Ввести цвет HEX; работает у окрашиваемых частиц
+      fill: <gray>Переключить заполнение области
+      spacing: <gray>Изменить расстояние между точками эффекта
+      preview: <gray>Показать эффект только вам на три секунды
+      access: <gray>Доступ, бой, транспорт, задержки и режимы игры
+      publish: <gray>Проверить и сохранить портал в SQLite
+      editor: <gray>Точная настройка и перестановка действий
+  portal-particles:
+    names:
+      poof: Клубок пыли
+      explosion: Взрыв
+      explosion_emitter: Серия взрывов
+      firework: Искры фейерверка
+      bubble: Пузырёк
+      splash: Водяные брызги
+      fishing: След рыболовного поплавка
+      underwater: Подводная взвесь
+      crit: Критический удар
+      enchanted_hit: Зачарованный удар
+      smoke: Дым
+      large_smoke: Густой дым
+      effect: Зелье
+      instant_effect: Мгновенное зелье
+      entity_effect: Цветное свечение
+      witch: Магия ведьмы
+      dripping_water: Капающая вода
+      dripping_lava: Капающая лава
+      angry_villager: Злость жителя
+      happy_villager: Радость жителя
+      mycelium: Споры мицелия
+      note: Музыкальная нота
+      portal: Вихрь портала
+      enchant: Руны зачарования
+      flame: Пламя
+      lava: Лавовая искра
+      cloud: Облако
+      dust: Цветная пыль
+      item_snowball: Осколки снежка
+      item_slime: Брызги слизи
+      heart: Сердце
+      item: Осколки предмета
+      block: Осколки блока
+      rain: Дождь
+      elder_guardian: Древний страж
+      dragon_breath: Дыхание дракона
+      end_rod: Искры стержня Энда
+      damage_indicator: Частицы урона
+      sweep_attack: Размашистый удар
+      falling_dust: Падающая пыль блока
+      totem_of_undying: Искры тотема
+      spit: Плевок ламы
+      squid_ink: Чернила спрута
+      bubble_pop: Лопающийся пузырёк
+      current_down: Нисходящее течение
+      bubble_column_up: Восходящие пузырьки
+      nautilus: След наутилуса
+      dolphin: След дельфина
+      sneeze: Чихание
+      campfire_cosy_smoke: Дым костра
+      campfire_signal_smoke: Сигнальный дым
+      composter: Искры компостера
+      flash: Цветная вспышка
+      falling_lava: Падающая лава
+      landing_lava: Лавовый всплеск
+      falling_water: Падающая вода
+      dripping_honey: Капающий мёд
+      falling_honey: Падающий мёд
+      landing_honey: Медовый всплеск
+      falling_nectar: Падающий нектар
+      soul_fire_flame: Пламя душ
+      ash: Пепел
+      crimson_spore: Багровые споры
+      warped_spore: Искажённые споры
+      soul: Душа
+      dripping_obsidian_tear: Капающие слёзы обсидиана
+      falling_obsidian_tear: Падающие слёзы обсидиана
+      landing_obsidian_tear: Всплеск слёз обсидиана
+      reverse_portal: Обратный вихрь портала
+      white_ash: Белый пепел
+      dust_color_transition: Пыль с переходом цвета
+      vibration: Вибрация
+      falling_spore_blossom: Падающие споры цветка
+      spore_blossom_air: Парящие споры цветка
+      small_flame: Малое пламя
+      snowflake: Снежинка
+      dripping_dripstone_lava: Лава на сталактите
+      falling_dripstone_lava: Лава со сталактита
+      dripping_dripstone_water: Вода на сталактите
+      falling_dripstone_water: Вода со сталактита
+      glow_squid_ink: Светящиеся чернила
+      glow: Сияние
+      wax_on: Нанесение воска
+      wax_off: Снятие воска
+      electric_spark: Электрическая искра
+      scrape: Соскабливание
+      sonic_boom: Звуковой удар
+      sculk_soul: Скалковая душа
+      sculk_charge: Скалковый заряд
+      sculk_charge_pop: Всплеск скалкового заряда
+      shriek: Вопль скалка
+      cherry_leaves: Лепестки сакуры
+      pale_oak_leaves: Листья бледного дуба
+      tinted_leaves: Цветные листья
+      egg_crack: Трещина яйца
+      dust_plume: Столб пыли
+      white_smoke: Белый дым
+      gust: Порыв ветра
+      small_gust: Малый порыв ветра
+      gust_emitter_large: Большая вихревая воронка
+      gust_emitter_small: Малая вихревая воронка
+      trial_spawner_detection: Обнаружение испытателя
+      trial_spawner_detection_ominous: Зловещее обнаружение испытателя
+      vault_connection: Связь с хранилищем
+      infested: Заражение
+      item_cobweb: Обрывки паутины
+      dust_pillar: Пылевой столб блока
+      block_crumble: Крошение блока
+      firefly: Светлячок
+      trail: Цветной след к центру
+      ominous_spawning: Зловещее появление
+      raid_omen: Знамение набега
+      trial_omen: Знамение испытания
+      block_marker: Маркер блока
+      copper_fire_flame: Медное пламя
+      pause_mob_growth: Приостановка роста существа
+      reset_mob_growth: Возобновление роста существа
+      noxious_gas: Ядовитый газ
+      noxious_gas_cloud: Облако ядовитого газа
+      sulfur_cube_goo: Слизь серного куба
+      sulfur_bubbles: Серные пузырьки
+      geyser: Водяной гейзер
+      geyser_base: Основание гейзера
+      geyser_plume: Столб гейзера
+      geyser_poof: Всплеск гейзера
+    new-effect: Новый эффект
+    groups:
+      all: Все
+      magic: Магия
+      fire: Огонь
+      air: Дым и ветер
+      water: Вода
+      nature: Природа
+      combat: Бой
+      blocks: Блоки и предметы
+    info:
+    - <dark_gray>Справка
+    - ''
+    - '<gray>Найдено: <white><count>'
+    - '<gray>Выбрано: <white><current>'
+    - ''
+    - <gray>Эффекты расположены по алфавиту.
+    - <gray>Выбор покажет образец только вам.
+    filter: <gold>Фильтр <dark_gray>| <yellow><group>
+    filter-lore:
+    - <dark_gray>Категории эффектов
+    - ''
+    - <gray>Показывает частицы выбранной группы.
+    - ''
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>следующая категория
+    search: <gold>Поиск частиц
+    search-help: <green>ЛКМ <dark_gray>— <gray>поиск по русскому названию или коду
+    empty: <gray>Частицы не найдены
+    reset-help: <green>ЛКМ <dark_gray>— <gray>сбросить поиск и фильтр
+    category: <dark_gray><group>
+    colored: <gray>Поддерживает выбранный цвет портала.
+    fixed-color: <gray>Имеет фиксированный цвет; HEX не влияет.
+    heavy: '<gray>Крупный эффект: не более восьми точек за обновление.'
+    amethyst: <gray>Образец использует аметистовый блок или осколок.
+    unsupported: <red>Этому эффекту нужны данные новой версии API.
+    selected: <green>ЛКМ <dark_gray>— <gray>повторить предпросмотр выбранного эффекта
+    choose: <green>ЛКМ <dark_gray>— <gray>выбрать и показать на три секунды
+    name: <gold><name>
+    settings-help: <green>ЛКМ <dark_gray>— <gray>изменить цвет, заполнение и плотность
+
+# Каталог с поиском всегда использует 54 слота и стандартные кнопки листания.
