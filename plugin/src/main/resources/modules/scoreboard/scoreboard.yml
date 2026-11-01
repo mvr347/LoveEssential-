@@ -391,6 +391,14 @@ placeholders:
       reason: '&7Нужно состоять в клане'
 
   # ── Охота ──
+  hunt_pass:
+    display-name: '&2Билет охотника'
+    template: '&7билет охотника &2◆ &f%lovehunt_pass%'
+    lore:
+      - '&7Есть ли у вас действующий билет охотника'
+      - '&7Отключённое требование билета учитывается отдельно'
+    category: hunt
+
   hunt_rank:
     display-name: '&2Ранг охотника'
     template: '&7охотник ранга &2◆ &f%lovehunt_rank_stars% %lovehunt_rank%'
@@ -546,3 +554,6 @@ messages:
     display-condition: <gold>Условие показа (имя из conditions, пусто — всегда)
     lines: <gold>Строки (до 15)
     legacy-conflict: <red>Другой плагин держит табло LoveTweaks; модуль scoreboard не может его перехватить.
+
+# Однократное добавление новых строк; удалённый после обновления билет не восстанавливается.
+catalog-version: 1

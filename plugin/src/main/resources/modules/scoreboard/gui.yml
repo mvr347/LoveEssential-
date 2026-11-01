@@ -55,6 +55,7 @@ messages:
     slot-variant: '<yellow>Shift + ЛКМ <dark_gray>— <gray>формат: <white><variant>'
     unavailable: '<dark_gray>▪ <red>Недоступно:'
     reason-plugin: '  <gray>Плагин не установлен'
+    reason-hunter-pass: '  <gray>Нужен купленный билет охотника'
     reason-full: '  <gray>Все <max> слотов заняты'
     slot-empty-lore:
     - <dark_gray>Свободный слот
@@ -93,6 +94,9 @@ messages:
     catalog-swap: '<green>ЛКМ <dark_gray>— <gray>поменять местами со слотом <n>'
     catalog-here: <dark_gray>Эта строка уже в выбранном слоте
 textures:
+  hunt-filter: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjAzMjdkNDFiMDg3MjIzOGRlYThlNDg4ODRhNzk3YzM3YzE3OTFiZjQ4YzAwYzJiYzU1MDFhMjVhYzIzYzgxNiJ9fX0=
+  hunt-ticket: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjAzMjdkNDFiMDg3MjIzOGRlYThlNDg4ODRhNzk3YzM3YzE3OTFiZjQ4YzAwYzJiYzU1MDFhMjVhYzIzYzgxNiJ9fX0=
+  hunt-ticket-owned: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNWY3N2YxNTkwMzZjOTVlZGI2Yjg0Mzc1MWI1M2VkNWI2MGJlMTUwZTkwMTlkMzhjMGJkZWJhOGI3NDU2ODM4NiJ9fX0=
   slot-empty: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjhkZGY4M2VhN2YwOGE3MmE1MmFjMjFkYzc0MDBhMDYxN2FjMmNiZTIxYTMxNzA0OGY0MmU3ZjI0OTk0NDgwZSJ9fX0=
   slot-filled: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=
   layouts-button: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg2NWVlOWM3MDg3NjkwZGRjMjA2NTRmZTZhYzNmNjBlMzI3NmZkYzM3ODgzNTAyYzUzM2U3YjljY2I2NGIzZCJ9fX0=

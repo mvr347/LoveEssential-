@@ -301,13 +301,16 @@ public final class GuiSettings {
     if (inventory.getSize() != 54
         || module(layout.guiId()).equals("crafting")
         || module(layout.guiId()).equals("starter")
-        // The personal scoreboard menu places its cards and categories by slot, and the catalog fills pages by slot, so they keep their size.
+        // The personal scoreboard menu places its cards and categories by slot, and the catalog
+        // fills pages by slot, so they keep their size.
         || layout.guiId().equals("sidebar.menu-title")
-        // The statistics menu is drawn artwork with its buttons at fixed slots, so it never shrinks.
+        // The statistics menu is drawn artwork with its buttons at fixed slots, so it never
+        // shrinks.
         || layout.guiId().equals("profile-menu.statistics")
         // The settings menu groups its switches by row, so it keeps its 54 slots.
         || layout.guiId().equals("profile-menu.settings")
-        || layout.guiId().equals("sidebar.catalog-title")) return inventory;
+        || layout.guiId().equals("sidebar.catalog-title")
+        || layout.guiId().equals("portal-ui.particle-catalog")) return inventory;
     @SuppressWarnings("unchecked")
     var actions = (Map<Integer, Object>) (Map<?, ?>) layout.guiActions();
     // Previous/next pages require the full list layout.

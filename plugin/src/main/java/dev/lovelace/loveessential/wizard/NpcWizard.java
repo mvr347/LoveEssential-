@@ -489,17 +489,21 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
   public boolean cancelPrompt(Player p, String token) {
     var prompt = prompts.get(p.getUniqueId());
-    if (prompt == null || !prompt.token().equals(token)) return false;
+    if (prompt == null || !prompt.token().equals(token) || !ChatPrompt.owns(p.getUniqueId(), token))
+      return false;
     input(p, "cancel");
     return true;
   }
 
   public void input(Player p, String value) {
     var prompt = prompts.remove(p.getUniqueId());
-    if (prompt == null || prompt.expiry() < System.currentTimeMillis()) {
+    if (prompt == null
+        || prompt.expiry() < System.currentTimeMillis()
+        || !ChatPrompt.owns(p.getUniqueId(), prompt.token())) {
       lang.send(p, "input.expired");
       return;
     }
+    ChatPrompt.release(p.getUniqueId(), prompt.token());
     if (!permitted(p)) return;
     try {
       if (value.equalsIgnoreCase("cancel") || value.equalsIgnoreCase("отмена")) {
@@ -2009,11 +2013,14 @@ public final class NpcWizard implements Listener, AutoCloseable {
   @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
   public void commandInput(PlayerCommandPreprocessEvent event) {
     var prompt = prompts.get(event.getPlayer().getUniqueId());
-    if (prompt == null || !prompt.command()) return;
+    if (prompt == null
+        || !prompt.command()
+        || !ChatPrompt.owns(event.getPlayer().getUniqueId(), prompt.token())) return;
     String value = event.getMessage();
     // The real cancellation button must still reach the token-checked command handler.
     String line = value.startsWith("/") ? value.substring(1) : value;
-    if (line.startsWith("loveessential:loveessential cancel ")) return;
+    if (line.startsWith("loveessential:loveessential cancel ")
+        || line.startsWith("loveessential:loveessential portal ")) return;
     event.setCancelled(true);
     input(
         event.getPlayer(),
@@ -2025,6 +2032,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
     var id = e.getPlayer().getUniqueId();
     var prompt = prompts.get(id);
     if (prompt == null) return;
+    if (!ChatPrompt.owns(id, prompt.token())) {
+      prompts.remove(id, prompt);
+      return;
+    }
     if (prompt.expiry() < System.currentTimeMillis()) {
       prompts.remove(id, prompt);
       e.setCancelled(true);
@@ -2033,7 +2044,11 @@ public final class NpcWizard implements Listener, AutoCloseable {
     }
     e.setCancelled(true);
     String input = PlainTextComponentSerializer.plainText().serialize(e.message());
-    main.execute(() -> input(e.getPlayer(), input));
+    main.execute(
+        () -> {
+          if (prompts.get(id) == prompt && ChatPrompt.owns(id, prompt.token()))
+            input(e.getPlayer(), input);
+        });
   }
 
   @EventHandler
@@ -2071,7 +2086,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
   @EventHandler
   public void quit(PlayerQuitEvent e) {
     var id = e.getPlayer().getUniqueId();
-    prompts.remove(id);
+    var prompt = prompts.remove(id);
+    if (prompt != null) ChatPrompt.release(id, prompt.token());
     createIds.remove(id);
     loading.remove(id);
     var w = sessions.remove(id);
@@ -2080,6 +2096,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
 
   public void close() {
     HandlerList.unregisterAll(this);
+    prompts.forEach((id, prompt) -> ChatPrompt.release(id, prompt.token()));
     prompts.clear();
     var saves =
         sessions.entrySet().stream()

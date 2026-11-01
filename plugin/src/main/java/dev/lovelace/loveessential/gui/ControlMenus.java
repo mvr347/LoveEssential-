@@ -41,7 +41,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
   private final Set<UUID> direct = new HashSet<>(), dispatching = new HashSet<>();
 
   public void cancelInput(Player p) {
-    prompts.remove(p.getUniqueId());
+    var cancelled = prompts.remove(p.getUniqueId());
+    if (cancelled != null) ChatPrompt.release(p.getUniqueId(), cancelled.token);
   }
 
   public void direct(Player p, Runnable open) {
@@ -156,7 +157,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
   private Menu menu(Player p, String title, Map<String, String> vars, Predicate<Player> allowed) {
     if (!plugin.ready() || !love.authenticated(p) || !allowed.test(p))
       throw new IllegalArgumentException("errors.permission");
-    prompts.remove(p.getUniqueId());
+    var cancelled = prompts.remove(p.getUniqueId());
+    if (cancelled != null) ChatPrompt.release(p.getUniqueId(), cancelled.token);
     wizard.cancelInput(p);
     var m = new Menu(allowed);
     String route = title + new TreeMap<>(vars);
@@ -1839,8 +1841,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   public void nickname(Player p) {
     nicknames.settings(p);
     var m = menu(p, "nick.title", Map.of(), nicknames::canUse);
-    // Opened from the profile the menu leads back to it.
-    m.back = () -> Bukkit.dispatchCommand(p, "profile");
+    // MenuNavigation supplies the profile parent only when it was actually opened.
     String plain = nicknames.values(p.getUniqueId()).getOrDefault("nickname_plain", p.getName());
     var preview = dev.lovelace.loveessential.module.Nicknames.render(plain, List.of());
     var current = nicknames.display(p);
@@ -2214,17 +2215,20 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   public boolean cancelPrompt(Player p, String token) {
     var prompt = prompts.get(p.getUniqueId());
-    if (prompt == null || !prompt.token.equals(token)) return false;
+    if (prompt == null || !prompt.token.equals(token) || !ChatPrompt.owns(p.getUniqueId(), token))
+      return false;
     return input(p, "cancel");
   }
 
   public boolean input(Player p, String value) {
     var prompt = prompts.remove(p.getUniqueId());
     if (prompt == null) return false;
-    if (prompt.expires < System.currentTimeMillis()) {
+    if (prompt.expires < System.currentTimeMillis()
+        || !ChatPrompt.owns(p.getUniqueId(), prompt.token)) {
       lang.send(p, "input.expired");
       return true;
     }
+    ChatPrompt.release(p.getUniqueId(), prompt.token);
     try {
       if (!plugin.ready() || !love.authenticated(p) || !prompt.allowed.test(p))
         throw new IllegalArgumentException("errors.permission");
@@ -2373,6 +2377,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
   public void chat(AsyncChatEvent e) {
     var prompt = prompts.get(e.getPlayer().getUniqueId());
     if (prompt == null) return;
+    if (!ChatPrompt.owns(e.getPlayer().getUniqueId(), prompt.token)) {
+      prompts.remove(e.getPlayer().getUniqueId(), prompt);
+      return;
+    }
     if (prompt.expires < System.currentTimeMillis()) {
       prompts.remove(e.getPlayer().getUniqueId(), prompt);
       e.setCancelled(true);
@@ -2381,12 +2389,17 @@ public final class ControlMenus implements Listener, AutoCloseable {
     }
     e.setCancelled(true);
     String value = PlainTextComponentSerializer.plainText().serialize(e.message());
-    main.execute(() -> input(e.getPlayer(), value));
+    main.execute(
+        () -> {
+          if (prompts.get(e.getPlayer().getUniqueId()) == prompt
+              && ChatPrompt.owns(e.getPlayer().getUniqueId(), prompt.token))
+            input(e.getPlayer(), value);
+        });
   }
 
   @EventHandler
   public void quit(PlayerQuitEvent e) {
-    prompts.remove(e.getPlayer().getUniqueId());
+    cancelInput(e.getPlayer());
     roots.remove(e.getPlayer().getUniqueId());
     vanishFilter.remove(e.getPlayer().getUniqueId());
     direct.remove(e.getPlayer().getUniqueId());
@@ -2395,6 +2408,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   public void close() {
     HandlerList.unregisterAll(this);
+    prompts.forEach((id, prompt) -> ChatPrompt.release(id, prompt.token));
     prompts.clear();
     roots.clear();
     vanishFilter.clear();

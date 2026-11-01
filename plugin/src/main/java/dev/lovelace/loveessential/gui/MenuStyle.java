@@ -24,6 +24,10 @@ public final class MenuStyle {
     navigation = value;
   }
 
+  public static void forget(org.bukkit.entity.Player player) {
+    if (navigation != null) navigation.forget(player);
+  }
+
   public static void command(org.bukkit.entity.Player player) {
     if (navigation != null) navigation.command(player);
   }

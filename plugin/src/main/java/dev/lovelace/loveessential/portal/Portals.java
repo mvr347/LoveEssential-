@@ -27,7 +27,11 @@ import org.bukkit.inventory.*;
  * execution.
  */
 public final class Portals implements Listener, AutoCloseable {
-  private record Draft(PortalDefinition value, long targetRevision) {}
+  record Draft(PortalDefinition value, long targetRevision, int step, int corners) {
+    Draft(PortalDefinition value, long targetRevision) {
+      this(value, targetRevision, 0, targetRevision > 0 ? 3 : 0);
+    }
+  }
 
   private record Selection(int corner, long expires) {}
 
@@ -36,6 +40,11 @@ public final class Portals implements Listener, AutoCloseable {
   private static final class Menu implements dev.lovelace.loveessential.gui.GuiLayout {
     Inventory inventory;
     String menuId = "gui.menu";
+    Runnable back;
+
+    public Runnable guiBack() {
+      return back;
+    }
 
     public String guiId() {
       return menuId;
@@ -73,6 +82,7 @@ public final class Portals implements Listener, AutoCloseable {
   private final Map<UUID, SqliteStore.Document<Draft>> drafts = new HashMap<>();
   private final Map<UUID, Selection> selections = new HashMap<>();
   private final Set<UUID> saving = new HashSet<>();
+  private final PortalGuide guide;
   private final Map<UUID, UUID> sessions = new HashMap<>();
 
   private UUID session(Player p) {
@@ -89,9 +99,8 @@ public final class Portals implements Listener, AutoCloseable {
   private final Map<String, Long> created = new HashMap<>();
   private org.bukkit.scheduler.BukkitTask task;
   private long ticks;
+  private final Map<UUID, Long> previews = new HashMap<>();
   private Consumer<Player> parent = p -> {};
-  private static final List<String> PARTICLES =
-      List.of("DUST", "END_ROD", "PORTAL", "REVERSE_PORTAL", "ENCHANT", "SOUL_FIRE_FLAME");
   private static final String ICON =
       "d0d5a4eba140cbb34d45e40d62dd3f7e6584b2ab0b4155a0bcc603d5d750f793";
 
@@ -110,6 +119,7 @@ public final class Portals implements Listener, AutoCloseable {
     this.love = love;
     this.teleport = teleport;
     this.actions = actions;
+    this.guide = new PortalGuide(this, plugin, main, lang);
   }
 
   public void ui(NativeDialogs ui, ContentLibrary texts, Consumer<Player> parent) {
@@ -208,14 +218,14 @@ public final class Portals implements Listener, AutoCloseable {
     task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 2, 2);
   }
 
-  private boolean admin(Player p) {
+  boolean admin(Player p) {
     return plugin.ready()
         && p.isOnline()
         && love.authenticated(p)
         && p.hasPermission("loveessential.admin");
   }
 
-  private void requireAdmin(Player p) {
+  void requireAdmin(Player p) {
     if (!love.authenticated(p)) throw new IllegalArgumentException("errors.access");
     if (!admin(p)) throw new IllegalArgumentException("errors.permission");
   }
@@ -257,6 +267,11 @@ public final class Portals implements Listener, AutoCloseable {
               case "назначение" -> "destination";
               default -> args[0].toLowerCase(Locale.ROOT);
             };
+    if (op.equals("guide")) {
+      guide.command(p, args);
+      return;
+    }
+    if (op.equals("list") || op.equals("edit")) guide.leave(p);
     switch (op) {
       case "list" -> list(p, 0);
       case "create", "wizard" -> {
@@ -294,7 +309,7 @@ public final class Portals implements Listener, AutoCloseable {
       }
       case "cancel" -> {
         selections.remove(p.getUniqueId());
-        discard(p);
+        guide.confirmDiscard(p);
       }
       default -> throw new IllegalArgumentException("portal-ui.usage");
     }
@@ -321,7 +336,7 @@ public final class Portals implements Listener, AutoCloseable {
   private void resume(Player p) {
     UUID token = session(p);
     if (drafts.containsKey(p.getUniqueId())) {
-      wizard(p);
+      guide.open(p);
       return;
     }
     if (!saving.add(p.getUniqueId())) return;
@@ -343,7 +358,7 @@ public final class Portals implements Listener, AutoCloseable {
                               () ->
                                   new SqliteStore.Document<>(
                                       p.getUniqueId().toString(), 0, new Draft(defaults(p), 0))));
-                      wizard(p);
+                      guide.open(p);
                     }));
   }
 
@@ -380,7 +395,7 @@ public final class Portals implements Listener, AutoCloseable {
                     }));
   }
 
-  private SqliteStore.Document<Draft> draft(Player p) {
+  SqliteStore.Document<Draft> draft(Player p) {
     var d = drafts.get(p.getUniqueId());
     if (d == null) throw new IllegalArgumentException("portal-ui.no-draft");
     return d;
@@ -413,18 +428,40 @@ public final class Portals implements Listener, AutoCloseable {
   }
 
   private void change(Player p, PortalDefinition next, Runnable after) {
-    UUID token = session(p);
     requireAdmin(p);
     validate(next, false);
     var old = draft(p);
+    writeDraft(
+        p,
+        old,
+        new Draft(next, old.value().targetRevision(), old.value().step(), old.value().corners()),
+        after);
+  }
+
+  private void writeDraft(Player p, SqliteStore.Document<Draft> old, Draft next, Runnable after) {
+    writeDraft(p, old, next, after, () -> CompletableFuture.completedFuture(null));
+  }
+
+  private void writeDraft(
+      Player p,
+      SqliteStore.Document<Draft> old,
+      Draft next,
+      Runnable after,
+      java.util.function.Supplier<CompletableFuture<Void>> prepare) {
+    UUID token = session(p);
+    requireAdmin(p);
+    validate(next.value(), false);
     if (!saving.add(p.getUniqueId())) return;
-    store
-        .save(
-            "portal-draft",
-            p.getUniqueId().toString(),
-            old.revision(),
-            new Draft(next, old.value().targetRevision()),
-            p.getUniqueId().toString())
+    String actor = p.getUniqueId().toString();
+    CompletableFuture<Void> preparation;
+    try {
+      preparation = prepare.get();
+    } catch (RuntimeException error) {
+      saving.remove(p.getUniqueId());
+      throw error;
+    }
+    preparation
+        .thenCompose(unused -> store.save("portal-draft", actor, old.revision(), next, actor))
         .whenComplete(
             (rev, e) ->
                 main.execute(
@@ -437,12 +474,60 @@ public final class Portals implements Listener, AutoCloseable {
                       }
                       drafts.put(
                           p.getUniqueId(),
-                          new SqliteStore.Document<>(
-                              p.getUniqueId().toString(),
-                              rev,
-                              new Draft(next, old.value().targetRevision())));
+                          new SqliteStore.Document<>(p.getUniqueId().toString(), rev, next));
                       if (admin(p)) after.run();
                     }));
+  }
+
+  boolean busy(Player p) {
+    return saving.contains(p.getUniqueId());
+  }
+
+  void adjust(
+      Player p,
+      java.util.function.Consumer<PortalEdit> edit,
+      int step,
+      int corners,
+      Runnable after) {
+    var old = draft(p);
+    var values = new PortalEdit(old.value().value());
+    edit.accept(values);
+    writeDraft(
+        p, old, new Draft(values.build(), old.value().targetRevision(), step, corners), after);
+  }
+
+  void guideName(Player p, String name, Runnable after) {
+    if (name.isBlank()
+        || name.length() > 128
+        || name.indexOf('\n') >= 0
+        || name.indexOf('\r') >= 0
+        || name.indexOf('\0') >= 0) throw new IllegalArgumentException("errors.input");
+    var old = draft(p);
+    String key = "portal-text." + old.value().value().id() + ".name";
+    var edit = new PortalEdit(old.value().value());
+    edit.name = key;
+    var next = new Draft(edit.build(), old.value().targetRevision(), 1, old.value().corners());
+    writeDraft(p, old, next, after, () -> texts.texts(Map.of(key, name)));
+  }
+
+  void guideCommand(Player p, String value, String sender, Runnable after) {
+    String command = value.strip();
+    if (command.startsWith("/")) command = command.substring(1);
+    var action =
+        new dev.lovelace.loveessential.api.Action(
+            "portal-command", Map.of("sender", sender, "value", command));
+    commandValue(action.args(), true);
+    var old = draft(p).value();
+    adjust(
+        p,
+        edit -> {
+          var list = new ArrayList<>(edit.actions);
+          list.add(action);
+          edit.actions = list;
+        },
+        old.step(),
+        old.corners(),
+        after);
   }
 
   public CompletableFuture<Long> save(PortalDefinition d, long revision, String actor) {
@@ -479,7 +564,7 @@ public final class Portals implements Listener, AutoCloseable {
         || d.cooldownSeconds() > 86400
         || d.warmupTicks() < 0
         || d.warmupTicks() > 1200
-        || !PARTICLES.contains(d.particle())
+        || !PortalParticles.supported(PortalParticles.parse(d.particle()))
         || !d.color().matches("[a-fA-F0-9]{6}")
         || !Double.isFinite(d.spacing())
         || d.spacing() < .2
@@ -529,6 +614,7 @@ public final class Portals implements Listener, AutoCloseable {
     requireAdmin(p);
     var m = new Menu();
     m.menuId = title;
+    m.back = guide.active(p) ? () -> wizard(p) : null;
     m.inventory = Bukkit.createInventory(m, size, MenuStyle.title(lang, title, Map.of()));
     MenuStyle.frame(m.inventory);
     m.inventory.setItem(
@@ -559,7 +645,15 @@ public final class Portals implements Listener, AutoCloseable {
               ICON,
               lang.render(d.value().nameKey()),
               List.of(
-                  lang.render("portal-ui.id", Map.of("id", d.id())),
+                  lang.render(
+                      "portal-ui.coordinates",
+                      Map.of(
+                          "x",
+                          "" + (int) d.value().first().x(),
+                          "y",
+                          "" + (int) d.value().first().y(),
+                          "z",
+                          "" + (int) d.value().first().z())),
                   lang.render(
                       d.value().enabled() ? "profile-menu.enabled" : "profile-menu.disabled"),
                   lang.render("gui.separator"),
@@ -579,7 +673,12 @@ public final class Portals implements Listener, AutoCloseable {
     MenuStyle.open(p, m.inventory);
   }
 
-  private void wizard(Player p) {
+  void wizard(Player p) {
+    if (guide.active(p)) guide.render(p);
+    else editor(p);
+  }
+
+  void editor(Player p) {
     var d = draft(p).value().value();
     var m = menu(p, 54, "portal-ui.wizard", () -> list(p, 0));
     String[] keys = {
@@ -591,7 +690,7 @@ public final class Portals implements Listener, AutoCloseable {
       () -> destinationForm(p),
       () -> actionMenu(p),
       () -> accessForm(p),
-      () -> effectForm(p),
+      () -> particleMenu(p, "all", "", 0),
       () -> preview(p),
       () -> nameForm(p),
       () -> publish(p)
@@ -630,10 +729,11 @@ public final class Portals implements Listener, AutoCloseable {
         () ->
             ui.confirm(
                 p, "portal-ui.discard-confirm", () -> discard(p), () -> wizard(p), this::admin));
+    button(m, 4, "portal-guide.start", "portal-guide.start-help", () -> guide.open(p));
     MenuStyle.open(p, m.inventory);
   }
 
-  private void select(Player p, int corner) {
+  void select(Player p, int corner) {
     selections.put(p.getUniqueId(), new Selection(corner, System.currentTimeMillis() + 60000));
     p.closeInventory();
     lang.send(p, corner == 1 ? "portal-ui.select-first" : "portal-ui.select-second");
@@ -652,8 +752,17 @@ public final class Portals implements Listener, AutoCloseable {
     if (!admin(p) || selection.expires() < System.currentTimeMillis()) return;
     var d = draft(p).value().value();
     var pos = Position.of(e.getClickedBlock().getLocation());
-    if (!pos.world().equals(d.first().world())) {
+    if ((selection.corner() == 2 || !guide.active(p)) && !pos.world().equals(d.first().world())) {
       lang.send(p, "portal-ui.same-world");
+      return;
+    }
+    if (guide.active(p)) {
+      try {
+        guide.capture(p, selection.corner(), pos);
+      } catch (RuntimeException error) {
+        lang.error(p, error);
+        guide.render(p);
+      }
       return;
     }
     change(
@@ -770,7 +879,7 @@ public final class Portals implements Listener, AutoCloseable {
     return NativeDialogs.Field.select(id, lang.render(key), value, options);
   }
 
-  private void accessForm(Player p) {
+  void accessForm(Player p) {
     var d = draft(p).value().value();
     ui.show(
         p,
@@ -830,7 +939,7 @@ public final class Portals implements Listener, AutoCloseable {
         "portal-ui.effects",
         "portal-ui.effects-help",
         List.of(
-            choice("particle", "portal-ui.particle", d.particle(), PARTICLES),
+            ui.text("particle", "portal-ui.particle", d.particle(), 64),
             ui.text("color", "portal-ui.color", d.color(), 6),
             choice("fill", "portal-ui.fill", "" + d.fill(), List.of("true", "false")),
             ui.text("spacing", "portal-ui.spacing", "" + d.spacing(), 4)),
@@ -862,6 +971,158 @@ public final class Portals implements Listener, AutoCloseable {
                         () -> wizard(p))),
             ui.button("back", "common.back", v -> wizard(p))),
         this::admin);
+  }
+
+  void cancelSelection(Player p) {
+    selections.remove(p.getUniqueId());
+  }
+
+  void cancelDialog(Player p) {
+    if (ui != null) ui.cancel(p);
+  }
+
+  String particleName(Particle particle) {
+    String key = "portal-particles.names." + particle.name().toLowerCase(Locale.ROOT);
+    return lang.contains(key) ? lang.text(key) : lang.text("portal-particles.new-effect");
+  }
+
+  void particleMenu(Player p, String group, String query, int page) {
+    requireAdmin(p);
+    var groups = List.of("all", "magic", "fire", "air", "water", "nature", "combat", "blocks");
+    String filter = groups.contains(group) ? group : "all";
+    String search = query.strip().toLowerCase(Locale.ROOT);
+    var available =
+        PortalParticles.ALL.stream()
+            .filter(
+                particle -> filter.equals("all") || PortalParticles.group(particle).equals(filter))
+            .filter(
+                particle ->
+                    search.isBlank()
+                        || particleName(particle).toLowerCase(Locale.ROOT).contains(search)
+                        || particle.name().toLowerCase(Locale.ROOT).contains(search))
+            .sorted(Comparator.comparing(this::particleName))
+            .toList();
+    int actual = Math.clamp(page, 0, Math.max(0, (available.size() - 1) / 21));
+    var m = menu(p, 54, "portal-ui.particle-catalog", () -> wizard(p));
+    var current = draft(p).value();
+    m.inventory.setItem(
+        0,
+        MenuStyle.head(
+            ICON,
+            lang.render("portal-ui.effects"),
+            lang.lines("portal-particles.info").stream()
+                .map(
+                    text ->
+                        lang.renderText(
+                            text,
+                            Map.of(
+                                "count",
+                                "" + available.size(),
+                                "current",
+                                particleName(PortalParticles.parse(current.value().particle())))))
+                .toList()));
+    m.inventory.setItem(
+        3,
+        MenuStyle.head(
+            ICON,
+            lang.render(
+                "portal-particles.filter",
+                Map.of("group", lang.text("portal-particles.groups." + filter))),
+            lang.lines("portal-particles.filter-lore").stream()
+                .map(text -> lang.renderText(text, Map.of()))
+                .toList()));
+    m.actions.put(
+        3,
+        () -> particleMenu(p, groups.get((groups.indexOf(filter) + 1) % groups.size()), query, 0));
+    button(
+        m,
+        5,
+        "portal-particles.search",
+        "portal-particles.search-help",
+        () -> {
+          if (guide.active(p)) guide.search(p);
+          else
+            ui.show(
+                p,
+                "portal-particles.search",
+                "portal-particles.search-help",
+                List.of(ui.text("search", "portal-particles.search", query, 64)),
+                List.of(
+                    ui.button(
+                        "search",
+                        "portal-particles.search",
+                        values -> particleMenu(p, filter, values.get("search"), 0)),
+                    ui.button(
+                        "back", "common.back", values -> particleMenu(p, filter, query, actual))),
+                this::admin);
+        });
+    if (available.isEmpty())
+      button(
+          m,
+          31,
+          "portal-particles.empty",
+          "portal-particles.reset-help",
+          () -> particleMenu(p, "all", "", 0));
+    for (int i = actual * 21; i < Math.min(available.size(), (actual + 1) * 21); i++) {
+      Particle particle = available.get(i);
+      int slot = MenuStyle.CONTENT[i % 21];
+      var lore = new ArrayList<net.kyori.adventure.text.Component>();
+      lore.add(
+          lang.render(
+              "portal-particles.category",
+              Map.of(
+                  "group",
+                  lang.text("portal-particles.groups." + PortalParticles.group(particle)))));
+      lore.add(net.kyori.adventure.text.Component.empty());
+      lore.add(
+          lang.render(
+              "portal-particles."
+                  + (PortalParticles.colored(particle) ? "colored" : "fixed-color")));
+      if (PortalParticles.limit(particle, 64) < 64) lore.add(lang.render("portal-particles.heavy"));
+      if (particle.getDataType() == org.bukkit.block.data.BlockData.class
+          || particle.getDataType() == ItemStack.class)
+        lore.add(lang.render("portal-particles.amethyst"));
+      if (!PortalParticles.supported(particle))
+        lore.add(lang.render("portal-particles.unsupported"));
+      lore.add(net.kyori.adventure.text.Component.empty());
+      lore.add(lang.render("gui.separator"));
+      boolean selected = current.value().particle().equals(particle.name());
+      lore.add(lang.render(selected ? "portal-particles.selected" : "portal-particles.choose"));
+      m.inventory.setItem(
+          slot,
+          MenuStyle.head(
+              ICON,
+              lang.render("portal-particles.name", Map.of("name", particleName(particle))),
+              lore));
+      if (PortalParticles.supported(particle))
+        m.actions.put(
+            slot,
+            () -> {
+              var latest = draft(p).value();
+              adjust(
+                  p,
+                  edit -> edit.particle = particle.name(),
+                  latest.step(),
+                  latest.corners(),
+                  () -> {
+                    preview(p);
+                    if (guide.active(p)) guide.render(p);
+                    else particleMenu(p, filter, query, actual);
+                  });
+            });
+    }
+    if (actual > 0)
+      button(
+          m,
+          36,
+          "gui.previous",
+          "gui.click.open",
+          () -> particleMenu(p, filter, query, actual - 1));
+    if ((actual + 1) * 21 < available.size())
+      button(
+          m, 44, "common.next", "gui.click.open", () -> particleMenu(p, filter, query, actual + 1));
+    button(m, 50, "portal-ui.effects", "portal-particles.settings-help", () -> effectForm(p));
+    MenuStyle.open(p, m.inventory);
   }
 
   private void actionMenu(Player p) {
@@ -957,7 +1218,7 @@ public final class Portals implements Listener, AutoCloseable {
         this::admin);
   }
 
-  private void publish(Player p) {
+  void publish(Player p) {
     var d = draft(p);
     UUID token = session(p);
     requireAdmin(p);
@@ -988,6 +1249,7 @@ public final class Portals implements Listener, AutoCloseable {
                         return;
                       }
                       drafts.remove(p.getUniqueId(), d);
+                      guide.leave(p);
                       selections.remove(p.getUniqueId());
                       if (admin(p)) {
                         lang.send(p, "portal-ui.published");
@@ -996,10 +1258,11 @@ public final class Portals implements Listener, AutoCloseable {
                     }));
   }
 
-  private void discard(Player p) {
+  void discard(Player p) {
     UUID token = session(p);
     var d = drafts.get(p.getUniqueId());
     selections.remove(p.getUniqueId());
+    guide.leave(p);
     if (d == null || d.revision() == 0) {
       drafts.remove(p.getUniqueId());
       list(p, 0);
@@ -1086,6 +1349,8 @@ public final class Portals implements Listener, AutoCloseable {
 
   private void tick() {
     ticks += 2;
+    guide.tick();
+    previews.entrySet().removeIf(entry -> ticks > entry.getValue());
     for (var entry : List.copyOf(pending.entrySet())) {
       var p = Bukkit.getPlayer(entry.getKey());
       var a = entry.getValue();
@@ -1106,7 +1371,7 @@ public final class Portals implements Listener, AutoCloseable {
       activate(p, d.value());
     }
     selections.entrySet().removeIf(e -> e.getValue().expires() < System.currentTimeMillis());
-    if (plugin.module("portal")
+    if ((plugin.module("portal") || !previews.isEmpty())
         && ticks % Math.max(2, plugin.getConfig().getInt("portal.particles.refresh-ticks", 6)) == 0)
       render();
   }
@@ -1136,9 +1401,10 @@ public final class Portals implements Listener, AutoCloseable {
     if (d.destination() != null && allowed(p, d)) teleport.teleport(p, d.destination());
   }
 
-  private void preview(Player p) {
+  void preview(Player p) {
     var d = draft(p).value().value();
     if (!d.first().world().equals(p.getWorld().getUID())) return;
+    previews.put(p.getUniqueId(), ticks + 60);
     particles(
         p,
         d,
@@ -1150,11 +1416,28 @@ public final class Portals implements Listener, AutoCloseable {
     double range = plugin.getConfig().getDouble("portal.particles.view-distance", 32);
     int duration = plugin.getConfig().getInt("portal.particles.creation-ticks", 60);
     for (Player viewer : Bukkit.getOnlinePlayers()) {
-      if (!love.authenticated(viewer) || !plugin.allows("portal", viewer)) continue;
+      if (!love.authenticated(viewer)) continue;
       int remaining = plugin.getConfig().getInt("portal.particles.per-player-budget", 256);
+      String previewId = "";
+      var draft = drafts.get(viewer.getUniqueId());
+      if (previews.containsKey(viewer.getUniqueId())
+          && draft != null
+          && admin(viewer)
+          && draft.value().value().first().world().equals(viewer.getWorld().getUID())) {
+        var value = draft.value().value();
+        int budget =
+            Math.min(
+                remaining, plugin.getConfig().getInt("portal.particles.per-portal-budget", 64));
+        particles(viewer, value, 1, budget);
+        remaining -= budget;
+        previewId = value.id();
+      }
+      if (!plugin.allows("portal", viewer)) continue;
       for (var doc : portals.values()) {
         var d = doc.value();
-        if (!d.enabled() || !d.first().world().equals(viewer.getWorld().getUID())) continue;
+        if (!d.enabled()
+            || d.id().equals(previewId)
+            || !d.first().world().equals(viewer.getWorld().getUID())) continue;
         var center =
             d.first()
                 .location()
@@ -1177,12 +1460,10 @@ public final class Portals implements Listener, AutoCloseable {
   }
 
   private void particles(Player p, PortalDefinition d, double progress, int budget) {
-    Particle particle = Particle.valueOf(d.particle());
-    Object data =
-        particle == Particle.DUST
-            ? new Particle.DustOptions(Color.fromRGB(Integer.parseInt(d.color(), 16)), .8f)
-            : null;
-    for (var point : PortalGeometry.points(d, budget, progress, ticks))
+    Particle particle = PortalParticles.parse(d.particle());
+    Object data = PortalParticles.data(particle, d.color(), d.first().location().add(.5, .5, .5));
+    for (var point :
+        PortalGeometry.points(d, PortalParticles.limit(particle, budget), progress, ticks))
       p.spawnParticle(
           particle,
           new Location(p.getWorld(), point.getX(), point.getY(), point.getZ()),
@@ -1225,6 +1506,8 @@ public final class Portals implements Listener, AutoCloseable {
   @EventHandler
   public void quit(PlayerQuitEvent e) {
     UUID id = e.getPlayer().getUniqueId();
+    guide.leave(e.getPlayer());
+    previews.remove(id);
     sessions.remove(id);
     selections.remove(id);
     inside.remove(id);
@@ -1236,7 +1519,10 @@ public final class Portals implements Listener, AutoCloseable {
   public void close() {
     if (task != null) task.cancel();
     HandlerList.unregisterAll(this);
+    guide.close();
+    saving.clear();
     pending.clear();
+    previews.clear();
     sessions.clear();
     selections.clear();
     drafts.clear();
