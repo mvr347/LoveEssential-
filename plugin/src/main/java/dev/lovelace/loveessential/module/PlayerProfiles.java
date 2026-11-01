@@ -815,7 +815,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
               lang.text("profile-menu.metric-line"),
               Map.of("label", metric.label(), "value", plain(lang.renderText(metric.value(), values)))));
     lore.add(Component.empty());
-    lore.add(lang.render(count > 1 ? "profile-menu.cycle-hint" : "profile-menu.cycle-single"));
+    if (count > 1) lore.add(lang.render("gui.separator"));
+    if (count > 1) lore.addAll(lang.lines("profile-menu.cycle-hint").stream()
+        .map(text -> lang.renderText(text, Map.of())).toList());
+    else lore.add(lang.render("profile-menu.cycle-single"));
 
     m.inventory.setItem(slot, MenuStyle.head(texture, lang.render(title, values), lore));
     if (count > 1)
@@ -873,6 +876,14 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   public static ItemStack head(Player target, Component title, List<Component> lore) {
     var skin = target.getPlayerProfile().getTextures().getSkin();
     return skinHead(skin == null ? "" : skin.toExternalForm(), title, lore);
+  }
+
+  public void skinChanged(Player player) {
+    MainThread.require();
+    capture(player);
+    for (var menu : List.copyOf(menus.values()))
+      if (player.getUniqueId().equals(menu.subject) && menu.repaint != null && permitted(menu))
+        repaint(menu);
   }
 
   /** Never give a skull an account identity: Paper may try to complete it through Mojang. */
@@ -1226,7 +1237,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     String[] parts = value.split(" ", 2);
     var command = linkCommand(id);
     if (command == null) throw new IllegalArgumentException("profile-menu.integration-unavailable");
-    if (close) viewer.closeInventory();
+    if (close) {
+      if (command.getPlugin() != plugin) MenuStyle.external(viewer);
+      viewer.closeInventory();
+    }
     command.execute(
         viewer, command.getName(), parts.length == 1 ? new String[0] : parts[1].split(" +"));
     placeholders.invalidate(viewer.getUniqueId());

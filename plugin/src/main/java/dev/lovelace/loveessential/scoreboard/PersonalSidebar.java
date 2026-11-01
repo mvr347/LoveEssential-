@@ -395,6 +395,14 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   private void drawMain(Menu menu, Player p, PersonalState state) {
     var c = catalog;
+    menu.inventory.setItem(
+        0,
+        dev.lovelace.loveessential.module.PlayerProfiles.head(
+            p,
+            lang.render("sidebar.profile-name", Map.of("player", p.getName())),
+            lines(
+                "sidebar.profile-lore",
+                Map.of("count", "" + state.ids().size(), "max", "" + c.max()))));
     if (!c.presets().isEmpty())
       set(menu, 1, presetsButton(), click -> {
         if (click != ClickType.LEFT) return;

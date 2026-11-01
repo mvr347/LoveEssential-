@@ -482,4 +482,42 @@ class PersonalScoreboardTest {
             .map(PlainTextComponentSerializer.plainText()::serialize)
             .anyMatch(text -> text.contains("Охотник:")));
   }
+
+  @Test
+  void returningFromCatalogAndPresetsKeepsTheOriginalProfileSettingsParent() throws Exception {
+    var a = join("Alice");
+    var f = LoveEssentialPlugin.class.getDeclaredField("profiles");
+    f.setAccessible(true);
+    var profiles = (dev.lovelace.loveessential.module.PlayerProfiles) f.get(plugin);
+    waitFor(() -> profiles.privacy().loaded(a.getUniqueId()));
+    server.dispatchCommand(a, "profile");
+    tick(2);
+    var root = a.getOpenInventory().getTopInventory();
+    click(a, slotNamed(root, 9, root.getSize() - 9, "Настройки"), ClickType.LEFT);
+    var settings = a.getOpenInventory().getTopInventory();
+    click(a, slotNamed(settings, 18, settings.getSize() - 9, "Боковая панель"), ClickType.LEFT);
+    assertEquals("sidebar.menu-title", idOf(a.getOpenInventory().getTopInventory()));
+    for (int cycle = 0; cycle < 3; cycle++) {
+      click(a, PersonalLayout.CARD_SLOTS[2], ClickType.LEFT);
+      var cat = a.getOpenInventory().getTopInventory();
+      assertEquals("sidebar.catalog-title", idOf(cat));
+      click(a, cat.getSize() - 2, ClickType.LEFT);
+      var board = a.getOpenInventory().getTopInventory();
+      assertEquals("sidebar.menu-title", idOf(board));
+      assertTrue(name(board.getItem(board.getSize() - 2)).contains("Назад"));
+    }
+    click(a, PersonalLayout.CARD_SLOTS[2], ClickType.LEFT);
+    var selected = a.getOpenInventory().getTopInventory();
+    click(a, slotNamed(selected, 18, 45, "Онлайн"), ClickType.LEFT);
+    assertTrue(name(a.getOpenInventory().getTopInventory().getItem(52)).contains("Назад"));
+    click(a, slotNamed(a.getOpenInventory().getTopInventory(), 2, 8, "Раскладки"), ClickType.LEFT);
+    var presets = a.getOpenInventory().getTopInventory();
+    click(a, presets.getSize() - 2, ClickType.LEFT);
+    var board = a.getOpenInventory().getTopInventory();
+    assertTrue(name(board.getItem(board.getSize() - 2)).contains("Назад"));
+    click(a, board.getSize() - 2, ClickType.LEFT);
+    assertSame(settings, a.getOpenInventory().getTopInventory());
+    click(a, settings.getSize() - 2, ClickType.LEFT);
+    assertSame(root, a.getOpenInventory().getTopInventory());
+  }
 }

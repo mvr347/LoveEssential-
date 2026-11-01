@@ -453,7 +453,7 @@ public final class Gameplay implements Listener, AutoCloseable {
       return;
     }
     double required = plugin.getConfig().getDouble("night-skip.required-percent", 50);
-    double speed = plugin.getConfig().getDouble("night-skip.max-multiplier", 30);
+    double speed = plugin.getConfig().getDouble("night-skip.max-multiplier", 38);
     for (World w : Bukkit.getWorlds()) {
       long timeOfDay = w.getTime();
       if (timeOfDay < NIGHT_START) {
@@ -643,7 +643,7 @@ public final class Gameplay implements Listener, AutoCloseable {
           new ProfileProperty(
               "textures", value, signature == null || signature.isBlank() ? null : signature));
     p.setPlayerProfile(current);
-    if (plugin instanceof LoveEssentialPlugin essential) essential.mechanicsPulse(p);
+    if (plugin instanceof LoveEssentialPlugin essential) essential.skinChanged(p);
   }
 
   /** A chosen skin is persisted as signed textures, so it survives a relog without a Mojang call. */

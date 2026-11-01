@@ -384,4 +384,73 @@ class GuiAuditTest {
             .map(PlainTextComponentSerializer.plainText()::serialize)
             .anyMatch(line -> line.contains("автоматически")));
   }
+
+  @Test
+  void aForeignMenuReturnsToTheSameProfileWithItsHubContext() throws Exception {
+    var player = admin();
+    var f = LoveEssentialPlugin.class.getDeclaredField("profiles");
+    f.setAccessible(true);
+    var profiles = (dev.lovelace.loveessential.module.PlayerProfiles) f.get(plugin);
+    waitFor(() -> profiles.privacy().loaded(player.getUniqueId()));
+    server.dispatchCommand(player, "profile back");
+    var profile = player.getOpenInventory().getTopInventory();
+    assertTrue(name(player, profile.getSize() - 2).contains("Назад"));
+    dev.lovelace.loveessential.gui.MenuStyle.external(player);
+    player.openInventory(
+        org.bukkit.Bukkit.createInventory(
+            null, 27, net.kyori.adventure.text.Component.text("Внешнее меню")));
+    server.dispatchCommand(player, "profile");
+    assertSame(profile, player.getOpenInventory().getTopInventory());
+    assertTrue(name(player, profile.getSize() - 2).contains("Назад"));
+    // A fresh explicit command has no foreign return context and opens a root.
+    server.dispatchCommand(player, "profile");
+    var direct = player.getOpenInventory().getTopInventory();
+    assertNotSame(profile, direct);
+    assertFalse(name(player, direct.getSize() - 2).contains("Назад"));
+  }
+
+  @Test
+  void backUsesTheInventoryRebuiltWhenTheParentResumes() {
+    var p = admin();
+    class Resizing implements GuiLayout {
+      org.bukkit.inventory.Inventory inv = org.bukkit.Bukkit.createInventory(this, 27);
+      final java.util.Map<Integer, Runnable> actions = new java.util.HashMap<>();
+      final String id;
+
+      Resizing(String id) {
+        this.id = id;
+      }
+
+      public String guiId() {
+        return id;
+      }
+
+      public org.bukkit.inventory.Inventory getInventory() {
+        return inv;
+      }
+
+      public void guiInventory(org.bukkit.inventory.Inventory value) {
+        inv = value;
+      }
+
+      public java.util.Map<Integer, ?> guiActions() {
+        return actions;
+      }
+
+      public void guiPut(int slot, Runnable action) {
+        actions.put(slot, action);
+      }
+
+      public void guiResume() {
+        inv = org.bukkit.Bukkit.createInventory(this, 36);
+      }
+    }
+    var parent = new Resizing("gui.test-parent");
+    var child = new Resizing("gui.test-child");
+    dev.lovelace.loveessential.gui.MenuStyle.open(p, parent.inv);
+    dev.lovelace.loveessential.gui.MenuStyle.open(p, child.inv);
+    dev.lovelace.loveessential.gui.MenuStyle.back(p);
+    assertSame(parent.inv, p.getOpenInventory().getTopInventory());
+    assertEquals(36, parent.inv.getSize());
+  }
 }

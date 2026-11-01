@@ -41,6 +41,14 @@ public final class MenuStyle {
     if (navigation != null) navigation.suspend(player);
   }
 
+  public static void external(org.bukkit.entity.Player player) {
+    if (navigation != null) navigation.external(player);
+  }
+
+  public static boolean resumeExternal(org.bukkit.entity.Player player, String screen) {
+    return navigation != null && navigation.resumeExternal(player, screen);
+  }
+
   public static void special(org.bukkit.entity.Player player, Inventory inventory) {
     if (navigation != null) navigation.special(player, inventory);
   }
@@ -169,9 +177,9 @@ public final class MenuStyle {
             case "common.back" -> "bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9";
             case "gui.confirm" -> "badc048a7ce78f7dad72a07da27d85c0916881e5522eeed1e3daf217a38c1a";
             case "gui.previous" ->
-                "84df2cefad48c10063d735399f904faa4608fd466def1de9e55b1a3665e38603";
+                "f6dab7271f4ff04d5440219067a109b5c0c1d1e01ec602c0020476f7eb612180";
             case "common.next" ->
-                "8a6d2f471b54047148b355255c7f556e2187fd4e8338b111dbf3adcd2850c498";
+                "8aa187fede88de002cbd930575eb7ba48d3b1a06d961bdc535800750af764926";
             default -> "c618731e063379aebf82f1d64c419c90d7f0c1648c548e9b6151b1baba66d723";
           };
       item = head(texture, lang.render(title), Arrays.stream(lore).map(lang::render).toList());

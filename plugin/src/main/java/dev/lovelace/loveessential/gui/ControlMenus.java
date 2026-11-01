@@ -1889,6 +1889,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
       m.actions.put(
           5,
           click -> {
+            MenuStyle.external(p);
             p.closeInventory();
             Bukkit.dispatchCommand(p, "suffixes le nick");
           });
