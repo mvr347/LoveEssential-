@@ -869,7 +869,13 @@ public final class Portals implements Listener, AutoCloseable {
     var m = menu(p, 54, "portal-ui.actions", () -> wizard(p));
     int count = d.actions().size();
     int total = count + (count < 16 ? 1 : 0);
-    if (count < 16) button(m, MenuStyle.slot(count, total), "portal-ui.add-command", "portal-ui.command-help", () -> commandForm(p, -1));
+    if (count < 16)
+      button(
+          m,
+          MenuStyle.slot(count, total),
+          "portal-ui.add-command",
+          "portal-ui.command-help",
+          () -> commandForm(p, -1));
     for (int i = 0; i < count; i++) {
       int index = i;
       var a = d.actions().get(i);
@@ -1117,9 +1123,13 @@ public final class Portals implements Listener, AutoCloseable {
           return;
         }
         boolean success =
-            a.args().getOrDefault("sender", "player").equals("console")
-                ? Bukkit.dispatchCommand(Bukkit.getConsoleSender(), value)
-                : p.performCommand(value);
+            teleport.portalCommand(
+                p,
+                d,
+                () ->
+                    a.args().getOrDefault("sender", "player").equals("console")
+                        ? Bukkit.dispatchCommand(Bukkit.getConsoleSender(), value)
+                        : p.performCommand(value));
         if (!success) return;
       } else if (!actions.execute(p, List.of(a))) return;
     }
