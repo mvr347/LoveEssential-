@@ -782,7 +782,43 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       int[] slots = STAT_SLOTS[cards.size()];
       for (int i = 0; i < cards.size(); i++) statisticButton(m, cards.get(i), slots[i], values);
     }
+    statisticProfile(m, viewer);
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
+  }
+
+  /** A hover region over the drawn portrait, with the same information as the root profile head. */
+  private void statisticProfile(Menu menu, Player viewer) {
+    String root = "profile.gui.menus.profile-menu-statistics.profile-info";
+    if (!plugin.getConfig().getBoolean(root + ".enabled", true)) return;
+    var custom =
+        dev.lovelace.loveessential.gui.ItemsAdderItems.find(
+            plugin.getConfig().getString(root + ".item", "voidcore:invisible"));
+    if (custom.isEmpty()) return;
+    ItemStack item = custom.get();
+    item.setAmount(1);
+    var meta = item.getItemMeta();
+    meta.displayName(
+        placeholders
+            .render("profile-menu.heading", viewer, viewer)
+            .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+    meta.lore(
+        textLines("profile-menu.root-head-lore", viewer, viewer).stream()
+            .map(
+                line ->
+                    line.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
+            .toList());
+    meta.setHideTooltip(false);
+    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
+    item.setItemMeta(meta);
+    for (int slot : new LinkedHashSet<>(plugin.getConfig().getIntegerList(root + ".slots"))) {
+      if (slot < 0 || slot >= menu.inventory.getSize()) continue;
+      var occupied = menu.inventory.getItem(slot);
+      // Never replace a category, a navigation button or another configured control.
+      if (occupied != null
+          && !occupied.getType().isAir()
+          && !occupied.getType().name().endsWith("STAINED_GLASS_PANE")) continue;
+      menu.inventory.setItem(slot, item.clone());
+    }
   }
 
   /** One category button: the current section's metrics, a trail of all sections, and left/right to leaf. */

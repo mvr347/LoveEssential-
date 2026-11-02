@@ -61,6 +61,7 @@ class ProfilePrivacyTest {
       instance.setAccessible(true);
       instance.set(null, null);
     }
+    dev.lone.itemsadder.api.CustomStack.clear();
     MockBukkit.unmock();
   }
 
@@ -763,5 +764,107 @@ class ProfilePrivacyTest {
     click(viewer, 15);
     assertTrue(calls.isEmpty());
     assertFalse(viewer.isOp());
+  }
+
+  static final List<Integer> PORTRAIT_SLOTS = List.of(9, 10, 11, 18, 19, 20, 27, 28, 29);
+
+  org.bukkit.inventory.ItemStack invisibleItem() {
+    MockBukkit.createMockPlugin("ItemsAdder");
+    var item = new org.bukkit.inventory.ItemStack(Material.PAPER);
+    var meta = item.getItemMeta();
+    meta.setCustomModelData(351);
+    meta.setHideTooltip(true);
+    meta.getPersistentDataContainer()
+        .set(
+            new NamespacedKey("itemsadder", "id"),
+            org.bukkit.persistence.PersistentDataType.STRING,
+            "voidcore:invisible");
+    item.setItemMeta(meta);
+    dev.lone.itemsadder.api.CustomStack.register("voidcore:invisible", item);
+    return item;
+  }
+
+  @Test
+  void theNineInvisibleItemsKeepTheirModelAndShowTheSameProfileTooltip() throws Exception {
+    var prototype = invisibleItem();
+    var viewer = player("Portrait");
+    command(viewer, "profile");
+    var profileHead = viewer.getOpenInventory().getTopInventory().getItem(0);
+    command(viewer, "profile stats");
+    var inventory = viewer.getOpenInventory().getTopInventory();
+    for (int slot : PORTRAIT_SLOTS) {
+      var item = inventory.getItem(slot);
+      assertNotNull(item, "portrait slot " + slot);
+      assertEquals(Material.PAPER, item.getType());
+      var meta = item.getItemMeta();
+      assertEquals(profileHead.getItemMeta().displayName(), meta.displayName());
+      assertEquals(profileHead.getItemMeta().lore(), meta.lore());
+      assertEquals(351, meta.getCustomModelData());
+      assertEquals(
+          "voidcore:invisible",
+          meta.getPersistentDataContainer()
+              .get(
+                  new NamespacedKey("itemsadder", "id"),
+                  org.bukkit.persistence.PersistentDataType.STRING));
+      assertFalse(meta.isHideTooltip());
+    }
+    assertTrue(prototype.getItemMeta().isHideTooltip(), "the provider's template is not edited");
+    assertFalse(prototype.getItemMeta().hasDisplayName());
+    var click =
+        new InventoryClickEvent(
+            viewer.getOpenInventory(),
+            InventoryType.SlotType.CONTAINER,
+            9,
+            ClickType.SHIFT_LEFT,
+            InventoryAction.MOVE_TO_OTHER_INVENTORY);
+    server.getPluginManager().callEvent(click);
+    assertTrue(click.isCancelled());
+    assertSame(inventory, viewer.getOpenInventory().getTopInventory());
+  }
+
+  @Test
+  void editingOnePortraitItemDoesNotChangeOtherSlotsPlayersOrTheProvider() throws Exception {
+    var prototype = invisibleItem();
+    var a = player("First");
+    var b = player("Second");
+    command(a, "profile stats");
+    command(b, "profile stats");
+    var first = a.getOpenInventory().getTopInventory();
+    var changed = first.getItem(9);
+    var meta = changed.getItemMeta();
+    meta.displayName(net.kyori.adventure.text.Component.text("Изменено"));
+    changed.setItemMeta(meta);
+    first.setItem(9, changed);
+    assertFalse(title(a, 10).contains("Изменено"));
+    assertFalse(title(b, 9).contains("Изменено"));
+    assertFalse(prototype.getItemMeta().hasDisplayName());
+  }
+
+  @Test
+  void absentOrUnknownItemsAdderItemsLeaveThePortraitAreaEmpty() throws Exception {
+    var p = player("MissingPortrait");
+    command(p, "profile stats");
+    for (int slot : PORTRAIT_SLOTS)
+      assertNull(p.getOpenInventory().getTopInventory().getItem(slot));
+    MockBukkit.createMockPlugin("ItemsAdder");
+    command(p, "profile stats");
+    for (int slot : PORTRAIT_SLOTS)
+      assertNull(p.getOpenInventory().getTopInventory().getItem(slot));
+  }
+
+  @Test
+  void aConfiguredPortraitCannotOverwriteNavigationAndCanBeDisabled() throws Exception {
+    invisibleItem();
+    var p = player("CustomPortrait");
+    plugin
+        .getConfig()
+        .set(
+            "profile.gui.menus.profile-menu-statistics.profile-info.slots", List.of(9, 53, -1, 99));
+    command(p, "profile stats");
+    assertEquals(Material.PAPER, p.getOpenInventory().getTopInventory().getItem(9).getType());
+    assertTrue(title(p, 53).contains("Закрыть"));
+    plugin.getConfig().set("profile.gui.menus.profile-menu-statistics.profile-info.enabled", false);
+    command(p, "profile stats");
+    assertNull(p.getOpenInventory().getTopInventory().getItem(9));
   }
 }
