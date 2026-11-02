@@ -385,7 +385,8 @@ class ProfilePrivacyTest {
     // Frameless: the drawn background shows, so there is no glass anywhere.
     for (int slot = 0; slot < inventory.getSize(); slot++)
       assertTrue(
-          inventory.getItem(slot) == null || !inventory.getItem(slot).getType().name().endsWith("GLASS_PANE"),
+          inventory.getItem(slot) == null
+              || !inventory.getItem(slot).getType().name().endsWith("GLASS_PANE"),
           "glass at " + slot);
 
     String first = slotLore(p, 14);
@@ -432,7 +433,8 @@ class ProfilePrivacyTest {
     assertTrue(title(p, 26).contains("Закрыть"), title(p, 26));
     plugin.getConfig().set("profile.back-command", "");
     command(p, "profile back");
-    assertTrue(p.getOpenInventory().getTopInventory().getItem(25).getType().name().endsWith("GLASS_PANE"));
+    assertTrue(
+        p.getOpenInventory().getTopInventory().getItem(25).getType().name().endsWith("GLASS_PANE"));
   }
 
   @Test
@@ -463,7 +465,8 @@ class ProfilePrivacyTest {
         meta.getPlayerProfile().getProperties().stream()
             .anyMatch(property -> property.getName().equals("textures")));
     assertFalse(lore(viewer).contains("K/D:"));
-    assertTrue(viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
+    assertTrue(
+        viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
     assertFalse(
         title(viewer, 43).contains("Назад"), "direct offline profile has no invented parent");
   }
@@ -602,7 +605,8 @@ class ProfilePrivacyTest {
     owner.addAttachment(plugin, "loveadaptation.use", true);
     command(owner, "profile");
     click(owner, named(owner, "Адаптации"));
-    assertEquals("LoveAdaptation:loveadaptation:Owner:mainmenu profile", calls.getLast());
+    assertEquals(
+        "LoveAdaptation:loveadaptation:Owner:mainmenu loveessential:profile", calls.getLast());
     command(owner, "profile settings");
     assertTrue(title(owner, named(owner, "Видимость профиля")).contains("Открыт"));
     assertTrue(title(owner, named(owner, "Видимость активности")).contains("Скрыта"));
@@ -682,7 +686,7 @@ class ProfilePrivacyTest {
     command(viewer, "profile");
     click(viewer, named(viewer, "Поведение"));
     // Opened from the profile the plugin gets its "came from profile" argument.
-    assertEquals("LoveBehavior:behavior:Viewer:mainmenu profile", calls.getLast());
+    assertEquals("LoveBehavior:behavior:Viewer:mainmenu loveessential:profile", calls.getLast());
   }
 
   @Test
@@ -697,7 +701,78 @@ class ProfilePrivacyTest {
     assertTrue(calls.isEmpty());
     command(viewer, "profile");
     click(viewer, named(viewer, "Безопасность"));
-    assertEquals(List.of("LoveBehavior:account:Viewer:profile"), calls);
+    assertEquals(List.of("LoveBehavior:account:Viewer:loveessential:profile"), calls);
+  }
+
+  @Test
+  void nativeProfileLinksReturnToEssentialWhenAnotherPluginOwnsTheProfileAlias() throws Exception {
+    neighbor("LoveAuth", "loveauth");
+    server
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.auth.AuthOracle.class,
+            id -> true,
+            plugin,
+            ServicePriority.Normal);
+    neighbor("LoveBehavior", "behavior");
+    neighbor("LoveAdaptation", "loveadaptation");
+    neighbor("LoveSubnames", "suffixes");
+    var foreign = neighbor("DeluxeMenus", "profile");
+    server.getCommandMap().getKnownCommands().put("profile", foreign.getCommand("profile"));
+    var viewer = player("Owner");
+    for (String permission :
+        List.of("lovebehavior.behavior", "loveadaptation.use", "lovesubnames.use"))
+      viewer.addAttachment(plugin, permission, true);
+    for (var entry :
+        Map.of(
+                "Безопасность", "LoveAuth:loveauth:Owner:account loveessential:profile",
+                "Поведение", "LoveBehavior:behavior:Owner:mainmenu loveessential:profile",
+                "Адаптации", "LoveAdaptation:loveadaptation:Owner:mainmenu loveessential:profile")
+            .entrySet()) {
+      command(viewer, "loveessential:profile");
+      click(viewer, named(viewer, entry.getKey()));
+      assertEquals(entry.getValue(), calls.getLast());
+      int callsBeforeReturn = calls.size();
+      command(viewer, "loveessential:profile");
+      assertEquals(callsBeforeReturn, calls.size(), "Back must not dispatch DeluxeMenus' alias");
+      assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    }
+  }
+
+  @Test
+  void suffixCatalogueFromPersonalizationGetsTheProfileParentDespiteForeignAliases() throws Exception {
+    neighbor("LoveSubnames", "suffixes");
+    var foreign = neighbor("DeluxeMenus", "suffixes", "display");
+    for (String alias : List.of("suffixes", "display"))
+      server.getCommandMap().getKnownCommands().put(alias, foreign.getCommand(alias));
+    var viewer = player("Owner");
+    var nicknames = internal("nicknames", Nicknames.class);
+    waitFor(() -> {
+      try { nicknames.settings(viewer); return true; }
+      catch (IllegalArgumentException pending) { return false; }
+    });
+    command(viewer, "loveessential:profile");
+    click(viewer, named(viewer, "Персонализация"));
+    click(viewer, named(viewer, "Пометки"));
+    assertEquals("LoveSubnames:suffixes:Owner:loveessential:profile", calls.getLast());
+    command(viewer, "loveessential:profile");
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    click(viewer, named(viewer, "Персонализация"));
+    int before = calls.size();
+    click(viewer, named(viewer, "Отображение"));
+    assertEquals(before, calls.size(), "Display must not invoke DeluxeMenus");
+    assertTrue(titles(viewer).toLowerCase(Locale.ROOT).contains("клан"));
+  }
+
+  @Test
+  void legacyCommandAlreadyContainingMainmenuDoesNotDuplicateTheOpeningMode() throws Exception {
+    neighbor("LoveBehavior", "behavior");
+    plugin.getConfig().set("profile.links.behavior.command", "behavior mainmenu");
+    var viewer = player("Owner");
+    viewer.addAttachment(plugin, "lovebehavior.behavior", true);
+    command(viewer, "profile");
+    click(viewer, named(viewer, "Поведение"));
+    assertEquals("LoveBehavior:behavior:Owner:mainmenu loveessential:profile", calls.getLast());
   }
 
   @Test
@@ -766,7 +841,8 @@ class ProfilePrivacyTest {
     assertFalse(viewer.isOp());
   }
 
-  static final List<Integer> PORTRAIT_SLOTS = List.of(9, 10, 11, 18, 19, 20, 27, 28, 29);
+  static final List<Integer> PORTRAIT_SLOTS =
+      List.of(9, 10, 11, 12, 18, 19, 20, 21, 27, 28, 29, 30, 36, 37, 38, 39);
 
   org.bukkit.inventory.ItemStack invisibleItem() {
     MockBukkit.createMockPlugin("ItemsAdder");
@@ -785,7 +861,7 @@ class ProfilePrivacyTest {
   }
 
   @Test
-  void theNineInvisibleItemsKeepTheirModelAndShowTheSameProfileTooltip() throws Exception {
+  void theInvisibleItemsKeepTheirModelAndShowTheSameProfileTooltip() throws Exception {
     var prototype = invisibleItem();
     var viewer = player("Portrait");
     command(viewer, "profile");

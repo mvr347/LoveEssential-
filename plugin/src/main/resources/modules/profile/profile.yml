@@ -12,7 +12,7 @@ links:
     plugin: LoveAuth
     command: loveauth account
     # 2026-11-01: аргумент, с которым плагин открывается из профиля: LoveAuth возвращает игрока этой командой.
-    from-profile: profile
+    from-profile: loveessential:profile
     permission: ''
   customization:
     plugin: LoveEssential
@@ -23,7 +23,7 @@ links:
     command: behavior
     from-profile: mainmenu
     # 2026-11-01: команда «Назад» передаётся аргументом, поэтому правка config.yml самого плагина не нужна.
-    back-argument: profile
+    back-argument: loveessential:profile
     permission: lovebehavior.behavior
   reputation:
     plugin: LoveBehavior
@@ -32,12 +32,12 @@ links:
   adaptations:
     plugin: LoveAdaptation
     command: loveadaptation mainmenu
-    back-argument: profile
+    back-argument: loveessential:profile
     permission: loveadaptation.use
   suffixes:
     plugin: LoveSubnames
     command: suffixes
-    from-profile: profile
+    from-profile: loveessential:profile
     permission: lovesubnames.use
   display:
     plugin: LoveEssential
