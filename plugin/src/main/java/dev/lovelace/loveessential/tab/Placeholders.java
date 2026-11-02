@@ -475,7 +475,8 @@ public final class Placeholders {
                           depth + 1,
                           hidden));
             }));
-    return mm.deserialize(template, b.build());
+    Component rendered = mm.deserialize(template, b.build());
+    return template.contains("<head:") ? PlayerHeads.resolve(rendered) : rendered;
   }
 
   /** One animation: frame texts and the time each frame stays visible. */

@@ -1485,6 +1485,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       default -> {
         draws.add(
             slot ->
+                link(m, slot, "display", "profile-menu.display",
+                    "profile-menu.display-lore", Material.COMPARATOR, p, true));
+        draws.add(
+            slot ->
                 card(m, slot, Material.BELL, "profile-menu.notifications",
                     "profile-menu.notifications-lore", p, () -> notifications(p)));
         draws.add(

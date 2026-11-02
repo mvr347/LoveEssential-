@@ -288,4 +288,104 @@ class TabIntegrationTest {
     assertFalse(bob.canSee(alice));
     assertEquals(alice.getUniqueId(), alice.getPlayerProfile().getId());
   }
+
+  private static final String FIRST_SKIN =
+      java.util.Base64.getEncoder()
+          .encodeToString(
+              "{\"textures\":{\"SKIN\":{\"url\":\"https://textures.minecraft.net/texture/first\"}}}"
+                  .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  private static final String SECOND_SKIN =
+      java.util.Base64.getEncoder()
+          .encodeToString(
+              "{\"textures\":{\"SKIN\":{\"url\":\"https://textures.minecraft.net/texture/second\"}}}"
+                  .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+  PlayerMock offlinePlayer() {
+    var uuid =
+        UUID.nameUUIDFromBytes(
+            "OfflinePlayer:Ada123".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    var p = new PlayerMock(server, "Ada123", uuid);
+    server.addPlayer(p);
+    return p;
+  }
+
+  void texture(PlayerMock player, String value) {
+    var profile = player.getPlayerProfile();
+    profile.removeProperty("textures");
+    profile.setProperty(
+        new com.destroystokyo.paper.profile.ProfileProperty("textures", value, "signed-texture"));
+    player.setPlayerProfile(profile);
+  }
+
+  List<net.kyori.adventure.text.object.PlayerHeadObjectContents> heads(
+      net.kyori.adventure.text.Component c) {
+    var found = new ArrayList<net.kyori.adventure.text.object.PlayerHeadObjectContents>();
+    if (c instanceof net.kyori.adventure.text.ObjectComponent o
+        && o.contents() instanceof net.kyori.adventure.text.object.PlayerHeadObjectContents head)
+      found.add(head);
+    c.children().forEach(child -> found.addAll(heads(child)));
+    return found;
+  }
+
+  @Test
+  void offlineAccountHeadsEmbedTheCurrentSignedTextureByNameAndUuid() throws Exception {
+    var p = offlinePlayer();
+    assertEquals(3, p.getUniqueId().version());
+    texture(p, FIRST_SKIN);
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    for (String source : List.of("<head:name:%player%>", "<head:uuid:" + p.getUniqueId() + ">")) {
+      var text = placeholders.renderRaw("<red>До " + source + ": после", p, p);
+      var head = heads(text).getFirst();
+      var property =
+          head.profileProperties().stream()
+              .filter(v -> v.name().equals("textures"))
+              .findFirst()
+              .orElseThrow();
+      assertEquals(FIRST_SKIN, property.value());
+      assertEquals("signed-texture", property.signature());
+      assertTrue(PlainTextComponentSerializer.plainText().serialize(text).endsWith(": после"));
+      assertEquals(p.getUniqueId(), p.getPlayerProfile().getId());
+      assertEquals("Ada123", p.getPlayerProfile().getName());
+    }
+  }
+
+  @Test
+  void skinChangedImmediatelyRepaintsInlineHeadsForOfflinePlayersAndKeepsVisibility()
+      throws Exception {
+    plugin.getConfig().set("tab.groups._DEFAULT_.tabprefix", "<head:%player%> <gold># ");
+    var p = offlinePlayer();
+    var viewer = player("Observer", "world");
+    viewer.hidePlayer(plugin, p);
+    texture(p, FIRST_SKIN);
+    plugin.skinChanged(p);
+    var before = p.playerListName();
+    assertEquals(FIRST_SKIN, heads(before).getFirst().profileProperties().getFirst().value());
+    texture(p, SECOND_SKIN);
+    plugin.skinChanged(p);
+    var after = p.playerListName();
+    assertNotEquals(
+        before, after, "The list entry must change even though the player's nickname is unchanged");
+    assertEquals(SECOND_SKIN, heads(after).getFirst().profileProperties().getFirst().value());
+    assertFalse(viewer.canSee(p), "Refreshing a head must not reveal a hidden player");
+    settle(2);
+    assertEquals(after, p.playerListName());
+  }
+
+  @Test
+  void liveTexturesKeepTheConfiguredHatAndExplicitOrUnconnectedHeadsStayUntouched()
+      throws Exception {
+    var p = offlinePlayer();
+    texture(p, FIRST_SKIN);
+    var placeholders = internal("placeholders", dev.lovelace.loveessential.tab.Placeholders.class);
+    var text = placeholders.renderRaw("<head:%player%:false> <head:NotConnected>", p, p);
+    assertFalse(heads(text).get(0).hat());
+    assertFalse(heads(text).get(0).profileProperties().isEmpty());
+    assertEquals("NotConnected", heads(text).get(1).name());
+    assertTrue(heads(text).get(1).profileProperties().isEmpty());
+    String explicitSource = "<head:entity/player/wide/steve>";
+    var explicit = placeholders.renderRaw(explicitSource, p, p);
+    var configured = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(explicitSource);
+    assertNotNull(heads(explicit).getFirst().texture());
+    assertEquals(heads(configured).getFirst().texture(), heads(explicit).getFirst().texture());
+  }
 }

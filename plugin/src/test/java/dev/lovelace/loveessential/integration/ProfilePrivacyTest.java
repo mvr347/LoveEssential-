@@ -943,4 +943,22 @@ class ProfilePrivacyTest {
     command(p, "profile stats");
     assertNull(p.getOpenInventory().getTopInventory().getItem(9));
   }
+  @Test
+  void displayOpensFromInterfaceSettingsAndBackKeepsTheFilterAndProfileParent() throws Exception {
+    var p = player("Viewer");
+    command(p, "profile");
+    click(p, named(p, "Настройки"));
+    for (int i = 0; i < 4; i++) click(p, 4);
+    assertTrue(title(p, 4).contains("Интерфейс"));
+    click(p, named(p, "Отображение"));
+    assertTrue(titles(p).toLowerCase(Locale.ROOT).contains("клан"));
+    int back = p.getOpenInventory().getTopInventory().getSize() - 2;
+    assertTrue(title(p, back).contains("Назад"));
+    click(p, back);
+    assertTrue(title(p, 4).contains("Интерфейс"));
+    assertTrue(titles(p).contains("Отображение"));
+    click(p, p.getOpenInventory().getTopInventory().getSize() - 2);
+    assertEquals(27, p.getOpenInventory().getTopInventory().getSize());
+  }
+
 }
