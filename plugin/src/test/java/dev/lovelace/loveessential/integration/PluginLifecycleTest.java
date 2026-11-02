@@ -477,6 +477,26 @@ class PluginLifecycleTest {
     return out.toString();
   }
 
+  public static class ModerationNeighbor extends org.bukkit.plugin.java.JavaPlugin {
+    public final java.util.Set<java.util.UUID> muted=new java.util.HashSet<>();
+    public ModerationNeighbor getModerationService(){return this;}
+    public boolean isMuted(java.util.UUID uuid){return muted.contains(uuid);}
+  }
+  @Test void shadowMuteNeverReachesPrivateMessageRecipientOrReplyState()throws Exception {
+    var description=new org.bukkit.plugin.PluginDescriptionFile(new java.io.StringReader("name: LoveWebAdmin\nversion: 1\nmain: "+ModerationNeighbor.class.getName()+"\n"));
+    var moderation=MockBukkit.loadWith(ModerationNeighbor.class,description);
+    var sender=server.addPlayer("Muted");var recipient=server.addPlayer("Receiver");
+    messageReady(sender,recipient);
+    moderation.muted.add(sender.getUniqueId());
+    var messages=internal("messages",dev.lovelace.loveessential.module.PrivateMessages.class);
+    messages.send(sender,recipient,"Скрытое сообщение");
+    assertTrue(drain(sender).contains("Скрытое сообщение"));
+    assertFalse(drain(recipient).contains("Скрытое сообщение"));
+    moderation.muted.clear();
+    messages.send(sender,recipient,"Обычное сообщение");
+    assertTrue(drain(recipient).contains("Обычное сообщение"));
+  }
+
   @Test
   void privateMessagesReplyAndEscapePlayerText() throws Exception {
     var alice = server.addPlayer("Alice");

@@ -259,6 +259,11 @@ public final class PrivateMessages implements Listener, AutoCloseable {
       throw new IllegalArgumentException("messages.cooldown");
     // Throttle cancelled attempts too; a filter can safely reject without generating replies.
     sent.put(sender.getUniqueId(), now);
+    if (dev.lovelace.loveessential.integration.ModerationBridge.muted(sender.getUniqueId())) {
+      sender.sendMessage(net.kyori.adventure.text.Component.text("Вы → " + recipient.getName() + ": " + text));
+      sender.sendActionBar(net.kyori.adventure.text.Component.text("Вас никто не слышит"));
+      return;
+    }
     var event = new PrivateMessageEvent(sender, recipient, text);
     Bukkit.getPluginManager().callEvent(event);
     if (event.isCancelled()) {
