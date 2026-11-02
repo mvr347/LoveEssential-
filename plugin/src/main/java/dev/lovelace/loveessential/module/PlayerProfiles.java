@@ -1266,7 +1266,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             .replace("{viewer}", viewer.getName());
     // Opened from the profile: the plugin gets its "came from profile" argument, so it can show Back.
     String fromProfile = plugin.getConfig().getString("profile.links." + id + ".from-profile", "").strip();
-    if (close && !fromProfile.isBlank() && !fromProfile.contains("\n")) value = value + " " + fromProfile;
+    if (close
+        && !fromProfile.isBlank()
+        && !fromProfile.contains("\n")
+        && !value.endsWith(" " + fromProfile)) value = value + " " + fromProfile;
     // The command the opened menu runs for its Back button; the plugin checks that it exists.
     String backArgument = plugin.getConfig().getString("profile.links." + id + ".back-argument", "").strip();
     if (close && !backArgument.isBlank() && !backArgument.contains("\n")) value = value + " " + backArgument;
@@ -1480,6 +1483,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                     () -> changePrivacy(p, true, "toggle", () -> repaintNext(p)), true));
       }
       default -> {
+        draws.add(
+            slot ->
+                link(m, slot, "display", "profile-menu.display",
+                    "profile-menu.display-lore", Material.COMPARATOR, p, true));
         draws.add(
             slot ->
                 card(m, slot, Material.BELL, "profile-menu.notifications",

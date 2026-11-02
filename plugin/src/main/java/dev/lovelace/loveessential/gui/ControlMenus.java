@@ -1854,7 +1854,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             lang.lines("nick.head-lore").stream()
                 .map(line -> lang.renderText(line, Map.of("suffix", suffix), Map.of("preview", current)))
                 .toList()));
-    m.actions.put(0, click -> Bukkit.dispatchCommand(p, "profile"));
+    m.actions.put(0, click -> Bukkit.dispatchCommand(p, "loveessential:profile"));
     // Two header controls, centred on slots 3 and 5.
     m.inventory.setItem(
         3,
@@ -1871,8 +1871,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
             lang.lines("profile-menu.display-lore").stream()
                 .map(l -> lang.renderText(l, Map.of()))
                 .toList()));
-    m.actions.put(4, click -> MenuStyle.action(p, () -> Bukkit.dispatchCommand(p, "display")));
-    boolean catalogue = Bukkit.getPluginCommand("suffixes") != null;
+    m.actions.put(4, click -> MenuStyle.action(p, () -> Bukkit.dispatchCommand(p, "loveessential:display")));
+    var suffixCommand = Bukkit.getPluginCommand("lovesubnames:suffixes");
+    boolean catalogue = suffixCommand != null && suffixCommand.getPlugin().isEnabled()
+        && suffixCommand.getPlugin().getName().equalsIgnoreCase("LoveSubnames");
     var suffixLore =
         new ArrayList<>(
             lang.lines("nick.suffixes-lore").stream()
@@ -1891,7 +1893,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
           click -> {
             MenuStyle.external(p);
             p.closeInventory();
-            Bukkit.dispatchCommand(p, "suffixes le nick");
+            Bukkit.dispatchCommand(p, "lovesubnames:suffixes loveessential:profile");
           });
     int index = 0;
     for (var color : NICK_COLORS.entrySet()) {

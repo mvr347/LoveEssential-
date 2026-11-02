@@ -102,6 +102,10 @@ public final class ModuleConfigs {
         fillIn("modules/" + id + "/" + id + ".yml", module, legacy);
         if (id.equals("calamities")) migrateCalamityClock(module);
         if (id.equals("scoreboard")) migrateScoreboard(module);
+        if (id.equals("profile")
+            && migrateProfileReturns(module)
+            && Files.exists(configFile(id)))
+          backup(configFile(id), ".pre-profile-return-20261102.bak");
         var gui = read(guiFile(id));
         if (module.isConfigurationSection("gui")) fill(gui, module.getConfigurationSection("gui"));
         module.set("gui", null);
@@ -131,6 +135,10 @@ public final class ModuleConfigs {
           gui.set(STATISTICS + ".categories", null);
           gui.set(STATISTICS + ".size", null);
         }
+        if (id.equals("profile")
+            && expandStatisticsProfile(gui, guiDefaults)
+            && Files.exists(guiFile(id)))
+          backup(guiFile(id), ".pre-profile-area-20261102.bak");
         fillIn("modules/" + id + "/gui.yml", gui, guiDefaults);
         repairMappedLines(gui);
         String beforeDisplay = id.equals("display") ? gui.saveToString() : null;
@@ -491,6 +499,35 @@ public final class ModuleConfigs {
       if (!section.contains(to)) section.set(to, section.get(from));
       section.set(from, null);
     }
+  }
+
+  /** Expand only the previously shipped portrait; keep explicitly customized slot lists intact. */
+  static boolean expandStatisticsProfile(YamlConfiguration gui, YamlConfiguration defaults) {
+    String path = "menus.profile-menu-statistics.profile-info.slots";
+    if (!Objects.equals(gui.get(path), List.of(9, 10, 11, 18, 19, 20, 27, 28, 29))) return false;
+    gui.set(path, defaults.getIntegerList(path));
+    return true;
+  }
+
+  /**
+   * Old generic /profile aliases can belong to DeluxeMenus; pin only our shipped return targets.
+   */
+  static boolean migrateProfileReturns(YamlConfiguration module) {
+    boolean changed = false;
+    for (String path :
+        List.of(
+            "links.account.from-profile",
+            "links.behavior.back-argument",
+            "links.adaptations.back-argument",
+            "links.suffixes.from-profile")) {
+      String value = module.getString(path, "");
+      if (value.equals("profile")
+          || (path.equals("links.account.from-profile") && value.equals("mainmenu"))) {
+        module.set(path, "loveessential:profile");
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   private static void backup(Path file, String suffix) throws IOException {

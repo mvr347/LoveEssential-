@@ -28,6 +28,48 @@ class StatisticsConfigTest {
     return resource("modules/profile/gui.yml").getConfigurationSection(STATS + ".categories");
   }
 
+  @Test
+  void expandingThePortraitPreservesCustomLayoutsAndOtherSettings() throws Exception {
+    String path = STATS + ".profile-info.slots";
+    var defaults = resource("modules/profile/gui.yml");
+    var installed = new YamlConfiguration();
+    installed.set(path, List.of(9, 10, 11, 18, 19, 20, 27, 28, 29));
+    installed.set(STATS + ".title", "<white>my artwork");
+    installed.set(STATS + ".profile-info.item", "custom:portrait");
+    installed.set(STATS + ".profile-info.enabled", false);
+    assertTrue(ModuleConfigs.expandStatisticsProfile(installed, defaults));
+    assertEquals(defaults.getIntegerList(path), installed.getIntegerList(path));
+    assertEquals("<white>my artwork", installed.getString(STATS + ".title"));
+    assertEquals("custom:portrait", installed.getString(STATS + ".profile-info.item"));
+    assertFalse(installed.getBoolean(STATS + ".profile-info.enabled"));
+    assertFalse(ModuleConfigs.expandStatisticsProfile(installed, defaults));
+    for (var custom : List.of(List.of(12, 21), List.<Integer>of())) {
+      installed.set(path, custom);
+      assertFalse(ModuleConfigs.expandStatisticsProfile(installed, defaults));
+      assertEquals(custom, installed.getIntegerList(path));
+    }
+  }
+
+  @Test
+  void oldReturnAliasesArePinnedWithoutOverwritingCustomTargets() {
+    var module = new YamlConfiguration();
+    module.set("links.account.from-profile", "mainmenu");
+    module.set("links.behavior.back-argument", "profile");
+    module.set("links.adaptations.back-argument", "profile");
+    module.set("links.suffixes.from-profile", "profile");
+    assertTrue(ModuleConfigs.migrateProfileReturns(module));
+    assertEquals("loveessential:profile", module.getString("links.account.from-profile"));
+    assertEquals("loveessential:profile", module.getString("links.behavior.back-argument"));
+    assertEquals("loveessential:profile", module.getString("links.adaptations.back-argument"));
+    assertEquals("loveessential:profile", module.getString("links.suffixes.from-profile"));
+    assertFalse(ModuleConfigs.migrateProfileReturns(module));
+    module.set("links.account.from-profile", "custom:account");
+    module.set("links.behavior.back-argument", "hub open");
+    assertFalse(ModuleConfigs.migrateProfileReturns(module));
+    assertEquals("custom:account", module.getString("links.account.from-profile"));
+    assertEquals("hub open", module.getString("links.behavior.back-argument"));
+  }
+
   /** Variable of every "Label: <value>" line, per section. */
   private static Map<String, List<String>> variablesBySection() throws Exception {
     var result = new LinkedHashMap<String, List<String>>();
@@ -52,7 +94,9 @@ class StatisticsConfigTest {
         List.of("world", "clans", "activities", "combat", "trade"),
         List.copyOf(categories().getKeys(false)));
     assertEquals(54, resource("modules/profile/gui.yml").getInt(STATS + ".size"));
-    assertFalse(resource("modules/profile/gui.yml").getBoolean(STATS + ".frame", true), "drawn background: no glass");
+    assertFalse(
+        resource("modules/profile/gui.yml").getBoolean(STATS + ".frame", true),
+        "drawn background: no glass");
   }
 
   @Test
@@ -126,7 +170,8 @@ class StatisticsConfigTest {
     assertTrue(ModuleConfigs.unchangedLegacyStatistics(installed, legacy));
 
     installed.set(STATS + ".categories.world.details.visits.lore", List.of("<gold>my own line"));
-    assertFalse(ModuleConfigs.unchangedLegacyStatistics(installed, legacy), "an admin's edit is kept");
+    assertFalse(
+        ModuleConfigs.unchangedLegacyStatistics(installed, legacy), "an admin's edit is kept");
 
     var current = new YamlConfiguration();
     current.set(STATS + ".categories", ModuleConfigs.snapshot(legacy.get(STATS + ".categories")));
