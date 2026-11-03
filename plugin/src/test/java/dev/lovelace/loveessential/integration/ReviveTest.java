@@ -197,6 +197,20 @@ class ReviveTest implements Listener {
       attacked = target;
     }
 
+    final List<Boolean> swimWrites = new ArrayList<>();
+    boolean emulateSwimEvents;
+
+    @Override
+    public void setSwimming(boolean swimming) {
+      if (emulateSwimEvents && swimming != isSwimming()) {
+        var event = new org.bukkit.event.entity.EntityToggleSwimEvent(this, swimming);
+        getServer().getPluginManager().callEvent(event);
+        if (event.isCancelled()) return;
+      }
+      if (swimWrites != null) swimWrites.add(swimming);
+      super.setSwimming(swimming);
+    }
+
     final java.util.Map<Location, org.bukkit.block.data.BlockData> changes =
         new java.util.HashMap<>();
 
@@ -318,6 +332,100 @@ class ReviveTest implements Listener {
     assertEquals(
         Material.BARRIER,
         ((RecordingPlayer) victim).changes.get(current.getLocation()).getMaterial());
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {"sneak", "carrier-damage", "victim-damage", "carrier-quit"})
+  void droppingResendsSwimmingStateImmediatelyAndAfterDismount(String reason) {
+    fall();
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    assertTrue(helper.getPassengers().contains(victim));
+    var recording = (RecordingPlayer) victim;
+    recording.emulateSwimEvents = true;
+    recording.swimWrites.clear();
+    // External attempts to stop crawling are still blocked; only the internal reset is allowed.
+    recording.setSwimming(false);
+    assertTrue(recording.isSwimming());
+    assertTrue(recording.swimWrites.isEmpty());
+    switch (reason) {
+      case "sneak" ->
+          server
+              .getPluginManager()
+              .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+      case "carrier-damage" -> hit(helper, EntityDamageEvent.DamageCause.ENTITY_ATTACK, .1);
+      case "victim-damage" -> hit(victim, EntityDamageEvent.DamageCause.ENTITY_ATTACK, .1);
+      case "carrier-quit" ->
+          server
+              .getPluginManager()
+              .callEvent(
+                  new org.bukkit.event.player.PlayerQuitEvent(
+                      helper, net.kyori.adventure.text.Component.empty()));
+      default -> fail("Unexpected drop reason");
+    }
+    assertFalse(victim.isInsideVehicle());
+    assertEquals(List.of(false, true), recording.swimWrites);
+    // Simulate the server resetting the metadata after removePassenger has returned.
+    victim.setPose(org.bukkit.entity.Pose.STANDING, false);
+    recording.swimWrites.clear();
+    server.getScheduler().performOneTick();
+    assertEquals(List.of(false, true), recording.swimWrites);
+    assertTrue(victim.isSwimming());
+    assertTrue(victim.hasFixedPose());
+    assertEquals(org.bukkit.entity.Pose.SLEEPING, victim.getPose());
+    var ceiling = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    assertEquals(Material.AIR, ceiling.getType());
+    assertEquals(Material.BARRIER, recording.changes.get(ceiling.getLocation()).getMaterial());
+  }
+
+  @Test
+  void previousDropCannotResetANewCarrySession() {
+    fall();
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    // Another carrier can pick up in the same tick; click de-duplication is per player.
+    var other = joinUnchecked("OtherCarrier");
+    other.teleport(victim.getLocation());
+    rightClick(other, victim);
+    assertTrue(other.getPassengers().contains(victim));
+    var recording = (RecordingPlayer) victim;
+    recording.swimWrites.clear();
+    server.getScheduler().performOneTick();
+    assertTrue(recording.swimWrites.isEmpty());
+    assertTrue(other.getPassengers().contains(victim));
+    var ceiling = victim.getLocation().getBlock().getRelative(0, 1, 0);
+    assertEquals(Material.AIR, recording.changes.get(ceiling.getLocation()).getMaterial());
+  }
+
+  @Test
+  void oldDropCallbackDoesNotRepeatTheNewDropInTheSameTick() {
+    fall();
+    helper.teleport(victim.getLocation());
+    rightClick(helper, victim);
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(helper, true));
+    var other = joinUnchecked("OtherCarrier");
+    other.teleport(victim.getLocation());
+    rightClick(other, victim);
+    server
+        .getPluginManager()
+        .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(other, true));
+    var recording = (RecordingPlayer) victim;
+    recording.swimWrites.clear();
+    server.getScheduler().performOneTick();
+    assertEquals(List.of(false, true), recording.swimWrites);
+    assertFalse(victim.isInsideVehicle());
+  }
+
+  private PlayerMock joinUnchecked(String name) {
+    var p = new RecordingPlayer(server, name);
+    server.addPlayer(p);
+    return p;
   }
 
   @Test

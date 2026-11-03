@@ -1,12 +1,12 @@
 package dev.lovelace.loveessential.module;
 
-import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent;
 import dev.lovelace.lovecore.api.revive.DownedOracle;
 import dev.lovelace.lovecore.api.revive.ReviveService;
 import dev.lovelace.lovecore.api.social.ProfileOracle;
 import dev.lovelace.loveessential.LoveEssentialPlugin;
 import dev.lovelace.loveessential.api.Action;
+import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import dev.lovelace.loveessential.api.revive.*;
 import dev.lovelace.loveessential.condition.ActionEngine;
 import dev.lovelace.loveessential.integration.LoveBridge;
@@ -91,6 +91,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
     volatile UUID reviver;
     volatile Map<String, String> placeholderValues = Map.of();
     UUID carrier;
+    long carryRevision;
+    boolean resettingPose;
     Runnable refund;
     EntityDamageEvent cause;
     BossBar bar;
@@ -1160,6 +1162,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
     if (!carrier.addPassenger(downed)) return false;
     if (helper != null) stop(downed, state, helper);
     state.carrier = carrier.getUniqueId();
+    state.carryRevision++;
     updatePose(downed, state);
     updateInteraction(downed, state);
     carrying.put(carrier.getUniqueId(), downed.getUniqueId());
@@ -1188,10 +1191,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
   }
 
   private void restoreAfterDrop(Player p, State state) {
-    restoreCeiling(p, state);
-    p.setPose(Pose.STANDING, false);
-    updatePose(p, state);
-    updateInteraction(p, state);
+    long revision = ++state.carryRevision;
+    reapplyDroppedPose(p, state);
     // Dismount processing may reset the pose/location after removePassenger returns.
     Bukkit.getScheduler()
         .runTask(
@@ -1199,14 +1200,27 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
             () -> {
               if (!enabled()
                   || states.get(p.getUniqueId()) != state
+                  || state.carryRevision != revision
                   || state.carrier != null
                   || !p.isOnline()
                   || p.isDead()) return;
-              restoreCeiling(p, state);
-              p.setPose(Pose.STANDING, false);
-              updatePose(p, state);
-              updateInteraction(p, state);
+              reapplyDroppedPose(p, state);
             });
+  }
+
+  private void reapplyDroppedPose(Player p, State state) {
+    restoreCeiling(p, state);
+    // Dismount resets the owning client's swimming state independently of the server flag.
+    // Toggle it deliberately so fresh metadata is sent even when it was already true here.
+    state.resettingPose = true;
+    try {
+      p.setSwimming(false);
+      p.setPose(Pose.STANDING, false);
+    } finally {
+      state.resettingPose = false;
+    }
+    updatePose(p, state);
+    updateInteraction(p, state);
   }
 
   @EventHandler
@@ -1332,8 +1346,8 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
 
   @EventHandler(ignoreCancelled = true)
   public void swimming(EntityToggleSwimEvent e) {
-    if (!e.isSwimming() && enabled() && states.containsKey(e.getEntity().getUniqueId()))
-      e.setCancelled(true);
+    State state = states.get(e.getEntity().getUniqueId());
+    if (!e.isSwimming() && enabled() && state != null && !state.resettingPose) e.setCancelled(true);
   }
 
   @EventHandler(ignoreCancelled = true)
