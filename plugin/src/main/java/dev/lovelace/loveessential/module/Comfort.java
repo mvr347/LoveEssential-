@@ -1,16 +1,16 @@
 package dev.lovelace.loveessential.module;
 
-import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import dev.lovelace.loveessential.*;
+import dev.lovelace.loveessential.api.mechanics.PlayerMechanics;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
 import dev.lovelace.loveessential.storage.SqliteStore;
 import java.util.*;
 import org.bukkit.*;
-import org.bukkit.command.CommandSender;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.type.Stairs;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
 import org.bukkit.event.block.Action;
@@ -46,7 +46,29 @@ public final class Comfort implements Listener, AutoCloseable {
 
   private record Seat(ArmorStand entity, Location stand, Block block) {}
 
-  private record Lying(Location anchor, Block support, Pose previous, boolean fixed) {}
+  private static final class Lying {
+    private final Location anchor;
+    private final Block support;
+    private final Pose previous;
+    private final boolean fixed;
+    private Block ceiling;
+    private int refresh;
+
+    private Lying(Location anchor, Block support, Pose previous, boolean fixed) {
+      this.anchor = anchor;
+      this.support = support;
+      this.previous = previous;
+      this.fixed = fixed;
+    }
+
+    Location anchor() {
+      return anchor;
+    }
+
+    Block support() {
+      return support;
+    }
+  }
 
   private record Step(Location at, long time, boolean left) {}
 
@@ -238,7 +260,8 @@ public final class Comfort implements Listener, AutoCloseable {
       if (target == null
           || !target.isOnline()
           || !love.authenticated(target)
-          || actor != null && !actor.canSee(target)) throw new IllegalArgumentException("players.unavailable");
+          || actor != null && !actor.canSee(target))
+        throw new IllegalArgumentException("players.unavailable");
       if (target != actor && !sender.hasPermission("loveessential." + command + ".others"))
         throw new IllegalArgumentException("errors.permission");
     }
@@ -359,6 +382,7 @@ public final class Comfort implements Listener, AutoCloseable {
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void gameMode(PlayerGameModeChangeEvent e) {
+    unlay(e.getPlayer());
     if (e.getNewGameMode() == GameMode.SURVIVAL && !god.contains(e.getPlayer().getUniqueId()))
       e.getPlayer().setInvulnerable(false);
   }
@@ -470,17 +494,52 @@ public final class Comfort implements Listener, AutoCloseable {
     double y = surface(block, at.getX() - block.getX(), at.getZ() - block.getZ());
     at.setY(y);
     if (!clear(at, 1.8)) throw new IllegalArgumentException("comfort.seat-space");
-    lying.put(p.getUniqueId(), new Lying(at.clone(), block, p.getPose(), p.hasFixedPose()));
+    var state = new Lying(at.clone(), block, p.getPose(), p.hasFixedPose());
+    lying.put(p.getUniqueId(), state);
+    updateLyingPose(p, state);
     plugin.mechanicsChanged(p);
-    p.setPose(Pose.SLEEPING, true);
   }
 
   private void unlay(Player p) {
     var state = lying.remove(p.getUniqueId());
     if (state != null) {
-      p.setPose(state.previous(), state.fixed());
+      restoreLyingCeiling(p, state);
+      p.setSwimming(false);
+      p.setPose(state.previous, state.fixed);
       plugin.mechanicsChanged(p);
     }
+  }
+
+  /**
+   * Metadata alone does not control the owning client's pose. Like revive, /lay needs a client-only
+   * low ceiling to keep vanilla crawling active on dry land. No world block changes.
+   */
+  private void updateLyingPose(Player p, Lying state) {
+    if (p.getPose() != Pose.SWIMMING || !p.hasFixedPose()) p.setPose(Pose.SWIMMING, true);
+    if (!p.isSwimming()) p.setSwimming(true);
+    Block next = state.anchor.getBlock().getRelative(0, 1, 0);
+    if (!next.getType().isAir()) next = null;
+    if (!Objects.equals(next, state.ceiling)) {
+      restoreLyingCeiling(p, state);
+      state.ceiling = next;
+      state.refresh = 0;
+    }
+    if (next != null && state.refresh++ % 10 == 0)
+      p.sendBlockChange(next.getLocation(), Material.BARRIER.createBlockData());
+  }
+
+  private void restoreLyingCeiling(Player p, Lying state) {
+    Block old = state.ceiling;
+    state.ceiling = null;
+    if (old != null
+        && p.getWorld().equals(old.getWorld())
+        && old.getWorld().isChunkLoaded(old.getX() >> 4, old.getZ() >> 4))
+      p.sendBlockChange(old.getLocation(), old.getBlockData());
+  }
+
+  @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+  public void lyingSwim(org.bukkit.event.entity.EntityToggleSwimEvent e) {
+    if (!e.isSwimming() && lying.containsKey(e.getEntity().getUniqueId())) e.setCancelled(true);
   }
 
   private void eject(Player carrier) {
@@ -643,8 +702,11 @@ public final class Comfort implements Listener, AutoCloseable {
           || love.combat(p)
           || state.support().isPassable()
           || !p.getWorld().equals(state.anchor().getWorld())
-          || p.isInsideVehicle()) unlay(p);
-      else if (p.getPose() != Pose.SLEEPING || !p.hasFixedPose()) p.setPose(Pose.SLEEPING, true);
+          || p.isInsideVehicle()
+          || p.isFlying()
+          || p.isGliding()
+          || p.isDead()) unlay(p);
+      else updateLyingPose(p, state);
     }
     for (UUID id : new ArrayList<>(seats.keySet())) {
       var p = Bukkit.getPlayer(id);

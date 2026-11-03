@@ -152,60 +152,128 @@ class ComfortHologramTest {
         dev.lovelace.loveessential.api.mechanics.PlayerMechanics.NONE, seen.getLast().getState());
   }
 
-  @Test
-  void laySurvivesServerPoseResetAndSecondCommandRestoresStanding() throws Exception {
+  private ReviveTest.RecordingPlayer layPlayer() {
     var world =
         new org.mockbukkit.mockbukkit.world.WorldMock() {
+          private final Map<
+                  org.mockbukkit.mockbukkit.world.Coordinate,
+                  org.mockbukkit.mockbukkit.block.BlockMock>
+              blocks = new HashMap<>();
+
           @Override
           public org.mockbukkit.mockbukkit.block.BlockMock createBlock(
               org.mockbukkit.mockbukkit.world.Coordinate coordinate) {
-            return new org.mockbukkit.mockbukkit.block.BlockMock(
-                coordinate.y < 64 ? Material.STONE : Material.AIR,
-                new Location(this, coordinate.x, coordinate.y, coordinate.z)) {
-              @Override
-              public boolean isPassable() {
-                return getType().isAir();
-              }
+            return blocks.computeIfAbsent(
+                coordinate,
+                ignored ->
+                    new org.mockbukkit.mockbukkit.block.BlockMock(
+                        coordinate.y < 64 ? Material.STONE : Material.AIR,
+                        new Location(this, coordinate.x, coordinate.y, coordinate.z)) {
+                      @Override
+                      public boolean isPassable() {
+                        return getType().isAir();
+                      }
 
-              @Override
-              public org.bukkit.util.VoxelShape getCollisionShape() {
-                var boxes =
-                    getType().isAir()
-                        ? List.<org.bukkit.util.BoundingBox>of()
-                        : List.of(new org.bukkit.util.BoundingBox(0, 0, 0, 1, 1, 1));
-                return new org.bukkit.util.VoxelShape() {
-                  public Collection<org.bukkit.util.BoundingBox> getBoundingBoxes() {
-                    return boxes;
-                  }
+                      @Override
+                      public org.bukkit.util.VoxelShape getCollisionShape() {
+                        var boxes =
+                            getType().isAir()
+                                ? List.<org.bukkit.util.BoundingBox>of()
+                                : List.of(new org.bukkit.util.BoundingBox(0, 0, 0, 1, 1, 1));
+                        return new org.bukkit.util.VoxelShape() {
+                          public Collection<org.bukkit.util.BoundingBox> getBoundingBoxes() {
+                            return boxes;
+                          }
 
-                  public boolean overlaps(org.bukkit.util.BoundingBox box) {
-                    return boxes.stream().anyMatch(b -> b.overlaps(box));
-                  }
-                };
-              }
-            };
+                          public boolean overlaps(org.bukkit.util.BoundingBox box) {
+                            return boxes.stream().anyMatch(b -> b.overlaps(box));
+                          }
+                        };
+                      }
+                    });
           }
         };
     world.setName("lay-test");
     server.addWorld(world);
-    var p = server.addPlayer("Lounger");
+    var p = new ReviveTest.RecordingPlayer(server, "Lounger");
+    server.addPlayer(p);
     p.teleport(new Location(world, .5, 64, .5));
+    world.loadChunk(0, 0);
+    return p;
+  }
+
+  @Test
+  void laySurvivesServerPoseResetAndSecondCommandRestoresStanding() {
+    var p = layPlayer();
+    var world = p.getWorld();
     command(p, "lay");
-    assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
+    assertEquals(org.bukkit.entity.Pose.SWIMMING, p.getPose());
     assertTrue(
         Bukkit.getServicesManager()
             .load(dev.lovelace.loveessential.api.mechanics.PlayerMechanicsService.class)
             .snapshot(p.getUniqueId())
             .states()
             .contains(dev.lovelace.loveessential.api.mechanics.PlayerMechanics.State.LYING));
+    var ceiling = new Location(world, 0, 65, 0);
+    assertTrue(p.isSwimming());
+    assertEquals(Material.AIR, world.getBlockAt(ceiling).getType());
+    assertEquals(Material.BARRIER, p.changes.get(ceiling).getMaterial());
+    var stopSwim = new org.bukkit.event.entity.EntityToggleSwimEvent(p, false);
+    server.getPluginManager().callEvent(stopSwim);
+    assertTrue(stopSwim.isCancelled());
+    p.changes.clear();
+    p.setSwimming(false);
     p.setPose(org.bukkit.entity.Pose.STANDING, false); // A server/client update must not end /lay.
-    server.getScheduler().performTicks(5);
-    assertEquals(org.bukkit.entity.Pose.SLEEPING, p.getPose());
+    server.getScheduler().performTicks(10);
+    assertEquals(org.bukkit.entity.Pose.SWIMMING, p.getPose());
+    assertTrue(p.isSwimming());
+    assertEquals(Material.BARRIER, p.changes.get(ceiling).getMaterial());
     assertTrue(p.hasFixedPose());
     command(p, "лежать");
     server.getScheduler().performTicks(3);
     assertEquals(org.bukkit.entity.Pose.STANDING, p.getPose());
     assertFalse(p.hasFixedPose());
+    assertFalse(p.isSwimming());
+    assertEquals(Material.AIR, p.changes.get(ceiling).getMaterial());
+    assertEquals(Material.AIR, world.getBlockAt(ceiling).getType());
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {"sneak", "teleport", "damage", "quit", "module", "plugin", "gamemode"})
+  void leavingLayRestoresClientBlocksAndSwimState(String exit) throws Exception {
+    var p = layPlayer();
+    var ceiling = new Location(p.getWorld(), 0, 65, 0);
+    command(p, "lay");
+    assertEquals(Material.BARRIER, p.changes.get(ceiling).getMaterial());
+    // Restoration must send the current block, rather than the air that was here on entry.
+    p.getWorld().getBlockAt(ceiling).setType(Material.STONE);
+    switch (exit) {
+      case "sneak" ->
+          server
+              .getPluginManager()
+              .callEvent(new org.bukkit.event.player.PlayerToggleSneakEvent(p, true));
+      case "teleport" -> p.teleport(p.getLocation().add(3, 0, 0));
+      case "damage" ->
+          server
+              .getPluginManager()
+              .callEvent(damage(p, org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL));
+      case "quit" ->
+          server
+              .getPluginManager()
+              .callEvent(new org.bukkit.event.player.PlayerQuitEvent(p, Component.empty()));
+      case "module" -> {
+        await(plugin.module("sitride", false));
+        server.getScheduler().performOneTick();
+      }
+      case "plugin" -> server.getPluginManager().disablePlugin(plugin);
+      case "gamemode" -> p.setGameMode(GameMode.CREATIVE);
+      default -> fail("Unexpected exit");
+    }
+    assertEquals(org.bukkit.entity.Pose.STANDING, p.getPose());
+    assertFalse(p.hasFixedPose());
+    assertFalse(p.isSwimming());
+    assertEquals(Material.STONE, p.changes.get(ceiling).getMaterial());
   }
 
   @Test
