@@ -740,7 +740,7 @@ class ProfilePrivacyTest {
   }
 
   @Test
-  void suffixCatalogueFromPersonalizationGetsTheProfileParentDespiteForeignAliases() throws Exception {
+  void suffixCatalogueFromPersonalizationReturnsToNicknameDespiteForeignAliases() throws Exception {
     neighbor("LoveSubnames", "suffixes");
     var foreign = neighbor("DeluxeMenus", "suffixes", "display");
     for (String alias : List.of("suffixes", "display"))
@@ -754,7 +754,7 @@ class ProfilePrivacyTest {
     command(viewer, "loveessential:profile");
     click(viewer, named(viewer, "Персонализация"));
     click(viewer, named(viewer, "Пометки"));
-    assertEquals("LoveSubnames:suffixes:Owner:loveessential:profile", calls.getLast());
+    assertEquals("LoveSubnames:suffixes:Owner:loveessential:nick", calls.getLast());
     command(viewer, "loveessential:profile");
     assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     click(viewer, named(viewer, "Персонализация"));

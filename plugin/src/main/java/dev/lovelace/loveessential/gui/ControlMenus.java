@@ -302,6 +302,15 @@ public final class ControlMenus implements Listener, AutoCloseable {
           displayPrefs.setAll(id, true);
           displayMenu(p);
         });
+    long visible = Arrays.stream(dev.lovelace.lovecore.api.display.DisplayPrefs.Element.values())
+        .flatMap(element -> Arrays.stream(dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.values())
+            .map(surface -> displayPrefs.shown(id, surface, element, scope)))
+        .filter(Boolean::booleanValue).count();
+    m.inventory.setItem(0, dev.lovelace.loveessential.module.PlayerProfiles.head(p,
+        lang.renderText(lang.text("display.head"), Map.of("name", p.getName())),
+        lang.lines("display.head-lore").stream()
+            .map(line -> lang.renderText(line, Map.of("visible", String.valueOf(visible), "suffix", currentSuffix(p))))
+            .toList()));
     var elements = dev.lovelace.lovecore.api.display.DisplayPrefs.Element.values();
     var surfaces = Arrays.asList(dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.values());
     int index = 0;
@@ -1831,10 +1840,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   /** The player's active mark from LoveSubnames, or a dash when that plugin or the mark is absent. */
   private static String currentSuffix(Player p) {
-    if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) return "—";
+    if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) return "Пометки недоступны";
     String value =
         me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(p, "%lovesubnames_current%");
-    return value == null || value.isBlank() || value.startsWith("%") ? "—" : value;
+    return value == null || value.isBlank() || value.startsWith("%") ? "Пометка не выбрана" : value;
   }
 
   /** Customization menu (the reference design): sixteen colours, the suffix catalogue and a reset. */
@@ -1893,7 +1902,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
           click -> {
             MenuStyle.external(p);
             p.closeInventory();
-            Bukkit.dispatchCommand(p, "lovesubnames:suffixes loveessential:profile");
+            Bukkit.dispatchCommand(p, "lovesubnames:suffixes loveessential:nick");
           });
     int index = 0;
     for (var color : NICK_COLORS.entrySet()) {
