@@ -53,6 +53,7 @@ public final class Comfort implements Listener, AutoCloseable {
     private final boolean fixed;
     private Block ceiling;
     private int refresh;
+    private int correctionTick = Integer.MIN_VALUE;
 
     private Lying(Location anchor, Block support, Pose previous, boolean fixed) {
       this.anchor = anchor;
@@ -578,7 +579,10 @@ public final class Comfort implements Listener, AutoCloseable {
     if (e.getTo() == null
         || e instanceof PlayerTeleportEvent
         || !lying.containsKey(e.getPlayer().getUniqueId())) return;
-    var anchor = lying.get(e.getPlayer().getUniqueId()).anchor().clone();
+    if (!e.hasChangedPosition()) return;
+    var state = lying.get(e.getPlayer().getUniqueId());
+    var anchor = state.anchor().clone();
+    state.correctionTick = Bukkit.getCurrentTick();
     anchor.setYaw(e.getTo().getYaw());
     anchor.setPitch(e.getTo().getPitch());
     e.setTo(anchor);
@@ -858,6 +862,15 @@ public final class Comfort implements Listener, AutoCloseable {
 
   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
   public void teleport(PlayerTeleportEvent e) {
+    var state = lying.get(e.getPlayer().getUniqueId());
+    // Paper implements a changed MoveEvent destination through a PLUGIN teleport.
+    // Accept only our exact anchor correction during the same tick, never a real relocation.
+    if (state != null
+        && state.correctionTick == Bukkit.getCurrentTick()
+        && e.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN
+        && e.getTo() != null
+        && state.anchor.getWorld().equals(e.getTo().getWorld())
+        && state.anchor.distanceSquared(e.getTo()) < 1e-12) return;
     unlay(e.getPlayer());
     release(e.getPlayer(), false);
     steps.remove(e.getPlayer().getUniqueId());

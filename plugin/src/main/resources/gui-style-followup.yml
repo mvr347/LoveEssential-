@@ -1,14 +1,14 @@
-# Обновление 02.11.2026: резервная копия .pre-style-20261102.bak; пользовательские значения сохраняются.
-version: 20261102
+# Обновление 04.11.2026: исходные файлы копируются в .pre-style-20261104.bak; свои значения сохраняются.
+version: 20261104
 updates:
 - file: modules/scoreboard/gui.yml
   path: messages.sidebar.profile-name
-  before:
+  before: null
   value: <gold>Профиль <dark_gray>| <white><player>
   preserve-custom: true
 - file: modules/scoreboard/gui.yml
   path: messages.sidebar.profile-lore
-  before:
+  before: null
   value:
   - <dark_gray>Личное табло
   - ''
@@ -26,4 +26,43 @@ updates:
   value:
   - <green>ЛКМ <dark_gray>— <gray>следующий раздел
   - <gold>ПКМ <dark_gray>— <gray>предыдущий раздел
+  preserve-custom: true
+- file: modules/display/gui.yml
+  path: menus.display-gui-title.title
+  before: <gold>Мои теги и пометки
+  value: <white>Мои теги и пометки
+  preserve-custom: true
+- file: modules/display/gui.yml
+  path: messages.display.head
+  before: null
+  value: <white><name></white>
+  preserve-custom: true
+- file: modules/display/gui.yml
+  path: messages.display.head-lore
+  before: null
+  value:
+  - <dark_gray>Моё оформление</dark_gray>
+  - ''
+  - '<gray>Показано элементов: <white><visible> из 6</white></gray>'
+  - '<gray>Пометка: <white><suffix></white></gray>'
+  - ''
+  - <gray>Здесь вы меняете видимость своих подписей.</gray>
+  - <gray>Изменения действуют для всех игроков.</gray>
+  - <dark_gray>─────────────────────</dark_gray>
+  - <gray>Выберите клан или пометку ниже.</gray>
+  preserve-custom: true
+- file: modules/display/gui.yml
+  path: messages.display.all-on
+  before: <gold>Показать всё <dark_gray>| <white>6 настроек
+  value: <white>Показать всё <dark_gray>| <white>6 настроек
+  preserve-custom: true
+- file: modules/display/gui.yml
+  path: messages.display.tile-on
+  before: '<gold><element>: <surface> <dark_gray>| <green>Вкл'
+  value: '<white><element>: <surface> <dark_gray>| <green>Вкл'
+  preserve-custom: true
+- file: modules/display/gui.yml
+  path: messages.display.tile-off
+  before: '<gold><element>: <surface> <dark_gray>| <red>Выкл'
+  value: '<white><element>: <surface> <dark_gray>| <red>Выкл'
   preserve-custom: true

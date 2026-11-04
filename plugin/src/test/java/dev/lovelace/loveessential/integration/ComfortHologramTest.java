@@ -203,6 +203,30 @@ class ComfortHologramTest {
   }
 
   @Test
+  void cameraAndMicroMovementCorrectionsDoNotEndLayButRealTeleportsDo() {
+    var p = layPlayer();
+    command(p, "lay");
+    var anchor = p.getLocation();
+    var look = new org.bukkit.event.player.PlayerMoveEvent(p, anchor, anchor.clone());
+    look.getTo().setYaw(45);
+    server.getPluginManager().callEvent(look);
+    assertTrue(p.hasFixedPose());
+    var move = new org.bukkit.event.player.PlayerMoveEvent(
+        p, anchor, anchor.clone().add(.00001, 0, .00001));
+    server.getPluginManager().callEvent(move);
+    assertEquals(anchor.getX(), move.getTo().getX());
+    assertEquals(anchor.getZ(), move.getTo().getZ());
+    var correction = new org.bukkit.event.player.PlayerTeleportEvent(
+        p, anchor, move.getTo(), org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.PLUGIN);
+    server.getPluginManager().callEvent(correction);
+    assertTrue(p.hasFixedPose());
+    assertTrue(p.isSwimming());
+    p.teleport(anchor.clone().add(3, 0, 0));
+    assertFalse(p.hasFixedPose());
+    assertFalse(p.isSwimming());
+  }
+
+  @Test
   void laySurvivesServerPoseResetAndSecondCommandRestoresStanding() {
     var p = layPlayer();
     var world = p.getWorld();
