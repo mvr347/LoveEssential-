@@ -544,13 +544,25 @@ public final class TabModule implements Listener, AutoCloseable {
     if (dueFor("per-world-playerlist", interval("per-world-playerlist.refresh-ticks", 20)))
       worldLists(players);
     for (Player viewer : players) {
+      // A player who left during this cycle has no connection any more: CraftPlayer refuses scoreboard calls.
+      if (!viewer.isOnline()) continue;
       long t0 = System.nanoTime();
       try {
         updateViewer(viewer, sorted, targets);
+      } catch (IllegalStateException e) {
+        // 2026-11-06: a player who is still joining or already disconnecting throws "Cannot set scoreboard ..."
+        // from the server; that is not a fault, the next cycle draws the tab for them. Any other
+        // IllegalStateException is reported with its text, so the cause is visible in the log.
+        String reason = String.valueOf(e.getMessage());
+        if (!reason.startsWith("Cannot set scoreboard")) {
+          plugin.getLogger().warning(lang.text("logs.tab-failed") + " IllegalStateException: " + reason);
+          plugin.getLogger().log(java.util.logging.Level.FINE, "Tab update failed for " + viewer.getName(), e);
+        }
       } catch (RuntimeException e) {
         plugin
             .getLogger()
-            .warning(lang.text("logs.tab-failed") + " " + e.getClass().getSimpleName());
+            .warning(lang.text("logs.tab-failed") + " " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        plugin.getLogger().log(java.util.logging.Level.FINE, "Tab update failed for " + viewer.getName(), e);
       }
       stats.record("viewer", System.nanoTime() - t0);
     }
