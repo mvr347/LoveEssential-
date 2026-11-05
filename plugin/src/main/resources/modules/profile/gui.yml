@@ -62,6 +62,7 @@ menus:
         - <green>ЛКМ <dark_gray>— <gray>открыть отображение
         open-behavior: <gold>Открыть LoveBehavior
         no-data: —
+        none: отсутствует
         saved-activity-lore:
         - <gray>Время игры и статистика на момент выхода.
         - <gray>Видимость определяется отдельной настройкой активности.
@@ -117,17 +118,17 @@ menus:
         - <dark_gray>Личная карточка игрока
         - ''
         - '<dark_gray>▪ <gray>Данные:'
-        - '  <gray>Клан: <gold><papi:clans_name:"отсутствует">'
-        - '  <gray>Ранг: <yellow><papi:clans_rank_display:"отсутствует">'
+        - '  <gray>Клан: <gold><clan_or_none>'
+        - '  <gray>Ранг в клане: <yellow><papi:clans_rank_display:"отсутствует">'
         - '  <gray>Пометка: <white><papi:lovesubnames_current:"отсутствует">'
         - '  <gray>Вежливость: <white><papi:lovebehavior_politeness_name:"отсутствует">'
         root-customization: <gold>Персонализация
-        root-head-lore:
+        root-card-lore:
         - <dark_gray>Личная карточка игрока
         - ''
         - '<dark_gray>▪ <gray>Данные:'
-        - '  <gray>Клан: <gold><clan>'
-        - '  <gray>Ранг: <yellow><papi:clans_rank_display:"—">'
+        - '  <gray>Клан: <gold><clan_or_none>'
+        - '  <gray>Ранг в клане: <yellow><papi:clans_rank_display:"отсутствует">'
         root-account-lore:
         - <dark_gray>Учётная запись
         - ''
@@ -1101,12 +1102,16 @@ menus:
         - <green>ЛКМ <dark_gray>— <gray>переключить запросы
     labels:
       profile-menu:
-        settings-head-lore:
+        settings-about-lore:
         - '<dark_gray>Персональные настройки'
         - ''
-        - '<dark_gray>▪ <gray>Статус:'
-        - '  <gray>Клан: <gold><clan>'
-        - '  <gray>Ранг: <yellow><papi:clans_rank_display:"—">'
+        - '<dark_gray>▪ <gray>Что здесь:'
+        - '  <gray>Чат и личные сообщения, приватность профиля,'
+        - '  <gray>отображение и оповещения.'
+        - ''
+        - '<dark_gray>▪ <gray>Как менять:'
+        - '  <gray>Кнопка «Фильтр» выбирает группу настроек,'
+        - '  <gray>клик по значку меняет настройку.'
         - ''
         - '<dark_gray><st>─────────────────────</st>'
         - '<green>ЛКМ <dark_gray>— <gray>открыть профиль'

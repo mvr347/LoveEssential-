@@ -76,6 +76,39 @@ class TabIntegrationTest {
   }
 
   @Test
+  void aPlayerLeavingDoesNotBreakTheTabUpdateOfTheOthers() throws Exception {
+    var failures = new ArrayList<String>();
+    var handler =
+        new java.util.logging.Handler() {
+          @Override
+          public void publish(java.util.logging.LogRecord record) {
+            if (record.getLevel().intValue() >= java.util.logging.Level.WARNING.intValue())
+              failures.add(record.getMessage());
+          }
+
+          @Override
+          public void flush() {}
+
+          @Override
+          public void close() {}
+        };
+    plugin.getLogger().addHandler(handler);
+    var stays = player("Stays", "world");
+    var leaves = player("Leaves", "world");
+    settle(60);
+    leaves.disconnect();
+    settle(60);
+    plugin.getLogger().removeHandler(handler);
+    assertTrue(
+        failures.stream().noneMatch(m -> m != null && m.contains("IllegalStateException")),
+        failures.toString());
+    // The team of the player who left is gone from the remaining viewer's board.
+    assertTrue(
+        stays.getScoreboard().getTeams().stream().noneMatch(t -> t.hasEntry("Leaves")),
+        "stale team of the player who left");
+  }
+
+  @Test
   void rankMarkersAreRemovedButOrdinaryHashAndSuffixStay() throws Exception {
     plugin
         .getConfig()

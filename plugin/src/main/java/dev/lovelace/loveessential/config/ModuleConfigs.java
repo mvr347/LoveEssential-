@@ -551,9 +551,11 @@ public final class ModuleConfigs {
         changed = true;
       }
     }
-    // 2026-11-06: Back from the games settings returns to the profile settings, not the profile root.
-    if (module.getString("links.activities.back-argument", "").equals("loveessential:profile")) {
-      module.set("links.activities.back-argument", "loveessential:profile settings");
+    // 2026-11-06: Back from the games settings returns to the profile settings (with its own Back to the profile),
+    // not the profile root: "settings back" is the form a plugin uses to return to them.
+    String games = module.getString("links.activities.back-argument", "");
+    if (games.equals("loveessential:profile") || games.equals("loveessential:profile settings")) {
+      module.set("links.activities.back-argument", "loveessential:profile settings back");
       changed = true;
     }
     return changed;

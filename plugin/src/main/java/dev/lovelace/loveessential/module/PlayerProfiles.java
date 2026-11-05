@@ -235,6 +235,8 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     m.put("authenticated", "" + love.authenticated(p));
     m.put("combat", "" + love.combat(p));
     m.put("clan", love.clan(p).orElse(""));
+    // The card shows the clan from the service lookup (no PlaceholderAPI needed); only a real "no clan" reads as none.
+    m.put("clan_or_none", love.clan(p).orElse(lang.text("profile-menu.none")));
     m.put("territory", love.territory(p));
     var reputation = love.reputation(p);
     m.put("reputation", reputation.isPresent() ? "" + reputation.getAsInt() : "");
@@ -772,7 +774,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     statisticProfile(
         m,
         placeholders.render("profile-menu.heading", viewer, target),
-        textLines(own ? "profile-menu.root-head-lore" : "profile-menu.public-head-lore", viewer, target));
+        textLines(own ? "profile-menu.root-card-lore" : "profile-menu.public-head-lore", viewer, target));
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
   }
 
@@ -1164,6 +1166,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       return;
     }
     String op = args[0].toLowerCase(Locale.ROOT);
+    if (args.length == 2 && op.equals("settings") && args[1].equalsIgnoreCase("back")) {
+      settingsReturned(p);
+      return;
+    }
     if (args.length == 1)
       switch (op) {
         case "list" -> {
@@ -1456,7 +1462,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         head(
             target,
             placeholders.render("profile-menu.heading", viewer, target),
-            textLines(own ? "profile-menu.root-head-lore" : "profile-menu.public-head-lore", viewer, target)));
+            textLines(own ? "profile-menu.root-card-lore" : "profile-menu.public-head-lore", viewer, target)));
     if (own) {
       // Own profile (27 slots): one row of buttons centred on slots 10-16; a missing plugin leaves no gap.
       var row = new ArrayList<java.util.function.IntConsumer>();
@@ -1557,11 +1563,30 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     settings(p, "all");
   }
 
+  /** The settings a plugin returns to: the same menu, with Back to the profile. */
+  public void settingsReturned(Player p) {
+    settings(p, "all", true);
+  }
+
   /** Settings with one filter group preselected ({@code /profile activity} opens the privacy group). */
   public void settings(Player p, String filter) {
+    settings(p, filter, false);
+  }
+
+  private void settings(Player p, String filter, boolean returned) {
     var m = menu(p, "profile-menu.settings", Map.of(), () -> access(p));
     m.subject = p.getUniqueId();
     m.tab = filter;
+    // Typed as a command, the settings are a root menu without Back. They get Back to the profile when a plugin
+    // returns to them ("profile settings back") and when a child menu (sidebar, games, notifications, display)
+    // goes Back to them: a menu you came back to is not the start of the way.
+    if (returned) m.back = () -> profile(p, p);
+    var resume = m.resume;
+    m.resume =
+        () -> {
+          m.back = () -> profile(p, p);
+          resume.run();
+        };
     m.repaint = () -> drawSettings(m, p);
     drawSettings(m, p);
     show(m);
@@ -1647,7 +1672,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         head(
             p,
             placeholders.render("profile-menu.heading", p, p),
-            textLines("profile-menu.settings-head-lore", p, p)));
+            textLines("profile-menu.settings-about-lore", p, p)));
     m.actions.put(0, () -> profile(p, p));
     drawFilter(m, p);
     if (m.tab.equals("all")) {

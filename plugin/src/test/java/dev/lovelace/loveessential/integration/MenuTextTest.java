@@ -129,7 +129,38 @@ class MenuTextTest {
     assertEquals(java.util.List.of(), GuiRules.unresolvedText(top));
   }
   @Test
-  void settingsReturnThroughTheActualParentAndDirectSidebarHasNoBack() throws Exception {
+  void settingsReachedFromTheProfileKeepTheirBackAfterReturningFromTheSidebar() throws Exception {
+    var player = server.addPlayer("ProfileWalker");
+    player.setOp(true);
+    var enabled = plugin.module("scoreboard", true);
+    waitFor(enabled::isDone);
+    enabled.join();
+    server.getScheduler().performTicks(5);
+    server.dispatchCommand(player, "profile");
+    server.getScheduler().performTicks(2);
+    var root = player.getOpenInventory().getTopInventory();
+    int settingsSlot = -1;
+    for (int i = 0; i < root.getSize(); i++)
+      if (GuiRules.name(root.getItem(i)).contains("Настройки")) settingsSlot = i;
+    assertTrue(settingsSlot >= 0);
+    click(player, settingsSlot);
+    for (int i = 0; i < 4; i++) click(player, 4);
+    var settings = player.getOpenInventory().getTopInventory();
+    assertTrue(GuiRules.name(settings.getItem(settings.getSize() - 2)).contains("Назад"), "Back from the profile");
+    int board = -1;
+    for (int i = 0; i < settings.getSize(); i++)
+      if (GuiRules.name(settings.getItem(i)).contains("Боковая панель")) board = i;
+    assertTrue(board >= 0);
+    click(player, board);
+    var sidebar = player.getOpenInventory().getTopInventory();
+    click(player, sidebar.getSize() - 2);
+    var returned = player.getOpenInventory().getTopInventory();
+    assertEquals("profile-menu.settings", ((dev.lovelace.loveessential.gui.GuiLayout) returned.getHolder()).guiId());
+    assertTrue(GuiRules.name(returned.getItem(returned.getSize() - 2)).contains("Назад"), "Back to the profile after returning");
+  }
+
+  @Test
+  void settingsReturnThroughTheActualParentKeepBackAndDirectSidebarHasNoBack() throws Exception {
     var player = server.addPlayer("SettingsOwner");
     player.setOp(true);
     var enabled = plugin.module("scoreboard", true);
@@ -152,7 +183,8 @@ class MenuTextTest {
     assertEquals("profile-menu.settings", ((dev.lovelace.loveessential.gui.GuiLayout) player.getOpenInventory().getTopInventory().getHolder()).guiId());
     var returned = player.getOpenInventory().getTopInventory();
     assertTrue(GuiRules.name(returned.getItem(4)).contains("Интерфейс"));
-    assertFalse(GuiRules.name(returned.getItem(returned.getSize()-2)).contains("Назад"));
+    // A menu you came back to is not the start of the way: Back leads on to the profile.
+    assertTrue(GuiRules.name(returned.getItem(returned.getSize()-2)).contains("Назад"));
     server.dispatchCommand(player, "le scoreboard edit");
     server.getScheduler().performTicks(2);
     var direct = player.getOpenInventory().getTopInventory();
