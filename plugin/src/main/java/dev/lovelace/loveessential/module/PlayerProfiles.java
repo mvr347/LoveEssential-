@@ -235,6 +235,8 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     m.put("authenticated", "" + love.authenticated(p));
     m.put("combat", "" + love.combat(p));
     m.put("clan", love.clan(p).orElse(""));
+    // The card shows the clan from the service lookup (no PlaceholderAPI needed); only a real "no clan" reads as none.
+    m.put("clan_or_none", love.clan(p).orElse(lang.text("profile-menu.none")));
     m.put("territory", love.territory(p));
     var reputation = love.reputation(p);
     m.put("reputation", reputation.isPresent() ? "" + reputation.getAsInt() : "");

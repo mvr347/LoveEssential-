@@ -3483,6 +3483,10 @@ bindings:
   file: gui.yml
   key: profile-menu.public-head-lore
   path: menus.profile-menu-title.labels.profile-menu.public-head-lore
+- module: profile
+  file: gui.yml
+  key: profile-menu.none
+  path: menus.profile-menu-title.labels.profile-menu.none
 aliases:
 - module: profile
   file: profile.yml
