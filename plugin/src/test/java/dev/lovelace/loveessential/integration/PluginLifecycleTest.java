@@ -736,12 +736,20 @@ class PluginLifecycleTest {
     for (int i = 0; i < contents.length; i++) {
       if (contents[i] != null
           && contents[i].getItemMeta() != null
-          && String.valueOf(contents[i].getItemMeta().displayName()).contains("Статистика")) {
+          && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(contents[i].getItemMeta().displayName()).contains("Статистика")) {
         statisticsSlot = i;
       }
     }
     assertTrue(statisticsSlot >= 0, "public profile has one Statistics button");
-    viewer.simulateInventoryClick(statisticsSlot);
+    var click =
+        new org.bukkit.event.inventory.InventoryClickEvent(
+            viewer.getOpenInventory(),
+            org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+            statisticsSlot,
+            org.bukkit.event.inventory.ClickType.LEFT,
+            org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(click);
+    server.getScheduler().performOneTick();
     String lore =
         java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
             .filter(java.util.Objects::nonNull)

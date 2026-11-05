@@ -554,19 +554,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     m.subject = saved.id();
     m.inventory.setItem(0, savedHead(saved));
     m.variables = savedValues(saved);
-    drawSummary(m, m.variables, false, saved.preferences().activityVisible());
+    // Same frame as an online visit: the report sits in the header, the work row holds the
+    // statistics (public summary only) and the reputation, which needs the player online.
     button(
         m,
-        3,
-        Material.SUNFLOWER,
-        "profile-menu.reputation",
-        "public-profile.offline-feedback",
-        () -> {
-          throw new IllegalArgumentException("public-profile.offline-feedback");
-        });
-    button(
-        m,
-        5,
+        MenuStyle.headerSlot(0, 1),
         Material.WRITABLE_BOOK,
         "public-profile.report",
         "public-profile.report-help",
@@ -578,11 +570,38 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                 () -> savedAllowed(viewer, saved, false)));
     button(
         m,
-        m.inventory.getSize() - 3,
-        Material.ARROW,
-        "common.back",
-        "gui.click.open",
-        () -> profile(viewer, viewer));
+        contentSlot(m, 0, 2),
+        Material.KNOWLEDGE_BOOK,
+        "profile-menu.statistics-button",
+        "public-profile.statistics-lore",
+        () -> offlineStatistics(viewer, saved));
+    button(
+        m,
+        contentSlot(m, 1, 2),
+        Material.SUNFLOWER,
+        "profile-menu.reputation",
+        "public-profile.offline-feedback",
+        () -> {
+          throw new IllegalArgumentException("public-profile.offline-feedback");
+        });
+    show(m);
+  }
+
+  /** The saved public summary of a player who is offline, one level below the offline profile. */
+  private void offlineStatistics(Player viewer, Saved saved) {
+    var m =
+        menu(
+            viewer,
+            "profile-menu.statistics",
+            Map.of(),
+            () -> savedAllowed(viewer, saved, false));
+    m.subject = saved.id();
+    m.inventory.setItem(0, savedHead(saved));
+    int last = m.inventory.getSize() - 1;
+    button(
+        m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> offlineProfile(viewer, saved));
+    button(m, last, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
+    drawSummary(m, savedValues(saved), false, saved.preferences().activityVisible());
     show(m);
   }
 

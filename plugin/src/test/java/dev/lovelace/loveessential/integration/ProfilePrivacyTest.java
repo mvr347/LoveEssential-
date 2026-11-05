@@ -455,6 +455,10 @@ class ProfilePrivacyTest {
         () ->
             viewer.getOpenInventory().getTopInventory() != null
                 && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+    assertTrue(
+        viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
+    assertFalse(
+        titles(viewer).contains("Назад"), "direct offline profile has no invented parent");
     click(viewer, named(viewer, "Статистика"));
     assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
     var meta =
@@ -466,10 +470,6 @@ class ProfilePrivacyTest {
         meta.getPlayerProfile().getProperties().stream()
             .anyMatch(property -> property.getName().equals("textures")));
     assertFalse(lore(viewer).contains("K/D:"));
-    assertTrue(
-        viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
-    assertFalse(
-        title(viewer, 43).contains("Назад"), "direct offline profile has no invented parent");
   }
 
   @Test
@@ -488,7 +488,7 @@ class ProfilePrivacyTest {
         waitFor(
             () ->
                 viewer.getOpenInventory().getTopInventory() != null
-                    && viewer.getOpenInventory().getTopInventory().getSize() == 45);
+                    && viewer.getOpenInventory().getTopInventory().getSize() == 27);
         var meta =
             (org.bukkit.inventory.meta.SkullMeta)
                 viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
