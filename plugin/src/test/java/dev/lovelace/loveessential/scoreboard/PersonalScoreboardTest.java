@@ -161,6 +161,23 @@ class PersonalScoreboardTest {
   }
 
   @Test
+  void middleAndCreativeCloneClicksAreCancelledWithoutChangingTheSelection() throws Exception {
+    var player = join("Alice");
+    openMenu(player);
+    var inventory = player.getOpenInventory().getTopInventory();
+    var before = List.copyOf(personal.state(player.getUniqueId()).entries());
+    for (var type : List.of(ClickType.MIDDLE, ClickType.NUMBER_KEY, ClickType.DROP)) {
+      var event = new InventoryClickEvent(player.getOpenInventory(), InventoryType.SlotType.CONTAINER,
+          PersonalLayout.CARD_SLOTS[0], type, InventoryAction.CLONE_STACK);
+      server.getPluginManager().callEvent(event);
+      tick(2);
+      assertTrue(event.isCancelled());
+      assertSame(inventory, player.getOpenInventory().getTopInventory());
+      assertEquals(before, personal.state(player.getUniqueId()).entries());
+    }
+  }
+
+  @Test
   void cardClicksMoveLinesAndRemovingOneInTheMiddleMovesTheNextUp() throws Exception {
     var a = join("Alice");
     var id = a.getUniqueId();
