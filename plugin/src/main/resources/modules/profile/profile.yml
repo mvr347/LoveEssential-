@@ -42,8 +42,9 @@ links:
   activities:
     plugin: LoveActivities
     command: loveactivities settings
-    # 2026-11-05: LoveActivities вернёт игрока в профиль этой командой (второй аргумент).
-    back-argument: loveessential:profile
+    # 2026-11-06: «Назад» из настроек игр ведёт в настройки профиля, а не в корень профиля (аргументы команды
+    # возврата принимаются целиком: метка команды и простые слова).
+    back-argument: loveessential:profile settings
     permission: ''
   display:
     plugin: LoveEssential

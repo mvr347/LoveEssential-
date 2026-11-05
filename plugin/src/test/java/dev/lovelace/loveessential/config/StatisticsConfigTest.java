@@ -70,6 +70,17 @@ class StatisticsConfigTest {
     assertEquals("hub open", module.getString("links.behavior.back-argument"));
   }
 
+  @Test
+  void backFromTheGamesSettingsReturnsToTheProfileSettings() {
+    var module = new YamlConfiguration();
+    module.set("links.activities.back-argument", "loveessential:profile");
+    assertTrue(ModuleConfigs.migrateProfileReturns(module));
+    assertEquals("loveessential:profile settings", module.getString("links.activities.back-argument"));
+    module.set("links.activities.back-argument", "hub open");
+    assertFalse(ModuleConfigs.migrateProfileReturns(module));
+    assertEquals("hub open", module.getString("links.activities.back-argument"));
+  }
+
   /** Variable of every "Label: <value>" line, per section. */
   private static Map<String, List<String>> variablesBySection() throws Exception {
     var result = new LinkedHashMap<String, List<String>>();

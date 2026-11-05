@@ -246,6 +246,8 @@ public final class ModuleConfigs {
               Map.entry("menus.profile-menu-title.textures.profile-menu.mentions", List.of(OLD_ON)),
               Map.entry("menus.profile-menu-title.textures.profile-menu.clan-invites", List.of(OLD_ON)),
               Map.entry("menus.profile-menu-title.textures.profile-menu.player-trades", List.of(OLD_ON)),
+              // 2026-11-06: the account button shows the same head as slot 0 of the LoveAuth account menu.
+              Map.entry("menus.profile-menu-title.textures.profile-menu.account", List.of("eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGY3Mjc1MzFhNGJhYzQ1ZTFjNjM1ZjlhYzM5NGUxYWM0YTJmZDVmNmRmM2FlNDU4NTgyMTI2YTY1ZmUyMDYwZiJ9fX0=")),
               Map.entry("menus.profile-menu-title.textures.enabled", List.of(OLD_ON)),
               Map.entry("menus.profile-menu-title.textures.disabled", List.of(OLD_OFF))),
           // /display now changes the owner's signature for everyone, including themselves.
@@ -545,6 +547,11 @@ public final class ModuleConfigs {
         module.set(path, "loveessential:profile");
         changed = true;
       }
+    }
+    // 2026-11-06: Back from the games settings returns to the profile settings, not the profile root.
+    if (module.getString("links.activities.back-argument", "").equals("loveessential:profile")) {
+      module.set("links.activities.back-argument", "loveessential:profile settings");
+      changed = true;
     }
     return changed;
   }
