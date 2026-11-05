@@ -3193,8 +3193,8 @@ bindings:
   path: menus.profile-menu-title.labels.profile-menu.root-customization
 - module: profile
   file: gui.yml
-  key: profile-menu.root-head-lore
-  path: menus.profile-menu-title.labels.profile-menu.root-head-lore
+  key: profile-menu.root-card-lore
+  path: menus.profile-menu-title.labels.profile-menu.root-card-lore
 - module: profile
   file: gui.yml
   key: profile-menu.root-account-lore
@@ -3221,8 +3221,8 @@ bindings:
   path: menus.profile-menu-title.labels.profile-menu.root-behavior-lore
 - module: profile
   file: gui.yml
-  key: profile-menu.settings-head-lore
-  path: menus.profile-menu-settings.labels.profile-menu.settings-head-lore
+  key: profile-menu.settings-about-lore
+  path: menus.profile-menu-settings.labels.profile-menu.settings-about-lore
 - module: profile
   file: gui.yml
   key: profile-menu.filter

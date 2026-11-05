@@ -299,7 +299,7 @@ class ProfilePrivacyTest {
     assertTrue(text.contains("Выключено"));
     assertTrue(text.contains("Глобальный"));
     // (The mocked PlaceholderAPI answers "yes" to the clan rank in the head too.)
-    assertFalse(text.replace("Ранг: yes", "").contains("yes"));
+    assertFalse(text.replace("Ранг в клане: yes", "").contains("yes"));
     assertFalse(text.contains("false"));
     assertEquals(
         "yes", internal("placeholders", Placeholders.class).papi(p, p, "%clans_invites_enabled%"));
@@ -609,6 +609,21 @@ class ProfilePrivacyTest {
         buttons++;
     assertTrue(buttons >= 3, "category buttons sit where the own statistics have them");
     assertFalse(lore(viewer).contains("K/D:"));
+  }
+
+  @Test
+  void settingsOpenedByCommandStillHaveBackToTheProfileAndAnExplainingCard() throws Exception {
+    var p = player("Returner");
+    command(p, "profile settings"); // what the Back of the sidebar, games, notifications and display menus runs
+    assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
+    int back = named(p, "Назад");
+    assertEquals(p.getOpenInventory().getTopInventory().getSize() - 2, back);
+    var card = slotLore(p, 0);
+    assertFalse(card.contains("Статус"), card);
+    assertTrue(card.contains("Что здесь"), card);
+    click(p, back);
+    assertEquals(27, p.getOpenInventory().getTopInventory().getSize(), "Back leads to the profile");
+    assertTrue(slotLore(p, 0).contains("Клан: отсутствует"), slotLore(p, 0));
   }
 
   @Test

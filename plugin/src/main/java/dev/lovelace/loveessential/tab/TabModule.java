@@ -738,8 +738,11 @@ public final class TabModule implements Listener, AutoCloseable {
       }
     for (Team team : new HashSet<>(view.board.getTeams()))
       if (!expected.contains(team.getName()) && team.getName().startsWith(TEAM_PREFIX)) {
+        // 2026-11-06: the name is read before unregistering; an unregistered team throws "Unregistered scoreboard
+        // component" from getName(), which broke the tab update of every viewer right after a player left.
+        String name = team.getName();
         team.unregister();
-        view.sent.keySet().removeIf(key -> key.startsWith(team.getName() + "."));
+        view.sent.keySet().removeIf(key -> key.startsWith(name + "."));
       }
   }
 

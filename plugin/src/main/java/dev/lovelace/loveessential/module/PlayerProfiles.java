@@ -772,7 +772,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     statisticProfile(
         m,
         placeholders.render("profile-menu.heading", viewer, target),
-        textLines(own ? "profile-menu.root-head-lore" : "profile-menu.public-head-lore", viewer, target));
+        textLines(own ? "profile-menu.root-card-lore" : "profile-menu.public-head-lore", viewer, target));
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
   }
 
@@ -1456,7 +1456,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         head(
             target,
             placeholders.render("profile-menu.heading", viewer, target),
-            textLines(own ? "profile-menu.root-head-lore" : "profile-menu.public-head-lore", viewer, target)));
+            textLines(own ? "profile-menu.root-card-lore" : "profile-menu.public-head-lore", viewer, target)));
     if (own) {
       // Own profile (27 slots): one row of buttons centred on slots 10-16; a missing plugin leaves no gap.
       var row = new ArrayList<java.util.function.IntConsumer>();
@@ -1562,6 +1562,9 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     var m = menu(p, "profile-menu.settings", Map.of(), () -> access(p));
     m.subject = p.getUniqueId();
     m.tab = filter;
+    // Opened by a command (Back of the sidebar, games, notifications or display menus) there is no parent in the
+    // navigation chain: Back still leads to the profile. A real parent, when there is one, takes priority.
+    m.back = () -> profile(p, p);
     m.repaint = () -> drawSettings(m, p);
     drawSettings(m, p);
     show(m);
@@ -1647,7 +1650,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         head(
             p,
             placeholders.render("profile-menu.heading", p, p),
-            textLines("profile-menu.settings-head-lore", p, p)));
+            textLines("profile-menu.settings-about-lore", p, p)));
     m.actions.put(0, () -> profile(p, p));
     drawFilter(m, p);
     if (m.tab.equals("all")) {
