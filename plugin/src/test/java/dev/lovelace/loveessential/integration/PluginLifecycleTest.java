@@ -720,7 +720,7 @@ class PluginLifecycleTest {
     target.setLevel(42);
     target.setStatistic(org.bukkit.Statistic.DEATHS, 7);
     server.dispatchCommand(viewer, "le userinfo Target");
-    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     var skull =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
@@ -731,6 +731,25 @@ class PluginLifecycleTest {
     assertEquals("Выключено", values.get("afk_state"));
     assertEquals(target.getUniqueId().toString(), values.get("uuid"));
     assertEquals(textures.getSkin().toExternalForm(), values.get("skin_url"));
+    var statisticsSlot = -1;
+    var contents = viewer.getOpenInventory().getTopInventory().getContents();
+    for (int i = 0; i < contents.length; i++) {
+      if (contents[i] != null
+          && contents[i].getItemMeta() != null
+          && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(contents[i].getItemMeta().displayName()).contains("Статистика")) {
+        statisticsSlot = i;
+      }
+    }
+    assertTrue(statisticsSlot >= 0, "public profile has one Statistics button");
+    var click =
+        new org.bukkit.event.inventory.InventoryClickEvent(
+            viewer.getOpenInventory(),
+            org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+            statisticsSlot,
+            org.bukkit.event.inventory.ClickType.LEFT,
+            org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+    server.getPluginManager().callEvent(click);
+    server.getScheduler().performOneTick();
     String lore =
         java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
             .filter(java.util.Objects::nonNull)

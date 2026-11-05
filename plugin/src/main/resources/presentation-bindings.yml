@@ -333,6 +333,10 @@ bindings:
   path: menus.messages-settings.labels.messages.self
 - module: messages
   file: gui.yml
+  key: messages.ignore-self
+  path: menus.messages-settings.labels.messages.ignore-self
+- module: messages
+  file: gui.yml
   key: messages.ignore-limit
   path: menus.messages-settings.labels.messages.ignore-limit
 - module: messages
@@ -1057,6 +1061,14 @@ bindings:
   path: menus.profile-menu-title.labels.profile-menu.scoreboard-lore
 - module: profile
   file: gui.yml
+  key: profile-menu.activities
+  path: menus.profile-menu-title.labels.profile-menu.activities
+- module: profile
+  file: gui.yml
+  key: profile-menu.settings-activities-lore
+  path: menus.profile-menu-settings.labels.profile-menu.settings-activities-lore
+- module: profile
+  file: gui.yml
   key: profile-menu.nickname
   path: menus.profile-menu-settings.labels.profile-menu.nickname
 - module: profile
@@ -1231,6 +1243,26 @@ bindings:
   file: gui.yml
   key: public-profile.report-help
   path: menus.public-profile-title.labels.public-profile.report-help
+- module: profile
+  file: gui.yml
+  key: public-profile.report-lore
+  path: menus.public-profile-title.labels.public-profile.report-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.statistics-lore
+  path: menus.public-profile-title.labels.public-profile.statistics-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.complaints-lore
+  path: menus.public-profile-title.labels.public-profile.complaints-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.ignore-lore
+  path: menus.public-profile-title.labels.public-profile.ignore-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.message-lore
+  path: menus.public-profile-title.labels.public-profile.message-lore
 - module: profile
   file: gui.yml
   key: public-profile.offline-feedback
@@ -3137,24 +3169,12 @@ bindings:
   path: menus.public-profile-title.labels.public-profile.message
 - module: profile
   file: gui.yml
-  key: public-profile.message-help
-  path: menus.public-profile-title.labels.public-profile.message-help
-- module: profile
-  file: gui.yml
   key: public-profile.ignore
   path: menus.public-profile-title.labels.public-profile.ignore
 - module: profile
   file: gui.yml
-  key: public-profile.ignore-help
-  path: menus.public-profile-title.labels.public-profile.ignore-help
-- module: profile
-  file: gui.yml
   key: public-profile.complaints
   path: menus.public-profile-title.labels.public-profile.complaints
-- module: profile
-  file: gui.yml
-  key: public-profile.complaints-count
-  path: menus.public-profile-title.labels.public-profile.complaints-count
 - module: profile
   file: gui.yml
   key: profile-menu.section-line

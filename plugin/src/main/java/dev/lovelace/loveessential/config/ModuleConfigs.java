@@ -218,17 +218,36 @@ public final class ModuleConfigs {
     }
   }
 
+  /** Switch textures shipped before 2026-11-05 (on and off). */
+  private static final String OLD_ON = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==";
+
+  private static final String OLD_OFF = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTRmZWY3NTNkNWI0ZmYyYTljYWU3NWJjMmVkZWIzMTUzMDI1YWJjNWNjMjc0NDI4NWYzMTk2NGY5NDA4YTFmIn19fQ==";
+
   /**
    * Shipped texts that turned out to be wrong and were replaced. An installation still holding one
    * of these exact old values gets the new default; anything an admin edited is left alone.
    */
   private static final Map<String, Map<String, List<String>>> RETIRED_TEXTS =
       Map.of(
-          // 2026-11-01: the statistics button shows the section name only, without its number in the circle.
-          "profile",
+          // 2026-11-05: "choose another player" did not say why the message to yourself was refused.
+          "messages",
           Map.of(
-              "menus.profile-menu-statistics.labels.profile-menu.section-line",
-              List.of("<dark_gray>Раздел: <white><name> <dark_gray>(<index>/<count>)")),
+              "menus.messages-settings.labels.messages.self",
+              List.of("<red>Выберите другого игрока.")),
+          // 2026-11-01: the statistics button shows the section name only, without its number in the circle.
+          // 2026-11-05: new on/off switch textures; only the exact old shipped values are replaced.
+          "profile",
+          Map.ofEntries(
+              Map.entry(
+                  "menus.profile-menu-statistics.labels.profile-menu.section-line",
+                  List.of("<dark_gray>Раздел: <white><name> <dark_gray>(<index>/<count>)")),
+              Map.entry("menus.profile-menu-title.textures.profile-menu.grammar", List.of(OLD_ON)),
+              Map.entry("menus.profile-menu-title.textures.profile-menu.silent", List.of(OLD_ON)),
+              Map.entry("menus.profile-menu-title.textures.profile-menu.mentions", List.of(OLD_ON)),
+              Map.entry("menus.profile-menu-title.textures.profile-menu.clan-invites", List.of(OLD_ON)),
+              Map.entry("menus.profile-menu-title.textures.profile-menu.player-trades", List.of(OLD_ON)),
+              Map.entry("menus.profile-menu-title.textures.enabled", List.of(OLD_ON)),
+              Map.entry("menus.profile-menu-title.textures.disabled", List.of(OLD_OFF))),
           // /display now changes the owner's signature for everyone, including themselves.
           "display",
           Map.of(

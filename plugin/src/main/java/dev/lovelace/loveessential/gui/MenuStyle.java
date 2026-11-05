@@ -282,6 +282,23 @@ public final class MenuStyle {
     return result;
   }
 
+  /**
+   * Slots of the header control buttons (gui_gen: only 2-7, centred by how many there are, so the
+   * layout is recomputed when a control appears or disappears).
+   */
+  public static int headerSlot(int index, int count) {
+    int[] slots =
+        switch (Math.clamp(count, 1, 6)) {
+          case 1 -> new int[] {4};
+          case 2 -> new int[] {3, 5};
+          case 3 -> new int[] {2, 4, 6};
+          case 4 -> new int[] {2, 3, 5, 6};
+          case 5 -> new int[] {2, 3, 4, 6, 7};
+          default -> new int[] {2, 3, 4, 5, 6, 7};
+        };
+    return slots[Math.clamp(index, 0, slots.length - 1)];
+  }
+
   public static int slot(int index, int count) {
     int row = index / 7, inRow = Math.min(7, count - row * 7);
     int[] columns =

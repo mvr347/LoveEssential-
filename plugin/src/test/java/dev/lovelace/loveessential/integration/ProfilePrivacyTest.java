@@ -330,11 +330,11 @@ class ProfilePrivacyTest {
     target.setStatistic(Statistic.PLAY_ONE_MINUTE, 72000);
     target.setStatistic(Statistic.MINE_BLOCK, Material.DIAMOND_ORE, 17);
     command(viewer, "profile Target");
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
+    click(viewer, named(viewer, "Статистика")); // one button, public summary only
+    assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
     assertTrue(lore(viewer).contains("Общая статистика"));
     assertFalse(lore(viewer).contains("K/D:"));
-    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
-    click(viewer, named(viewer, "Мир")); // public summary has no drill-down
-    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
     command(target, "profile");
     assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
     assertEquals("Настройки", title(target, named(target, "Настройки")));
@@ -454,7 +454,12 @@ class ProfilePrivacyTest {
     waitFor(
         () ->
             viewer.getOpenInventory().getTopInventory() != null
-                && viewer.getOpenInventory().getTopInventory().getSize() == 45);
+                && viewer.getOpenInventory().getTopInventory().getSize() == 27);
+    assertTrue(
+        viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
+    assertFalse(
+        titles(viewer).contains("Назад"), "direct offline profile has no invented parent");
+    click(viewer, named(viewer, "Статистика"));
     assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
     var meta =
         (org.bukkit.inventory.meta.SkullMeta)
@@ -465,10 +470,6 @@ class ProfilePrivacyTest {
         meta.getPlayerProfile().getProperties().stream()
             .anyMatch(property -> property.getName().equals("textures")));
     assertFalse(lore(viewer).contains("K/D:"));
-    assertTrue(
-        viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
-    assertFalse(
-        title(viewer, 43).contains("Назад"), "direct offline profile has no invented parent");
   }
 
   @Test
@@ -487,7 +488,7 @@ class ProfilePrivacyTest {
         waitFor(
             () ->
                 viewer.getOpenInventory().getTopInventory() != null
-                    && viewer.getOpenInventory().getTopInventory().getSize() == 45);
+                    && viewer.getOpenInventory().getTopInventory().getSize() == 27);
         var meta =
             (org.bukkit.inventory.meta.SkullMeta)
                 viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
@@ -507,10 +508,10 @@ class ProfilePrivacyTest {
     waitFor(
         () ->
             viewer.getOpenInventory().getTopInventory() != null
-                && viewer.getOpenInventory().getTopInventory().getSize() == 45);
+                && viewer.getOpenInventory().getTopInventory().getSize() == 27);
     var menu = viewer.getOpenInventory().getTopInventory();
-    click(viewer, named(viewer, "Мир"));
-    assertSame(menu, viewer.getOpenInventory().getTopInventory());
+    click(viewer, named(viewer, "Статистика"));
+    assertNotNull(viewer.getOpenInventory().getTopInventory());
     target.reconnect();
     waitFor(() -> profiles.privacy().loaded(target.getUniqueId()));
     await(profiles.privacy().change(target, old -> new ProfilePrivacy.Preferences(false, false)));
@@ -538,6 +539,18 @@ class ProfilePrivacyTest {
   }
 
   @Test
+  void messageToYourselfIsRefusedWithAnUnderstandableText() throws Exception {
+    var p = player("Lonely");
+    command(p, "le msg Lonely привет");
+    var seen = new StringBuilder();
+    net.kyori.adventure.text.Component c;
+    while ((c = p.nextComponentMessage()) != null)
+      seen.append(PlainTextComponentSerializer.plainText().serialize(c)).append('\n');
+    assertTrue(seen.toString().contains("Нельзя написать самому себе"), seen.toString());
+    assertFalse(seen.toString().contains("Выберите другого игрока"), seen.toString());
+  }
+
+  @Test
   void publicSummaryUsesTargetSnapshotAndCurrentSkin() throws Exception {
     enablePapi();
     var viewer = player("Viewer");
@@ -550,15 +563,15 @@ class ProfilePrivacyTest {
     skin.setTextures(textures);
     target.setPlayerProfile(skin);
     command(viewer, "le profile view Target");
-    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
-    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
-    assertFalse(lore(viewer).contains("Координаты:"));
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     var skull =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
     assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
-    click(viewer, named(viewer, "Мир"));
-    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
+    click(viewer, named(viewer, "Статистика"));
+    assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
+    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
+    assertFalse(lore(viewer).contains("Координаты:"));
   }
 
   @Test
@@ -567,16 +580,16 @@ class ProfilePrivacyTest {
     var viewer = player("Viewer");
     viewer.setOp(true);
     command(viewer, "profile Owner");
-    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     command(owner, "profile hide");
     waitFor(() -> !profiles.privacy().preferences(owner).profileVisible());
     assertFalse(
         viewer.getOpenInventory().getTopInventory() != null
-            && viewer.getOpenInventory().getTopInventory().getSize() == 45);
+            && viewer.getOpenInventory().getTopInventory().getSize() == 27);
     command(viewer, "profile Owner");
     assertFalse(
         viewer.getOpenInventory().getTopInventory() != null
-            && viewer.getOpenInventory().getTopInventory().getSize() == 45);
+            && viewer.getOpenInventory().getTopInventory().getSize() == 27);
     assertFalse(server.getCommandMap().tabComplete(viewer, "le profile view ").contains("Owner"));
     command(owner, "profile");
     assertEquals(27, owner.getOpenInventory().getTopInventory().getSize());
@@ -585,7 +598,7 @@ class ProfilePrivacyTest {
     command(owner, "profile show");
     waitFor(() -> profiles.privacy().preferences(owner).profileVisible());
     command(viewer, "profile view Owner");
-    assertEquals(45, viewer.getOpenInventory().getTopInventory().getSize());
+    assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
   }
 
   @Test
@@ -596,11 +609,13 @@ class ProfilePrivacyTest {
     var viewer = player("Viewer");
     owner.setStatistic(Statistic.PLAY_ONE_MINUTE, 20 * 60 * 60 * 77);
     command(viewer, "profile Owner");
+    click(viewer, named(viewer, "Статистика"));
     assertTrue(lore(viewer).contains("77"));
     command(owner, "profile activity hide");
     waitFor(() -> !profiles.privacy().preferences(owner).activityVisible());
     command(viewer, "profile Owner");
     assertTrue(profiles.canView(viewer, owner));
+    click(viewer, named(viewer, "Статистика"));
     assertFalse(lore(viewer).contains("77"));
     owner.addAttachment(plugin, "loveadaptation.use", true);
     command(owner, "profile");
