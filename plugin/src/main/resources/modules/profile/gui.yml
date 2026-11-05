@@ -273,18 +273,53 @@ menus:
         - <papi:loveadaptation_travel_bar:"—">
         notifications: <gold>Оповещения
   public-profile-title:
-    size: 45
+    size: 27
     title: <gold>Профиль <dark_gray>| <white><player>
     labels:
       public-profile:
         report: <gold>Пожаловаться
+        report-lore:
+        - <dark_gray>Нарушение правил
+        - ''
+        - '<dark_gray>▪ <gray>Что произойдёт:'
+        - '  <gray>Жалоба уйдёт администрации с вашим описанием.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>отправить жалобу
         report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
         message: <gold>Написать
-        message-help: <green>ЛКМ <dark_gray>— <gray>личное сообщение
+        message-lore:
+        - <dark_gray>Личное сообщение
+        - ''
+        - '<dark_gray>▪ <gray>Что произойдёт:'
+        - '  <gray>Команда /le msg будет вставлена в строку чата.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>написать игроку
         ignore: <gold>Игнорировать
-        ignore-help: <green>ЛКМ <dark_gray>— <gray>скрыть или вернуть сообщения игрока
+        ignore-lore:
+        - <dark_gray>Скрытие сообщений
+        - ''
+        - '<dark_gray>▪ <gray>Что произойдёт:'
+        - '  <gray>Сообщения игрока будут скрыты или возвращены.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>скрыть или вернуть сообщения
         complaints: <red>Жалобы на игрока
-        complaints-count: '<gray>Открытых жалоб от разных игроков: <white><count>'
+        complaints-lore:
+        - <dark_gray>Для персонала
+        - ''
+        - '<dark_gray>▪ <gray>Открытые жалобы:'
+        - '  <gray>От разных игроков: <white><count>'
+        statistics-lore:
+        - <dark_gray>Достижения и прогресс
+        - ''
+        - '<dark_gray>▪ <gray>Разделы:'
+        - '  <gray>Мир, кланы, активности, сражения, торговля.'
+        - '  <gray>Скрытое игроком не показывается.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть статистику игрока
         offline-feedback: <gray>Для оценки репутации игрок должен быть в сети.
   profile-menu-notify:
     size: 27

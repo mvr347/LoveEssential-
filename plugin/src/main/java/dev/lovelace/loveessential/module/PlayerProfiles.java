@@ -88,6 +88,9 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     String tab = "";
     /** Which section each statistics button currently shows (category id to index). */
     final Map<String, Integer> sections = new HashMap<>();
+    /** Open complaints about the visited player (staff only), loaded once per menu. */
+    int complaints;
+    boolean complaintsLoaded;
 
     public Object guiRoute() {
       return List.of(menuId, subject == null ? viewer.getUniqueId() : subject);
@@ -723,14 +726,20 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   /** Own statistics: one button per category, each leafing through its sections in the lore. */
   public void statistics(Player viewer, Player target) {
     if (!canView(viewer, target)) throw new IllegalArgumentException("profile-menu.hidden");
-    if (!viewer.equals(target)) {
-      profile(viewer, target);
-      return;
-    }
-    var m = menu(viewer, "profile-menu.statistics", Map.of(), () -> access(viewer));
-    m.subject = viewer.getUniqueId();
-    m.repaint = () -> drawStatistics(m, viewer);
-    drawStatistics(m, viewer);
+    var m =
+        menu(
+            viewer,
+            "profile-menu.statistics",
+            Map.of(),
+            () -> access(viewer) && canView(viewer, target));
+    m.subject = target.getUniqueId();
+    boolean own = viewer.equals(target);
+    m.repaint =
+        () -> {
+          if (own) drawStatistics(m, viewer, target);
+          else drawPublicStatistics(m, viewer, target);
+        };
+    m.repaint.run();
     show(m);
   }
 
@@ -754,19 +763,46 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
   private static final int STAT_BUTTONS = STAT_SLOTS.length - 1;
 
-  private void drawStatistics(Menu m, Player viewer) {
-    capture(viewer);
-    var values = displayValues(snapshots.get(viewer.getUniqueId()));
+  /**
+   * Another player's statistics: the public summary of each category, never the detailed numbers
+   * of the own view (balance, homes, kill ratio stay with their owner).
+   */
+  private void drawPublicStatistics(Menu m, Player viewer, Player target) {
+    capture(target);
+    m.variables = displayValues(snapshots.get(target.getUniqueId()));
+    MenuStyle.frame(m.inventory);
+    m.actions.clear();
+    m.inventory.setItem(
+        0,
+        head(
+            target,
+            placeholders.render("profile-menu.heading", viewer, target),
+            textLines("profile-menu.heading-lore", viewer, target)));
+    int last = m.inventory.getSize() - 1;
+    button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, target));
+    button(m, last, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
+    drawSummary(m, m.variables, false, privacy.canViewActivity(viewer, target));
+    if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
+  }
+
+  private void drawStatistics(Menu m, Player viewer, Player target) {
+    capture(target);
+    boolean own = viewer.equals(target);
+    var values = displayValues(snapshots.get(target.getUniqueId()));
     m.variables = values;
     MenuStyle.frame(m.inventory);
     m.actions.clear();
     m.choices.clear();
     // Owner's layout for this menu: back and close in the last two slots of the bottom row.
     int last = m.inventory.getSize() - 1;
-    button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, viewer));
+    button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, target));
     button(m, last, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
     var cards = new ArrayList<Card>();
+    boolean activity = own || privacy.canViewActivity(viewer, target);
     for (String id : statisticCategories().stream().limit(STAT_BUTTONS).toList()) {
+      // What the player keeps private stays private in their statistics too.
+      if (!activity && plugin.getConfig().getBoolean(statisticPath(id) + ".activity-sensitive", false))
+        continue;
       var sections = metricRows(id, values);
       if (!sections.isEmpty()) cards.add(new Card(id, sections));
     }
@@ -782,12 +818,13 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       int[] slots = STAT_SLOTS[cards.size()];
       for (int i = 0; i < cards.size(); i++) statisticButton(m, cards.get(i), slots[i], values);
     }
-    statisticProfile(m, viewer);
+    statisticProfile(m, target);
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
   }
 
   /** A hover region over the drawn portrait, with the same information as the root profile head. */
-  private void statisticProfile(Menu menu, Player viewer) {
+  private void statisticProfile(Menu menu, Player target) {
+    var viewer = menu.viewer;
     String root = "profile.gui.menus.profile-menu-statistics.profile-info";
     if (!plugin.getConfig().getBoolean(root + ".enabled", true)) return;
     var custom =
@@ -799,10 +836,14 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     var meta = item.getItemMeta();
     meta.displayName(
         placeholders
-            .render("profile-menu.heading", viewer, viewer)
+            .render("profile-menu.heading", viewer, target)
             .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
     meta.lore(
-        textLines("profile-menu.root-head-lore", viewer, viewer).stream()
+        textLines(
+                viewer.equals(target) ? "profile-menu.root-head-lore" : "profile-menu.heading-lore",
+                viewer,
+                target)
+            .stream()
             .map(
                 line ->
                     line.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
@@ -956,8 +997,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     // notification channels 27; every other profile menu (settings included) is 54.
     int size =
         switch (title) {
-          case "profile-menu.title", "profile-menu.notify" -> 27;
-          case "public-profile.title" -> 45;
+          case "profile-menu.title", "profile-menu.notify", "public-profile.title" -> 27;
           default -> 54;
         };
     if (!Set.of(27, 36, 45, 54).contains(size))
@@ -1364,15 +1404,89 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                     "profile-menu.root-behavior-lore", Material.SUNFLOWER, target, true));
       for (int i = 0; i < row.size(); i++) row.get(i).accept(contentSlot(m, i, row.size()));
     } else {
-      drawSummary(
-          m,
-          displayValues(snapshots.get(target.getUniqueId())),
-          false,
-          privacy.canViewActivity(viewer, target));
-      // Second work row: what the viewer can do with this player.
-      var actions = new ArrayList<java.util.function.IntConsumer>();
+      // Another player's profile has the same 27-slot frame as your own. The things you can do
+      // with this player sit in the header (slots 2-7, centred by their number); the work row
+      // holds statistics, always one button, and reputation.
+      var controls = new ArrayList<java.util.function.IntConsumer>();
+      controls.add(
+          slot ->
+              card(
+                  m,
+                  slot,
+                  Material.PAPER,
+                  "public-profile.message",
+                  "public-profile.message-lore",
+                  target,
+                  () -> suggestMessage(viewer, target)));
+      controls.add(
+          slot ->
+              card(
+                  m,
+                  slot,
+                  Material.WRITABLE_BOOK,
+                  "public-profile.report",
+                  "public-profile.report-lore",
+                  target,
+                  () ->
+                      reports.create(
+                          viewer,
+                          target.getUniqueId(),
+                          target.getName(),
+                          () -> access(viewer) && canView(viewer, target))));
+      controls.add(
+          slot ->
+              card(
+                  m,
+                  slot,
+                  Material.BARRIER,
+                  "public-profile.ignore",
+                  "public-profile.ignore-lore",
+                  target,
+                  () -> messages.command(viewer, "ignore", new String[] {target.getName()})));
+      if (viewer.hasPermission("loveessential.reports.notify")) {
+        if (!m.complaintsLoaded) {
+          m.complaintsLoaded = true;
+          reports.openCount(
+              viewer,
+              target.getUniqueId(),
+              open -> {
+                // Staff see how many different players have an open complaint about this one; the
+                // header is laid out again because a fourth control appears.
+                if (open > 0 && menus.get(viewer.getUniqueId()) == m) {
+                  m.complaints = open;
+                  repaint(m);
+                }
+              });
+        }
+        if (m.complaints > 0)
+          controls.add(
+              slot ->
+                  m.inventory.setItem(
+                      slot,
+                      icon(
+                          "public-profile.complaints",
+                          Material.PAPER,
+                          lang.render("public-profile.complaints"),
+                          snapshotLines(
+                              "public-profile.complaints-lore",
+                              Map.of("count", Integer.toString(m.complaints))))));
+      }
+      for (int i = 0; i < controls.size(); i++)
+        controls.get(i).accept(MenuStyle.headerSlot(i, controls.size()));
+
+      var row = new ArrayList<java.util.function.IntConsumer>();
+      row.add(
+          slot ->
+              card(
+                  m,
+                  slot,
+                  Material.KNOWLEDGE_BOOK,
+                  "profile-menu.statistics-button",
+                  "public-profile.statistics-lore",
+                  target,
+                  () -> statistics(viewer, target)));
       if (linkAvailable("reputation", viewer))
-        actions.add(
+        row.add(
             slot ->
                 link(
                     m,
@@ -1383,57 +1497,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                     Material.SUNFLOWER,
                     target,
                     true));
-      actions.add(
-          slot ->
-              button(
-                  m,
-                  slot,
-                  Material.WRITABLE_BOOK,
-                  "public-profile.report",
-                  "public-profile.report-help",
-                  () ->
-                      reports.create(
-                          viewer,
-                          target.getUniqueId(),
-                          target.getName(),
-                          () -> access(viewer) && canView(viewer, target))));
-      actions.add(
-          slot ->
-              button(
-                  m,
-                  slot,
-                  Material.PAPER,
-                  "public-profile.message",
-                  "public-profile.message-help",
-                  () -> suggestMessage(viewer, target)));
-      actions.add(
-          slot ->
-              button(
-                  m,
-                  slot,
-                  Material.BARRIER,
-                  "public-profile.ignore",
-                  "public-profile.ignore-help",
-                  () -> messages.command(viewer, "ignore", new String[] {target.getName()})));
-      for (int i = 0; i < actions.size(); i++)
-        actions.get(i).accept(contentSlot(m, 7 + i, 7 + actions.size()));
-      if (viewer.hasPermission("loveessential.reports.notify"))
-        reports.openCount(
-            viewer,
-            target.getUniqueId(),
-            open -> {
-              // Staff see how many different players have an open complaint about this one.
-              if (open > 0 && menus.get(viewer.getUniqueId()) == m)
-                m.inventory.setItem(
-                    4,
-                    MenuStyle.item(
-                        Material.PAPER,
-                        lang.render("public-profile.complaints"),
-                        List.of(
-                            lang.render(
-                                "public-profile.complaints-count",
-                                Map.of("count", Integer.toString(open))))));
-            });
+      for (int i = 0; i < row.size(); i++) row.get(i).accept(contentSlot(m, i, row.size()));
     }
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
   }
