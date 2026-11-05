@@ -430,7 +430,6 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       return;
     }
     var previousInventory = viewer.getOpenInventory().getTopInventory();
-    lang.send(viewer, "profile-menu.offline-loading");
     java.util.concurrent.CompletableFuture.allOf(
             snapshotWrites.values().toArray(java.util.concurrent.CompletableFuture[]::new))
         .thenCompose(ignored -> store.findPlayerProfile(name))
@@ -479,7 +478,15 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                             lang.send(viewer, "profile-menu.hidden");
                             return;
                           }
-                          offlineProfile(viewer, saved);
+                          try {
+                            offlineProfile(viewer, saved);
+                          } catch (IllegalArgumentException refused) {
+                            lang.send(viewer, refused.getMessage());
+                          } catch (RuntimeException failure) {
+                            // Never leave the player with nothing: say so and keep the cause in the log.
+                            plugin.getLogger().log(java.util.logging.Level.WARNING, "Offline profile failed", failure);
+                            lang.send(viewer, "errors.storage");
+                          }
                         }));
   }
 
