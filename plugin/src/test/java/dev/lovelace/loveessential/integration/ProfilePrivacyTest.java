@@ -539,6 +539,18 @@ class ProfilePrivacyTest {
   }
 
   @Test
+  void everyButtonOfAnotherPlayersProfileIsAHead() throws Exception {
+    var viewer = player("Viewer");
+    player("Target");
+    command(viewer, "profile Target");
+    var inventory = viewer.getOpenInventory().getTopInventory();
+    for (String button : List.of("Написать", "Пожаловаться", "Игнорировать", "Статистика")) {
+      var item = inventory.getItem(named(viewer, button));
+      assertEquals(Material.PLAYER_HEAD, item.getType(), button);
+    }
+  }
+
+  @Test
   void messageToYourselfIsRefusedWithAnUnderstandableText() throws Exception {
     var p = player("Lonely");
     command(p, "le msg Lonely привет");

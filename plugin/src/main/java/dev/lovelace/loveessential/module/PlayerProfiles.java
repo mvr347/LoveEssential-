@@ -1064,7 +1064,14 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   private void button(Menu m, int slot, Material icon, String title, String hint, Runnable action) {
-    m.inventory.setItem(slot, MenuStyle.button(lang, icon, title, "gui.separator", hint));
+    ItemStack item = MenuStyle.button(lang, icon, title, "gui.separator", hint);
+    // A button with a configured texture (profile.gui.textures.<title key>) is a head, like the cards.
+    String texture = plugin.getConfig().getString("profile.gui.textures." + title, "");
+    if (!texture.isBlank() && item.getItemMeta() != null) {
+      var meta = item.getItemMeta();
+      item = MenuStyle.head(texture, meta.displayName(), meta.lore() == null ? List.of() : meta.lore());
+    }
+    m.inventory.setItem(slot, item);
     m.actions.put(slot, action);
   }
 
