@@ -559,6 +559,27 @@ public final class Comfort implements Listener, AutoCloseable {
     lang.send(carrier, "comfort.passenger-ejected");
   }
 
+  /**
+   * The client never lets a player aim at the one sitting on their head, so a hit never reaches
+   * the server. A swing of the empty hand while looking up is the shake-off instead.
+   */
+  @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+  public void shakeOffPassenger(PlayerAnimationEvent e) {
+    var carrier = e.getPlayer();
+    if (e.getAnimationType() != PlayerAnimationType.ARM_SWING
+        || carrier.getPassengers().isEmpty()
+        || !carrier.getInventory().getItemInMainHand().getType().isAir()
+        || carrier.getLocation().getPitch() > -SHAKE_OFF_PITCH) return;
+    try {
+      eject(carrier);
+    } catch (IllegalArgumentException noRideRider) {
+      // The passenger is not a /ride rider (a mount, a vanilla passenger): leave it alone.
+    }
+  }
+
+  /** Looking up at least this many degrees above the horizon counts as shaking the rider off. */
+  private static final float SHAKE_OFF_PITCH = 45f;
+
   @EventHandler(priority = EventPriority.HIGHEST)
   public void hitPassenger(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
     if (e.getDamager() instanceof Player carrier

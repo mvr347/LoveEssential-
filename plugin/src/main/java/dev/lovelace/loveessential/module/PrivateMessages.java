@@ -182,7 +182,7 @@ public final class PrivateMessages implements Listener, AutoCloseable {
         if (existing.isPresent()) unignore(p, existing.get().getKey(), () -> {});
         else {
           var other = target(p, args[0]);
-          if (other.equals(p)) throw new IllegalArgumentException("messages.self");
+          if (other.equals(p)) throw new IllegalArgumentException("messages.ignore-self");
           if (preferences(p).ignored().size()
               >= plugin.getConfig().getInt("messages.max-ignored", 200))
             throw new IllegalArgumentException("messages.ignore-limit");

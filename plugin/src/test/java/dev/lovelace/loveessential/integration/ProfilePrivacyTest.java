@@ -539,6 +539,18 @@ class ProfilePrivacyTest {
   }
 
   @Test
+  void messageToYourselfIsRefusedWithAnUnderstandableText() throws Exception {
+    var p = player("Lonely");
+    command(p, "le msg Lonely привет");
+    var seen = new StringBuilder();
+    net.kyori.adventure.text.Component c;
+    while ((c = p.nextComponentMessage()) != null)
+      seen.append(PlainTextComponentSerializer.plainText().serialize(c)).append('\n');
+    assertTrue(seen.toString().contains("Нельзя написать самому себе"), seen.toString());
+    assertFalse(seen.toString().contains("Выберите другого игрока"), seen.toString());
+  }
+
+  @Test
   void publicSummaryUsesTargetSnapshotAndCurrentSkin() throws Exception {
     enablePapi();
     var viewer = player("Viewer");

@@ -224,6 +224,11 @@ public final class ModuleConfigs {
    */
   private static final Map<String, Map<String, List<String>>> RETIRED_TEXTS =
       Map.of(
+          // 2026-11-05: "choose another player" did not say why the message to yourself was refused.
+          "messages",
+          Map.of(
+              "menus.messages-settings.labels.messages.self",
+              List.of("<red>Выберите другого игрока.")),
           // 2026-11-01: the statistics button shows the section name only, without its number in the circle.
           "profile",
           Map.of(

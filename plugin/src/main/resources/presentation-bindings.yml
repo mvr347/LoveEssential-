@@ -333,6 +333,10 @@ bindings:
   path: menus.messages-settings.labels.messages.self
 - module: messages
   file: gui.yml
+  key: messages.ignore-self
+  path: menus.messages-settings.labels.messages.ignore-self
+- module: messages
+  file: gui.yml
   key: messages.ignore-limit
   path: menus.messages-settings.labels.messages.ignore-limit
 - module: messages

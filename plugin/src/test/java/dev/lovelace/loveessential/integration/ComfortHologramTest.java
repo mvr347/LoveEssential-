@@ -435,6 +435,45 @@ class ComfortHologramTest {
   }
 
   @Test
+  void carrierShakesOffTheRiderWithAnEmptyHandSwingWhileLookingUp() throws Exception {
+    var rider =
+        new PlayerMock(server, "Rider") {
+          @Override
+          public boolean hasLineOfSight(org.bukkit.entity.Entity target) {
+            return true;
+          }
+        };
+    server.addPlayer(rider);
+    rider.setOp(true);
+    var target = server.addPlayer("Passenger");
+    rider.teleport(target.getLocation().clone().add(1, 0, 0));
+    await(store.profile(rider.getUniqueId(), "test.barrier", "true"));
+    await(store.profile(target.getUniqueId(), "test.barrier", "true"));
+    server.getScheduler().performTicks(3);
+    command(rider, "ride Passenger");
+    assertTrue(target.getPassengers().contains(rider));
+    var swing =
+        (java.util.function.Supplier<org.bukkit.event.player.PlayerAnimationEvent>)
+            () ->
+                new org.bukkit.event.player.PlayerAnimationEvent(
+                    target, org.bukkit.event.player.PlayerAnimationType.ARM_SWING);
+    // Looking straight ahead: nothing happens.
+    target.setRotation(0, 0);
+    server.getPluginManager().callEvent(swing.get());
+    assertTrue(target.getPassengers().contains(rider));
+    // Looking up with an item in the hand: nothing happens.
+    target.setRotation(0, -80);
+    target.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.STICK));
+    server.getPluginManager().callEvent(swing.get());
+    assertTrue(target.getPassengers().contains(rider));
+    assertTrue(target.getLocation().getPitch() <= -45, "pitch " + target.getLocation().getPitch());
+    // Looking up with an empty hand: the rider is thrown off.
+    target.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR));
+    server.getPluginManager().callEvent(swing.get());
+    assertFalse(target.getPassengers().contains(rider));
+  }
+
+  @Test
   void createsWithGeneratedIdAndLocalizesTextThenEditsLinesThroughGui() throws Exception {
     var p = admin();
     command(p, "le hologram create <gold>Первая строка");
