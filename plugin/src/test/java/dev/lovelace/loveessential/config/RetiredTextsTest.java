@@ -88,4 +88,30 @@ class RetiredTextsTest {
     ModuleConfigs.refreshRetiredTexts("npc", installed, fresh);
     assertEquals("<red>[Мой] ", installed.getString("messages.chat.prefix"));
   }
+
+  @Test
+  void theOldSwitchTexturesAreReplacedButACustomOneIsNot() {
+    String path = "menus.profile-menu-title.textures.enabled";
+    String old = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvODg5MDgyNTQ1MWMwMWJkMDNiMDMwNzkwNjIxYWI3NTM0NDgzMTlmODQ3NDliYjAyYzkwZjNhMjg0ODliZDcyIn19fQ==";
+    var defaults = new YamlConfiguration();
+    defaults.set(path, "new-texture");
+    var installed = new YamlConfiguration();
+    installed.set(path, old);
+    ModuleConfigs.refreshRetiredTexts("profile", installed, defaults);
+    assertEquals("new-texture", installed.getString(path));
+    installed.set(path, "admin-texture");
+    ModuleConfigs.refreshRetiredTexts("profile", installed, defaults);
+    assertEquals("admin-texture", installed.getString(path));
+  }
+
+  @Test
+  void theUnclearSelfMessageTextIsReplaced() {
+    String path = "menus.messages-settings.labels.messages.self";
+    var defaults = new YamlConfiguration();
+    defaults.set(path, "clear");
+    var installed = new YamlConfiguration();
+    installed.set(path, "<red>Выберите другого игрока.");
+    ModuleConfigs.refreshRetiredTexts("messages", installed, defaults);
+    assertEquals("clear", installed.getString(path));
+  }
 }
