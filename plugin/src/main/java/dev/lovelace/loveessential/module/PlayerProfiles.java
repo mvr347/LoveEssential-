@@ -1578,6 +1578,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             slot ->
                 link(m, slot, "scoreboard", "profile-menu.scoreboard",
                     "profile-menu.settings-scoreboard-lore", Material.MAP, p, true));
+        if (linkAvailable("activities", p))
+          draws.add(
+              slot ->
+                  link(m, slot, "activities", "profile-menu.activities",
+                      "profile-menu.settings-activities-lore", Material.JIGSAW, p, true));
       }
     }
     return draws;

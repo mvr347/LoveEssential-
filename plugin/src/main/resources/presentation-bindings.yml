@@ -1061,6 +1061,14 @@ bindings:
   path: menus.profile-menu-title.labels.profile-menu.scoreboard-lore
 - module: profile
   file: gui.yml
+  key: profile-menu.activities
+  path: menus.profile-menu-title.labels.profile-menu.activities
+- module: profile
+  file: gui.yml
+  key: profile-menu.settings-activities-lore
+  path: menus.profile-menu-settings.labels.profile-menu.settings-activities-lore
+- module: profile
+  file: gui.yml
   key: profile-menu.nickname
   path: menus.profile-menu-settings.labels.profile-menu.nickname
 - module: profile

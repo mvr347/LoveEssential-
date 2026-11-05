@@ -39,6 +39,12 @@ links:
     command: suffixes
     from-profile: loveessential:profile
     permission: lovesubnames.use
+  activities:
+    plugin: LoveActivities
+    command: loveactivities settings
+    # 2026-11-05: LoveActivities вернёт игрока в профиль этой командой (второй аргумент).
+    back-argument: loveessential:profile
+    permission: ''
   display:
     plugin: LoveEssential
     command: display
