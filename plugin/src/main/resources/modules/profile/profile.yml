@@ -45,9 +45,9 @@ links:
   activities:
     plugin: LoveActivities
     command: loveactivities settings
-    # 2026-11-06: «Назад» из настроек игр ведёт в настройки профиля, а не в корень профиля (аргументы команды
+    # 2026-11-06: «Назад» из настроек игр ведёт в настройки профиля (слово back даёт им свою кнопку «Назад» в профиль), а не в корень профиля (аргументы команды
     # возврата принимаются целиком: метка команды и простые слова).
-    back-argument: loveessential:profile settings
+    back-argument: loveessential:profile settings back
     permission: ''
   display:
     plugin: LoveEssential

@@ -1164,6 +1164,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       return;
     }
     String op = args[0].toLowerCase(Locale.ROOT);
+    if (args.length == 2 && op.equals("settings") && args[1].equalsIgnoreCase("back")) {
+      settingsReturned(p);
+      return;
+    }
     if (args.length == 1)
       switch (op) {
         case "list" -> {
@@ -1557,14 +1561,30 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     settings(p, "all");
   }
 
+  /** The settings a plugin returns to: the same menu, with Back to the profile. */
+  public void settingsReturned(Player p) {
+    settings(p, "all", true);
+  }
+
   /** Settings with one filter group preselected ({@code /profile activity} opens the privacy group). */
   public void settings(Player p, String filter) {
+    settings(p, filter, false);
+  }
+
+  private void settings(Player p, String filter, boolean returned) {
     var m = menu(p, "profile-menu.settings", Map.of(), () -> access(p));
     m.subject = p.getUniqueId();
     m.tab = filter;
-    // Opened by a command (Back of the sidebar, games, notifications or display menus) there is no parent in the
-    // navigation chain: Back still leads to the profile. A real parent, when there is one, takes priority.
-    m.back = () -> profile(p, p);
+    // Typed as a command, the settings are a root menu without Back. They get Back to the profile when a plugin
+    // returns to them ("profile settings back") and when a child menu (sidebar, games, notifications, display)
+    // goes Back to them: a menu you came back to is not the start of the way.
+    if (returned) m.back = () -> profile(p, p);
+    var resume = m.resume;
+    m.resume =
+        () -> {
+          m.back = () -> profile(p, p);
+          resume.run();
+        };
     m.repaint = () -> drawSettings(m, p);
     drawSettings(m, p);
     show(m);

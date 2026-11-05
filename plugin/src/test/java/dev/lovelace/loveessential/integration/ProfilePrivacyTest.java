@@ -612,9 +612,11 @@ class ProfilePrivacyTest {
   }
 
   @Test
-  void settingsOpenedByCommandStillHaveBackToTheProfileAndAnExplainingCard() throws Exception {
+  void settingsReturnedToByAPluginHaveBackToTheProfileAndAnExplainingCard() throws Exception {
     var p = player("Returner");
-    command(p, "profile settings"); // what the Back of the sidebar, games, notifications and display menus runs
+    command(p, "profile settings"); // typed by hand: a root menu without Back
+    assertFalse(titles(p).contains("Назад"));
+    command(p, "profile settings back"); // what a plugin runs to return to the settings (games)
     assertEquals(54, p.getOpenInventory().getTopInventory().getSize());
     int back = named(p, "Назад");
     assertEquals(p.getOpenInventory().getTopInventory().getSize() - 2, back);

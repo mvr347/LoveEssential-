@@ -75,7 +75,7 @@ class StatisticsConfigTest {
     var module = new YamlConfiguration();
     module.set("links.activities.back-argument", "loveessential:profile");
     assertTrue(ModuleConfigs.migrateProfileReturns(module));
-    assertEquals("loveessential:profile settings", module.getString("links.activities.back-argument"));
+    assertEquals("loveessential:profile settings back", module.getString("links.activities.back-argument"));
     module.set("links.activities.back-argument", "hub open");
     assertFalse(ModuleConfigs.migrateProfileReturns(module));
     assertEquals("hub open", module.getString("links.activities.back-argument"));
