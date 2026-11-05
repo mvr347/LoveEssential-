@@ -121,7 +121,6 @@ menus:
         - '  <gray>Ранг: <yellow><papi:clans_rank_display:"отсутствует">'
         - '  <gray>Пометка: <white><papi:lovesubnames_current:"отсутствует">'
         - '  <gray>Вежливость: <white><papi:lovebehavior_politeness_name:"отсутствует">'
-        - '  <gray>В игре: <white><playtime_hours> ч'
         root-customization: <gold>Персонализация
         root-head-lore:
         - <dark_gray>Личная карточка игрока
