@@ -4,6 +4,9 @@ refresh-ticks: 40
 # открывает профиль с этим аргументом, чтобы игрок мог вернуться. Пусто — кнопки «Назад» нет.
 back-command: menu
 persist-seconds: 300
+# 2026-11-06: кнопка «Торговля» в профиле другого игрока активна, только если он не дальше этого числа блоков
+# (в одном мире). Сама команда /trade дальность не проверяет, ограничение действует только для кнопки профиля.
+trade-range: 6
 privacy:
   default-visible: true
   default-activity-visible: true
@@ -73,6 +76,16 @@ links:
   channel-local:
     plugin: Lovechat
     command: channel local
+    permission: ''
+  # 2026-11-06: кнопки профиля другого игрока. Команды вызываются от имени зрителя, права и ограничения
+  # проверяют сами плагины, профиль только заранее серит кнопку и называет причину.
+  clan-invite:
+    plugin: LoveClans
+    command: loveclan invite {player}
+    permission: ''
+  trade-request:
+    plugin: LoveTrades
+    command: trade {player}
     permission: ''
   clan-invites:
     plugin: LoveClans

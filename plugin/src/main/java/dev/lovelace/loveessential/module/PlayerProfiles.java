@@ -561,36 +561,44 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     m.subject = saved.id();
     m.inventory.setItem(0, savedHead(saved));
     m.variables = savedValues(saved);
-    // Same frame as an online visit: the report sits in the header, the work row holds the
-    // statistics (public summary only) and the reputation, which needs the player online.
-    button(
-        m,
-        MenuStyle.headerSlot(0, 1),
-        Material.WRITABLE_BOOK,
-        "public-profile.report",
-        "public-profile.report-help",
-        () ->
-            reports.create(
-                viewer,
-                saved.id(),
-                saved.data().getOrDefault("player", ""),
-                () -> savedAllowed(viewer, saved, false)));
-    button(
-        m,
-        contentSlot(m, 0, 2),
-        Material.KNOWLEDGE_BOOK,
-        "profile-menu.statistics-button",
-        "public-profile.statistics-lore",
-        () -> offlineStatistics(viewer, saved));
-    button(
-        m,
-        contentSlot(m, 1, 2),
-        Material.SUNFLOWER,
-        "profile-menu.reputation",
-        "public-profile.offline-feedback",
-        () -> {
-          throw new IllegalArgumentException("public-profile.offline-feedback");
-        });
+    // Same frame as an online visit: every button sits in the work row. Statistics are the public
+    // summary only; reputation needs the player online.
+    var row = new ArrayList<java.util.function.IntConsumer>();
+    row.add(
+        slot ->
+            button(
+                m,
+                slot,
+                Material.KNOWLEDGE_BOOK,
+                "profile-menu.statistics-button",
+                "public-profile.statistics-lore",
+                () -> offlineStatistics(viewer, saved)));
+    row.add(
+        slot ->
+            button(
+                m,
+                slot,
+                Material.SUNFLOWER,
+                "profile-menu.reputation",
+                "public-profile.offline-feedback",
+                () -> {
+                  throw new IllegalArgumentException("public-profile.offline-feedback");
+                }));
+    row.add(
+        slot ->
+            button(
+                m,
+                slot,
+                Material.WRITABLE_BOOK,
+                "public-profile.report",
+                "public-profile.report-help",
+                () ->
+                    reports.create(
+                        viewer,
+                        saved.id(),
+                        saved.data().getOrDefault("player", ""),
+                        () -> savedAllowed(viewer, saved, false))));
+    for (int i = 0; i < row.size(); i++) row.get(i).accept(contentSlot(m, i, row.size()));
     show(m);
   }
 
@@ -603,12 +611,13 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             Map.of(),
             () -> savedAllowed(viewer, saved, false));
     m.subject = saved.id();
-    m.inventory.setItem(0, savedHead(saved));
-    int last = m.inventory.getSize() - 1;
-    button(
-        m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> offlineProfile(viewer, saved));
-    button(m, last, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
-    drawSummary(m, savedValues(saved), false, saved.preferences().activityVisible());
+    var values = savedValues(saved);
+    paintStatistics(
+        m, viewer, values, false, saved.preferences().activityVisible(), () -> offlineProfile(viewer, saved));
+    statisticProfile(
+        m,
+        lang.render("profile-menu.saved-heading", values),
+        snapshotLines("profile-menu.saved-heading-lore", values));
     show(m);
   }
 
@@ -631,72 +640,12 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     return MenuStyle.slot(index, count) + (m.inventory.getSize() >= 45 ? 0 : -9);
   }
 
-  private int contentCapacity(Menu m) {
-    return (m.inventory.getSize() / 9 - (m.inventory.getSize() >= 45 ? 3 : 2)) * 7;
-  }
-
   private String statisticPath(String id) {
     return "profile.statistics.categories." + id;
   }
 
   private List<Component> snapshotLines(String key, Map<String, String> values) {
     return lang.lines(key).stream().map(t -> lang.renderText(t, values)).toList();
-  }
-
-  private ItemStack statisticIcon(
-      String path, String title, String lore, Map<String, String> values) {
-    String texture =
-        plugin
-            .getConfig()
-            .getString(
-                path + ".texture",
-                plugin
-                    .getConfig()
-                    .getString(
-                        "profile.gui.textures.profile-menu.statistics",
-                        "8672085ff5df0ee852136e2d41a769229291d666b28e9fb04d6c92f158e42bb"));
-    return MenuStyle.head(texture, lang.render(title, values), snapshotLines(lore, values));
-  }
-
-  private void drawSummary(Menu m, Map<String, String> values, boolean own, boolean activity) {
-    m.variables = values;
-    var ids = statisticCategories();
-    int count = Math.min(contentCapacity(m), ids.size());
-    for (int i = 0; i < count; i++) {
-      String id = ids.get(i), path = statisticPath(id);
-      int slot = contentSlot(m, i, count);
-      String title =
-          plugin.getConfig().getString(path + ".title-key", "profile-stats." + id + ".title");
-      boolean sensitive = plugin.getConfig().getBoolean(path + ".activity-sensitive", false);
-      if (!own && sensitive && !activity) {
-        m.inventory.setItem(
-            slot,
-            icon(
-                "disabled",
-                Material.GRAY_DYE,
-                lang.render(title),
-                List.of(lang.render("profile-menu.activity-hidden-lore"))));
-        continue;
-      }
-      String owner = plugin.getConfig().getString(path + ".plugin", "");
-      if (!owner.isBlank() && !love.installed(owner)) {
-        m.inventory.setItem(
-            slot,
-            icon(
-                "disabled",
-                Material.GRAY_DYE,
-                lang.render(title),
-                List.of(lang.render("profile-menu.integration-unavailable"))));
-        continue;
-      }
-      String lore =
-          plugin
-              .getConfig()
-              .getString(
-                  path + (own ? ".summary-key" : ".public-key"),
-                  "profile-stats." + id + (own ? ".summary" : ".public"));
-      m.inventory.setItem(slot, statisticIcon(path, title, lore, values));
-    }
   }
 
   private record Metric(String label, String value, String variable, String group) {}
@@ -742,6 +691,29 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     return groups;
   }
 
+  /**
+   * Another player's statistics: the public lines of the category (never the detailed numbers of the
+   * own view), as a single section with the same "Label: value" rows.
+   */
+  private List<List<Metric>> publicRows(String id, Map<String, String> values) {
+    String path = statisticPath(id);
+    String owner = plugin.getConfig().getString(path + ".plugin", "");
+    if (!owner.isBlank()
+        && !love.installed(owner)
+        && plugin.getConfig().getBoolean("profile.statistics.hide-unavailable", true)) return List.of();
+    String key = plugin.getConfig().getString(path + ".public-key", "profile-stats." + id + ".public");
+    String group = plugin.getConfig().getString(path + ".title-key", "profile-stats." + id + ".title");
+    var row = new ArrayList<Metric>();
+    for (String line : lang.lines(key)) {
+      var match = METRIC.matcher(line);
+      if (!match.matches()) continue;
+      var variable = VARIABLE.matcher(match.group(2));
+      if (!variable.find() || !values.containsKey(variable.group(1))) continue;
+      row.add(new Metric(match.group(1), match.group(2), variable.group(1), group));
+    }
+    return row.isEmpty() ? List.of() : List.of(row);
+  }
+
   private static ItemStack glow(ItemStack item) {
     var meta = item.getItemMeta();
     meta.setEnchantmentGlintOverride(true);
@@ -759,12 +731,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             Map.of(),
             () -> access(viewer) && canView(viewer, target));
     m.subject = target.getUniqueId();
-    boolean own = viewer.equals(target);
-    m.repaint =
-        () -> {
-          if (own) drawStatistics(m, viewer, target);
-          else drawPublicStatistics(m, viewer, target);
-        };
+    m.repaint = () -> drawStatistics(m, viewer, target);
     m.repaint.run();
     show(m);
   }
@@ -789,47 +756,42 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
   private static final int STAT_BUTTONS = STAT_SLOTS.length - 1;
 
-  /**
-   * Another player's statistics: the public summary of each category, never the detailed numbers
-   * of the own view (balance, homes, kill ratio stay with their owner).
-   */
-  private void drawPublicStatistics(Menu m, Player viewer, Player target) {
-    capture(target);
-    m.variables = displayValues(snapshots.get(target.getUniqueId()));
-    MenuStyle.frame(m.inventory);
-    m.actions.clear();
-    m.inventory.setItem(
-        0,
-        head(
-            target,
-            placeholders.render("profile-menu.heading", viewer, target),
-            textLines("profile-menu.heading-lore", viewer, target)));
-    int last = m.inventory.getSize() - 1;
-    button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, target));
-    button(m, last, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
-    drawSummary(m, m.variables, false, privacy.canViewActivity(viewer, target));
-    if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
-  }
-
+  /** Own or another player's statistics: one layout, the other player's numbers are the public ones only. */
   private void drawStatistics(Menu m, Player viewer, Player target) {
     capture(target);
     boolean own = viewer.equals(target);
     var values = displayValues(snapshots.get(target.getUniqueId()));
+    m.variables = values;
+    paintStatistics(
+        m,
+        viewer,
+        values,
+        own,
+        own || privacy.canViewActivity(viewer, target),
+        () -> profile(viewer, target));
+    statisticProfile(
+        m,
+        placeholders.render("profile-menu.heading", viewer, target),
+        textLines(own ? "profile-menu.root-head-lore" : "profile-menu.public-head-lore", viewer, target));
+    if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
+  }
+
+  private void paintStatistics(
+      Menu m, Player viewer, Map<String, String> values, boolean own, boolean activity, Runnable back) {
     m.variables = values;
     MenuStyle.frame(m.inventory);
     m.actions.clear();
     m.choices.clear();
     // Owner's layout for this menu: back and close in the last two slots of the bottom row.
     int last = m.inventory.getSize() - 1;
-    button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", () -> profile(viewer, target));
+    button(m, last - 1, Material.ARROW, "common.back", "gui.click.open", back);
     button(m, last, Material.BARRIER, "gui.close", "gui.click.close", viewer::closeInventory);
     var cards = new ArrayList<Card>();
-    boolean activity = own || privacy.canViewActivity(viewer, target);
     for (String id : statisticCategories().stream().limit(STAT_BUTTONS).toList()) {
       // What the player keeps private stays private in their statistics too.
       if (!activity && plugin.getConfig().getBoolean(statisticPath(id) + ".activity-sensitive", false))
         continue;
-      var sections = metricRows(id, values);
+      var sections = own ? metricRows(id, values) : publicRows(id, values);
       if (!sections.isEmpty()) cards.add(new Card(id, sections));
     }
     if (cards.isEmpty()) {
@@ -844,13 +806,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       int[] slots = STAT_SLOTS[cards.size()];
       for (int i = 0; i < cards.size(); i++) statisticButton(m, cards.get(i), slots[i], values);
     }
-    statisticProfile(m, target);
-    if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);
   }
 
   /** A hover region over the drawn portrait, with the same information as the root profile head. */
-  private void statisticProfile(Menu menu, Player target) {
-    var viewer = menu.viewer;
+  private void statisticProfile(Menu menu, Component name, List<Component> lines) {
     String root = "profile.gui.menus.profile-menu-statistics.profile-info";
     if (!plugin.getConfig().getBoolean(root + ".enabled", true)) return;
     var custom =
@@ -860,19 +819,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     ItemStack item = custom.get();
     item.setAmount(1);
     var meta = item.getItemMeta();
-    meta.displayName(
-        placeholders
-            .render("profile-menu.heading", viewer, target)
-            .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+    meta.displayName(name.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
     meta.lore(
-        textLines(
-                viewer.equals(target) ? "profile-menu.root-head-lore" : "profile-menu.heading-lore",
-                viewer,
-                target)
-            .stream()
-            .map(
-                line ->
-                    line.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
+        lines.stream()
+            .map(line -> line.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false))
             .toList());
     meta.setHideTooltip(false);
     meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
@@ -1082,6 +1032,109 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
     m.actions.put(slot, action);
   }
 
+
+  private static boolean yes(String state) {
+    String value = state.strip().toLowerCase(Locale.ROOT);
+    return value.equals("yes") || value.equals("true");
+  }
+
+  /** An inactive button with the reason why, gui_gen style: grey name, the reason in its own block. */
+  private void blocked(Menu m, int slot, String title, String reason, String range) {
+    String text = lang.text(reason).replace("<range>", range);
+    m.inventory.setItem(
+        slot,
+        icon(
+            "disabled",
+            Material.GRAY_DYE,
+            lang.render(title),
+            snapshotLines("public-profile.blocked-lore", Map.of("reason", text))));
+    // A click on a button that is blocked only redraws it: the state may have changed meanwhile.
+    m.actions.put(slot, () -> repaint(m));
+  }
+
+  private void inviteButton(Menu m, int slot, Player target) {
+    var viewer = m.viewer;
+    String reason = inviteBlock(viewer, target);
+    if (reason != null) {
+      blocked(m, slot, "public-profile.invite-off", reason, "");
+      return;
+    }
+    card(m, slot, Material.WRITABLE_BOOK, "public-profile.invite", "public-profile.invite-lore", target,
+        () -> {
+          if (inviteBlock(viewer, target) != null) repaint(m);
+          else invoke("clan-invite", viewer, target, true);
+        });
+  }
+
+  /** Why the viewer cannot invite the target into their clan right now; null when they can. */
+  private String inviteBlock(Player viewer, Player target) {
+    if (!yes(placeholders.papi(viewer, viewer, "%clans_in_clan%")))
+      return "public-profile.reason-no-clan";
+    if (!yes(placeholders.papi(viewer, viewer, "%clans_can_invite%")))
+      return "public-profile.reason-no-rights";
+    if (yes(placeholders.papi(viewer, target, "%clans_in_clan%")))
+      return "public-profile.reason-in-clan";
+    if (!yes(placeholders.papi(viewer, target, "%clans_invites_enabled%")))
+      return "public-profile.reason-invites-disabled";
+    return null;
+  }
+
+  private void tradeButton(Menu m, int slot, Player target) {
+    var viewer = m.viewer;
+    String reason = tradeBlock(viewer, target);
+    String range = Integer.toString((int) tradeRange());
+    if (reason != null) {
+      blocked(m, slot, "public-profile.trade-off", reason, range);
+      return;
+    }
+    card(m, slot, Material.EMERALD, "public-profile.trade", "public-profile.trade-lore", target,
+        () -> {
+          if (tradeBlock(viewer, target) != null) repaint(m);
+          else invoke("trade-request", viewer, target, true);
+        });
+  }
+
+  private double tradeRange() {
+    return Math.max(1.0, plugin.getConfig().getDouble("profile.trade-range", 6.0));
+  }
+
+  /** Why a trade request cannot go to the target now (their setting, the distance); null when it can. */
+  private String tradeBlock(Player viewer, Player target) {
+    if (!yes(placeholders.papi(viewer, target, "%lovetrades_requests_enabled%")))
+      return "public-profile.reason-trades-disabled";
+    if (!viewer.getWorld().equals(target.getWorld())) return "public-profile.reason-far";
+    double range = tradeRange();
+    return viewer.getLocation().distanceSquared(target.getLocation()) > range * range
+        ? "public-profile.reason-far"
+        : null;
+  }
+
+  /** The private message is typed in a dialog; without dialogs the old chat suggestion stays as the fallback. */
+  private void composeMessage(Player viewer, Player target) {
+    if (!visible(viewer, target)) throw new IllegalArgumentException("players.unavailable");
+    var ui = nativeUi;
+    if (ui == null) {
+      suggestMessage(viewer, target);
+      return;
+    }
+    String name = target.getName();
+    ui.show(
+        viewer,
+        lang.render("public-profile.message-title", Map.of("player", name)),
+        lang.render("public-profile.message-help", Map.of("player", name)),
+        List.of(ui.text("text", "public-profile.message-field", "", 256)),
+        List.of(
+            ui.button(
+                "send",
+                "public-profile.message-send",
+                values -> {
+                  String text = values.getOrDefault("text", "").strip();
+                  if (text.isEmpty()) composeMessage(viewer, target);
+                  else messages.command(viewer, "msg", new String[] {name, text});
+                }),
+            ui.button("back", "common.back", values -> profile(viewer, target))),
+        p -> access(p) && visible(p, target));
+  }
 
   private void suggestMessage(Player viewer, Player target) {
     if (!visible(viewer, target)) throw new IllegalArgumentException("players.unavailable");
@@ -1403,7 +1456,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
         head(
             target,
             placeholders.render("profile-menu.heading", viewer, target),
-            textLines(own ? "profile-menu.root-head-lore" : "profile-menu.heading-lore", viewer, target)));
+            textLines(own ? "profile-menu.root-head-lore" : "profile-menu.public-head-lore", viewer, target)));
     if (own) {
       // Own profile (27 slots): one row of buttons centred on slots 10-16; a missing plugin leaves no gap.
       var row = new ArrayList<java.util.function.IntConsumer>();
@@ -1437,28 +1490,49 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                     "profile-menu.root-behavior-lore", Material.SUNFLOWER, target, true));
       for (int i = 0; i < row.size(); i++) row.get(i).accept(contentSlot(m, i, row.size()));
     } else {
-      // Another player's profile has the same 27-slot frame as your own. The things you can do
-      // with this player sit in the header (slots 2-7, centred by their number); the work row
-      // holds statistics, always one button, and reputation.
-      var controls = new ArrayList<java.util.function.IntConsumer>();
-      controls.add(
+      // Another player's profile: the same 27-slot frame as your own. Slot 0 is the card, the header
+      // stays glass and every button sits in the work row (up to seven, centred).
+      if (viewer.hasPermission("loveessential.reports.notify") && !m.complaintsLoaded) {
+        m.complaintsLoaded = true;
+        reports.openCount(
+            viewer,
+            target.getUniqueId(),
+            open -> {
+              // Staff see how many different players have an open complaint about this one.
+              if (open > 0 && menus.get(viewer.getUniqueId()) == m) {
+                m.complaints = open;
+                repaint(m);
+              }
+            });
+      }
+      if (m.complaints > 0) {
+        var lore = new ArrayList<>(textLines("profile-menu.public-head-lore", viewer, target));
+        lore.add(Component.empty());
+        lore.addAll(
+            snapshotLines(
+                "public-profile.complaints-lore", Map.of("count", Integer.toString(m.complaints))));
+        m.inventory.setItem(
+            0, head(target, placeholders.render("profile-menu.heading", viewer, target), lore));
+      }
+      var row = new ArrayList<java.util.function.IntConsumer>();
+      row.add(
           slot ->
-              card(
-                  m,
-                  slot,
-                  Material.PAPER,
-                  "public-profile.message",
-                  "public-profile.message-lore",
-                  target,
-                  () -> suggestMessage(viewer, target)));
-      controls.add(
+              card(m, slot, Material.PAPER, "public-profile.message", "public-profile.message-compose-lore",
+                  target, () -> composeMessage(viewer, target)));
+      row.add(
           slot ->
-              card(
-                  m,
-                  slot,
-                  Material.WRITABLE_BOOK,
-                  "public-profile.report",
-                  "public-profile.report-lore",
+              card(m, slot, Material.KNOWLEDGE_BOOK, "profile-menu.statistics-button",
+                  "public-profile.statistics-lore", target, () -> statistics(viewer, target)));
+      if (linkAvailable("reputation", viewer))
+        row.add(
+            slot ->
+                link(m, slot, "reputation", "profile-menu.reputation", "profile-menu.reputation-lore",
+                    Material.SUNFLOWER, target, true));
+      if (linkAvailable("clan-invite", viewer)) row.add(slot -> inviteButton(m, slot, target));
+      if (linkAvailable("trade-request", viewer)) row.add(slot -> tradeButton(m, slot, target));
+      row.add(
+          slot ->
+              card(m, slot, Material.WRITABLE_BOOK, "public-profile.report", "public-profile.report-lore",
                   target,
                   () ->
                       reports.create(
@@ -1466,70 +1540,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
                           target.getUniqueId(),
                           target.getName(),
                           () -> access(viewer) && canView(viewer, target))));
-      controls.add(
-          slot ->
-              card(
-                  m,
-                  slot,
-                  Material.BARRIER,
-                  "public-profile.ignore",
-                  "public-profile.ignore-lore",
-                  target,
-                  () -> messages.command(viewer, "ignore", new String[] {target.getName()})));
-      if (viewer.hasPermission("loveessential.reports.notify")) {
-        if (!m.complaintsLoaded) {
-          m.complaintsLoaded = true;
-          reports.openCount(
-              viewer,
-              target.getUniqueId(),
-              open -> {
-                // Staff see how many different players have an open complaint about this one; the
-                // header is laid out again because a fourth control appears.
-                if (open > 0 && menus.get(viewer.getUniqueId()) == m) {
-                  m.complaints = open;
-                  repaint(m);
-                }
-              });
-        }
-        if (m.complaints > 0)
-          controls.add(
-              slot ->
-                  m.inventory.setItem(
-                      slot,
-                      icon(
-                          "public-profile.complaints",
-                          Material.PAPER,
-                          lang.render("public-profile.complaints"),
-                          snapshotLines(
-                              "public-profile.complaints-lore",
-                              Map.of("count", Integer.toString(m.complaints))))));
-      }
-      for (int i = 0; i < controls.size(); i++)
-        controls.get(i).accept(MenuStyle.headerSlot(i, controls.size()));
-
-      var row = new ArrayList<java.util.function.IntConsumer>();
       row.add(
           slot ->
-              card(
-                  m,
-                  slot,
-                  Material.KNOWLEDGE_BOOK,
-                  "profile-menu.statistics-button",
-                  "public-profile.statistics-lore",
-                  target,
-                  () -> statistics(viewer, target)));
-      if (linkAvailable("reputation", viewer))
-        row.add(
-            slot ->
-                link(
-                    m,
-                    slot,
-                    "reputation",
-                    "profile-menu.reputation",
-                    "profile-menu.reputation-lore",
-                    Material.SUNFLOWER,
-                    target,
-                    true));
+              card(m, slot, Material.BARRIER, "public-profile.ignore", "public-profile.ignore-lore", target,
+                  () -> messages.command(viewer, "ignore", new String[] {target.getName()})));
       for (int i = 0; i < row.size(); i++) row.get(i).accept(contentSlot(m, i, row.size()));
     }
     if (menus.get(viewer.getUniqueId()) == m) MenuStyle.apply(viewer, m.inventory);

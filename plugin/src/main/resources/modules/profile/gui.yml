@@ -14,6 +14,7 @@ menus:
       public-profile.report: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMmUzZjUwYmE2MmNiZGEzZWNmNTQ3OWI2MmZlZGViZDYxZDc2NTg5NzcxY2MxOTI4NmJmMjc0NWNkNzFlNDdjNiJ9fX0=
       public-profile.complaints: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMmUzZjUwYmE2MmNiZGEzZWNmNTQ3OWI2MmZlZGViZDYxZDc2NTg5NzcxY2MxOTI4NmJmMjc0NWNkNzFlNDdjNiJ9fX0=
       public-profile.ignore: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTdlYTFiYTNhMjZjYmM0YzgxODI4MWMyMmE5OTliOGYxYTcxZDEzMzgzMzAzMDU2OTc1MDExYjZkMTIxMmI0NCJ9fX0=
+      public-profile.invite: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvM2VkZDIwYmU5MzUyMDk0OWU2Y2U3ODlkYzRmNDNlZmFlYjI4YzcxN2VlNmJmY2JiZTAyNzgwMTQyZjcxNiJ9fX0=
       profile-menu.statistics-button: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTgxOGQxY2M1M2MyNzVjMjk0ZjVkZmI1NTkxNzRkZDkzMWZjNTE2YTg1YWY2MWExZGUyNTZhZWQ4YmNhNWU3In19fQ==
       profile-menu.notifications: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDYxNzhhZDUxZmQ1MmIxOWQwYTM4ODg3MTBiZDkyMDY4ZTkzMzI1MmFhYzZiMTNjNzZlN2U2ZWE1ZDMyMjYifX19
       profile-menu.scoreboard: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTk4ODQxOWRkNWIzODZmNjk4YTk2OTEzZGIxZDk3YzI0MThlMTZkNDE2ZDdmNDM5ZDQ4YWNkNDFlM2E0MzZjZSJ9fX0=
@@ -112,7 +113,14 @@ menus:
         - '<gray>Имя: <white><player>'
         - '<gray>Клан: <gold><clan>'
         - '<gray>Пометка: <suffix>'
-        - <green>ЛКМ <dark_gray>— <gray>обновить информацию
+        public-head-lore:
+        - <dark_gray>Личная карточка игрока
+        - ''
+        - '<dark_gray>▪ <gray>Данные:'
+        - '  <gray>Клан: <gold><papi:clans_name:"отсутствует">'
+        - '  <gray>Ранг: <yellow><papi:clans_rank_display:"отсутствует">'
+        - '  <gray>Пометка: <white><papi:lovesubnames_current:"отсутствует">'
+        - '  <gray>Вежливость: <white><papi:lovebehavior_politeness_name:"отсутствует">'
         root-customization: <gold>Персонализация
         root-head-lore:
         - <dark_gray>Личная карточка игрока
@@ -295,15 +303,50 @@ menus:
         - <dark_gray><st>─────────────────────</st>
         - <green>ЛКМ <dark_gray>— <gray>отправить жалобу
         report-help: <green>ЛКМ <dark_gray>— <gray>отправить жалобу администрации
-        message: <gold>Написать
-        message-lore:
+        message: <gold>Личное сообщение
+        message-compose-lore:
         - <dark_gray>Личное сообщение
         - ''
         - '<dark_gray>▪ <gray>Что произойдёт:'
-        - '  <gray>Команда /le msg будет вставлена в строку чата.'
+        - '  <gray>Откроется окно ввода, текст уйдёт игроку командой /msg.'
         - ''
         - <dark_gray><st>─────────────────────</st>
         - <green>ЛКМ <dark_gray>— <gray>написать игроку
+        message-title: <gold>Сообщение для <player>
+        message-help: <gray>Введите текст, он будет отправлен игроку <white><player><gray> личным сообщением.
+        message-field: Сообщение
+        message-send: <green>Отправить
+        invite: <gold>Пригласить в клан
+        invite-off: <gray>Пригласить в клан
+        invite-lore:
+        - <dark_gray>Набор в клан
+        - ''
+        - '<dark_gray>▪ <gray>Что произойдёт:'
+        - '  <gray>Игрок получит приглашение в ваш клан.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>отправить приглашение
+        trade: <gold>Торговля
+        trade-off: <gray>Торговля
+        trade-lore:
+        - <dark_gray>Обмен предметами
+        - ''
+        - '<dark_gray>▪ <gray>Что произойдёт:'
+        - '  <gray>Игроку уйдёт запрос на обмен.'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>предложить обмен
+        blocked-lore:
+        - <dark_gray>Сейчас недоступно
+        - ''
+        - '<dark_gray>▪ <red>Причина:'
+        - '  <gray><reason>'
+        reason-no-clan: У вас нет клана.
+        reason-no-rights: У вас нет права приглашать в клан.
+        reason-in-clan: Игрок уже состоит в клане.
+        reason-invites-disabled: Игрок отключил приглашения в клан.
+        reason-trades-disabled: Игрок отключил запросы на обмен.
+        reason-far: Игрок должен быть рядом, не дальше <range> блоков.
         ignore: <gold>Игнорировать
         ignore-lore:
         - <dark_gray>Скрытие сообщений

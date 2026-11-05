@@ -126,7 +126,8 @@ class ProfilePrivacyTest {
     return Arrays.stream(p.getOpenInventory().getTopInventory().getContents())
         .filter(Objects::nonNull)
         .map(item -> String.valueOf(item.getItemMeta().getLore()))
-        .collect(java.util.stream.Collectors.joining());
+        .collect(java.util.stream.Collectors.joining())
+        .replaceAll("§.", "");
   }
 
   /** Every item name of the open menu, one per line. */
@@ -298,7 +299,7 @@ class ProfilePrivacyTest {
     assertTrue(text.contains("Выключено"));
     assertTrue(text.contains("Глобальный"));
     // (The mocked PlaceholderAPI answers "yes" to the clan rank in the head too.)
-    assertFalse(text.replace("Ранг: §eyes", "").contains("yes"));
+    assertFalse(text.replace("Ранг: yes", "").contains("yes"));
     assertFalse(text.contains("false"));
     assertEquals(
         "yes", internal("placeholders", Placeholders.class).papi(p, p, "%clans_invites_enabled%"));
@@ -333,7 +334,7 @@ class ProfilePrivacyTest {
     assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     click(viewer, named(viewer, "Статистика")); // one button, public summary only
     assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
-    assertTrue(lore(viewer).contains("Общая статистика"));
+    assertTrue(lore(viewer).contains("Раздел: Мир"), lore(viewer));
     assertFalse(lore(viewer).contains("K/D:"));
     command(target, "profile");
     assertEquals(27, target.getOpenInventory().getTopInventory().getSize());
@@ -459,8 +460,6 @@ class ProfilePrivacyTest {
         viewer.getOpenInventory().getTopInventory().getItem(named(viewer, "Пожаловаться")) != null);
     assertFalse(
         titles(viewer).contains("Назад"), "direct offline profile has no invented parent");
-    click(viewer, named(viewer, "Статистика"));
-    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
     var meta =
         (org.bukkit.inventory.meta.SkullMeta)
             viewer.getOpenInventory().getTopInventory().getItem(0).getItemMeta();
@@ -469,6 +468,8 @@ class ProfilePrivacyTest {
     assertTrue(
         meta.getPlayerProfile().getProperties().stream()
             .anyMatch(property -> property.getName().equals("textures")));
+    click(viewer, named(viewer, "Статистика"));
+    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
     assertFalse(lore(viewer).contains("K/D:"));
   }
 
@@ -544,10 +545,70 @@ class ProfilePrivacyTest {
     player("Target");
     command(viewer, "profile Target");
     var inventory = viewer.getOpenInventory().getTopInventory();
-    for (String button : List.of("Написать", "Пожаловаться", "Игнорировать", "Статистика")) {
+    for (String button : List.of("Личное сообщение", "Пожаловаться", "Игнорировать", "Статистика")) {
       var item = inventory.getItem(named(viewer, button));
       assertEquals(Material.PLAYER_HEAD, item.getType(), button);
     }
+  }
+
+  @Test
+  void anotherPlayersProfileKeepsItsButtonsInTheWorkRowAndShowsTheCard() throws Exception {
+    var viewer = player("Viewer");
+    player("Target");
+    command(viewer, "profile Target");
+    var inventory = viewer.getOpenInventory().getTopInventory();
+    assertEquals(27, inventory.getSize());
+    for (int slot = 1; slot <= 8; slot++)
+      assertTrue(
+          inventory.getItem(slot).getType().name().endsWith("STAINED_GLASS_PANE"),
+          "header slot " + slot + " stays glass");
+    for (String button : List.of("Личное сообщение", "Статистика", "Пожаловаться", "Игнорировать")) {
+      int slot = named(viewer, button);
+      assertTrue(slot >= 9 && slot <= 17, button + " sits in the work row: " + slot);
+    }
+    var card = slotLore(viewer, 0);
+    assertFalse(card.contains("обновить информацию"), card);
+    assertTrue(card.contains("Клан: отсутствует"), card);
+    assertTrue(card.contains("Пометка: отсутствует"), card);
+  }
+
+  @Test
+  void personalMessageIsTypedInADialogAndSentAsMsg() throws Exception {
+    var forms = new java.util.concurrent.ConcurrentHashMap<UUID, dev.lovelace.loveessential.dialog.NativeDialogs.Form>();
+    internal("extensions", dev.lovelace.loveessential.Extensions.class)
+        .ui
+        .presenter((who, form) -> forms.put(who.getUniqueId(), form));
+    var viewer = player("Viewer");
+    var target = player("Target");
+    command(viewer, "profile Target");
+    click(viewer, named(viewer, "Личное сообщение"));
+    var form = forms.get(viewer.getUniqueId());
+    assertNotNull(form, "a dialog opens instead of a chat suggestion");
+    assertEquals(1, form.fields().size());
+    var send = form.buttons().stream().filter(b -> b.id().equals("send")).findFirst().orElseThrow();
+    send.action().accept(Map.of("text", "привет"));
+    server.getScheduler().performTicks(2);
+    var seen = new StringBuilder();
+    net.kyori.adventure.text.Component c;
+    while ((c = target.nextComponentMessage()) != null)
+      seen.append(PlainTextComponentSerializer.plainText().serialize(c)).append('\n');
+    assertTrue(seen.toString().contains("привет"), seen.toString());
+  }
+
+  @Test
+  void anotherPlayersStatisticsUseTheLayoutOfTheOwnOnes() throws Exception {
+    var viewer = player("Viewer");
+    player("Target");
+    command(viewer, "profile Target");
+    click(viewer, named(viewer, "Статистика"));
+    var inventory = viewer.getOpenInventory().getTopInventory();
+    assertEquals(54, inventory.getSize());
+    int buttons = 0;
+    for (int slot : new int[] {14, 16, 24, 32, 34})
+      if (inventory.getItem(slot) != null && inventory.getItem(slot).getType() == Material.PLAYER_HEAD)
+        buttons++;
+    assertTrue(buttons >= 3, "category buttons sit where the own statistics have them");
+    assertFalse(lore(viewer).contains("K/D:"));
   }
 
   @Test
@@ -582,7 +643,7 @@ class ProfilePrivacyTest {
     assertEquals(textures.getSkin(), skull.getPlayerProfile().getTextures().getSkin());
     click(viewer, named(viewer, "Статистика"));
     assertEquals(54, viewer.getOpenInventory().getTopInventory().getSize());
-    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"));
+    assertTrue(lore(viewer).contains("В игре: 1 ч 0 мин"), lore(viewer));
     assertFalse(lore(viewer).contains("Координаты:"));
   }
 

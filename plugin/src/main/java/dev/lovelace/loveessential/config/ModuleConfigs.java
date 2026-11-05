@@ -238,6 +238,9 @@ public final class ModuleConfigs {
           // 2026-11-05: new on/off switch textures; only the exact old shipped values are replaced.
           "profile",
           Map.ofEntries(
+              // 2026-11-06: the "write" button of another player's profile became "private message" (it opens a dialog).
+              Map.entry(
+                  "menus.public-profile-title.labels.public-profile.message", List.of("<gold>Написать")),
               Map.entry(
                   "menus.profile-menu-statistics.labels.profile-menu.section-line",
                   List.of("<dark_gray>Раздел: <white><name> <dark_gray>(<index>/<count>)")),

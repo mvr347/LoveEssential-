@@ -754,9 +754,10 @@ class PluginLifecycleTest {
         java.util.Arrays.stream(viewer.getOpenInventory().getTopInventory().getContents())
             .filter(java.util.Objects::nonNull)
             .map(item -> String.valueOf(item.getItemMeta().getLore()))
-            .collect(java.util.stream.Collectors.joining());
+            .collect(java.util.stream.Collectors.joining())
+            .replaceAll("§.", "");
     assertFalse(lore.contains("Координаты:"));
-    assertTrue(lore.contains("Общая статистика"));
+    assertTrue(lore.contains("Раздел: Мир"), lore);
     assertFalse(lore.contains("Нанесено урона"));
     server.dispatchCommand(viewer, "le profile activity");
     assertFalse(lore.contains("<health>"));
