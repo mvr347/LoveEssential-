@@ -1261,10 +1261,6 @@ bindings:
   path: menus.public-profile-title.labels.public-profile.ignore-lore
 - module: profile
   file: gui.yml
-  key: public-profile.message-lore
-  path: menus.public-profile-title.labels.public-profile.message-lore
-- module: profile
-  file: gui.yml
   key: public-profile.offline-feedback
   path: menus.public-profile-title.labels.public-profile.offline-feedback
 - module: profile
@@ -3411,6 +3407,82 @@ bindings:
   file: gui.yml
   key: profile-menu.filter-previous
   path: menus.profile-menu-settings.labels.profile-menu.filter-previous
+- module: profile
+  file: gui.yml
+  key: public-profile.message-compose-lore
+  path: menus.public-profile-title.labels.public-profile.message-compose-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.message-title
+  path: menus.public-profile-title.labels.public-profile.message-title
+- module: profile
+  file: gui.yml
+  key: public-profile.message-help
+  path: menus.public-profile-title.labels.public-profile.message-help
+- module: profile
+  file: gui.yml
+  key: public-profile.message-field
+  path: menus.public-profile-title.labels.public-profile.message-field
+- module: profile
+  file: gui.yml
+  key: public-profile.message-send
+  path: menus.public-profile-title.labels.public-profile.message-send
+- module: profile
+  file: gui.yml
+  key: public-profile.invite
+  path: menus.public-profile-title.labels.public-profile.invite
+- module: profile
+  file: gui.yml
+  key: public-profile.invite-off
+  path: menus.public-profile-title.labels.public-profile.invite-off
+- module: profile
+  file: gui.yml
+  key: public-profile.invite-lore
+  path: menus.public-profile-title.labels.public-profile.invite-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.trade
+  path: menus.public-profile-title.labels.public-profile.trade
+- module: profile
+  file: gui.yml
+  key: public-profile.trade-off
+  path: menus.public-profile-title.labels.public-profile.trade-off
+- module: profile
+  file: gui.yml
+  key: public-profile.trade-lore
+  path: menus.public-profile-title.labels.public-profile.trade-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.blocked-lore
+  path: menus.public-profile-title.labels.public-profile.blocked-lore
+- module: profile
+  file: gui.yml
+  key: public-profile.reason-no-clan
+  path: menus.public-profile-title.labels.public-profile.reason-no-clan
+- module: profile
+  file: gui.yml
+  key: public-profile.reason-no-rights
+  path: menus.public-profile-title.labels.public-profile.reason-no-rights
+- module: profile
+  file: gui.yml
+  key: public-profile.reason-in-clan
+  path: menus.public-profile-title.labels.public-profile.reason-in-clan
+- module: profile
+  file: gui.yml
+  key: public-profile.reason-invites-disabled
+  path: menus.public-profile-title.labels.public-profile.reason-invites-disabled
+- module: profile
+  file: gui.yml
+  key: public-profile.reason-trades-disabled
+  path: menus.public-profile-title.labels.public-profile.reason-trades-disabled
+- module: profile
+  file: gui.yml
+  key: public-profile.reason-far
+  path: menus.public-profile-title.labels.public-profile.reason-far
+- module: profile
+  file: gui.yml
+  key: profile-menu.public-head-lore
+  path: menus.profile-menu-title.labels.profile-menu.public-head-lore
 aliases:
 - module: profile
   file: profile.yml
