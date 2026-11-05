@@ -198,7 +198,7 @@ final class PersonalSidebar implements Listener, AutoCloseable {
 
   void load(Player p) {
     UUID id = p.getUniqueId();
-    if (slots.containsKey(id) || !loading.add(id)) return;
+    if (closed || slots.containsKey(id) || !loading.add(id)) return;
     store
         .get(KIND, id.toString(), PersonalState.Stored.class)
         .whenComplete(
@@ -238,16 +238,16 @@ final class PersonalSidebar implements Listener, AutoCloseable {
   /** Writes the latest choice; saves run one after another so revisions never clash. */
   private void persist(Player p, Slot slot) {
     UUID id = p.getUniqueId();
+    // Snapshot mutable GUI state on the main thread, not in a SQLite completion callback.
+    PersonalState.Stored snapshot = slot.state.stored();
     slot.tail =
         slot.tail
             .handle((value, error) -> null)
             .thenCompose(
                 ignored -> {
                   long expected;
-                  PersonalState.Stored snapshot;
                   synchronized (slot) {
                     expected = slot.revision;
-                    snapshot = slot.state.stored();
                   }
                   return store
                       .save(KIND, id.toString(), expected, snapshot, id.toString())
@@ -854,6 +854,8 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     var action = menu.clicks.get(event.getRawSlot());
     if (action == null) return;
     ClickType click = event.getClick();
+    if (click != ClickType.LEFT && click != ClickType.RIGHT
+        && click != ClickType.SHIFT_LEFT && click != ClickType.SHIFT_RIGHT) return;
     Bukkit.getScheduler()
         .runTask(
             plugin,
@@ -878,5 +880,6 @@ final class PersonalSidebar implements Listener, AutoCloseable {
     org.bukkit.event.HandlerList.unregisterAll(this);
     slots.clear();
     loading.clear();
+    views.clear();
   }
 }
