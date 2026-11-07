@@ -580,7 +580,7 @@ public final class Waystones implements Listener, AutoCloseable {
             ui.text("center", "waystones.render-center", r.centerX() + " " + r.centerZ(), 80),
             ui.text("gap", "waystones.render-gap", Double.toString(r.gap()), 24),
             ui.text(
-                "text-scale", "waystones.render-text-scale", Double.toString(r.textScale()), 24),
+                "text_scale", "waystones.render-text-scale", Double.toString(r.textScale()), 24),
             NativeDialogs.Field.select(
                 "text",
                 lang.render("waystones.render-text"),
@@ -614,7 +614,7 @@ public final class Waystones implements Listener, AutoCloseable {
                             center[0],
                             center[1],
                             decimal(values.get("gap")),
-                            decimal(values.get("text-scale")),
+                            decimal(values.get("text_scale")),
                             values.get("text").equals("Показывать"),
                             values.get("context").equals("Фиксированный") ? "FIXED" : "NONE");
                   } catch (RuntimeException invalid) {
@@ -869,7 +869,7 @@ public final class Waystones implements Listener, AutoCloseable {
     String selected = labels.contains(sizeLabel(current)) ? sizeLabel(current) : custom;
     return List.of(
         NativeDialogs.Field.select("size", lang.render("waystones.size"), selected, labels),
-        ui.text("size-custom", "waystones.size-custom", Double.toString(current), 8));
+        ui.text("size_custom", "waystones.size-custom", Double.toString(current), 8));
   }
 
   private double chosenSize(Map<String, String> values) {
@@ -877,7 +877,7 @@ public final class Waystones implements Listener, AutoCloseable {
     if (!picked.equals(lang.text("waystones.size-custom-option")))
       return Double.parseDouble(picked.substring(1));
     try {
-      double d = decimal(values.get("size-custom"));
+      double d = decimal(values.get("size_custom"));
       if (d >= Waystone.MIN_SIZE && d <= Waystone.MAX_SIZE) return d;
     } catch (NumberFormatException invalid) {
       // fall through to the shared message

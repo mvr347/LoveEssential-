@@ -1847,9 +1847,35 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   /** Customization menu (the reference design): sixteen colours, the suffix catalogue and a reset. */
+  /** The nickname menu opened on its own (/nick): no opener to go back to. */
   public void nickname(Player p) {
+    nickname(p, "");
+  }
+
+  /** The command each player's nickname menu returns to, kept while they edit (colours, gradients, reset). */
+  private final Map<UUID, String> nicknameBack = new java.util.concurrent.ConcurrentHashMap<>();
+
+  /** Redraws the nickname menu after an edit or from a child menu, keeping the opener's Back. */
+  private void nicknameAgain(Player p) {
+    nickname(p, nicknameBack.getOrDefault(p.getUniqueId(), ""));
+  }
+
+  /**
+   * The nickname menu. {@code back} is the command its Back button runs when another plugin opened it
+   * (LoveSubnames' Personalization menu passes its own return command), so Back returns there, not to nothing.
+   */
+  public void nickname(Player p, String back) {
     nicknames.settings(p);
     var m = menu(p, "nick.title", Map.of(), nicknames::canUse);
+    if (back.isBlank()) nicknameBack.remove(p.getUniqueId());
+    else {
+      nicknameBack.put(p.getUniqueId(), back);
+      m.back = () -> {
+        // Going back completes the way: the nickname menu must not stay behind as the opener's parent.
+        MenuStyle.forget(p);
+        Bukkit.dispatchCommand(p, back);
+      };
+    }
     // MenuNavigation supplies the profile parent only when it was actually opened.
     String plain = nicknames.values(p.getUniqueId()).getOrDefault("nickname_plain", p.getName());
     var preview = dev.lovelace.loveessential.module.Nicknames.render(plain, List.of());
@@ -1872,10 +1898,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
             lang.render("nick.label"),
             lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
     // The tags and marks other players see: LoveEssential's own /display menu, opened as a child of this one.
+    // The same head as the Display button of the profile settings menu.
     m.inventory.setItem(
         4,
-        MenuStyle.item(
-            Material.COMPARATOR,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.display", ""),
             lang.render("profile-menu.display"),
             lang.lines("profile-menu.display-lore").stream()
                 .map(l -> lang.renderText(l, Map.of()))
@@ -1930,7 +1957,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   }
 
   private void nicknameChange(Player p, String... args) {
-    complete(p, nicknames.change(p, p, args), () -> nickname(p), false);
+    complete(p, nicknames.change(p, p, args), () -> nicknameAgain(p), false);
   }
 
   private void nicknameColors(Player p) {
@@ -1967,7 +1994,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                 allowed,
                 value -> nicknameChange(p, "color", value),
                 () -> nicknameColors(p)));
-    navigation(m, p, 0, 0, n -> {}, () -> nickname(p));
+    navigation(m, p, 0, 0, n -> {}, () -> nicknameAgain(p));
     MenuStyle.open(p, m.inventory);
   }
 
@@ -2015,7 +2042,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   nicknameChange(p, args.toArray(String[]::new));
                 },
                 () -> nicknameGradients(p, page)));
-    navigation(m, p, page, keys.size(), n -> nicknameGradients(p, n), () -> nickname(p));
+    navigation(m, p, page, keys.size(), n -> nicknameGradients(p, n), () -> nicknameAgain(p));
     MenuStyle.open(p, m.inventory);
   }
 
@@ -2058,7 +2085,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               }
               case "portal", "hologram" -> places(p, name, 0);
               case "skin" -> skin(p);
-              case "nick" -> nickname(p);
+              case "nick" -> nicknameAgain(p);
               case "speed", "gamemode" ->
                   request(
                       p,
@@ -2416,6 +2443,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     vanishFilter.remove(e.getPlayer().getUniqueId());
     direct.remove(e.getPlayer().getUniqueId());
     dispatching.remove(e.getPlayer().getUniqueId());
+    nicknameBack.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {

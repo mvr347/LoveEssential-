@@ -160,6 +160,55 @@ class MenuTextTest {
   }
 
   @Test
+  void nicknameOpenedByAnotherPluginHasBackToIt() throws Exception {
+    var player = server.addPlayer("NickReturner");
+    player.setOp(true);
+    // The nickname data loads asynchronously: the first attempt may say "loading", so try again for a while.
+    long end = System.nanoTime() + java.time.Duration.ofSeconds(15).toNanos();
+    org.bukkit.inventory.Inventory nick = null;
+    while (System.nanoTime() < end) {
+      server.dispatchCommand(player, "nick return loveessential:profile");
+      server.getScheduler().performTicks(5);
+      var top = player.getOpenInventory().getTopInventory();
+      if (top != null && top.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout layout
+          && "nick.title".equals(layout.guiId())) {
+        nick = top;
+        break;
+      }
+      Thread.sleep(20);
+    }
+    assertNotNull(nick, "the nickname menu opens");
+    assertTrue(GuiRules.name(nick.getItem(nick.getSize() - 2)).contains("Назад"), "Back is shown");
+    // Editing (a colour click redraws the menu) keeps the opener's Back.
+    for (int slot = 18; slot < 45; slot++) {
+      var item = nick.getItem(slot);
+      if (item != null && item.getType() == org.bukkit.Material.PLAYER_HEAD && GuiRules.name(item).contains("цвет")) {
+        click(player, slot);
+        break;
+      }
+    }
+    // The edit is saved asynchronously, then the menu is redrawn: wait for the redrawn nickname menu.
+    org.bukkit.inventory.Inventory after = null;
+    end = System.nanoTime() + java.time.Duration.ofSeconds(15).toNanos();
+    while (System.nanoTime() < end) {
+      server.getScheduler().performTicks(2);
+      var top = player.getOpenInventory().getTopInventory();
+      if (top != null && top != nick && top.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout layout
+          && "nick.title".equals(layout.guiId())) {
+        after = top;
+        break;
+      }
+      Thread.sleep(20);
+    }
+    assertNotNull(after, "the nickname menu is redrawn after the edit");
+    assertTrue(GuiRules.name(after.getItem(after.getSize() - 2)).contains("Назад"), "Back survives an edit");
+    click(player, after.getSize() - 2);
+    var profile = player.getOpenInventory().getTopInventory();
+    assertEquals("profile-menu.title", ((dev.lovelace.loveessential.gui.GuiLayout) profile.getHolder()).guiId());
+    assertFalse(GuiRules.name(profile.getItem(profile.getSize() - 2)).contains("Назад"), "the nickname menu is not left as the parent");
+  }
+
+  @Test
   void settingsReturnThroughTheActualParentKeepBackAndDirectSidebarHasNoBack() throws Exception {
     var player = server.addPlayer("SettingsOwner");
     player.setOp(true);
