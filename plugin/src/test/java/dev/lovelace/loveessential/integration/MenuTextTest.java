@@ -160,6 +160,30 @@ class MenuTextTest {
   }
 
   @Test
+  void nicknameOpenedByAnotherPluginHasBackToIt() throws Exception {
+    var player = server.addPlayer("NickReturner");
+    player.setOp(true);
+    // The nickname data loads asynchronously: the first attempt may say "loading", so try again for a while.
+    long end = System.nanoTime() + java.time.Duration.ofSeconds(15).toNanos();
+    org.bukkit.inventory.Inventory nick = null;
+    while (System.nanoTime() < end) {
+      server.dispatchCommand(player, "nick return loveessential:profile");
+      server.getScheduler().performTicks(5);
+      var top = player.getOpenInventory().getTopInventory();
+      if (top != null && top.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout layout
+          && "nick.title".equals(layout.guiId())) {
+        nick = top;
+        break;
+      }
+      Thread.sleep(20);
+    }
+    assertNotNull(nick, "the nickname menu opens");
+    assertTrue(GuiRules.name(nick.getItem(nick.getSize() - 2)).contains("Назад"), "Back is shown");
+    click(player, nick.getSize() - 2);
+    assertEquals("profile-menu.title", ((dev.lovelace.loveessential.gui.GuiLayout) player.getOpenInventory().getTopInventory().getHolder()).guiId());
+  }
+
+  @Test
   void settingsReturnThroughTheActualParentKeepBackAndDirectSidebarHasNoBack() throws Exception {
     var player = server.addPlayer("SettingsOwner");
     player.setOp(true);

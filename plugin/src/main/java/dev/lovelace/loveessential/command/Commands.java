@@ -276,7 +276,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
       if (cmd.equals("nick")) {
         plugin.requireAccess("nickname", p);
         if (args.length == 0) menus.direct(p, () -> menus.nickname(p));
-        else {
+        else if (args.length >= 2 && args[0].equalsIgnoreCase("return")) {
+          // "/le nick return <command>": opened by another plugin; Back runs <command> (checked to exist).
+          String back = String.join(" ", slice(args, 1)).strip();
+          boolean usable = Bukkit.getCommandMap().getCommand(back.split(" ", 2)[0]) != null;
+          menus.direct(p, () -> menus.nickname(p, usable ? back : ""));
+        } else {
           Player target = p;
           String[] options = args;
           if (args[0].equalsIgnoreCase("player")) {

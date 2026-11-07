@@ -1848,8 +1848,17 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   /** Customization menu (the reference design): sixteen colours, the suffix catalogue and a reset. */
   public void nickname(Player p) {
+    nickname(p, "");
+  }
+
+  /**
+   * The nickname menu. {@code back} is the command its Back button runs when another plugin opened it
+   * (LoveSubnames' Personalization menu passes its own return command), so Back returns there, not to nothing.
+   */
+  public void nickname(Player p, String back) {
     nicknames.settings(p);
     var m = menu(p, "nick.title", Map.of(), nicknames::canUse);
+    if (!back.isBlank()) m.back = () -> Bukkit.dispatchCommand(p, back);
     // MenuNavigation supplies the profile parent only when it was actually opened.
     String plain = nicknames.values(p.getUniqueId()).getOrDefault("nickname_plain", p.getName());
     var preview = dev.lovelace.loveessential.module.Nicknames.render(plain, List.of());
@@ -1872,10 +1881,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
             lang.render("nick.label"),
             lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
     // The tags and marks other players see: LoveEssential's own /display menu, opened as a child of this one.
+    // The same head as the Display button of the profile settings menu.
     m.inventory.setItem(
         4,
-        MenuStyle.item(
-            Material.COMPARATOR,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.display", ""),
             lang.render("profile-menu.display"),
             lang.lines("profile-menu.display-lore").stream()
                 .map(l -> lang.renderText(l, Map.of()))
