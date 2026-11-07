@@ -179,7 +179,17 @@ class MenuTextTest {
     }
     assertNotNull(nick, "the nickname menu opens");
     assertTrue(GuiRules.name(nick.getItem(nick.getSize() - 2)).contains("Назад"), "Back is shown");
-    click(player, nick.getSize() - 2);
+    // Editing (a colour click redraws the menu) keeps the opener's Back.
+    for (int slot = 18; slot < 45; slot++) {
+      var item = nick.getItem(slot);
+      if (item != null && item.getType() == org.bukkit.Material.PLAYER_HEAD && GuiRules.name(item).contains("цвет")) {
+        click(player, slot);
+        break;
+      }
+    }
+    var after = player.getOpenInventory().getTopInventory();
+    assertTrue(GuiRules.name(after.getItem(after.getSize() - 2)).contains("Назад"), "Back survives an edit");
+    click(player, after.getSize() - 2);
     assertEquals("profile-menu.title", ((dev.lovelace.loveessential.gui.GuiLayout) player.getOpenInventory().getTopInventory().getHolder()).guiId());
   }
 
