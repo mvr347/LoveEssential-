@@ -194,6 +194,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
     NpcDraft draft;
     long revision;
     boolean busy, recording;
+    /** The stored NPC this edit started from; null when unknown (then a revision drift stays a conflict). */
+    NpcDefinition base;
     NpcDraft lastSaved;
     CompletableFuture<Long> autosave = CompletableFuture.completedFuture(0L), rawSave = autosave;
     final Deque<Route> undo = new ArrayDeque<>(), redo = new ArrayDeque<>();
@@ -436,6 +438,9 @@ public final class NpcWizard implements Listener, AutoCloseable {
                           saved
                               .map(d -> new Working(d.value(), d.revision()))
                               .orElseGet(() -> new Working(new NpcDraft(n, 0, Map.of()), 0)));
+                      // The draft is based on the stored NPC only while their revisions agree.
+                      if (sessions.get(p.getUniqueId()).draft.npc().revision() == n.revision())
+                        sessions.get(p.getUniqueId()).base = n;
                       sessions.get(p.getUniqueId()).draft =
                           sessions.get(p.getUniqueId()).draft.step(page);
                       show(p);
@@ -945,7 +950,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
             v ->
                 main.call(
                     () -> {
-                      var toSave = rebase(snapshot.npc(), npcs.get(snapshot.npc().id()).orElse(null));
+                      var toSave =
+                          rebase(snapshot.npc(), npcs.get(snapshot.npc().id()).orElse(null), w.base);
                       return npcs.save(toSave, toSave.revision(), p.getUniqueId().toString());
                     }))
         .thenCompose(Function.identity())
@@ -964,6 +970,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                         return;
                       }
                       w.draft = w.draft.npc(saved);
+                      w.base = saved;
                       npcs.removePreview(p);
                       lang.send(p, "wizard.published", Map.of("id", "" + npcs.number(saved.id())));
                       save(p);
@@ -973,18 +980,25 @@ public final class NpcWizard implements Listener, AutoCloseable {
   /**
    * Other plugins keep changing the stored NPC while the editor is open (their {@code tag.*} settings: LoveShop,
    * LoveClans), which raised its revision and made every save fail with "open the current revision" (2026-11-07).
-   * Those settings belong to their owners, so a draft whose revision is behind takes the stored {@code tag.*}
-   * settings and the stored revision; everything else stays the editor's, and any other concurrent change is
-   * still caught when the stored NPC changes again before the save.
+   * When the stored NPC differs from the one this edit started from ({@code base}) only in those settings and the
+   * revision, the draft takes the stored {@code tag.*} settings and revision. Any other change (another editor's
+   * route, dialog or position) is left as a conflict, so nobody's work is overwritten silently.
    */
-  static NpcDefinition rebase(NpcDefinition draft, NpcDefinition live) {
-    if (live == null || live.revision() <= draft.revision()) return draft;
+  static NpcDefinition rebase(NpcDefinition draft, NpcDefinition live, NpcDefinition base) {
+    if (live == null || base == null || live.revision() <= draft.revision()) return draft;
+    if (!withoutTags(live).equals(withoutTags(base))) return draft;
     var settings = new java.util.HashMap<>(draft.settings());
     settings.keySet().removeIf(key -> key.startsWith("tag."));
     live.settings().forEach((key, value) -> {
       if (key.startsWith("tag.")) settings.put(key, value);
     });
     return draft.withSettings(settings).revision(live.revision());
+  }
+
+  private static NpcDefinition withoutTags(NpcDefinition n) {
+    var settings = new java.util.HashMap<>(n.settings());
+    settings.keySet().removeIf(key -> key.startsWith("tag."));
+    return n.withSettings(settings).revision(0);
   }
 
   private static Throwable root(Throwable e) {
