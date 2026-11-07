@@ -203,7 +203,9 @@ class MenuTextTest {
     assertNotNull(after, "the nickname menu is redrawn after the edit");
     assertTrue(GuiRules.name(after.getItem(after.getSize() - 2)).contains("Назад"), "Back survives an edit");
     click(player, after.getSize() - 2);
-    assertEquals("profile-menu.title", ((dev.lovelace.loveessential.gui.GuiLayout) player.getOpenInventory().getTopInventory().getHolder()).guiId());
+    var profile = player.getOpenInventory().getTopInventory();
+    assertEquals("profile-menu.title", ((dev.lovelace.loveessential.gui.GuiLayout) profile.getHolder()).guiId());
+    assertFalse(GuiRules.name(profile.getItem(profile.getSize() - 2)).contains("Назад"), "the nickname menu is not left as the parent");
   }
 
   @Test

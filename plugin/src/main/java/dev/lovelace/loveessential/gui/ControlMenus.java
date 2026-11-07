@@ -1870,7 +1870,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (back.isBlank()) nicknameBack.remove(p.getUniqueId());
     else {
       nicknameBack.put(p.getUniqueId(), back);
-      m.back = () -> Bukkit.dispatchCommand(p, back);
+      m.back = () -> {
+        // Going back completes the way: the nickname menu must not stay behind as the opener's parent.
+        MenuStyle.forget(p);
+        Bukkit.dispatchCommand(p, back);
+      };
     }
     // MenuNavigation supplies the profile parent only when it was actually opened.
     String plain = nicknames.values(p.getUniqueId()).getOrDefault("nickname_plain", p.getName());
