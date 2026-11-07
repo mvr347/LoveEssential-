@@ -347,10 +347,57 @@ public final class NpcWizard implements Listener, AutoCloseable {
     if (!p.hasPermission("loveessential.npc.create"))
       throw new IllegalArgumentException("errors.permission");
     if (!id.matches("[a-z0-9_-]{1,48}")) throw new IllegalArgumentException("validation.id");
-    if (sessions.containsKey(p.getUniqueId()))
-      throw new IllegalArgumentException("wizard.existing-draft");
-    createIds.put(p.getUniqueId(), id);
-    open(p);
+    createNew(p, id);
+  }
+
+  /**
+   * Starts a new NPC. A leftover draft (often an abandoned edit of another NPC) used to block this
+   * with "draft already open" and no way out; now the player is asked to replace it.
+   */
+  public void createNew(Player p, String id) {
+    if (!permitted(p)) return;
+    if (!p.hasPermission("loveessential.npc.create"))
+      throw new IllegalArgumentException("errors.permission");
+    Runnable start =
+        () -> {
+          if (id != null) createIds.put(p.getUniqueId(), id);
+          open(p);
+        };
+    askReplace(p, start, start);
+  }
+
+  /** Runs {@code free} at once when the player has no draft, otherwise asks before dropping it. */
+  private void askReplace(Player p, Runnable free, Runnable replaced) {
+    if (sessions.containsKey(p.getUniqueId())) {
+      confirmReplace(p, replaced);
+      return;
+    }
+    if (!loading.add(p.getUniqueId())) return;
+    store
+        .get("draft", p.getUniqueId().toString(), NpcDraft.class)
+        .whenComplete(
+            (saved, error) ->
+                main.execute(
+                    () -> {
+                      loading.remove(p.getUniqueId());
+                      if (!p.isOnline()) return;
+                      if (error != null) {
+                        lang.send(p, "errors.storage");
+                        return;
+                      }
+                      if (saved.isEmpty()) {
+                        free.run();
+                        return;
+                      }
+                      sessions.put(
+                          p.getUniqueId(),
+                          new Working(saved.get().value(), saved.get().revision()));
+                      confirmReplace(p, replaced);
+                    }));
+  }
+
+  private void confirmReplace(Player p, Runnable replaced) {
+    confirm(p, "common.replace-draft", () -> dropDraft(p, replaced), () -> show(p));
   }
 
   public void open(Player p) {
@@ -410,7 +457,8 @@ public final class NpcWizard implements Listener, AutoCloseable {
         show(p);
         return;
       }
-      throw new IllegalArgumentException("wizard.existing-draft");
+      confirmReplace(p, () -> edit(p, id, page));
+      return;
     }
     if (!loading.add(p.getUniqueId())) return;
     store
@@ -429,8 +477,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                         sessions.put(
                             p.getUniqueId(),
                             new Working(saved.get().value(), saved.get().revision()));
-                        lang.send(p, "wizard.existing-draft");
-                        show(p);
+                        confirmReplace(p, () -> edit(p, id, page));
                         return;
                       }
                       sessions.put(
@@ -892,8 +939,18 @@ public final class NpcWizard implements Listener, AutoCloseable {
   }
 
   public void discard(Player p) {
+    dropDraft(
+        p,
+        () -> {
+          p.closeInventory();
+          lang.send(p, "wizard.discarded");
+        });
+  }
+
+  /** Deletes the player's draft, then runs {@code done} on the main thread. */
+  private void dropDraft(Player p, Runnable done) {
     var w = require(p);
-    if (waitAutosave(p, w, () -> discard(p))) return;
+    if (waitAutosave(p, w, () -> dropDraft(p, done))) return;
     w.busy = true;
     CompletableFuture<?> result =
         w.revision == 0
@@ -912,8 +969,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   sessions.remove(p.getUniqueId(), w);
                   prompts.remove(p.getUniqueId());
                   npcs.removePreview(p);
-                  p.closeInventory();
-                  lang.send(p, "wizard.discarded");
+                  done.run();
                 }));
   }
 
