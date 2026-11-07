@@ -580,7 +580,7 @@ public final class Waystones implements Listener, AutoCloseable {
             ui.text("center", "waystones.render-center", r.centerX() + " " + r.centerZ(), 80),
             ui.text("gap", "waystones.render-gap", Double.toString(r.gap()), 24),
             ui.text(
-                "text-scale", "waystones.render-text-scale", Double.toString(r.textScale()), 24),
+                "text_scale", "waystones.render-text-scale", Double.toString(r.textScale()), 24),
             NativeDialogs.Field.select(
                 "text",
                 lang.render("waystones.render-text"),
@@ -614,7 +614,7 @@ public final class Waystones implements Listener, AutoCloseable {
                             center[0],
                             center[1],
                             decimal(values.get("gap")),
-                            decimal(values.get("text-scale")),
+                            decimal(values.get("text_scale")),
                             values.get("text").equals("Показывать"),
                             values.get("context").equals("Фиксированный") ? "FIXED" : "NONE");
                   } catch (RuntimeException invalid) {

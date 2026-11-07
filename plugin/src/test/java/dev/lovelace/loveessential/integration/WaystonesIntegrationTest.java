@@ -267,7 +267,7 @@ class WaystonesIntegrationTest {
                 "0.25 -0.5",
                 "gap",
                 "0.4",
-                "text-scale",
+                "text_scale",
                 "0.5")));
     await(store.profile(player.getUniqueId(), "render.barrier", "true"));
     String key = WaystoneRender.key("wood", "");

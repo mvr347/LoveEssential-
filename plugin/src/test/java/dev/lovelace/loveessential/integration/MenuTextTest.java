@@ -187,7 +187,20 @@ class MenuTextTest {
         break;
       }
     }
-    var after = player.getOpenInventory().getTopInventory();
+    // The edit is saved asynchronously, then the menu is redrawn: wait for the redrawn nickname menu.
+    org.bukkit.inventory.Inventory after = null;
+    end = System.nanoTime() + java.time.Duration.ofSeconds(15).toNanos();
+    while (System.nanoTime() < end) {
+      server.getScheduler().performTicks(2);
+      var top = player.getOpenInventory().getTopInventory();
+      if (top != null && top != nick && top.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout layout
+          && "nick.title".equals(layout.guiId())) {
+        after = top;
+        break;
+      }
+      Thread.sleep(20);
+    }
+    assertNotNull(after, "the nickname menu is redrawn after the edit");
     assertTrue(GuiRules.name(after.getItem(after.getSize() - 2)).contains("Назад"), "Back survives an edit");
     click(player, after.getSize() - 2);
     assertEquals("profile-menu.title", ((dev.lovelace.loveessential.gui.GuiLayout) player.getOpenInventory().getTopInventory().getHolder()).guiId());
