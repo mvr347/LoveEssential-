@@ -869,7 +869,7 @@ public final class Waystones implements Listener, AutoCloseable {
     String selected = labels.contains(sizeLabel(current)) ? sizeLabel(current) : custom;
     return List.of(
         NativeDialogs.Field.select("size", lang.render("waystones.size"), selected, labels),
-        ui.text("size-custom", "waystones.size-custom", Double.toString(current), 8));
+        ui.text("size_custom", "waystones.size-custom", Double.toString(current), 8));
   }
 
   private double chosenSize(Map<String, String> values) {
@@ -877,7 +877,7 @@ public final class Waystones implements Listener, AutoCloseable {
     if (!picked.equals(lang.text("waystones.size-custom-option")))
       return Double.parseDouble(picked.substring(1));
     try {
-      double d = decimal(values.get("size-custom"));
+      double d = decimal(values.get("size_custom"));
       if (d >= Waystone.MIN_SIZE && d <= Waystone.MAX_SIZE) return d;
     } catch (NumberFormatException invalid) {
       // fall through to the shared message

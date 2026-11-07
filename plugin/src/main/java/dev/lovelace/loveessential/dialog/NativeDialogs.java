@@ -22,6 +22,9 @@ import org.bukkit.event.player.PlayerQuitEvent;
 public final class NativeDialogs implements Listener, AutoCloseable {
   public record Field(String id, Component label, String initial, int limit, List<String> choices) {
     public Field {
+      // Minecraft refuses a dialog input key outside [a-zA-Z0-9_] ("key must be a valid input key"), which made
+      // the waystone create/edit dialog unopenable because of the id "size-custom" (2026-11-07).
+      if (!id.matches("[a-zA-Z0-9_]+")) throw new IllegalArgumentException("Invalid dialog input key: " + id);
       choices = List.copyOf(choices);
     }
 
