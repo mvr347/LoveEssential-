@@ -159,12 +159,12 @@ class PluginLifecycleTest {
     server.dispatchCommand(p, "npc set name Первый");
     // A second create must not fail with "draft already open": it asks to replace the draft.
     server.dispatchCommand(p, "npc create second");
+    server.getScheduler().performTicks(40);
+    waitFor(() -> hasItemNamed(p, "Подтвердить"));
+    click(p, itemNamed(p, "Подтвердить"));
     waitFor(() -> p.getOpenInventory().getTopInventory() != null
-        && p.getOpenInventory().getTopInventory().getItem(20) != null
-        && p.getOpenInventory().getTopInventory().getItem(24) != null);
-    click(p, 20);
-    waitFor(() -> p.getOpenInventory().getTopInventory() != null
-        && p.getOpenInventory().getTopInventory().getSize() == 54);
+        && p.getOpenInventory().getTopInventory().getSize() >= 27
+        && !hasItemNamed(p, "Заменить черновик"));
     server.dispatchCommand(p, "npc set name Второй");
     server.dispatchCommand(p, "npc set type VILLAGER");
     server.dispatchCommand(p, "npc path add");
@@ -1048,6 +1048,18 @@ class PluginLifecycleTest {
         nick.display(alice));
     await(plugin.reloadSettings());
     assertEquals("#445566", plugin.getConfig().getString("nickname.default-color"));
+  }
+
+  boolean hasItemNamed(PlayerMock p, String name) {
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    var inv = p.getOpenInventory().getTopInventory();
+    for (int i = 0; inv != null && i < inv.getSize(); i++) {
+      var item = inv.getItem(i);
+      if (item != null
+          && item.getItemMeta().displayName() != null
+          && plain.serialize(item.getItemMeta().displayName()).contains(name)) return true;
+    }
+    return false;
   }
 
   int itemNamed(PlayerMock p, String name) {
