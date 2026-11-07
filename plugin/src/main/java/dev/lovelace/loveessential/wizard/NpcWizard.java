@@ -944,9 +944,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
         .thenCompose(
             v ->
                 main.call(
-                    () ->
-                        npcs.save(
-                            snapshot.npc(), snapshot.npc().revision(), p.getUniqueId().toString())))
+                    () -> {
+                      var toSave = rebase(snapshot.npc(), npcs.get(snapshot.npc().id()).orElse(null));
+                      return npcs.save(toSave, toSave.revision(), p.getUniqueId().toString());
+                    }))
         .thenCompose(Function.identity())
         .thenCompose(n -> store.complete(publication).thenApply(v -> n))
         .whenComplete(
@@ -967,6 +968,23 @@ public final class NpcWizard implements Listener, AutoCloseable {
                       lang.send(p, "wizard.published", Map.of("id", "" + npcs.number(saved.id())));
                       save(p);
                     }));
+  }
+
+  /**
+   * Other plugins keep changing the stored NPC while the editor is open (their {@code tag.*} settings: LoveShop,
+   * LoveClans), which raised its revision and made every save fail with "open the current revision" (2026-11-07).
+   * Those settings belong to their owners, so a draft whose revision is behind takes the stored {@code tag.*}
+   * settings and the stored revision; everything else stays the editor's, and any other concurrent change is
+   * still caught when the stored NPC changes again before the save.
+   */
+  static NpcDefinition rebase(NpcDefinition draft, NpcDefinition live) {
+    if (live == null || live.revision() <= draft.revision()) return draft;
+    var settings = new java.util.HashMap<>(draft.settings());
+    settings.keySet().removeIf(key -> key.startsWith("tag."));
+    live.settings().forEach((key, value) -> {
+      if (key.startsWith("tag.")) settings.put(key, value);
+    });
+    return draft.withSettings(settings).revision(live.revision());
   }
 
   private static Throwable root(Throwable e) {
