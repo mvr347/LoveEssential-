@@ -1071,7 +1071,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     navigation(m, p, actual, list.size(), 20, n -> npcList(p, n), () -> home(p));
     put(m, 50, Material.WRITABLE_BOOK, "gui.resume", "gui.click.open", c -> wizard.open(p));
     int create = MenuStyle.slot(count, count + 1);
-    put(m, create, Material.LIME_DYE, "gui.create-npc", "gui.create-npc-help", c -> wizard.open(p));
+    put(m, create, Material.LIME_DYE, "gui.create-npc", "gui.create-npc-help", c -> wizard.createNew(p, null));
     if (!p.hasPermission("loveessential.npc.create") || !p.hasPermission("loveessential.npc.edit"))
       locked(m, create);
     if (!p.hasPermission("loveessential.npc.edit")) locked(m, 50);

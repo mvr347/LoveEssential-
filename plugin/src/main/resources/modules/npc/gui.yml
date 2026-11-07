@@ -429,6 +429,7 @@ messages:
     next: <green>Далее
     save-draft: <yellow>Сохранить черновик
     discard: <red>Удалить черновик
+    replace-draft: <red>Заменить черновик новым
     preview: <aqua>Предпросмотр
     publish: <gold>Сохранить NPC
     done: <green>Готово.

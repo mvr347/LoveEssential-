@@ -386,7 +386,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
       case "wizard", "мастер" -> wizard.open(p);
       case "create", "создать" -> {
         if (args.length > 1) wizard.create(p, args[1]);
-        else wizard.open(p);
+        else wizard.createNew(p, null);
       }
       case "edit", "изменить" -> wizard.edit(p, npcSelection.target(p, args.length > 1 ? args[1] : null).id());
       case "set", "настроить" -> wizard.set(p, args[1], String.join(" ", slice(args, 2)));

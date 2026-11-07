@@ -151,6 +151,30 @@ class PluginLifecycleTest {
   }
 
   @Test
+  void creatingNpcReplacesLeftoverDraftAfterConfirmation() throws Exception {
+    PlayerMock p = admin();
+    server.dispatchCommand(p, "npc create first");
+    waitFor(() -> p.getOpenInventory().getTopInventory() != null
+        && p.getOpenInventory().getTopInventory().getSize() >= 27);
+    server.dispatchCommand(p, "npc set name Первый");
+    // A second create must not fail with "draft already open": it asks to replace the draft.
+    server.dispatchCommand(p, "npc create second");
+    waitFor(() -> p.getOpenInventory().getTopInventory() != null
+        && p.getOpenInventory().getTopInventory().getItem(20) != null
+        && p.getOpenInventory().getTopInventory().getItem(24) != null);
+    click(p, 20);
+    waitFor(() -> p.getOpenInventory().getTopInventory() != null
+        && p.getOpenInventory().getTopInventory().getSize() == 54);
+    server.dispatchCommand(p, "npc set name Второй");
+    server.dispatchCommand(p, "npc set type VILLAGER");
+    server.dispatchCommand(p, "npc path add");
+    server.dispatchCommand(p, "npc publish");
+    var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
+    waitFor(() -> api.npc("second").isPresent());
+    assertTrue(api.npc("first").isEmpty());
+  }
+
+  @Test
   void playerWithoutEditorPermissionCannotCreateNpc() throws Exception {
     var p = server.addPlayer("Visitor");
     server.dispatchCommand(p, "npc wizard");

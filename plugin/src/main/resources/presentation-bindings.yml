@@ -3487,6 +3487,10 @@ bindings:
   file: gui.yml
   key: profile-menu.none
   path: menus.profile-menu-title.labels.profile-menu.none
+- module: npc
+  file: gui.yml
+  key: common.replace-draft
+  path: messages.common.replace-draft
 aliases:
 - module: profile
   file: profile.yml
