@@ -224,6 +224,29 @@ public final class ControlMenus implements Listener, AutoCloseable {
         click);
   }
 
+  // Textures chosen by the owner (2026-11-08) for the /display menu: "show all" and tile toggles.
+  private static final String DISPLAY_ALL_OFF =
+      "6e946ac468fa3eb801f5ded64e3cf6a92e32553f4ff70f984c2c7f0145649c15";
+  private static final String DISPLAY_ALL_ON =
+      "e861292e00a36de13f42cd99ede68b19ff584ea862b0c433c8043005940ab78f";
+  private static final String DISPLAY_TOGGLE_OFF =
+      "cef119f08851a72a5f10fbc3247d95e1c006360d2b4f412b23ce054092756b0c";
+  private static final String DISPLAY_TOGGLE_ON =
+      "9b5871c72987266e15f1be49b1ec334ef6b618e9653fb78e918abd39563dbb93";
+
+  /** Swaps the icon of an already placed tile for a textured head, keeping its name and lore. */
+  private void retexture(Menu m, int slot, String texture) {
+    var old = m.inventory.getItem(slot);
+    if (old == null || !old.hasItemMeta()) return;
+    var meta = old.getItemMeta();
+    m.inventory.setItem(
+        slot,
+        MenuStyle.head(
+            texture,
+            meta.displayName(),
+            meta.lore() == null ? List.of() : meta.lore()));
+  }
+
   /** Components for {@code gui.toggle-lore}: the state now and the state after the click. */
   private Map<String, Component> toggleParts(boolean now, Map<String, Component> extra) {
     var parts = new HashMap<>(extra);
@@ -306,6 +329,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         .flatMap(element -> Arrays.stream(dev.lovelace.lovecore.api.display.DisplayPrefs.Surface.values())
             .map(surface -> displayPrefs.shown(id, surface, element, scope)))
         .filter(Boolean::booleanValue).count();
+    retexture(m, 50, visible == 6 ? DISPLAY_ALL_ON : DISPLAY_ALL_OFF);
     m.inventory.setItem(0, dev.lovelace.loveessential.module.PlayerProfiles.head(p,
         lang.renderText(lang.text("display.head"), Map.of("name", p.getName())),
         lang.lines("display.head-lore").stream()
@@ -336,6 +360,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               displayPrefs.set(id, surface, element, scope, !shown);
               displayMenu(p);
             });
+        retexture(m, slot, shown ? DISPLAY_TOGGLE_ON : DISPLAY_TOGGLE_OFF);
       }
     put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());
     MenuStyle.open(p, m.inventory);
