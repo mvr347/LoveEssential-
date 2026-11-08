@@ -330,6 +330,10 @@ class ProfilePrivacyTest {
     target.setStatistic(Statistic.DEATHS, 3);
     target.setStatistic(Statistic.PLAY_ONE_MINUTE, 72000);
     target.setStatistic(Statistic.MINE_BLOCK, Material.DIAMOND_ORE, 17);
+    // The block totals are cached for 30 s and the join may already have filled the cache with zeros.
+    var cache = PlayerProfiles.class.getDeclaredField("blockStatistics");
+    cache.setAccessible(true);
+    ((java.util.Map<?, ?>) cache.get(profiles)).clear();
     command(viewer, "profile Target");
     assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     click(viewer, named(viewer, "Статистика")); // one button, public summary only
