@@ -647,17 +647,20 @@ public final class Gameplay implements Listener, AutoCloseable {
     refreshForViewers(p);
   }
 
+  private static final String SKIN_REFRESH_REASON = "skin-refresh";
+
   /**
    * The profile change reaches the player list and chat at once, but other clients keep the old model until the
    * player entity is sent again: hide the player and show them on the next tick. Only viewers who can see them
    * now are touched, and a vanished player is left alone, so this can never reveal anybody.
    */
   private void refreshForViewers(Player p) {
-    if (vanished(p)) return;
+    if (vanished(p) || visibility == null) return;
     java.util.List<Player> viewers = new java.util.ArrayList<>();
     for (Player viewer : Bukkit.getOnlinePlayers()) {
+      // Pairs already hidden by another reason (vanish, world lists) are skipped: the arbiter keeps those hidden.
       if (!viewer.equals(p) && viewer.canSee(p)) {
-        viewer.hidePlayer(plugin, p);
+        visibility.set(SKIN_REFRESH_REASON, viewer.getUniqueId(), p.getUniqueId(), true);
         viewers.add(viewer);
       }
     }
@@ -666,9 +669,9 @@ public final class Gameplay implements Listener, AutoCloseable {
         .runTask(
             plugin,
             () -> {
-              for (Player viewer : viewers) {
-                if (viewer.isOnline() && p.isOnline() && !vanished(p)) viewer.showPlayer(plugin, p);
-              }
+              // Releasing only our own reason: the player is shown again unless another source still hides them.
+              for (Player viewer : viewers)
+                visibility.set(SKIN_REFRESH_REASON, viewer.getUniqueId(), p.getUniqueId(), false);
             });
   }
 
