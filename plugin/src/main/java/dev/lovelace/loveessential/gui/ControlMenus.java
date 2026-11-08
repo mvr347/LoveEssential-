@@ -1945,15 +1945,24 @@ public final class ControlMenus implements Listener, AutoCloseable {
       m.inventory.setItem(slot, MenuStyle.head(color.getValue(), title, lore));
       m.actions.put(slot, click -> nicknameChange(p, "color", name));
     }
-    // Extra footer button: standard() moves it next to Back.
-    m.inventory.setItem(
-        50,
-        MenuStyle.head(
-            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGVlN2I0YTMyMDJiNWI1OWVkYWMxNDk3N2IzMTg4OTBhNGM3NzVmMTFkNGJlZTA1MzQ4YjFhNmNiOTQyOWYxYiJ9fX0=",
-            lang.render("nick.reset-color"),
-            lang.lines("nick.reset-color-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
-    m.actions.put(50, click -> nicknameChange(p, "color", "reset"));
+    // Extra footer button: standard() moves it next to Back. Shown only while the player has a colour or a
+    // gradient of their own (owner request 2026-11-08): with the default colour there is nothing to reset, and an
+    // empty slot becomes glass.
+    if (hasOwnColor(nicknames.values(p.getUniqueId()))) {
+      m.inventory.setItem(
+          50,
+          MenuStyle.head(
+              "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGVlN2I0YTMyMDJiNWI1OWVkYWMxNDk3N2IzMTg4OTBhNGM3NzVmMTFkNGJlZTA1MzQ4YjFhNmNiOTQyOWYxYiJ9fX0=",
+              lang.render("nick.reset-color"),
+              lang.lines("nick.reset-color-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
+      m.actions.put(50, click -> nicknameChange(p, "color", "reset"));
+    }
     MenuStyle.open(p, m.inventory);
+  }
+
+  /** Whether the nickname values say the player picked a colour or gradient (the default colour is not "own"). */
+  static boolean hasOwnColor(Map<String, String> values) {
+    return values != null && !values.getOrDefault("nickname_colors", "").isBlank();
   }
 
   private void nicknameChange(Player p, String... args) {

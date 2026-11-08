@@ -159,6 +159,15 @@ class MenuTextTest {
     assertTrue(GuiRules.name(returned.getItem(returned.getSize() - 2)).contains("Назад"), "Back to the profile after returning");
   }
 
+  private static boolean hasButtonNamed(org.bukkit.inventory.Inventory inventory, String name) {
+    for (int slot = 0; slot < inventory.getSize(); slot++) {
+      var item = inventory.getItem(slot);
+      if (item != null && item.hasItemMeta() && item.getItemMeta().displayName() != null
+          && GuiRules.name(item).contains(name)) return true;
+    }
+    return false;
+  }
+
   @Test
   void nicknameOpenedByAnotherPluginHasBackToIt() throws Exception {
     var player = server.addPlayer("NickReturner");
@@ -179,6 +188,7 @@ class MenuTextTest {
     }
     assertNotNull(nick, "the nickname menu opens");
     assertTrue(GuiRules.name(nick.getItem(nick.getSize() - 2)).contains("Назад"), "Back is shown");
+    assertFalse(hasButtonNamed(nick, "Сброс цвета"), "no reset button while the default colour is set");
     // Editing (a colour click redraws the menu) keeps the opener's Back.
     for (int slot = 18; slot < 45; slot++) {
       var item = nick.getItem(slot);
@@ -201,6 +211,7 @@ class MenuTextTest {
       Thread.sleep(20);
     }
     assertNotNull(after, "the nickname menu is redrawn after the edit");
+    assertTrue(hasButtonNamed(after, "Сброс цвета"), "the reset button appears once a colour is chosen");
     assertTrue(GuiRules.name(after.getItem(after.getSize() - 2)).contains("Назад"), "Back survives an edit");
     click(player, after.getSize() - 2);
     var profile = player.getOpenInventory().getTopInventory();

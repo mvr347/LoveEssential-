@@ -1542,14 +1542,16 @@ public final class Waystones implements Listener, AutoCloseable {
       throw new IllegalArgumentException("waystones.no-funds");
     flights.put(p.getUniqueId(), new Flight(p, n, to, r, ticks + r.warmup() * 20L));
     p.closeInventory();
-    love.notify(
-        p,
-        lang.render("waystones.preparing")
-            .append(Component.space())
-            .append(
-                lang.render("waystones.cancel-button")
-                    .clickEvent(
-                        net.kyori.adventure.text.event.ClickEvent.runCommand("/waystone cancel"))));
+    // No warm-up means the move starts on the next tick: "preparing, click to cancel" would only flash by.
+    if (r.warmup() > 0)
+      love.notify(
+          p,
+          lang.render("waystones.preparing")
+              .append(Component.space())
+              .append(
+                  lang.render("waystones.cancel-button")
+                      .clickEvent(
+                          net.kyori.adventure.text.event.ClickEvent.runCommand("/waystone cancel"))));
   }
 
   private void check(Player p, Waystone.Route r, Waystone to) {
