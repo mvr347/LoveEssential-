@@ -300,10 +300,10 @@ class CalamityServiceTest {
     var field = LoveEssentialPlugin.class.getDeclaredField("store");
     field.setAccessible(true);
     var store = (dev.lovelace.loveessential.storage.SqliteStore) field.get(plugin);
-    var stored = store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join();
-    assertTrue(stored.isPresent());
-    assertTrue(stored.get().contains("\"type\":\"undead\""), stored.get());
-    assertTrue(stored.get().contains("\"phase\":\"ACTIVE\""), stored.get());
+    // The save is asynchronous: wait for the stored state instead of reading it once, right after the ticks.
+    waitFor(() -> store.profile(new java.util.UUID(0L, 0xCA1A0001L), "calamity.world").join()
+        .map(json -> json.contains("\"type\":\"undead\"") && json.contains("\"phase\":\"ACTIVE\""))
+        .orElse(false));
   }
 
   @Test
