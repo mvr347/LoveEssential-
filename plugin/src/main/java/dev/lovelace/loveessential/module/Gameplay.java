@@ -644,6 +644,32 @@ public final class Gameplay implements Listener, AutoCloseable {
               "textures", value, signature == null || signature.isBlank() ? null : signature));
     p.setPlayerProfile(current);
     if (plugin instanceof LoveEssentialPlugin essential) essential.skinChanged(p);
+    refreshForViewers(p);
+  }
+
+  /**
+   * The profile change reaches the player list and chat at once, but other clients keep the old model until the
+   * player entity is sent again: hide the player and show them on the next tick. Only viewers who can see them
+   * now are touched, and a vanished player is left alone, so this can never reveal anybody.
+   */
+  private void refreshForViewers(Player p) {
+    if (vanished(p)) return;
+    java.util.List<Player> viewers = new java.util.ArrayList<>();
+    for (Player viewer : Bukkit.getOnlinePlayers()) {
+      if (!viewer.equals(p) && viewer.canSee(p)) {
+        viewer.hidePlayer(plugin, p);
+        viewers.add(viewer);
+      }
+    }
+    if (viewers.isEmpty()) return;
+    Bukkit.getScheduler()
+        .runTask(
+            plugin,
+            () -> {
+              for (Player viewer : viewers) {
+                if (viewer.isOnline() && p.isOnline() && !vanished(p)) viewer.showPlayer(plugin, p);
+              }
+            });
   }
 
   /** A chosen skin is persisted as signed textures, so it survives a relog without a Mojang call. */
