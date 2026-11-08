@@ -510,6 +510,18 @@ class WaystonesIntegrationTest {
   }
 
   @Test
+  void aRouteWithoutWarmupShowsNoPreparingMessage() throws Exception {
+    net.kyori.adventure.text.Component drained;
+    while ((drained = player.nextComponentMessage()) != null) {}
+    travel.begin(player, "1", "2");
+    server.getScheduler().performTicks(2);
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    net.kyori.adventure.text.Component message;
+    while ((message = player.nextComponentMessage()) != null)
+      assertFalse(plain.serialize(message).contains("Подготовка"), "no 'preparing' line without a warm-up");
+  }
+
+  @Test
   void failedMoveRefundsAndDoesNotStartCooldown() throws Exception {
     success = false;
     travel.begin(player, "1", "2");
