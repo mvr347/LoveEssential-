@@ -434,6 +434,63 @@ class ComfortHologramTest {
     assertFalse(target.getPassengers().contains(rider));
   }
 
+  private PlayerMock sighted(String name) {
+    var p =
+        new PlayerMock(server, name) {
+          @Override
+          public boolean hasLineOfSight(org.bukkit.entity.Entity target) {
+            return true;
+          }
+        };
+    server.addPlayer(p);
+    return p;
+  }
+
+  @Test
+  void rideBuildsATowerUpToTheLimitAndOnlyOnTheTopPlayer() throws Exception {
+    var base = server.addPlayer("Base");
+    var mid = sighted("Mid");
+    var top = sighted("Top");
+    var extra = sighted("Extra");
+    for (var p : java.util.List.of(mid, top, extra)) p.teleport(base.getLocation().clone().add(1, 0, 0));
+    for (var p : java.util.List.of(base, mid, top, extra))
+      await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    server.getScheduler().performTicks(3);
+    plugin.getConfig().set("sitride.ride-max-stack", 3);
+    command(mid, "ride Base");
+    assertTrue(base.getPassengers().contains(mid));
+    // The second rider sits on the top of the tower, not on the base that already carries somebody.
+    command(top, "ride Mid");
+    assertTrue(mid.getPassengers().contains(top), "a tower of three");
+    command(extra, "ride Base");
+    assertTrue(extra.getVehicle() == null, "the base is not the top of the tower");
+    command(extra, "ride Top");
+    assertTrue(extra.getVehicle() == null, "the tower is already at the limit");
+    plugin.getConfig().set("sitride.ride-max-stack", 4);
+    command(extra, "ride Top");
+    assertTrue(top.getPassengers().contains(extra), "the limit raised: a tower of four");
+  }
+
+  @Test
+  void aRiderWhoCarriesATowerCannotMergeItIntoABiggerOne() throws Exception {
+    var base = sighted("Base");
+    var mid = sighted("Mid");
+    var top = sighted("Top");
+    var free = sighted("Free");
+    for (var p : java.util.List.of(mid, top, free)) p.teleport(base.getLocation().clone().add(1, 0, 0));
+    for (var p : java.util.List.of(base, mid, top, free))
+      await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    server.getScheduler().performTicks(3);
+    plugin.getConfig().set("sitride.ride-max-stack", 4);
+    command(mid, "ride Base");
+    command(top, "ride Mid");
+    assertTrue(mid.getPassengers().contains(top));
+    // Base carries a tower of three and tries to sit on a free player: that would be a tower of four plus one.
+    plugin.getConfig().set("sitride.ride-max-stack", 3);
+    command(base, "ride Free");
+    assertTrue(base.getVehicle() == null, "the whole tower of three would exceed the limit of three");
+  }
+
   @Test
   void carrierShakesOffTheRiderWithAnEmptyHandSwingWhileLookingUp() throws Exception {
     var rider =

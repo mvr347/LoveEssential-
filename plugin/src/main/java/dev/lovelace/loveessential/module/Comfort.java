@@ -649,8 +649,13 @@ public final class Comfort implements Listener, AutoCloseable {
         || target instanceof ArmorStand
         || !target.isValid()
         || !target.getPassengers().isEmpty()
-        || target.isInsideVehicle()
         || !rideable(target)) throw new IllegalArgumentException("comfort.ride-target");
+    // A tower is allowed: the target may itself be a /ride rider, as long as the whole chain below it is /ride riders.
+    int below = rideDepth(target);
+    if (below < 0) throw new IllegalArgumentException("comfort.ride-target");
+    // The rider may carry a tower of their own: count everybody who ends up in the stack, not only the rider.
+    if (below + 1 + 1 + riderChain(p) > plugin.getConfig().getInt("sitride.ride-max-stack", 4))
+      throw new IllegalArgumentException("comfort.ride-stack");
     if (target instanceof Player other
         && (!p.canSee(other)
             || !love.authenticated(other)
@@ -664,6 +669,33 @@ public final class Comfort implements Listener, AutoCloseable {
     rides.put(p.getUniqueId(), target);
     plugin.mechanicsChanged(p);
     if (target instanceof Player carrier) plugin.mechanicsChanged(carrier);
+  }
+
+  /** How many players sit on top of this one, following the chain of passengers upwards. */
+  private static int riderChain(Entity base) {
+    int count = 0;
+    Entity current = base;
+    while (!current.getPassengers().isEmpty() && count < 16) {
+      current = current.getPassengers().get(0);
+      count++;
+    }
+    return count;
+  }
+
+  /**
+   * How many /ride carriers the target stands on: 0 for a free entity, -1 when it sits in anything that is not
+   * a /ride carrier (a boat, a mount, a seat), which must never become the base of a tower.
+   */
+  private int rideDepth(Entity target) {
+    int depth = 0;
+    Entity current = target;
+    while (current.getVehicle() != null) {
+      var vehicle = current.getVehicle();
+      if (!(current instanceof Player rider) || rides.get(rider.getUniqueId()) != vehicle) return -1;
+      current = vehicle;
+      if (++depth > 16) return -1;
+    }
+    return depth;
   }
 
   /**

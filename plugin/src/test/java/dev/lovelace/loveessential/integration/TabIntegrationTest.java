@@ -127,6 +127,35 @@ class TabIntegrationTest {
   }
 
   @Test
+  void aNicknameColorReachesTheTabListName() throws Exception {
+    var alice = player("Alice", "world");
+    var nick = internal("nicknames", dev.lovelace.loveessential.module.Nicknames.class);
+    waitFor(
+        () -> {
+          try {
+            nick.settings(alice);
+            return true;
+          } catch (IllegalArgumentException e) {
+            return false;
+          }
+        });
+    server.dispatchCommand(alice, "le nick color #ff0000");
+    waitFor(() -> nick.settings(alice).colors().size() == 1);
+    settle(40);
+    var name = alice.playerListName();
+    assertNotNull(name);
+    var colors = new java.util.HashSet<net.kyori.adventure.text.format.TextColor>();
+    collect(name, colors);
+    assertTrue(colors.contains(net.kyori.adventure.text.format.TextColor.fromHexString("#ff0000")), name.toString());
+  }
+
+  private static void collect(
+      net.kyori.adventure.text.Component c, java.util.Set<net.kyori.adventure.text.format.TextColor> out) {
+    if (c.color() != null) out.add(c.color());
+    c.children().forEach(child -> collect(child, out));
+  }
+
+  @Test
   void joiningAndStoppingNeverUseTheNullTeamNameFallback() throws Exception {
     var alice = player("Alice", "world");
     assertNotNull(alice.playerListName(), "join sets an explicit name immediately");

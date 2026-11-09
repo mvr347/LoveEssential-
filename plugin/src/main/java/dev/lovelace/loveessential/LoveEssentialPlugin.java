@@ -753,6 +753,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     decimal(config, "traces.stride", .2, 3);
     decimal(config, "traces.view-distance", 4, 64);
     decimal(config, "sitride.ride-range", 1, 8);
+    bounded(config, "sitride.ride-max-stack", 2, 8);
     if (config.contains("sitride.ride-denied-types")) {
       if (!(config.get("sitride.ride-denied-types") instanceof java.util.List<?> denied))
         throw new IllegalArgumentException("errors.config");

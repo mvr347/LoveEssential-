@@ -747,6 +747,23 @@ class ReviveTest implements Listener {
   }
 
   @Test
+  void oneHelperRevivesOnlyOneOfTwoDownedPlayersLyingNextToEachOther() throws Exception {
+    var second = join("Second");
+    second.teleport(victim.getLocation());
+    fall();
+    hit(second, EntityDamageEvent.DamageCause.ENTITY_ATTACK, 100);
+    assertTrue(oracle().downed(second.getUniqueId()));
+    helper.teleport(victim.getLocation());
+    helper.setSneaking(true);
+    server.getScheduler().performTicks(10);
+    long reviving =
+        java.util.stream.Stream.of(victim, second)
+            .filter(p -> oracle().reviving(p.getUniqueId()))
+            .count();
+    assertEquals(1, reviving, "a helper works on one downed player at a time");
+  }
+
+  @Test
   void standingUpOrWalkingAwayStopsTheRevive() {
     fall();
     helper.teleport(victim.getLocation());

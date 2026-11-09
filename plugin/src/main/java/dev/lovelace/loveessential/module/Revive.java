@@ -713,7 +713,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
     for (var near : downed.getWorld().getNearbyPlayers(downed.getLocation(), radius))
       if (!near.equals(downed)
           && !states.containsKey(near.getUniqueId())
-          && !near.getUniqueId().equals(states.get(downed.getUniqueId()).reviver)
+          && !busy(near.getUniqueId())
           && near.hasPermission("loveessential.revive.reviver")) near.sendActionBar(message);
   }
 
@@ -796,6 +796,7 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
           || !o.isSneaking()
           || o.getGameMode() == GameMode.SPECTATOR
           || states.containsKey(o.getUniqueId())
+          || busy(o.getUniqueId())
           || !o.hasPermission("loveessential.revive.reviver")
           || distance > min
           || distance >= bestDistance) continue;
@@ -803,6 +804,16 @@ public final class Revive implements Listener, AutoCloseable, DownedOracle, Revi
       bestDistance = distance;
     }
     return best;
+  }
+
+  /**
+   * Whether the player already revives or carries somebody. Two downed players lying next to each other must not
+   * share one helper: it would revive both at once and both revive steps would fight over its action bar.
+   */
+  private boolean busy(UUID helper) {
+    if (carrying.containsKey(helper)) return true;
+    for (var state : states.values()) if (helper.equals(state.reviver)) return true;
+    return false;
   }
 
   private double speed(Player helper) {
