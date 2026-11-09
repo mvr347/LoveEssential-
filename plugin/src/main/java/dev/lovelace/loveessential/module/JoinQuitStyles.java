@@ -119,8 +119,9 @@ public final class JoinQuitStyles implements Listener, AutoCloseable {
                 .handle(
                     (value, error) -> {
                       // On a read failure the default is used; nothing here may block the join message.
+                      // putIfAbsent: a style chosen while this read was still running is newer than the value it read.
                       if (error == null && value.isPresent() && !value.get().isBlank())
-                        choice.put(key, value.get());
+                        choice.putIfAbsent(key, value.get());
                       return (Void) null;
                     }));
   }
