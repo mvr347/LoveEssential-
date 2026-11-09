@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 
 /** LoveCore {@link PresenceOracle} over the vanish, afk, nickname and skin modules. */
@@ -48,7 +47,9 @@ public final class LoveEssentialPresence implements PresenceOracle {
     var player = Bukkit.getPlayer(playerId);
     if (player == null) return Optional.empty();
     var shown = nicknames.display(player);
-    return PlainTextComponentSerializer.plainText().serialize(shown).equals(player.getName())
+    // A colour-only nickname has the same plain text as the account name, so compare the styled component:
+    // comparing plain text hid every colour or gradient from the consumers (chat).
+    return shown.equals(net.kyori.adventure.text.Component.text(player.getName()))
         ? Optional.empty()
         : Optional.of(shown);
   }
