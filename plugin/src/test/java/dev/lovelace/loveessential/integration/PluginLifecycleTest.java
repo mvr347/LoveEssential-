@@ -881,6 +881,35 @@ class PluginLifecycleTest {
   }
 
   @Test
+  void aPlayerChoosesJoinAndQuitMessagesFromTheCatalogue() throws Exception {
+    var p = server.addPlayer("Alice");
+    var styles = internal("joinQuit", dev.lovelace.loveessential.module.JoinQuitStyles.class);
+    plugin.getConfig().set("joinquit.styles.festive.name", "Праздничное");
+    plugin.getConfig().set("joinquit.styles.festive.join", "<gold>Ура, <player> пришёл!");
+    plugin.getConfig().set("joinquit.styles.festive.quit", "<gold>Пока, <player>!");
+    plugin.getConfig().set("joinquit.styles.festive.permission", "test.festive");
+    plugin.getConfig().set("joinquit.styles.broken.join", "только вход");
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    // The built-in message comes first, then the bundled examples and the new one; a style with one text is skipped.
+    assertEquals(
+        java.util.List.of("default", "king", "shadow", "festive"),
+        styles.catalog().stream().map(dev.lovelace.loveessential.module.JoinQuitStyles.Style::id).toList());
+    // Without the permission the choice is refused and the default stays.
+    assertThrows(Exception.class, () -> styles.choose(p, "festive").get());
+    assertEquals("default", styles.chosen(p).id());
+    assertThrows(Exception.class, () -> styles.choose(p, "missing").get());
+    var grant = p.addAttachment(plugin, "test.festive", true);
+    styles.choose(p, "festive").get();
+    waitFor(() -> styles.chosen(p).id().equals("festive"));
+    assertEquals("Ура, Alice пришёл!", plain.serialize(styles.join(p)));
+    assertEquals("Пока, Alice!", plain.serialize(styles.quit(p)));
+    // The permission is taken away: the message falls back to the default instead of breaking the join.
+    p.removeAttachment(grant);
+    assertEquals("default", styles.chosen(p).id());
+    assertTrue(plain.serialize(styles.join(p)).contains("Alice"));
+  }
+
+  @Test
   void nicknameColorGradientAndBothResetsPersistWithoutChangingIdentity() throws Exception {
     var p = server.addPlayer("Alice");
     var nick = nickReady(p);

@@ -1,3 +1,7 @@
+menus:
+  joinquit-gui-title:
+    size: 54
+    title: <gold>Сообщения входа и выхода
 frame:
   material: GRAY_STAINED_GLASS_PANE
 navigation:
@@ -9,3 +13,48 @@ messages:
   joinquit:
     join: <gray>Путник <gold><player> <gray>прибыл в королевство.
     quit: <gray>Путник <gold><player> <gray>покинул королевство.
+    default-name: Обычное
+    head: '<gold>Сообщения входа и выхода <dark_gray>| <white><name>'
+    head-lore:
+    - <dark_gray>Выбор оформления
+    - ''
+    - <dark_gray>▪ <gray>Сейчас выбрано:
+    - '  <white><current>'
+    - ''
+    - <dark_gray>▪ <gray>Что это:
+    - '  <gray>Сообщения, которые видят остальные,'
+    - '  <gray>когда вы заходите на сервер и выходите.'
+    tile: '<gold><name>'
+    tile-selected: '<green>✔ <name>'
+    tile-locked: '<red><name>'
+    status-selected: '<green>Выбрано сейчас'
+    status-open: '<gray>Можно выбрать'
+    status-locked: '<red>Недоступно: этот вариант выдаётся отдельно'
+    tile-lore:
+    - <dark_gray>Оформление сообщений
+    - ''
+    - '<dark_gray>▪ <gray>Вход:'
+    - '  <join>'
+    - '<dark_gray>▪ <gray>Выход:'
+    - '  <quit>'
+    - ''
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>выбрать это оформление
+    tile-selected-lore:
+    - <dark_gray>Оформление сообщений
+    - ''
+    - '<dark_gray>▪ <gray>Вход:'
+    - '  <join>'
+    - '<dark_gray>▪ <gray>Выход:'
+    - '  <quit>'
+    - ''
+    - '<dark_gray>▪ <gray>Статус: <status>'
+    tile-locked-lore:
+    - <dark_gray>Оформление сообщений
+    - ''
+    - '<dark_gray>▪ <gray>Вход:'
+    - '  <join>'
+    - '<dark_gray>▪ <gray>Выход:'
+    - '  <quit>'
+    - ''
+    - '<dark_gray>▪ <gray>Статус: <status>'

@@ -8,3 +8,22 @@ access:
   allowed-states: []
   denied-states: []
   required-states: []
+# 2026-11-09: каталог сообщений входа и выхода, из которого игрок выбирает своё в профиле (Персонализация, «Вход и выход»).
+# Обычное сообщение (из gui.yml, messages.joinquit.join/quit) всегда стоит первым и выдаётся всем. Свои варианты
+# добавляются здесь: id любой (кроме default), join и quit обязательны (MiniMessage, <player> - ник игрока),
+# name - название в меню, icon - предмет значка, permission - право на вариант (пусто - доступно всем). Игрок хранит
+# только id: если вариант убрать из этого списка или отнять право, ему вернётся обычное сообщение, а не сломается вход.
+# Нужны оба текста, иначе вариант пропускается с предупреждением в консоль.
+styles:
+  king:
+    name: Королевское
+    icon: GOLDEN_HELM
+    permission: ''
+    join: <gold>⚜ <yellow><player> <gold>вступил в королевство с триумфом!
+    quit: <gold>⚜ <yellow><player> <gold>покинул королевство, и двор затих.
+  shadow:
+    name: Тень
+    icon: ENDER_PEARL
+    permission: ''
+    join: <dark_gray>Из тени вышел <gray><player><dark_gray>.
+    quit: <gray><player> <dark_gray>растворился в тени.

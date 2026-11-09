@@ -36,6 +36,15 @@ menus:
         - ''
         - '<dark_gray><st>─────────────────────</st>'
         - '<green>ЛКМ <dark_gray>— <gray>открыть каталог пометок'
+        joinquit: '<gold>Вход и выход <dark_gray>| <yellow>Сообщения'
+        joinquit-lore:
+        - '<dark_gray>Оформление появления на сервере'
+        - ''
+        - '<dark_gray>▪ <gray>Сейчас выбрано:'
+        - '  <white><current>'
+        - ''
+        - '<dark_gray><st>─────────────────────</st>'
+        - '<green>ЛКМ <dark_gray>— <gray>выбрать сообщения входа и выхода'
         color-lore:
         - '<dark_gray>Палитра персонализации'
         - ''
