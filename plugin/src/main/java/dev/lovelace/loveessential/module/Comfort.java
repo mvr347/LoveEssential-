@@ -653,7 +653,8 @@ public final class Comfort implements Listener, AutoCloseable {
     // A tower is allowed: the target may itself be a /ride rider, as long as the whole chain below it is /ride riders.
     int below = rideDepth(target);
     if (below < 0) throw new IllegalArgumentException("comfort.ride-target");
-    if (below + 2 > plugin.getConfig().getInt("sitride.ride-max-stack", 4))
+    // The rider may carry a tower of their own: count everybody who ends up in the stack, not only the rider.
+    if (below + 1 + 1 + riderChain(p) > plugin.getConfig().getInt("sitride.ride-max-stack", 4))
       throw new IllegalArgumentException("comfort.ride-stack");
     if (target instanceof Player other
         && (!p.canSee(other)
@@ -668,6 +669,17 @@ public final class Comfort implements Listener, AutoCloseable {
     rides.put(p.getUniqueId(), target);
     plugin.mechanicsChanged(p);
     if (target instanceof Player carrier) plugin.mechanicsChanged(carrier);
+  }
+
+  /** How many players sit on top of this one, following the chain of passengers upwards. */
+  private static int riderChain(Entity base) {
+    int count = 0;
+    Entity current = base;
+    while (!current.getPassengers().isEmpty() && count < 16) {
+      current = current.getPassengers().get(0);
+      count++;
+    }
+    return count;
   }
 
   /**

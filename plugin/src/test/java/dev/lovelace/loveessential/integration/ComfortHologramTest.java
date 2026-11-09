@@ -472,6 +472,26 @@ class ComfortHologramTest {
   }
 
   @Test
+  void aRiderWhoCarriesATowerCannotMergeItIntoABiggerOne() throws Exception {
+    var base = sighted("Base");
+    var mid = sighted("Mid");
+    var top = sighted("Top");
+    var free = sighted("Free");
+    for (var p : java.util.List.of(mid, top, free)) p.teleport(base.getLocation().clone().add(1, 0, 0));
+    for (var p : java.util.List.of(base, mid, top, free))
+      await(store.profile(p.getUniqueId(), "test.barrier", "true"));
+    server.getScheduler().performTicks(3);
+    plugin.getConfig().set("sitride.ride-max-stack", 4);
+    command(mid, "ride Base");
+    command(top, "ride Mid");
+    assertTrue(mid.getPassengers().contains(top));
+    // Base carries a tower of three and tries to sit on a free player: that would be a tower of four plus one.
+    plugin.getConfig().set("sitride.ride-max-stack", 3);
+    command(base, "ride Free");
+    assertTrue(base.getVehicle() == null, "the whole tower of three would exceed the limit of three");
+  }
+
+  @Test
   void carrierShakesOffTheRiderWithAnEmptyHandSwingWhileLookingUp() throws Exception {
     var rider =
         new PlayerMock(server, "Rider") {
