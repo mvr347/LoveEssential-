@@ -890,10 +890,12 @@ class PluginLifecycleTest {
     plugin.getConfig().set("joinquit.styles.festive.permission", "test.festive");
     plugin.getConfig().set("joinquit.styles.broken.join", "только вход");
     var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
-    // The built-in message comes first, then the bundled examples and the new one; a style with one text is skipped.
-    assertEquals(
-        java.util.List.of("default", "king", "shadow", "festive"),
-        styles.catalog().stream().map(dev.lovelace.loveessential.module.JoinQuitStyles.Style::id).toList());
+    // The built-in message comes first, the bundled styles follow, then the new one; a style with one text is skipped.
+    var ids =
+        styles.catalog().stream().map(dev.lovelace.loveessential.module.JoinQuitStyles.Style::id).toList();
+    assertEquals("default", ids.get(0));
+    assertTrue(ids.contains("king") && ids.contains("festive"), ids.toString());
+    assertFalse(ids.contains("broken"), "a style with one text is skipped");
     // Without the permission the choice is refused and the default stays.
     assertThrows(Exception.class, () -> styles.choose(p, "festive").get());
     assertEquals("default", styles.chosen(p).id());
@@ -907,6 +909,39 @@ class PluginLifecycleTest {
     p.removeAttachment(grant);
     assertEquals("default", styles.chosen(p).id());
     assertTrue(plain.serialize(styles.join(p)).contains("Alice"));
+  }
+
+  @Test
+  void aStyleOfAnAchievementOpensOnlyAfterTheAchievement() throws Exception {
+    var p = server.addPlayer("Alice");
+    var styles = internal("joinQuit", dev.lovelace.loveessential.module.JoinQuitStyles.class);
+    var achievements = plugin.achievements();
+    waitFor(() -> achievements.loaded(p.getUniqueId()));
+    assertThrows(Exception.class, () -> styles.choose(p, "hunter").get(), "locked until hunt_100");
+    var hunter =
+        styles.catalog().stream().filter(st -> st.id().equals("hunter")).findFirst().orElseThrow();
+    assertFalse(styles.achievementName(hunter).isBlank(), "the menu can name the achievement");
+    assertTrue(achievements.unlock(p.getUniqueId(), "hunt_100"));
+    assertFalse(achievements.unlock(p.getUniqueId(), "hunt_100"), "the second unlock is not news");
+    styles.choose(p, "hunter").get();
+    waitFor(() -> styles.chosen(p).id().equals("hunter"));
+    // Taking the achievement back closes the style again, and the message falls back to the default.
+    assertTrue(achievements.revoke(p.getUniqueId(), "hunt_100"));
+    assertEquals("default", styles.chosen(p).id());
+  }
+
+  @Test
+  void onlyAnAdministratorCanSwitchTheJoinAndQuitMessagesOff() throws Exception {
+    var p = server.addPlayer("Alice");
+    var styles = internal("joinQuit", dev.lovelace.loveessential.module.JoinQuitStyles.class);
+    assertThrows(Exception.class, () -> styles.setSilent(p, true).get(), "no permission, no switch");
+    assertFalse(styles.silent(p));
+    var grant = p.addAttachment(plugin, dev.lovelace.loveessential.module.JoinQuitStyles.SILENT_PERMISSION, true);
+    styles.setSilent(p, true).get();
+    waitFor(() -> styles.silent(p));
+    // The switch only counts while the permission is held.
+    p.removeAttachment(grant);
+    assertFalse(styles.silent(p));
   }
 
   @Test

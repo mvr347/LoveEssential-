@@ -25,17 +25,32 @@ import org.bukkit.event.player.PlayerQuitEvent;
  */
 public final class JoinQuitStyles implements Listener, AutoCloseable {
   public static final String KEY = "loveessential.joinquit";
+  /** Per-player switch «enter and leave without a message», for those who have {@link #SILENT_PERMISSION}. */
+  public static final String SILENT_KEY = "loveessential.joinquit.silent";
+
+  public static final String SILENT_PERMISSION = "loveessential.joinquit.silent";
   public static final String DEFAULT_ID = "default";
 
-  /** One catalogue entry; {@code join} and {@code quit} are MiniMessage templates with {@code <player>}. */
+  /**
+   * One catalogue entry; {@code join} and {@code quit} are MiniMessage templates with {@code <player>}. A style is open
+   * when the player has its {@code permission} (if any) and has unlocked its {@code achievement} (if any); a style with
+   * neither is open to everybody.
+   */
   public record Style(
-      String id, String name, String join, String quit, String permission, Material icon) {}
+      String id,
+      String name,
+      String join,
+      String quit,
+      String permission,
+      String achievement,
+      Material icon) {}
 
   private final LoveEssentialPlugin plugin;
   private final MainThread main;
   private final Lang lang;
   private final SqliteStore store;
   private final Map<UUID, String> choice = new ConcurrentHashMap<>();
+  private final Set<UUID> silent = ConcurrentHashMap.newKeySet();
   private final Map<UUID, CompletableFuture<Void>> loaded = new ConcurrentHashMap<>();
 
   public JoinQuitStyles(LoveEssentialPlugin plugin, MainThread main, Lang lang, SqliteStore store) {
@@ -62,6 +77,7 @@ public final class JoinQuitStyles implements Listener, AutoCloseable {
             lang.text("joinquit.join"),
             lang.text("joinquit.quit"),
             "",
+            "",
             Material.OAK_SIGN));
     ConfigurationSection styles = plugin.getConfig().getConfigurationSection("joinquit.styles");
     if (styles == null) return result;
@@ -83,13 +99,50 @@ public final class JoinQuitStyles implements Listener, AutoCloseable {
               join,
               quit,
               s.getString("permission", ""),
+              s.getString("achievement", ""),
               icon == null ? Material.PAPER : icon));
     }
     return result;
   }
 
   public boolean allowed(Player p, Style style) {
-    return style.permission().isBlank() || p.hasPermission(style.permission());
+    boolean permitted = style.permission().isBlank() || p.hasPermission(style.permission());
+    return permitted && (style.achievement().isBlank() || achievementDone(p, style.achievement()));
+  }
+
+  private boolean achievementDone(Player p, String achievement) {
+    var service = plugin.achievements();
+    return service != null && service.unlocked(p.getUniqueId(), achievement);
+  }
+
+  /** Name of the achievement that opens the style, or empty when no achievement is needed or it is not in the catalogue. */
+  public String achievementName(Style style) {
+    var service = plugin.achievements();
+    if (style.achievement().isBlank() || service == null) return "";
+    return service.catalog().find(style.achievement()).map(AchievementCatalog.Def::name).orElse("");
+  }
+
+  // ------------------------------------------------------------- silent switch
+
+  /** Whether this player enters and leaves without a message: switched on and still allowed to. */
+  public boolean silent(Player p) {
+    return silent.contains(p.getUniqueId()) && p.hasPermission(SILENT_PERMISSION);
+  }
+
+  public CompletableFuture<Void> setSilent(Player p, boolean value) {
+    MainThread.require();
+    if (!p.hasPermission(SILENT_PERMISSION))
+      return CompletableFuture.failedFuture(new IllegalArgumentException("errors.permission"));
+    UUID uuid = p.getUniqueId();
+    return store
+        .profile(uuid, SILENT_KEY, Boolean.toString(value))
+        .thenAccept(
+            done ->
+                main.execute(
+                    () -> {
+                      if (value) silent.add(uuid);
+                      else silent.remove(uuid);
+                    }));
   }
 
   /** The style the player's messages use now: the saved one if it still exists and is permitted. */
@@ -123,7 +176,17 @@ public final class JoinQuitStyles implements Listener, AutoCloseable {
                       if (error == null && value.isPresent() && !value.get().isBlank())
                         choice.putIfAbsent(key, value.get());
                       return (Void) null;
-                    }));
+                    })
+                .thenCompose(
+                    ignored ->
+                        store
+                            .profile(key, SILENT_KEY)
+                            .handle(
+                                (value, error) -> {
+                                  if (error == null && value.isPresent() && Boolean.parseBoolean(value.get()))
+                                    silent.add(key);
+                                  return (Void) null;
+                                })));
   }
 
   /** Runs the task on the main thread once the player's choice is known; skipped if they left meanwhile. */
@@ -165,6 +228,7 @@ public final class JoinQuitStyles implements Listener, AutoCloseable {
             plugin,
             () -> {
               choice.remove(id);
+              silent.remove(id);
               loaded.remove(id);
             });
   }
@@ -173,6 +237,7 @@ public final class JoinQuitStyles implements Listener, AutoCloseable {
   public void close() {
     org.bukkit.event.HandlerList.unregisterAll(this);
     choice.clear();
+    silent.clear();
     loaded.clear();
   }
 }

@@ -21,6 +21,10 @@ links:
     plugin: LoveEssential
     command: le nick
     permission: ''
+  achievements:
+    plugin: LoveEssential
+    command: achievements
+    permission: ''
   behavior:
     plugin: LoveBehavior
     command: behavior

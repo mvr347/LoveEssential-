@@ -51,7 +51,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
           "display",
           "waystones",
           "calamities",
-          "secrets");
+          "secrets",
+          "achievements");
   private MechanicsService mechanics;
 
   public void mechanicsChanged(org.bukkit.entity.Player player) {
@@ -130,6 +131,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.module.DisplayPreferences displayPrefs;
   private dev.lovelace.loveessential.module.JoinQuitStyles joinQuit;
   private dev.lovelace.loveessential.module.Secrets secrets;
+  private dev.lovelace.loveessential.module.AchievementService achievements;
   private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
@@ -355,7 +357,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     displayPrefs = new dev.lovelace.loveessential.module.DisplayPreferences(this, main, store);
     joinQuit = new dev.lovelace.loveessential.module.JoinQuitStyles(this, main, lang, store);
     gameplay.joinQuit(joinQuit);
-    secrets = new dev.lovelace.loveessential.module.Secrets(this, main, store, lang, love);
+    achievements = new dev.lovelace.loveessential.module.AchievementService(this, main, store, lang, love);
+    secrets = new dev.lovelace.loveessential.module.Secrets(this, achievements);
     revive.secrets(secrets);
     profiles =
         new dev.lovelace.loveessential.module.PlayerProfiles(
@@ -367,6 +370,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
           values.putAll(revive.values(id));
           values.putAll(displayPrefs.values(id));
           values.putAll(secrets.values(id));
+          values.putAll(achievements.values(id));
           return Map.copyOf(values);
         });
     npcs.vanish(gameplay::vanished);
@@ -403,7 +407,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
             this, main, lang, love, npcs, wizard, gameplay, nicknames);
     menus.display(displayPrefs);
     menus.joinQuit(joinQuit);
-    menus.secrets(secrets);
+    menus.achievements(achievements);
     content = new dev.lovelace.loveessential.content.ContentLibrary(this, main, store, lang, love);
     starter =
         new dev.lovelace.loveessential.content.StarterItems(this, main, store, lang, love, content);
@@ -448,6 +452,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     commands.revive(revive);
     commands.display(displayPrefs);
     commands.secrets(secrets);
+    commands.achievements(achievements);
     commands.tab(tab);
     for (String name : getDescription().getCommands().keySet()) {
       var command = getCommand(name);
@@ -537,7 +542,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     extensions.start();
     displayPrefs.start();
     joinQuit.start();
-    secrets.start();
+    achievements.start();
     // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
     // Registered only now: a plugin that asks earlier gets "no such provider" (a warning at worst), not a
     // provider that answers "no such NPC" while the data is still loading.
@@ -571,11 +576,19 @@ public class LoveEssentialPlugin extends JavaPlugin {
             displayPrefs,
             this,
             ServicePriority.Normal);
-    // Other plugins mark easter eggs found through this contract; the book shows them at /secrets.
+    // Other plugins mark easter eggs found through this contract; they are achievements of the category «secret».
     getServer()
         .getServicesManager()
         .register(
             dev.lovelace.lovecore.api.secrets.SecretBook.class, secrets, this, ServicePriority.Normal);
+    // The shared achievements: plugins report facts here, cosmetics (join/quit styles, suffixes) ask what is unlocked.
+    getServer()
+        .getServicesManager()
+        .register(
+            dev.lovelace.lovecore.api.achievements.Achievements.class,
+            achievements,
+            this,
+            ServicePriority.Normal);
     getLogger().info(lang.text("logs.ready"));
     Bukkit.getPluginManager().callEvent(new LoveEssentialReadyEvent(essentialApi));
   }
@@ -590,6 +603,10 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   public dev.lovelace.loveessential.module.Secrets secrets() {
     return secrets;
+  }
+
+  public dev.lovelace.loveessential.module.AchievementService achievements() {
+    return achievements;
   }
 
   public boolean module(String name) {
@@ -877,7 +894,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
       if (revive != null) closeSafely("revive", revive::close);
       if (displayPrefs != null) closeSafely("displayPrefs", displayPrefs::close);
       if (joinQuit != null) closeSafely("joinQuit", joinQuit::close);
-      if (secrets != null) closeSafely("secrets", secrets::close);
+      if (achievements != null) closeSafely("achievements", achievements::close);
       if (extensions != null) closeSafely("extensions", extensions::close);
       if (contentMenus != null) closeSafely("contentMenus", contentMenus::close);
       if (starter != null) closeSafely("starter", starter::close);

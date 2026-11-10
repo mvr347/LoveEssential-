@@ -14,16 +14,103 @@ access:
 # name - название в меню, icon - предмет значка, permission - право на вариант (пусто - доступно всем). Игрок хранит
 # только id: если вариант убрать из этого списка или отнять право, ему вернётся обычное сообщение, а не сломается вход.
 # Нужны оба текста, иначе вариант пропускается с предупреждением в консоль.
+# 2026-11-10: поле achievement - id достижения из modules/achievements/achievements.yml: вариант открывается, когда
+# игрок получил это достижение (вместе с permission, если он задан). Без permission и achievement вариант доступен всем
+# «на выбор». Награда достижения устроена так, а не наоборот, чтобы одно достижение могло открывать и оформление входа,
+# и пометку LoveSubnames, или что-то одно, или ничего. Значки только из простых символов (⚔ ♪ ☾ ⚓ ✦): эмодзи в чате
+# у части клиентов не отображаются.
 styles:
   king:
     name: Королевское
     icon: GOLDEN_HELM
     permission: ''
-    join: <gold>⚜ <yellow><player> <gold>вступил в королевство с триумфом!
-    quit: <gold>⚜ <yellow><player> <gold>покинул королевство, и двор затих.
+    join: '<gold>⚜ <yellow><player> <gold>вступил в королевство с триумфом!'
+    quit: '<gold>⚜ <yellow><player> <gold>покинул королевство, и двор затих.'
   shadow:
     name: Тень
     icon: ENDER_PEARL
     permission: ''
-    join: <dark_gray>Из тени вышел <gray><player><dark_gray>.
-    quit: <gray><player> <dark_gray>растворился в тени.
+    join: '<dark_gray>Из тени вышел <gray><player><dark_gray>.'
+    quit: '<gray><player> <dark_gray>растворился в тени.'
+  classic:
+    name: Классика
+    icon: OAK_SIGN
+    join: '<yellow>➕ <player> присоединился к игре'
+    quit: '<yellow>➖ <player> покинул игру'
+  tavern:
+    name: Таверна
+    icon: BARREL
+    join: '<gold>✦ <white><player> <gray>заходит в таверну.'
+    quit: '<gold>✦ <white><player> <gray>допивает кружку и уходит.'
+  knight:
+    name: Рыцарь
+    icon: IRON_SWORD
+    join: '<aqua>⚔ <white><player> <gray>прибыл ко двору.'
+    quit: '<aqua>⚔ <white><player> <gray>покинул двор.'
+  bard:
+    name: Бард
+    icon: NOTE_BLOCK
+    join: '<light_purple>♪ <white><player> <gray>входит с песней.'
+    quit: '<light_purple>♪ <white><player> <gray>допел и ушёл.'
+  wanderer:
+    name: Странник
+    icon: COMPASS
+    join: '<green>✦ <gray>Странник <white><player> <gray>пришёл издалека.'
+    quit: '<green>✦ <gray>Странник <white><player> <gray>ушёл по дороге.'
+  pirate:
+    name: Пират
+    icon: SPYGLASS
+    join: '<blue>⚓ <white><player> <gray>причалил к берегу.'
+    quit: '<blue>⚓ <white><player> <gray>отчалил.'
+  night_watch:
+    name: Ночной дозор
+    icon: LANTERN
+    join: '<dark_aqua>☾ <gray>Ночной дозор: <white><player> <gray>на посту.'
+    quit: '<dark_aqua>☾ <gray>Ночной дозор: <white><player> <gray>сдал пост.'
+  sparkle:
+    name: Искра
+    icon: GLOWSTONE_DUST
+    join: '<gradient:#ffd166:#f6a623>✦ <player> появился в королевстве ✦</gradient>'
+    quit: '<gradient:#f6a623:#ffd166>✦ <player> покинул королевство ✦</gradient>'
+  hunter:
+    name: Охотник
+    icon: BOW
+    achievement: hunt_100
+    join: '<dark_red>➳ <gold><player> <gray>вышел на охоту.'
+    quit: '<dark_red>➳ <gold><player> <gray>вернулся с добычей.'
+  brewer:
+    name: Пивовар
+    icon: HONEY_BOTTLE
+    achievement: brew_100
+    join: '<gold>✦ <white><player> <gray>открывает бочку: пена до краёв.'
+    quit: '<gold>✦ <white><player> <gray>закрывает бочку до завтра.'
+  merchant:
+    name: Купец
+    icon: EMERALD
+    achievement: trade_100
+    join: '<green>✦ <white><player> <gray>раскладывает товар на прилавке.'
+    quit: '<green>✦ <white><player> <gray>закрывает лавку.'
+  duelist:
+    name: Дуэлянт
+    icon: DIAMOND_SWORD
+    achievement: duel_50
+    join: '<red>⚔ <white><player> <gray>выходит на арену.'
+    quit: '<red>⚔ <white><player> <gray>убирает клинок в ножны.'
+  veteran:
+    name: Ветеран
+    icon: SHIELD
+    achievement: play_100h
+    join: '<gold>❖ <gray>Ветеран <white><player> <gray>вернулся в строй.'
+    quit: '<gold>❖ <gray>Ветеран <white><player> <gray>уходит на заслуженный отдых.'
+  angel:
+    name: Ангел
+    icon: FEATHER
+    achievement: revive_50
+    join: '<white>✚ <gray>Ангел-хранитель <white><player> <gray>спускается к нам.'
+    quit: '<white>✚ <gray>Ангел-хранитель <white><player> <gray>возвращается на небеса.'
+  legend:
+    name: Легенда
+    icon: NETHER_STAR
+    achievement: collector_50
+    join: '<gradient:#ffd166:#ff6b6b>✦ Легенда королевства: <player> входит ✦</gradient>'
+    quit: '<gradient:#ff6b6b:#ffd166>✦ Легенда королевства: <player> покидает нас ✦</gradient>'

@@ -30,6 +30,18 @@ messages:
     status-selected: '<green>Выбрано сейчас'
     status-open: '<gray>Можно выбрать'
     status-locked: '<red>Недоступно: этот вариант выдаётся отдельно'
+    status-achievement: '<red>Откроется за достижение: <white><achievement>'
+    silent-on: '<green>Тихий вход и выход <dark_gray>| <white>включён'
+    silent-off: '<gray>Тихий вход и выход <dark_gray>| <white>выключен'
+    silent-lore:
+    - <dark_gray>Для администраторов
+    - ''
+    - '<dark_gray>▪ <gray>Что делает:'
+    - '  <gray>Пока включено, ваши вход и выход'
+    - '  <gray>на сервере не сопровождаются сообщением.'
+    - ''
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>переключить
     tile-lore:
     - <dark_gray>Оформление сообщений
     - ''

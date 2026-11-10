@@ -1,0 +1,435 @@
+# Тексты находятся рядом с настройками; MiniMessage и подстановки поддерживаются.
+# Модуль «Ачивки» (добавлен 2026-11-10): общие достижения сервера. Плагины сообщают факты через сервис
+# Achievements из LoveCore (progress/set/collect/unlock) и через общую шину метрик StatBus; каталог (названия,
+# редкости, условия) ведёт этот файл, поэтому новую ачивку можно добавить без пересборки плагинов. Прогресс
+# хранится в SQLite отдельно у каждого игрока. Награда ачивки здесь не описана: вход/выход (joinquit.yml) и
+# пометки (LoveSubnames) сами ссылаются на ачивку полем achievement и спрашивают, получена ли она, поэтому
+# ачивка может ничего не давать, давать только пометку, только оформление входа или и то и другое.
+# Книга тайн влита сюда: тайны это скрытые ачивки категории secret с идентификаторами secret_<id>.
+enabled: true
+access:
+  allowed-worlds: []
+  denied-worlds: []
+  allowed-gamemodes: []
+  denied-gamemodes: []
+  allowed-states: []
+  denied-states: []
+  required-states: []
+# 2026-11-10: на весь сервер объявляются ачивки этой редкости и выше (COMMON, RARE, EPIC, LEGENDARY или OFF).
+# Игрок всегда видит своё получение лично; публично - только самые редкие, чтобы чат не превращался в ленту.
+broadcast-rarity: LEGENDARY
+# Головы по редкости для плиток меню, если у ачивки нет своей головы (icon). Текстуры в формате base64.
+rarity-heads:
+  COMMON: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTUyODhkZGM5MTFhNzVmNzdjM2E1ZDMzNjM2NWE4ZjhiMTM5ZmE1MzkzMGI0YjZlZTEzOTg3NWM4MGNlMzY2YyJ9fX0=
+  RARE: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTYzZTY2NDZmMWMwZDQxZmQzYmY1NTg0YTFjZTA0NGY1YzQ2ZDU5ODI1OGRiNDYyMTYxMTc4NTlmNTdhZjE5NyJ9fX0=
+  EPIC: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk3MDEyZWQ2YTkyYjA1ZWEwZjE5NDk1MDc0ODU0NGUwNzViYWEyODc4MWNhMzczZDFiMjdlMjhjMjY5NTNjIn19fQ==
+  LEGENDARY: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWUzMDQ4MGVkMjgzNGY1YjdjYzgxZGNiMWRjN2U0NzY2NzkyNDMwYzQ5ZGFkNGRiY2QxMGE5M2M1ZTE0NTdiYyJ9fX0=
+all-texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2ZhNGRkYTZkMTlhMWZlMmQ5ODhkNjVkZWM1MzQyOTUwNTMwODE2NmM5MDY3YjY4YTQ3NzBjYTVjNDM2Y2Y5NCJ9fX0=
+# Категории (кнопки в шапке меню, не больше пяти: ещё одна кнопка «Все» добавляется сама). Порядок как в файле.
+categories:
+  hunt:
+    name: Охота
+    texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjk1M2IxMmEwOTQ2YjYyOWI0YzA4ODlkNDFmZDI2ZWQyNmZiNzI5ZDRkNTE0YjU5NzI3MTI0YzM3YmI3MGQ4ZCJ9fX0=
+  craft:
+    name: Ремесло и торговля
+    texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzc0NzJkNjA4ODIxZjQ1YTg4MDUzNzZlYzBjNmZmY2I3ODExNzgyOWVhNWY5NjAwNDFjMmEwOWQxMGUwNGNiNCJ9fX0=
+  duel:
+    name: Бои и дуэли
+    texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjFhZjQ2ZmViZDQ1YzBmNGQ4MWU4ZmExYjY2YjI3NWQ4OWUyNzJiMmFkNTVjOTc4NTUzYTk5YzczM2UxZmYifX19
+  play:
+    name: Жизнь на сервере
+    texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGQ5MDUyNjlhY2NhYjI0YjExOTI0ZWJhOGJkOTI5OTFiOGQ4NWNlNDI3NjAyN2ExNjM2YzkzMWI2ZDA2Yzg5ZSJ9fX0=
+  secret:
+    name: Скрытые
+    texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmE5NGNiMjVkZTYyOGNhMzU5YjJmNmVhNWE4ODY4Y2JlMjY1OTVlZWRiMmJmZmI3NTA5NjdhZDFlZTE4NTAifX19
+# Каталог ачивок. Порядок в файле - порядок в меню.
+#   category    - категория из списка выше;  rarity - COMMON, RARE, EPIC или LEGENDARY;
+#   name/description - название и что нужно сделать;  hint - намёк для скрытой до получения;
+#   hidden      - true: до получения в меню показано «???» и только намёк;
+#   icon        - своя голова (base64), иначе голова редкости;  reward-text - что даёт (только текст для меню);
+#   trigger     - условие:
+#     {type: counter, key: <метрика или счётчик>, at-least: N}  - значение достигло N (метрики StatBus: bounties.completed,
+#                   brewer.beverages, trades.completed, duels.won, kills ...; свои счётчики: play.hours, join.streak,
+#                   join.days, revive.saved);
+#     {type: set, key: <набор>, values: [...]}                  - собраны все значения набора (плагин зовёт collect);
+#     {type: all-of, ids: [...]}                                - получены все перечисленные ачивки;
+#     {type: unlocked-count, at-least: N}                       - получено N ачивок (метаачивки не считаются);
+#     без trigger или {type: manual}                            - выдаёт плагин-источник вызовом unlock.
+catalog:
+  hunt_1:
+    category: hunt
+    rarity: COMMON
+    name: 'Первая добыча'
+    description: 'Выполните свой первый заказ охотника.'
+    trigger: {type: counter, key: bounties.completed, at-least: 1}
+  hunt_10:
+    category: hunt
+    rarity: RARE
+    name: 'Охотник'
+    description: 'Выполните 10 заказов охотника.'
+    trigger: {type: counter, key: bounties.completed, at-least: 10}
+  hunt_50:
+    category: hunt
+    rarity: RARE
+    name: 'Следопыт'
+    description: 'Выполните 50 заказов охотника.'
+    trigger: {type: counter, key: bounties.completed, at-least: 50}
+  hunt_100:
+    category: hunt
+    rarity: EPIC
+    name: 'Мастер охоты'
+    description: 'Выполните 100 заказов охотника.'
+    reward-text: 'Оформление входа и выхода «Охотник»'
+    trigger: {type: counter, key: bounties.completed, at-least: 100}
+  hunt_250:
+    category: hunt
+    rarity: LEGENDARY
+    name: 'Гроза преступников'
+    description: 'Выполните 250 заказов охотника.'
+    trigger: {type: counter, key: bounties.completed, at-least: 250}
+  hunt_rating:
+    category: hunt
+    rarity: EPIC
+    name: 'Лучший из лучших'
+    description: 'Достигните высшего рейтинга охотника.'
+    trigger: {type: counter, key: hunter.rating, at-least: 5}
+  hunt_all:
+    category: hunt
+    rarity: LEGENDARY
+    name: 'Охотничья слава'
+    description: 'Получите все ачивки охоты по числу заказов.'
+    trigger: {type: all-of, ids: [hunt_1, hunt_10, hunt_50, hunt_100, hunt_250]}
+  brew_1:
+    category: craft
+    rarity: COMMON
+    name: 'Первая варка'
+    description: 'Сварите свой первый напиток.'
+    trigger: {type: counter, key: brewer.beverages, at-least: 1}
+  brew_25:
+    category: craft
+    rarity: RARE
+    name: 'Подмастерье пивовара'
+    description: 'Сварите 25 напитков.'
+    trigger: {type: counter, key: brewer.beverages, at-least: 25}
+  brew_100:
+    category: craft
+    rarity: EPIC
+    name: 'Мастер-пивовар'
+    description: 'Сварите 100 напитков.'
+    reward-text: 'Оформление входа и выхода «Пивовар»'
+    trigger: {type: counter, key: brewer.beverages, at-least: 100}
+  brew_500:
+    category: craft
+    rarity: LEGENDARY
+    name: 'Хозяин таверны'
+    description: 'Сварите 500 напитков.'
+    trigger: {type: counter, key: brewer.beverages, at-least: 500}
+  brew_skill_5:
+    category: craft
+    rarity: RARE
+    name: 'Набитая рука'
+    description: 'Достигните 5 уровня мастерства пивовара.'
+    trigger: {type: counter, key: brewer.skill, at-least: 5}
+  brew_skill_10:
+    category: craft
+    rarity: EPIC
+    name: 'Золотые руки'
+    description: 'Достигните 10 уровня мастерства пивовара.'
+    trigger: {type: counter, key: brewer.skill, at-least: 10}
+  trade_1:
+    category: craft
+    rarity: COMMON
+    name: 'Первая сделка'
+    description: 'Совершите свой первый обмен с игроком.'
+    trigger: {type: counter, key: trades.completed, at-least: 1}
+  trade_25:
+    category: craft
+    rarity: RARE
+    name: 'Знаток торга'
+    description: 'Совершите 25 обменов.'
+    trigger: {type: counter, key: trades.completed, at-least: 25}
+  trade_100:
+    category: craft
+    rarity: EPIC
+    name: 'Купец'
+    description: 'Совершите 100 обменов.'
+    reward-text: 'Оформление входа и выхода «Купец»'
+    trigger: {type: counter, key: trades.completed, at-least: 100}
+  trade_500:
+    category: craft
+    rarity: LEGENDARY
+    name: 'Торговый магнат'
+    description: 'Совершите 500 обменов.'
+    trigger: {type: counter, key: trades.completed, at-least: 500}
+  contract_1:
+    category: craft
+    rarity: COMMON
+    name: 'Первый контракт'
+    description: 'Выполните свой первый контракт.'
+    trigger: {type: counter, key: contracts.completed, at-least: 1}
+  contract_10:
+    category: craft
+    rarity: RARE
+    name: 'Надёжный подрядчик'
+    description: 'Выполните 10 контрактов.'
+    trigger: {type: counter, key: contracts.completed, at-least: 10}
+  contract_50:
+    category: craft
+    rarity: EPIC
+    name: 'Правая рука гильдии'
+    description: 'Выполните 50 контрактов.'
+    trigger: {type: counter, key: contracts.completed, at-least: 50}
+  contract_fulfilled_10:
+    category: craft
+    rarity: RARE
+    name: 'Слово дороже денег'
+    description: 'Выполните 10 контрактов других игроков.'
+    trigger: {type: counter, key: contracts.player.fulfilled, at-least: 10}
+  contract_posted_10:
+    category: craft
+    rarity: RARE
+    name: 'Работодатель'
+    description: 'Разместите 10 контрактов для других игроков.'
+    trigger: {type: counter, key: contracts.player.posted, at-least: 10}
+  duel_1:
+    category: duel
+    rarity: COMMON
+    name: 'Первая кровь'
+    description: 'Победите в своей первой дуэли.'
+    trigger: {type: counter, key: duels.won, at-least: 1}
+  duel_10:
+    category: duel
+    rarity: RARE
+    name: 'Дуэлянт'
+    description: 'Победите в 10 дуэлях.'
+    trigger: {type: counter, key: duels.won, at-least: 10}
+  duel_50:
+    category: duel
+    rarity: EPIC
+    name: 'Мастер клинка'
+    description: 'Победите в 50 дуэлях.'
+    reward-text: 'Оформление входа и выхода «Дуэлянт»'
+    trigger: {type: counter, key: duels.won, at-least: 50}
+  duel_100:
+    category: duel
+    rarity: LEGENDARY
+    name: 'Непобедимый'
+    description: 'Победите в 100 дуэлях.'
+    trigger: {type: counter, key: duels.won, at-least: 100}
+  duel_streak_5:
+    category: duel
+    rarity: EPIC
+    name: 'Серия побед'
+    description: 'Победите в 5 дуэлях подряд.'
+    trigger: {type: counter, key: duels.streak, at-least: 5}
+  duel_streak_10:
+    category: duel
+    rarity: LEGENDARY
+    name: 'Неудержимый'
+    description: 'Победите в 10 дуэлях подряд.'
+    trigger: {type: counter, key: duels.streak, at-least: 10}
+  royal_1:
+    category: duel
+    rarity: RARE
+    name: 'Королевская битва'
+    description: 'Победите в королевской дуэли.'
+    trigger: {type: counter, key: duels.royal, at-least: 1}
+  royal_10:
+    category: duel
+    rarity: EPIC
+    name: 'Король арены'
+    description: 'Победите в 10 королевских дуэлях.'
+    trigger: {type: counter, key: duels.royal, at-least: 10}
+  kill_1:
+    category: duel
+    rarity: COMMON
+    name: 'Первый противник'
+    description: 'Победите другого игрока в бою.'
+    trigger: {type: counter, key: kills, at-least: 1}
+  kill_100:
+    category: duel
+    rarity: RARE
+    name: 'Воин'
+    description: 'Победите 100 противников.'
+    trigger: {type: counter, key: kills, at-least: 100}
+  kill_1000:
+    category: duel
+    rarity: EPIC
+    name: 'Легенда поля боя'
+    description: 'Победите 1000 противников.'
+    trigger: {type: counter, key: kills, at-least: 1000}
+  death_1:
+    category: duel
+    rarity: COMMON
+    name: 'Первый раз не считается'
+    description: 'Погибните впервые.'
+    trigger: {type: counter, key: deaths, at-least: 1}
+  death_100:
+    category: duel
+    rarity: RARE
+    name: 'Закалённый'
+    description: 'Погибните 100 раз и продолжайте идти вперёд.'
+    trigger: {type: counter, key: deaths, at-least: 100}
+  play_1h:
+    category: play
+    rarity: COMMON
+    name: 'Освоился'
+    description: 'Проведите на сервере 1 час.'
+    trigger: {type: counter, key: play.hours, at-least: 1}
+  play_10h:
+    category: play
+    rarity: COMMON
+    name: 'Свой человек'
+    description: 'Проведите на сервере 10 часов.'
+    trigger: {type: counter, key: play.hours, at-least: 10}
+  play_50h:
+    category: play
+    rarity: RARE
+    name: 'Житель королевства'
+    description: 'Проведите на сервере 50 часов.'
+    trigger: {type: counter, key: play.hours, at-least: 50}
+  play_100h:
+    category: play
+    rarity: EPIC
+    name: 'Ветеран'
+    description: 'Проведите на сервере 100 часов.'
+    reward-text: 'Оформление входа и выхода «Ветеран»'
+    trigger: {type: counter, key: play.hours, at-least: 100}
+  play_500h:
+    category: play
+    rarity: LEGENDARY
+    name: 'Часть королевства'
+    description: 'Проведите на сервере 500 часов.'
+    trigger: {type: counter, key: play.hours, at-least: 500}
+  streak_3:
+    category: play
+    rarity: COMMON
+    name: 'Заглядывайте почаще'
+    description: 'Заходите на сервер 3 дня подряд.'
+    trigger: {type: counter, key: join.streak, at-least: 3}
+  streak_7:
+    category: play
+    rarity: RARE
+    name: 'Неделя на посту'
+    description: 'Заходите на сервер 7 дней подряд.'
+    trigger: {type: counter, key: join.streak, at-least: 7}
+  streak_30:
+    category: play
+    rarity: EPIC
+    name: 'Месяц без пропусков'
+    description: 'Заходите на сервер 30 дней подряд.'
+    trigger: {type: counter, key: join.streak, at-least: 30}
+  days_30:
+    category: play
+    rarity: RARE
+    name: 'Постоянный житель'
+    description: 'Заходите на сервер в 30 разных дней.'
+    trigger: {type: counter, key: join.days, at-least: 30}
+  days_100:
+    category: play
+    rarity: EPIC
+    name: 'Старожил'
+    description: 'Заходите на сервер в 100 разных дней.'
+    trigger: {type: counter, key: join.days, at-least: 100}
+  revive_1:
+    category: play
+    rarity: COMMON
+    name: 'Рука помощи'
+    description: 'Поднимите упавшего игрока.'
+    trigger: {type: counter, key: revive.saved, at-least: 1}
+  revive_10:
+    category: play
+    rarity: RARE
+    name: 'Спасатель'
+    description: 'Поднимите 10 упавших игроков.'
+    trigger: {type: counter, key: revive.saved, at-least: 10}
+  revive_50:
+    category: play
+    rarity: EPIC
+    name: 'Ангел-хранитель'
+    description: 'Поднимите 50 упавших игроков.'
+    reward-text: 'Оформление входа и выхода «Ангел»'
+    trigger: {type: counter, key: revive.saved, at-least: 50}
+  collector_10:
+    category: play
+    rarity: RARE
+    name: 'Коллекционер'
+    description: 'Получите 10 ачивок.'
+    trigger: {type: unlocked-count, at-least: 10}
+  collector_25:
+    category: play
+    rarity: EPIC
+    name: 'Собиратель'
+    description: 'Получите 25 ачивок.'
+    trigger: {type: unlocked-count, at-least: 25}
+  collector_50:
+    category: play
+    rarity: LEGENDARY
+    name: 'Хранитель славы'
+    description: 'Получите 50 ачивок.'
+    reward-text: 'Оформление входа и выхода «Легенда»'
+    trigger: {type: unlocked-count, at-least: 50}
+  secret_toast:
+    category: secret
+    rarity: RARE
+    hidden: true
+    name: 'Чин-чин'
+    hint: 'Бокалы любят компанию.'
+    description: 'Вы чокнулись с другим игроком, присев и кликнув по нему с напитком в руке.'
+    trigger: {type: manual}
+  secret_legendary_aging:
+    category: secret
+    rarity: EPIC
+    hidden: true
+    name: 'Выдержан годами'
+    hint: 'Время — лучший пивовар.'
+    description: 'Вы достали из бочки напиток, который пролежал там целый игровой год.'
+    trigger: {type: manual}
+  secret_perfectionists:
+    category: secret
+    rarity: RARE
+    hidden: true
+    name: 'Перфекционисты'
+    hint: 'Порядок в сундуке — порядок в голове.'
+    description: 'Вы закрыли сундук клана, в котором все занятые ячейки забиты одним предметом по 64 штуки.'
+    trigger: {type: manual}
+  secret_same_for_same:
+    category: secret
+    rarity: RARE
+    hidden: true
+    name: 'Бессмысленно, но честно'
+    hint: 'Иногда обмен — просто ритуал.'
+    description: 'Вы обменяли предметы на точно такие же.'
+    trigger: {type: manual}
+  secret_anniversary:
+    category: secret
+    rarity: RARE
+    hidden: true
+    name: 'С годовщиной!'
+    hint: 'Некоторые даты стоит отмечать.'
+    description: 'Вы зашли на сервер в годовщину своей регистрации.'
+    trigger: {type: manual}
+  secret_nine_lives:
+    category: secret
+    rarity: EPIC
+    hidden: true
+    name: 'Девять жизней'
+    hint: 'Говорят, у кошек их девять.'
+    description: 'Вас подняли три раза за одну жизнь.'
+    trigger: {type: manual}
+  secret_debt_repaid:
+    category: secret
+    rarity: EPIC
+    hidden: true
+    name: 'Долг платежом красен'
+    hint: 'Добро возвращается.'
+    description: 'Вас поднял тот, кого вы сами когда-то поднимали.'
+    trigger: {type: manual}
+  secret_western:
+    category: secret
+    rarity: EPIC
+    hidden: true
+    name: 'Как в вестерне'
+    hint: 'В хорошей дуэли иногда падают оба.'
+    description: 'Вы и соперник упали в дуэли одновременно.'
+    trigger: {type: manual}

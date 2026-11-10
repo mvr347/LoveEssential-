@@ -1484,6 +1484,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
           slot ->
               card(m, slot, Material.KNOWLEDGE_BOOK, "profile-menu.statistics-button",
                   "profile-menu.root-statistics-lore", target, () -> statistics(viewer, viewer)));
+      if (linkAvailable("achievements", viewer))
+        row.add(
+            slot ->
+                link(m, slot, "achievements", "profile-menu.achievements",
+                    "profile-menu.root-achievements-lore", Material.NETHER_STAR, target, true));
       if (linkAvailable("adaptations", viewer))
         row.add(
             slot ->

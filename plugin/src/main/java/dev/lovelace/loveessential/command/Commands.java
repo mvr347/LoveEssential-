@@ -78,6 +78,12 @@ public final class Commands implements CommandExecutor, TabCompleter {
     this.secrets = secrets;
   }
 
+  private dev.lovelace.loveessential.module.AchievementService achievements;
+
+  public void achievements(dev.lovelace.loveessential.module.AchievementService achievements) {
+    this.achievements = achievements;
+  }
+
   public void display(dev.lovelace.loveessential.module.DisplayPreferences displayPrefs) {
     this.displayPrefs = displayPrefs;
   }
@@ -350,9 +356,14 @@ public final class Commands implements CommandExecutor, TabCompleter {
         return true;
       }
       if (cmd.equals("secrets")) {
+        // The book of secrets is the category «secret» of the achievements now.
         plugin.requireAccess("secrets", p);
         if (!secrets.loaded(p.getUniqueId())) throw new IllegalArgumentException("errors.starting");
-        menus.direct(p, () -> menus.secretsMenu(p, 0));
+        menus.direct(p, () -> menus.achievementsMenu(p, "secret", 0));
+        return true;
+      }
+      if (cmd.equals("achievements")) {
+        achievements(p, args);
         return true;
       }
       if (cmd.equals("vanish")
@@ -798,6 +809,49 @@ public final class Commands implements CommandExecutor, TabCompleter {
    * {@code /display}: the menu, or {@code [own] <clan|suffix> <chat|tab|nametag> [on|off]}.
    * Changes the player's own signature for every viewer, including themselves.
    */
+  /** {@code /achievements}: the menu for everybody; give, take, reset, reload and list for administrators. */
+  private void achievements(Player p, String[] args) {
+    plugin.requireAccess("achievements", p);
+    boolean admin = p.hasPermission("loveessential.achievements.admin");
+    String sub = args.length == 0 ? "" : args[0].toLowerCase(Locale.ROOT);
+    if (!admin || sub.isEmpty() || !Set.of("give", "take", "reset", "reload", "list").contains(sub)) {
+      if (!achievements.loaded(p.getUniqueId())) throw new IllegalArgumentException("errors.starting");
+      menus.direct(p, () -> menus.achievementsMenu(p, args.length == 0 ? "all" : args[0], 0));
+      return;
+    }
+    switch (sub) {
+      case "reload" -> {
+        achievements.reload();
+        lang.send(p, "achievements.admin-reloaded", Map.of("count", "" + achievements.catalog().all().size()));
+      }
+      case "list" ->
+          lang.send(p, "achievements.admin-list", Map.of("ids", String.join(", ", achievements.catalogIds().stream().sorted().toList())));
+      default -> {
+        if (args.length < 2) throw new IllegalArgumentException("achievements.admin-usage");
+        var target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) throw new IllegalArgumentException("errors.not-found");
+        var id = target.getUniqueId();
+        if (!achievements.loaded(id)) throw new IllegalArgumentException("errors.starting");
+        switch (sub) {
+          case "reset" -> {
+            achievements.reset(id);
+            lang.send(p, "achievements.admin-reset", Map.of("player", target.getName()));
+          }
+          case "give", "take" -> {
+            if (args.length < 3 || !achievements.catalog().contains(args[2]))
+              throw new IllegalArgumentException("achievements.admin-unknown");
+            boolean changed = sub.equals("give") ? achievements.unlock(id, args[2]) : achievements.revoke(id, args[2]);
+            lang.send(
+                p,
+                changed ? "achievements.admin-done" : "achievements.admin-nothing",
+                Map.of("player", target.getName(), "id", args[2]));
+          }
+          default -> {}
+        }
+      }
+    }
+  }
+
   private void display(Player p, String[] args) {
     if (!plugin.module("display") || !love.authenticated(p))
       throw new IllegalArgumentException("errors.permission");
