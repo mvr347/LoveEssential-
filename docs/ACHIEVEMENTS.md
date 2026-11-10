@@ -36,3 +36,18 @@
 
 `/achievements give|take <ник> <id>`, `reset <ник>`, `list`, `reload` (право `loveessential.achievements.admin`).
 Сводные значения для текстов: `<achievements>`, `<achievements_total>`.
+
+## Ключи, которые кормят плагины-источники (волна 2)
+
+| Ключ / id | Кто сообщает | Как |
+|---|---|---|
+| `hunt_reaper` | LoveHunt | `unlock` (высший уровень билета, 50+ заказов, провалов меньше 1%) |
+| `clan_founder`, `clan_recruiter` | LoveClans | `unlock` |
+| `clan.war.won` | LoveClans | `progress` +1 онлайн-участникам победившего клана |
+| `brew.types` | LoveBrew | `collect` типа напитка (BEER, WINE, MEAD, CIDER, SPECIAL, DISTILLATE) |
+| `duels.lost`, `duels.played` | LoveDuels | `progress` |
+| `activities.won`, `activities.played` | LoveActivities | `progress` |
+| `behavior.politeness.level` | LoveBehaivor | `set` |
+| `claims.created` | LoveClaims | `progress` |
+
+Оформления входа и выхода «Смерть», «Основатель», «Сомелье», «Полководец», «Чемпион» открываются соответствующими ачивками. Пока плагин-источник не обновлён, его ачивка просто не выдаётся.
