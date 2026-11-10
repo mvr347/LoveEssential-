@@ -2339,6 +2339,10 @@ bindings:
   file: gui.yml
   key: secrets.gui-title
   path: menus.secrets-gui-title.title
+- module: joinquit
+  file: gui.yml
+  key: joinquit.gui-title
+  path: menus.joinquit-gui-title.title
 - module: npc
   file: gui.yml
   key: module-menu.descriptions.vanish
@@ -3351,6 +3355,14 @@ bindings:
   file: gui.yml
   key: nick.suffixes-lore
   path: menus.nick-title.labels.nick.suffixes-lore
+- module: nickname
+  file: gui.yml
+  key: nick.joinquit
+  path: menus.nick-title.labels.nick.joinquit
+- module: nickname
+  file: gui.yml
+  key: nick.joinquit-lore
+  path: menus.nick-title.labels.nick.joinquit-lore
 - module: nickname
   file: gui.yml
   key: nick.color-lore

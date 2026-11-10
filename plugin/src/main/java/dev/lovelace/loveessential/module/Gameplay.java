@@ -218,13 +218,22 @@ public final class Gameplay implements Listener, AutoCloseable {
                       applyVanish();
                       var vanilla = vanillaJoin.remove(id);
                       if (!announce || vanished(p)) return;
-                      var message =
-                          ((LoveEssentialPlugin) plugin).allows("joinquit", p)
-                              ? lang.render("joinquit.join", Map.of("player", p.getName()))
-                              : vanilla;
-                      if (message != null)
-                        for (var viewer : Bukkit.getOnlinePlayers())
-                          if (viewer.canSee(p)) viewer.sendMessage(message);
+                      Runnable announceJoin =
+                          () -> {
+                            var message =
+                                ((LoveEssentialPlugin) plugin).allows("joinquit", p)
+                                    ? (joinQuit == null
+                                        ? lang.render("joinquit.join", Map.of("player", p.getName()))
+                                        : joinQuit.join(p))
+                                    : vanilla;
+                            if (message != null)
+                              for (var viewer : Bukkit.getOnlinePlayers())
+                                if (viewer.canSee(p) && !vanished(p)) viewer.sendMessage(message);
+                          };
+                      // The player's chosen style is read from the store first; the default is used if that fails.
+                      if (joinQuit != null && ((LoveEssentialPlugin) plugin).allows("joinquit", p))
+                        joinQuit.afterLoaded(p, announceJoin);
+                      else announceJoin.run();
                     }));
   }
 
@@ -278,6 +287,13 @@ public final class Gameplay implements Listener, AutoCloseable {
                 && !viewer.hasPermission("loveessential.vanish.see");
         visibility.set("vanish", viewer.getUniqueId(), target.getUniqueId(), hidden);
       }
+  }
+
+  /** The catalogue of join and quit messages players choose from; set once by the plugin at startup. */
+  private JoinQuitStyles joinQuit;
+
+  public void joinQuit(JoinQuitStyles value) {
+    joinQuit = value;
   }
 
   /** Shared arbiter for every hidePlayer/showPlayer decision; set once by the plugin at startup. */
@@ -718,7 +734,9 @@ public final class Gameplay implements Listener, AutoCloseable {
       e.quitMessage(
           vanished(p) || !((LoveEssentialPlugin) plugin).allows("joinquit", p)
               ? null
-              : lang.render("joinquit.quit", Map.of("player", p.getName())));
+              : joinQuit == null
+                  ? lang.render("joinquit.quit", Map.of("player", p.getName()))
+                  : joinQuit.quit(p));
     else if (vanished(p)) e.quitMessage(null);
     vanillaJoin.remove(p.getUniqueId());
     loadSessions.remove(p.getUniqueId());

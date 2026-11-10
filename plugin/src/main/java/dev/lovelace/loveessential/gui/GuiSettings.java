@@ -26,6 +26,7 @@ public final class GuiSettings {
     if (id.startsWith("world")) return "worlds";
     if (id.startsWith("windows") || id.startsWith("dialog")) return "dialogs";
     if (id.startsWith("motd")) return "motd";
+    if (id.startsWith("joinquit")) return "joinquit";
     if (id.startsWith("comfort")) return "sitride";
     if (id.startsWith("inventory")) return "inventory";
     if (id.startsWith("profile") || id.startsWith("public-profile") || id.startsWith("players"))
