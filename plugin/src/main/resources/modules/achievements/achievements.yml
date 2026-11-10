@@ -99,6 +99,13 @@ catalog:
     name: 'Охотничья слава'
     description: 'Получите все ачивки охоты по числу заказов.'
     trigger: {type: all-of, ids: [hunt_1, hunt_10, hunt_50, hunt_100, hunt_250]}
+  hunt_reaper:
+    category: hunt
+    rarity: LEGENDARY
+    name: 'Жнец'
+    description: 'Достигните высшего уровня билета охотника, выполните не меньше 50 заказов и провалите меньше 1% взятых.'
+    reward-text: 'Оформление входа и выхода «Смерть»'
+    trigger: {type: manual}
   brew_1:
     category: craft
     rarity: COMMON
@@ -191,6 +198,37 @@ catalog:
     name: 'Работодатель'
     description: 'Разместите 10 контрактов для других игроков.'
     trigger: {type: counter, key: contracts.player.posted, at-least: 10}
+  brew_all_types:
+    category: craft
+    rarity: EPIC
+    name: 'Сомелье'
+    description: 'Сварите все виды напитков: пиво, вино, медовуху, сидр, специальные и дистиллят.'
+    reward-text: 'Оформление входа и выхода «Сомелье»'
+    trigger: {type: set, key: brew.types, values: [BEER, WINE, MEAD, CIDER, SPECIAL, DISTILLATE]}
+  shop_sold_100:
+    category: craft
+    rarity: COMMON
+    name: 'Первая выручка'
+    description: 'Продайте скупщику 100 предметов.'
+    trigger: {type: counter, key: shop.sold, at-least: 100}
+  shop_sold_1000:
+    category: craft
+    rarity: EPIC
+    name: 'Торговый дом'
+    description: 'Продайте скупщику 1000 предметов.'
+    trigger: {type: counter, key: shop.sold, at-least: 1000}
+  claims_created_1:
+    category: craft
+    rarity: COMMON
+    name: 'Свой угол'
+    description: 'Заприватьте свой первый участок.'
+    trigger: {type: counter, key: claims.created, at-least: 1}
+  claims_created_5:
+    category: craft
+    rarity: RARE
+    name: 'Землевладелец'
+    description: 'Заприватьте 5 участков.'
+    trigger: {type: counter, key: claims.created, at-least: 5}
   duel_1:
     category: duel
     rarity: COMMON
@@ -270,6 +308,43 @@ catalog:
     name: 'Закалённый'
     description: 'Погибните 100 раз и продолжайте идти вперёд.'
     trigger: {type: counter, key: deaths, at-least: 100}
+  duel_lost_10:
+    category: duel
+    rarity: COMMON
+    name: 'Школа поражений'
+    description: 'Проиграйте 10 дуэлей: проигрыш тоже опыт.'
+    trigger: {type: counter, key: duels.lost, at-least: 10}
+  duel_played_100:
+    category: duel
+    rarity: RARE
+    name: 'Ветеран арены'
+    description: 'Сыграйте 100 дуэлей, неважно с каким исходом.'
+    trigger: {type: counter, key: duels.played, at-least: 100}
+  activities_played_25:
+    category: duel
+    rarity: COMMON
+    name: 'Душа компании'
+    description: 'Сыграйте в 25 мини-игр и активностей.'
+    trigger: {type: counter, key: activities.played, at-least: 25}
+  activities_won_1:
+    category: duel
+    rarity: COMMON
+    name: 'Первая победа'
+    description: 'Выиграйте свою первую мини-игру.'
+    trigger: {type: counter, key: activities.won, at-least: 1}
+  activities_won_10:
+    category: duel
+    rarity: RARE
+    name: 'Любимец публики'
+    description: 'Выиграйте 10 мини-игр.'
+    trigger: {type: counter, key: activities.won, at-least: 10}
+  activities_won_50:
+    category: duel
+    rarity: EPIC
+    name: 'Чемпион'
+    description: 'Выиграйте 50 мини-игр.'
+    reward-text: 'Оформление входа и выхода «Чемпион»'
+    trigger: {type: counter, key: activities.won, at-least: 50}
   play_1h:
     category: play
     rarity: COMMON
@@ -369,6 +444,38 @@ catalog:
     description: 'Получите 50 ачивок.'
     reward-text: 'Оформление входа и выхода «Легенда»'
     trigger: {type: unlocked-count, at-least: 50}
+  clan_founder:
+    category: play
+    rarity: RARE
+    name: 'Основатель'
+    description: 'Создайте свой клан.'
+    reward-text: 'Оформление входа и выхода «Основатель»'
+    trigger: {type: manual}
+  clan_recruiter:
+    category: play
+    rarity: RARE
+    name: 'Вербовщик'
+    description: 'Примите в свой клан первого игрока.'
+    trigger: {type: manual}
+  clan_war_won_1:
+    category: play
+    rarity: RARE
+    name: 'Первая победа клана'
+    description: 'Выиграйте клановую войну.'
+    trigger: {type: counter, key: clan.war.won, at-least: 1}
+  clan_war_won_10:
+    category: play
+    rarity: EPIC
+    name: 'Полководец'
+    description: 'Одержите 10 побед в клановых войнах.'
+    reward-text: 'Оформление входа и выхода «Полководец»'
+    trigger: {type: counter, key: clan.war.won, at-least: 10}
+  polite_6:
+    category: play
+    rarity: EPIC
+    name: 'Образец вежливости'
+    description: 'Достигните высшей ступени вежливости.'
+    trigger: {type: counter, key: behavior.politeness.level, at-least: 6}
   secret_toast:
     category: secret
     rarity: RARE

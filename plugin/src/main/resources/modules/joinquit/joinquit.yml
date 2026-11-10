@@ -114,3 +114,33 @@ styles:
     achievement: collector_50
     join: '<gradient:#ffd166:#ff6b6b>✦ Легенда королевства: <player> входит ✦</gradient>'
     quit: '<gradient:#ff6b6b:#ffd166>✦ Легенда королевства: <player> покидает нас ✦</gradient>'
+  death:
+    name: Смерть
+    icon: WITHER_SKELETON_SKULL
+    achievement: hunt_reaper
+    join: '<dark_gray>✦ <gray>Смерть под ником <white><player> <gray>явилась в королевство.'
+    quit: '<dark_gray>✦ <gray>Смерть в облике <white><player> <gray>покинула королевство.'
+  founder:
+    name: Основатель
+    icon: WHITE_BANNER
+    achievement: clan_founder
+    join: '<aqua>⚜ <gray>Основатель клана <white><player> <gray>входит в игру.'
+    quit: '<aqua>⚜ <gray>Основатель клана <white><player> <gray>оставляет клан на заместителей.'
+  sommelier:
+    name: Сомелье
+    icon: GLASS_BOTTLE
+    achievement: brew_all_types
+    join: '<dark_red>✦ <gray>Сомелье <white><player> <gray>пробует урожай года.'
+    quit: '<dark_red>✦ <gray>Сомелье <white><player> <gray>оставляет бокал и уходит.'
+  warlord:
+    name: Полководец
+    icon: GOLDEN_SWORD
+    achievement: clan_war_won_10
+    join: '<red>⚔ <gray>Полководец <white><player> <gray>возвращается с поля боя.'
+    quit: '<red>⚔ <gray>Полководец <white><player> <gray>уводит войска на отдых.'
+  champion:
+    name: Чемпион
+    icon: GOLD_INGOT
+    achievement: activities_won_50
+    join: '<yellow>✦ <gray>Чемпион <white><player> <gray>выходит на арену под овации.'
+    quit: '<yellow>✦ <gray>Чемпион <white><player> <gray>уходит с кубком.'
