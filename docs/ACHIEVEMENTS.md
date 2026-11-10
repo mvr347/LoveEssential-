@@ -48,7 +48,6 @@
 | `duels.lost`, `duels.played` | LoveDuels | `progress` |
 | `activities.won`, `activities.played` | LoveActivities | `progress` |
 | `behavior.politeness.level` | LoveBehaivor | `set` |
-| `shop.sold` | LoveShop | `progress` (штук проданного скупщику) |
 | `claims.created` | LoveClaims | `progress` |
 
 Оформления входа и выхода «Смерть», «Основатель», «Сомелье», «Полководец», «Чемпион» открываются соответствующими ачивками. Пока плагин-источник не обновлён, его ачивка просто не выдаётся.

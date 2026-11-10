@@ -205,18 +205,6 @@ catalog:
     description: 'Сварите все виды напитков: пиво, вино, медовуху, сидр, специальные и дистиллят.'
     reward-text: 'Оформление входа и выхода «Сомелье»'
     trigger: {type: set, key: brew.types, values: [BEER, WINE, MEAD, CIDER, SPECIAL, DISTILLATE]}
-  shop_sold_100:
-    category: craft
-    rarity: COMMON
-    name: 'Первая выручка'
-    description: 'Продайте скупщику 100 предметов.'
-    trigger: {type: counter, key: shop.sold, at-least: 100}
-  shop_sold_1000:
-    category: craft
-    rarity: EPIC
-    name: 'Торговый дом'
-    description: 'Продайте скупщику 1000 предметов.'
-    trigger: {type: counter, key: shop.sold, at-least: 1000}
   claims_created_1:
     category: craft
     rarity: COMMON
