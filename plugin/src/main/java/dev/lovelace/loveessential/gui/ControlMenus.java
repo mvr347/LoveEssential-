@@ -400,7 +400,16 @@ public final class ControlMenus implements Listener, AutoCloseable {
           "join", lang.renderText(style.join(), Map.of("player", p.getName())));
       parts.put(
           "quit", lang.renderText(style.quit(), Map.of("player", p.getName())));
-      parts.put("status", lang.render(selected ? "joinquit.status-selected" : open ? "joinquit.status-open" : "joinquit.status-locked"));
+      String lockedBy = joinQuit.achievementName(style);
+      parts.put(
+          "status",
+          selected
+              ? lang.render("joinquit.status-selected")
+              : open
+                  ? lang.render("joinquit.status-open")
+                  : lockedBy.isBlank()
+                      ? lang.render("joinquit.status-locked")
+                      : lang.renderText(lang.text("joinquit.status-achievement"), Map.of("achievement", lockedBy)));
       String nameKey = selected ? "joinquit.tile-selected" : open ? "joinquit.tile" : "joinquit.tile-locked";
       tile(
           m,
@@ -423,91 +432,235 @@ public final class ControlMenus implements Listener, AutoCloseable {
                             }));
           });
     }
+    // Administrators only: enter and leave without a message (gui_gen: a single header control sits on slot 4).
+    if (p.hasPermission(dev.lovelace.loveessential.module.JoinQuitStyles.SILENT_PERMISSION)) {
+      boolean quiet = joinQuit.silent(p);
+      int slot = MenuStyle.headerSlot(0, 1);
+      m.inventory.setItem(
+          slot,
+          MenuStyle.head(
+              quiet ? DISPLAY_TOGGLE_ON : DISPLAY_TOGGLE_OFF,
+              lang.render(quiet ? "joinquit.silent-on" : "joinquit.silent-off"),
+              lang.lines("joinquit.silent-lore").stream()
+                  .map(l -> lang.renderText(l, Map.of()))
+                  .toList()));
+      m.actions.put(
+          slot,
+          click ->
+              joinQuit
+                  .setSilent(p, !quiet)
+                  .whenComplete(
+                      (done, error) ->
+                          main.execute(
+                              () -> {
+                                if (p.isOnline()) joinQuitMenu(p, shown);
+                              })));
+    }
     navigation(m, p, shown, catalog.size(), capacity, target -> joinQuitMenu(p, target), () -> nicknameAgain(p));
     MenuStyle.open(p, m.inventory);
   }
 
-  private dev.lovelace.loveessential.module.Secrets secrets;
+  private dev.lovelace.loveessential.module.AchievementService achievements;
 
-  public void secrets(dev.lovelace.loveessential.module.Secrets book) {
-    this.secrets = book;
+  public void achievements(dev.lovelace.loveessential.module.AchievementService service) {
+    this.achievements = service;
   }
 
-  /** The book of secrets: found ones with their description, the rest as a hint. */
-  public void secretsMenu(Player p, int page) {
-    var m = menu(p, "secrets.gui-title", Map.of(), player -> plugin.module("secrets"));
-    var catalog = secrets.catalog();
-    var foundAt = secrets.foundAt(p.getUniqueId());
+  private static final String ALL_CATEGORIES = "all";
+
+  private static net.kyori.adventure.text.format.NamedTextColor rarityColor(
+      dev.lovelace.lovecore.api.achievements.AchievementRarity rarity) {
+    return switch (rarity) {
+      case COMMON -> net.kyori.adventure.text.format.NamedTextColor.WHITE;
+      case RARE -> net.kyori.adventure.text.format.NamedTextColor.AQUA;
+      case EPIC -> net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE;
+      case LEGENDARY -> net.kyori.adventure.text.format.NamedTextColor.GOLD;
+    };
+  }
+
+  /** The categories shown as header controls: those of the config that the catalogue uses, at most five. */
+  private List<String> achievementCategories() {
+    var config = plugin.getConfig().getConfigurationSection("achievements.categories");
+    var used = new java.util.HashSet<>(achievements.catalog().categories());
+    var result = new ArrayList<String>();
+    if (config != null)
+      for (String id : config.getKeys(false)) if (used.contains(id)) result.add(id);
+    // gui_gen: at most six header controls, one of them is «all».
+    return result.size() > 5 ? List.copyOf(result.subList(0, 5)) : List.copyOf(result);
+  }
+
+  /** The achievements, one category or all of them; a child of nothing (opened by the command or from the profile). */
+  public void achievementsMenu(Player p, String category, int page) {
+    var m = menu(p, "achievements.gui-title", Map.of(), player -> plugin.module("achievements"));
+    var id = p.getUniqueId();
+    var catalog = achievements.catalog();
+    var unlocked = achievements.unlockedAt(id);
+    var categories = achievementCategories();
+    String shownCategory = categories.contains(category) ? category : ALL_CATEGORIES;
+    var defs =
+        catalog.all().stream()
+            .filter(d -> shownCategory.equals(ALL_CATEGORIES) || d.category().equals(shownCategory))
+            .toList();
     int capacity = MenuStyle.CONTENT.length;
-    int pages = Math.max(1, (catalog.size() + capacity - 1) / capacity);
+    int pages = Math.max(1, (defs.size() + capacity - 1) / capacity);
     int shown = Math.max(0, Math.min(page, pages - 1));
     int from = shown * capacity;
-    int to = Math.min(catalog.size(), from + capacity);
-    var format =
-        java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
-            .withZone(java.time.ZoneId.systemDefault());
-    int found = 0;
-    for (var entry : catalog) if (foundAt.containsKey(entry.id())) found++;
-    for (int i = from; i < to; i++) {
-      var entry = catalog.get(i);
-      int slot = MenuStyle.slot(i - from, to - from);
-      Long when = foundAt.get(entry.id());
-      var vars = new HashMap<String, String>();
-      vars.put("name", entry.name());
-      vars.put("hint", entry.hint());
-      if (when != null) {
-        vars.put("date", format.format(java.time.Instant.ofEpochMilli(when)));
-        entry(
-            m,
-            slot,
-            entry.icon(),
-            lang.renderText(lang.text("secrets.tile-found-name"), vars),
-            secretLore(lang.lines("secrets.tile-found-lore"), vars, entry.description()),
-            c -> {});
-      } else {
-        entry(
-            m,
-            slot,
-            Material.BOOK,
-            lang.render("secrets.unknown-name"),
-            secretLore(lang.lines("secrets.tile-unknown-lore"), vars, entry.hint()),
-            c -> {});
-      }
+    int to = Math.min(defs.size(), from + capacity);
+    // Header controls: «all» and the categories, centred by their number.
+    var controls = new ArrayList<String>();
+    controls.add(ALL_CATEGORIES);
+    controls.addAll(categories);
+    for (int i = 0; i < controls.size(); i++) {
+      String control = controls.get(i);
+      int slot = MenuStyle.headerSlot(i, controls.size());
+      boolean current = control.equals(shownCategory);
+      long owned =
+          catalog.all().stream()
+              .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
+              .filter(d -> unlocked.containsKey(d.id()))
+              .count();
+      long total =
+          catalog.all().stream()
+              .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
+              .count();
+      var name =
+          control.equals(ALL_CATEGORIES)
+              ? lang.render("achievements.category-all")
+              : Component.text(plugin.getConfig().getString("achievements.categories." + control + ".name", control));
+      var title =
+          lang.renderText(
+              lang.text(current ? "achievements.category-current" : "achievements.category"),
+              Map.of("name", plainText(name)));
+      var lore =
+          lang.lines("achievements.category-lore").stream()
+              .map(line -> lang.renderText(line, Map.of("owned", "" + owned, "total", "" + total)))
+              .toList();
+      String texture =
+          control.equals(ALL_CATEGORIES)
+              ? plugin.getConfig().getString("achievements.all-texture", "")
+              : plugin.getConfig().getString("achievements.categories." + control + ".texture", "");
+      m.inventory.setItem(slot, MenuStyle.head(texture, title, lore));
+      m.actions.put(slot, click -> achievementsMenu(p, control, 0));
     }
-    int filled = dev.lovelace.loveessential.module.SecretRules.filled(found, catalog.size());
-    var bar =
-        Component.text("█".repeat(filled), net.kyori.adventure.text.format.NamedTextColor.GREEN)
-            .append(
-                Component.text(
-                    "░".repeat(dev.lovelace.loveessential.module.SecretRules.BAR - filled),
-                    net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY));
+    for (int i = from; i < to; i++) {
+      var def = defs.get(i);
+      int slot = MenuStyle.slot(i - from, to - from);
+      boolean done = unlocked.containsKey(def.id());
+      boolean covered = def.hidden() && !done;
+      var color = rarityColor(def.rarity());
+      Component title =
+          covered
+              ? lang.render("achievements.hidden-name")
+              : lang.renderText(
+                  lang.text(done ? "achievements.tile-done" : "achievements.tile-todo"),
+                  Map.of("name", def.name()));
+      if (!covered && done) title = title.color(color);
+      var lore = achievementLore(def, id, unlocked.get(def.id()), covered);
+      String texture =
+          !def.icon().isBlank()
+              ? def.icon()
+              : plugin.getConfig().getString("achievements.rarity-heads." + def.rarity().name(), "");
+      m.inventory.setItem(slot, MenuStyle.head(texture, title, lore));
+      m.actions.put(slot, click -> {});
+    }
+    long total = catalog.all().size();
+    long owned = catalog.all().stream().filter(d -> unlocked.containsKey(d.id())).count();
+    int filled = dev.lovelace.loveessential.module.SecretRules.filled((int) owned, (int) total);
     tile(
         m,
         50,
         Material.ENCHANTED_BOOK,
-        "secrets.progress-name",
-        "secrets.progress-lore",
-        Map.of("found", "" + found, "total", "" + catalog.size()),
-        Map.of("bar", bar),
+        "achievements.progress-name",
+        "achievements.progress-lore",
+        Map.of("owned", "" + owned, "total", "" + total),
+        Map.of("bar", progressBar(filled)),
         c -> {});
-    navigation(m, p, shown, catalog.size(), capacity, target -> secretsMenu(p, target), () -> {});
+    navigation(
+        m, p, shown, defs.size(), capacity, target -> achievementsMenu(p, shownCategory, target), () -> {});
     MenuStyle.open(p, m.inventory);
   }
 
-  /** Lore from a language list; the line holding {@code <description>} is repeated per wrapped row. */
-  private List<Component> secretLore(List<String> template, Map<String, String> vars, String text) {
+  private static String plainText(Component component) {
+    return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(component);
+  }
+
+  private static Component progressBar(int filled) {
+    return Component.text("█".repeat(filled), net.kyori.adventure.text.format.NamedTextColor.GREEN)
+        .append(
+            Component.text(
+                "░".repeat(dev.lovelace.loveessential.module.SecretRules.BAR - filled),
+                net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY));
+  }
+
+  /** Lore of one achievement tile from the language lists; blocks that do not apply are left out. */
+  private List<Component> achievementLore(
+      dev.lovelace.loveessential.module.AchievementCatalog.Def def, UUID player, Long unlockedAt, boolean covered) {
     var lore = new ArrayList<Component>();
-    for (String line : template) {
-      if (!line.contains("<description>") && !line.contains("<hint>")) {
-        lore.add(lang.renderText(line, vars));
-        continue;
-      }
-      for (String row : dev.lovelace.loveessential.module.SecretRules.wrap(text, 38))
+    var vars = new HashMap<String, String>();
+    var rarity = lang.render("achievements.rarity-" + def.rarity().name().toLowerCase(Locale.ROOT));
+    vars.put("reward", def.rewardText());
+    vars.put(
+        "date",
+        unlockedAt == null
+            ? ""
+            : java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                .withZone(java.time.ZoneId.systemDefault())
+                .format(java.time.Instant.ofEpochMilli(unlockedAt)));
+    var progress = progressOf(def, player);
+    String text = covered ? def.hint() : def.description();
+    for (String line : lang.lines(covered ? "achievements.tile-hidden-lore" : "achievements.tile-lore")) {
+      if (line.contains("<description>")) {
+        for (String row : dev.lovelace.loveessential.module.SecretRules.wrap(text, 38))
+          lore.add(lang.renderText(line.replace("<description>", row), vars, Map.of("rarity", rarity)));
+      } else if (line.equals("<progress-block>")) {
+        if (!covered && unlockedAt == null && progress != null) {
+          vars.put("current", progress.current());
+          vars.put("target", progress.target());
+          for (String block : lang.lines("achievements.tile-progress"))
+            lore.add(
+                lang.renderText(
+                    block, vars, Map.of("bar", progressBar(progress.filled()))));
+        }
+      } else if (line.equals("<reward-block>")) {
+        if (!covered && !def.rewardText().isBlank())
+          for (String block : lang.lines("achievements.tile-reward"))
+            lore.add(lang.renderText(block, vars));
+      } else if (line.equals("<status>")) {
         lore.add(
             lang.renderText(
-                line.replace("<description>", row).replace("<hint>", row), vars));
+                lang.text(unlockedAt == null ? "achievements.status-todo" : "achievements.status-done"), vars));
+      } else lore.add(lang.renderText(line, vars, Map.of("rarity", rarity)));
     }
     return lore;
+  }
+
+  /** Numbers for the progress block of a tile; null when the achievement has no countable progress. */
+  private record TileProgress(String current, String target, int filled) {}
+
+  private TileProgress progressOf(dev.lovelace.loveessential.module.AchievementCatalog.Def def, UUID player) {
+    var trigger = def.trigger();
+    if (trigger instanceof dev.lovelace.loveessential.module.AchievementCatalog.Trigger.Counter c) {
+      double value = Math.min(achievements.counter(player, c.key()), c.atLeast());
+      return new TileProgress(number(value), number(c.atLeast()), barCells(value, c.atLeast()));
+    }
+    if (trigger instanceof dev.lovelace.loveessential.module.AchievementCatalog.Trigger.Collected c) {
+      long have = c.values().stream().filter(achievements.collected(player, c.key())::contains).count();
+      return new TileProgress("" + have, "" + c.values().size(), barCells(have, c.values().size()));
+    }
+    if (trigger instanceof dev.lovelace.loveessential.module.AchievementCatalog.Trigger.AllOf c) {
+      var owned = achievements.unlockedIds(player);
+      long have = c.ids().stream().filter(owned::contains).count();
+      return new TileProgress("" + have, "" + c.ids().size(), barCells(have, c.ids().size()));
+    }
+    return null;
+  }
+
+  private static int barCells(double have, double total) {
+    return dev.lovelace.loveessential.module.SecretRules.filled((int) Math.floor(have * 1000), (int) Math.floor(total * 1000));
+  }
+
+  private static String number(double value) {
+    return value == Math.rint(value) ? Long.toString((long) value) : String.format(Locale.ROOT, "%.1f", value);
   }
 
   private static final String[] VANISH_FILTERS = {"all", "world", "near"};
@@ -706,6 +859,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
             case "traces" -> Material.FEATHER;
             case "calamities" -> Material.WITHER_ROSE;
             case "secrets" -> Material.ENCHANTED_BOOK;
+            case "achievements" -> Material.NETHER_STAR;
             default -> Material.COMPARATOR;
           },
           lang.render("gui.module-names." + id),

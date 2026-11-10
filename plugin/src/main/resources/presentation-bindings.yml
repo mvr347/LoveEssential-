@@ -2335,10 +2335,14 @@ bindings:
   file: gui.yml
   key: module-menu.descriptions.secrets
   path: menus.module-menu-title.labels.module-menu.descriptions.secrets
-- module: secrets
+- module: npc
   file: gui.yml
-  key: secrets.gui-title
-  path: menus.secrets-gui-title.title
+  key: module-menu.descriptions.achievements
+  path: menus.module-menu-title.labels.module-menu.descriptions.achievements
+- module: achievements
+  file: gui.yml
+  key: achievements.gui-title
+  path: menus.achievements-gui-title.title
 - module: joinquit
   file: gui.yml
   key: joinquit.gui-title
@@ -3215,6 +3219,14 @@ bindings:
   file: gui.yml
   key: profile-menu.root-statistics-lore
   path: menus.profile-menu-title.labels.profile-menu.root-statistics-lore
+- module: profile
+  file: gui.yml
+  key: profile-menu.root-achievements-lore
+  path: menus.profile-menu-title.labels.profile-menu.root-achievements-lore
+- module: profile
+  file: gui.yml
+  key: profile-menu.achievements
+  path: menus.profile-menu-title.labels.profile-menu.achievements
 - module: profile
   file: gui.yml
   key: profile-menu.root-adaptations-lore

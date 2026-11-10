@@ -220,6 +220,8 @@ public final class Gameplay implements Listener, AutoCloseable {
                       if (!announce || vanished(p)) return;
                       Runnable announceJoin =
                           () -> {
+                            // An administrator who switched the messages off enters without one.
+                            if (joinQuit != null && joinQuit.silent(p)) return;
                             var message =
                                 ((LoveEssentialPlugin) plugin).allows("joinquit", p)
                                     ? (joinQuit == null
@@ -732,7 +734,9 @@ public final class Gameplay implements Listener, AutoCloseable {
     var p = e.getPlayer();
     if (enabled.test("joinquit"))
       e.quitMessage(
-          vanished(p) || !((LoveEssentialPlugin) plugin).allows("joinquit", p)
+          vanished(p)
+                  || (joinQuit != null && joinQuit.silent(p))
+                  || !((LoveEssentialPlugin) plugin).allows("joinquit", p)
               ? null
               : joinQuit == null
                   ? lang.render("joinquit.quit", Map.of("player", p.getName()))

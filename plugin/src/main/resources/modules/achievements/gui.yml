@@ -1,0 +1,75 @@
+menus:
+  achievements-gui-title:
+    size: 54
+    title: <gold>Достижения
+frame:
+  material: GRAY_STAINED_GLASS_PANE
+navigation:
+  back:
+    texture: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+  close:
+    texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
+messages:
+  achievements:
+    category-all: Все достижения
+    category: '<gold><name>'
+    category-current: '<yellow>▶ <gold><name>'
+    category-lore:
+    - <dark_gray>Раздел достижений
+    - ''
+    - '<dark_gray>▪ <gray>Получено:'
+    - '  <white><owned> <gray>из <white><total>'
+    - ''
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>показать этот раздел
+    hidden-name: '<gray>? ? ?'
+    tile-done: '<green>✔ <white><name>'
+    tile-todo: '<gray><name>'
+    tile-lore:
+    - '<dark_gray>Достижение · <rarity>'
+    - ''
+    - '  <gray><description>'
+    - ''
+    - '<progress-block>'
+    - '<reward-block>'
+    - '<status>'
+    tile-hidden-lore:
+    - '<dark_gray>Скрытое достижение · <rarity>'
+    - ''
+    - '<dark_gray>▪ <gray>Подсказка:'
+    - '  <gray><description>'
+    - ''
+    - '<status>'
+    tile-progress:
+    - '<dark_gray>▪ <gray>Прогресс: <white><current><dark_gray>/<white><target>'
+    - '  <bar>'
+    - ''
+    tile-reward:
+    - '<dark_gray>▪ <gray>Награда:'
+    - '  <gold><reward>'
+    - ''
+    status-done: '<green>Получено: <white><date>'
+    status-todo: '<red>Ещё не получено'
+    rarity-common: '<white>Обычная'
+    rarity-rare: '<aqua>Редкая'
+    rarity-epic: '<light_purple>Эпическая'
+    rarity-legendary: '<gold>Легендарная'
+    progress-name: '<gold>Получено достижений <dark_gray>| <white><owned> <gray>из <white><total>'
+    progress-lore:
+    - <dark_gray>Прогресс
+    - ''
+    - '<dark_gray>▪ <gray>Коллекция:'
+    - '  <bar>'
+    - '  <gray>Получено: <white><owned> <gray>из <white><total>'
+    unlocked: '<gold>✦ Достижение получено: <white><name></white> <dark_gray>(<rarity><dark_gray>)'
+    unlocked-detail: '<gray><description>'
+    unlocked-reward: '<dark_gray>Награда: <gold><reward>'
+    broadcast: '<gold>✦ <white><player></white> <gray>получает легендарное достижение «<white><name></white><gray>»!'
+    admin-usage: '<yellow>/achievements give|take <ник> <id>, reset <ник>, list, reload'
+    admin-reloaded: '<green>Каталог перечитан: достижений <white><count></white>.'
+    admin-list: '<gray>Достижения: <white><ids></white>'
+    admin-reset: '<green>Прогресс игрока <white><player></white> сброшен.'
+    admin-unknown: '<red>Такого достижения нет в каталоге. Список: <white>/achievements list</white>'
+    admin-done: '<green>Готово: <white><id></white> у игрока <white><player></white>.'
+    admin-nothing: '<yellow>Ничего не изменилось: <white><id></white> у игрока <white><player></white>.'
+    usage: '<yellow>/achievements <gray>— открыть достижения'

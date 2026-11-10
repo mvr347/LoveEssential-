@@ -131,6 +131,8 @@ commands:
     aliases: [бедствие, беда]
   secrets:
     aliases: [тайны]
+  achievements:
+    aliases: [ачивки, достижения]
 permissions:
   loveessential.calamities.admin:
     description: Запуск, остановка и настройка бедствий
@@ -277,6 +279,9 @@ permissions:
     default: op
   loveessential.heal.others:
     description: Применять команду к другому игроку и из консоли.
+    default: op
+  loveessential.achievements.admin:
+    description: Выдача, снятие и сброс достижений, перечитывание каталога
     default: op
   loveessential.display.own:
     description: Устаревшее право совместимости; управление своими подписями доступно всем.

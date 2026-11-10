@@ -362,6 +362,8 @@ menus:
           - '<gray>Бедствия на весь мир: жуки, неплодородие, чума скота, нечисть; голод и цинга. /calamity.'
           secrets:
           - '<gray>Книга тайн: список найденных пасхалок. /secrets.'
+          achievements:
+          - '<gray>Общие достижения: ачивки за дела на сервере, награды в оформлениях входа и пометках. /achievements.'
           crafting:
           - '<gray>Рецепты Paper с формой и без неё. Редактор: /le recipes.'
           starter:
@@ -645,6 +647,7 @@ messages:
       display: Теги и пометки
       calamities: Бедствия
       secrets: Книга тайн
+      achievements: Достижения
       crafting: Рецепты крафта
       starter: Стартовые предметы
       nickname: Никнеймы
@@ -676,6 +679,7 @@ messages:
       display: <gold>Теги и пометки
       calamities: <gold>Бедствия
       secrets: <gold>Книга тайн
+      achievements: <gold>Достижения
       crafting: <gold>Рецепты крафта
       starter: <gold>Стартовые предметы
       nickname: <gold>Никнеймы

@@ -7,6 +7,7 @@ menus:
       profile-menu.account: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWE0YzMzODU1YmQxZDAyMmNjOGVmOTQ5OTYzOTY1MDI3YmE5ZGI5NDFlY2VjMTAwMzUxMjBmMzAwYjc0NDg3MyJ9fX0=
       profile-menu.settings: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWZiNmEzZDdkYmE5N2JiNmU3Zjc5YTE1NjI3YWVjNjM2OTc5MTIzM2Y4MzNmYTc0OWVmMjFiZWQ3OWU1OWU5OCJ9fX0=
       profile-menu.customization: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzU0NWM0YWE5N2MxOWJlZDdjYWMxODE3ZmM1MTAzZmU4ZGQ1ODlmYTEyMDgzNWEzZTRlMTJmMzUyMjMwYTVhNiJ9fX0=
+      profile-menu.achievements: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWUzMDQ4MGVkMjgzNGY1YjdjYzgxZGNiMWRjN2U0NzY2NzkyNDMwYzQ5ZGFkNGRiY2QxMGE5M2M1ZTE0NTdiYyJ9fX0=
       profile-menu.adaptations: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTk3ZTRlMjdhMDRhZmE1ZjA2MTA4MjY1YTliZmI3OTc2MzAzOTFjN2YzZDg4MGQyNDRmNjEwYmIxZmYzOTNkOCJ9fX0=
       profile-menu.reputation: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmFlNjM0NGNlYmFjZDIxZDhjNmNhMGQyZTM0YjNjMzQ5MmRjNzliZjQ0MzE0MGQxMmE1MDg4N2FlM2ViN2Y4ZiJ9fX0=
       profile-menu.statistics: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTgxOGQxY2M1M2MyNzVjMjk0ZjVkZmI1NTkxNzRkZDkzMWZjNTE2YTg1YWY2MWExZGUyNTZhZWQ4YmNhNWU3In19fQ==
@@ -161,6 +162,14 @@ menus:
         - ''
         - <dark_gray><st>─────────────────────</st>
         - <green>ЛКМ <dark_gray>— <gray>открыть статистику
+        root-achievements-lore:
+        - <dark_gray>Достижения сервера
+        - ''
+        - '<dark_gray>▪ <gray>Получено:'
+        - '  <white><achievements> <gray>из <white><achievements_total>'
+        - ''
+        - <dark_gray><st>─────────────────────</st>
+        - <green>ЛКМ <dark_gray>— <gray>открыть достижения
         root-adaptations-lore:
         - <dark_gray>Путь и прогресс
         - ''
@@ -190,6 +199,7 @@ menus:
         - '<gray>Пометка: <suffix>'
         - '<gray>Получено пометок: <papi:lovesubnames_unlocked_count:"—">'
         - <gray>Редактировать чужой внешний вид через профиль нельзя.
+        achievements: <gold>Достижения
         adaptations: <gold>Адаптации
         adaptations-lore:
         - <gray>Путь и прогресс LoveAdaptation
