@@ -299,6 +299,11 @@ public final class GuiSettings {
             .contains("Закрыть");
   }
 
+  /** Menus that must keep their 54 slots whatever a filter leaves in them. */
+  static boolean keepsSize(String id) {
+    return id.equals("achievements.gui-title") || id.equals("joinquit.gui-title");
+  }
+
   public Inventory compact(Inventory inventory, GuiLayout layout) {
     if (inventory.getSize() != 54
         || module(layout.guiId()).equals("crafting")
@@ -309,6 +314,9 @@ public final class GuiSettings {
         // The statistics menu is drawn artwork with its buttons at fixed slots, so it never
         // shrinks.
         || layout.guiId().equals("profile-menu.statistics")
+        // The achievements and join/quit menus have filter and sort buttons and a fixed tile grid: a window
+        // that shrinks and re-centres its tiles when a filter leaves few of them is the jump the owner reported.
+        || keepsSize(layout.guiId())
         // The settings menu groups its switches by row, so it keeps its 54 slots.
         || layout.guiId().equals("profile-menu.settings")
         || layout.guiId().equals("sidebar.catalog-title")
