@@ -802,6 +802,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
       "c2df944b47420a37dfa8232f74a6e57bc35beb27edb608d60f04710e4f2378dd";
   private static final String ACH_SPECIAL_DONE =
       "c89ffc4e66837cbcd45782346819648782c9af0567caf04ee1ba91cbb81e95b3";
+  // Owner texture (2026-11-12) for slot 0 of the achievements menu.
+  static final String ACH_MENU =
+      "f97e2c8b8276276e38deca8850872d59ecc9c1f38f2adce40858edb9e634d7ba";
   private static final String ACH_RECEIVED =
       "df1365ecf11bdfaf15dab2ea80f1359d274ec6d425257be29095dd2c300e992e";
 
@@ -871,6 +874,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   /** The achievements, one category or all of them; a child of nothing (opened by the command or from the profile). */
   public void achievementsMenu(Player p, String category, int page) {
     var m = menu(p, "achievements.gui-title", Map.of(), player -> plugin.module("achievements"));
+    retexture(m, 0, plugin.getConfig().getString("achievements.state-heads.menu", ACH_MENU));
     var id = p.getUniqueId();
     var catalog = achievements.catalog();
     var unlocked = achievements.unlockedAt(id);
