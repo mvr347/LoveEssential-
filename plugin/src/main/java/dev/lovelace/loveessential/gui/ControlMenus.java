@@ -611,15 +611,58 @@ public final class ControlMenus implements Listener, AutoCloseable {
     };
   }
 
-  /** The categories shown as header controls: those of the config that the catalogue uses, at most five. */
-  private List<String> achievementCategories() {
+  /** Category of event-only, super-rare achievements: invisible (button and entries) until the player owns one. */
+  static final String SPECIAL_CATEGORY = "special";
+
+  // Owner textures (2026-11-12) for achievement tiles by state; the config may override each one.
+  private static final String ACH_TODO =
+      "df1365ecf11bdfaf15dab2ea80f1359d274ec6d425257be29095dd2c300e992e";
+  private static final String ACH_SECRET_DONE =
+      "c2df944b47420a37dfa8232f74a6e57bc35beb27edb608d60f04710e4f2378dd";
+  private static final String ACH_SPECIAL_DONE =
+      "c89ffc4e66837cbcd45782346819648782c9af0567caf04ee1ba91cbb81e95b3";
+  private static final String ACH_RECEIVED =
+      "df1365ecf11bdfaf15dab2ea80f1359d274ec6d425257be29095dd2c300e992e";
+
+  private dev.lovelace.loveessential.module.AchievementFavorites favorites;
+
+  public void favorites(dev.lovelace.loveessential.module.AchievementFavorites service) {
+    this.favorites = service;
+  }
+
+  /** Whether the player sees this entry: special achievements stay invisible until they are unlocked. */
+  private static boolean visibleTo(
+      dev.lovelace.loveessential.module.AchievementCatalog.Def def, Map<String, Long> unlocked) {
+    return !def.category().equals(SPECIAL_CATEGORY) || unlocked.containsKey(def.id());
+  }
+
+  /**
+   * The categories shown as header controls: those of the config that the catalogue uses. The special one is
+   * left out until the player owns a special achievement. gui_gen allows six header controls, one of them «all».
+   */
+  private List<String> achievementCategories(Map<String, Long> unlocked) {
     var config = plugin.getConfig().getConfigurationSection("achievements.categories");
     var used = new java.util.HashSet<>(achievements.catalog().categories());
+    boolean specialSeen =
+        achievements.catalog().all().stream()
+            .anyMatch(d -> d.category().equals(SPECIAL_CATEGORY) && unlocked.containsKey(d.id()));
     var result = new ArrayList<String>();
     if (config != null)
-      for (String id : config.getKeys(false)) if (used.contains(id)) result.add(id);
-    // gui_gen: at most six header controls, one of them is «all».
-    return result.size() > 5 ? List.copyOf(result.subList(0, 5)) : List.copyOf(result);
+      for (String id : config.getKeys(false))
+        if (used.contains(id) && (!id.equals(SPECIAL_CATEGORY) || specialSeen)) result.add(id);
+    return result.size() > 6 ? List.copyOf(result.subList(0, 6)) : List.copyOf(result);
+  }
+
+  private String achievementTexture(
+      dev.lovelace.loveessential.module.AchievementCatalog.Def def, boolean done) {
+    var config = plugin.getConfig();
+    if (!done) return config.getString("achievements.state-heads.todo", ACH_TODO);
+    if (!def.icon().isBlank()) return def.icon();
+    if (def.category().equals(SPECIAL_CATEGORY))
+      return config.getString("achievements.state-heads.special-done", ACH_SPECIAL_DONE);
+    if (def.hidden() || def.category().equals("secret"))
+      return config.getString("achievements.state-heads.secret-done", ACH_SECRET_DONE);
+    return config.getString("achievements.rarity-heads." + def.rarity().name(), "");
   }
 
   /** The achievements, one category or all of them; a child of nothing (opened by the command or from the profile). */
@@ -628,10 +671,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
     var id = p.getUniqueId();
     var catalog = achievements.catalog();
     var unlocked = achievements.unlockedAt(id);
-    var categories = achievementCategories();
+    var categories = achievementCategories(unlocked);
     String shownCategory = categories.contains(category) ? category : ALL_CATEGORIES;
     var defs =
         catalog.all().stream()
+            .filter(d -> visibleTo(d, unlocked))
             .filter(d -> shownCategory.equals(ALL_CATEGORIES) || d.category().equals(shownCategory))
             .toList();
     int capacity = MenuStyle.CONTENT.length;
@@ -641,7 +685,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
     int to = Math.min(defs.size(), from + capacity);
     // Header controls: «all» and the categories, centred by their number.
     var controls = new ArrayList<String>();
-    controls.add(ALL_CATEGORIES);
+    // Six categories fill the whole header: «all» gives way (the player can still open each category).
+    if (categories.size() < 6) controls.add(ALL_CATEGORIES);
     controls.addAll(categories);
     for (int i = 0; i < controls.size(); i++) {
       String control = controls.get(i);
@@ -649,11 +694,13 @@ public final class ControlMenus implements Listener, AutoCloseable {
       boolean current = control.equals(shownCategory);
       long owned =
           catalog.all().stream()
+              .filter(d -> visibleTo(d, unlocked))
               .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
               .filter(d -> unlocked.containsKey(d.id()))
               .count();
       long total =
           catalog.all().stream()
+              .filter(d -> visibleTo(d, unlocked))
               .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
               .count();
       var name =
@@ -689,14 +736,41 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   Map.of("name", def.name()));
       if (!covered && done) title = title.color(color);
       var lore = achievementLore(def, id, unlocked.get(def.id()), covered);
-      String texture =
-          !def.icon().isBlank()
-              ? def.icon()
-              : plugin.getConfig().getString("achievements.rarity-heads." + def.rarity().name(), "");
+      String texture = achievementTexture(def, done);
+      if (done && favorites != null) {
+        boolean pinned = favorites.isFavorite(id, def.id());
+        lore = new ArrayList<>(lore);
+        lore.add(Component.empty());
+        lore.add(lang.render("gui.separator"));
+        lore.add(lang.render(pinned ? "achievements.tile-favorite-remove" : "achievements.tile-favorite-add"));
+      }
       m.inventory.setItem(slot, MenuStyle.head(texture, title, lore));
-      m.actions.put(slot, click -> {});
+      m.actions.put(
+          slot,
+          click -> {
+            if (!done || favorites == null || click != ClickType.RIGHT) return;
+            favorites
+                .toggle(p, def.id())
+                .whenComplete(
+                    (result, error) ->
+                        main.execute(
+                            () -> {
+                              if (!p.isOnline()) return;
+                              if (error == null)
+                                p.sendMessage(
+                                    lang.renderText(
+                                        lang.text(
+                                            switch (result) {
+                                              case ADDED -> "achievements.favorite-added";
+                                              case REMOVED -> "achievements.favorite-removed";
+                                              case FULL -> "achievements.favorite-full";
+                                            }),
+                                        Map.of("name", def.name())));
+                              achievementsMenu(p, shownCategory, shown);
+                            }));
+          });
     }
-    long total = catalog.all().size();
+    long total = catalog.all().stream().filter(d -> visibleTo(d, unlocked)).count();
     long owned = catalog.all().stream().filter(d -> unlocked.containsKey(d.id())).count();
     int filled = dev.lovelace.loveessential.module.SecretRules.filled((int) owned, (int) total);
     tile(
@@ -708,6 +782,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         Map.of("owned", "" + owned, "total", "" + total),
         Map.of("bar", progressBar(filled)),
         c -> {});
+    retexture(m, 50, plugin.getConfig().getString("achievements.state-heads.received", ACH_RECEIVED));
     navigation(
         m, p, shown, defs.size(), capacity, target -> achievementsMenu(p, shownCategory, target), () -> {});
     MenuStyle.open(p, m.inventory);

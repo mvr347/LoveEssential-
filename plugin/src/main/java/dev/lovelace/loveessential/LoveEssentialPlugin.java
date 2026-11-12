@@ -132,6 +132,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
   private dev.lovelace.loveessential.module.JoinQuitStyles joinQuit;
   private dev.lovelace.loveessential.module.Secrets secrets;
   private dev.lovelace.loveessential.module.AchievementService achievements;
+  private dev.lovelace.loveessential.module.AchievementFavorites favorites;
   private dev.lovelace.loveessential.npc.LoveEssentialNpcProvider npcProvider;
   private dev.lovelace.loveessential.gui.MenuNavigation navigation;
   private Extensions extensions;
@@ -358,6 +359,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     joinQuit = new dev.lovelace.loveessential.module.JoinQuitStyles(this, main, lang, store);
     gameplay.joinQuit(joinQuit);
     achievements = new dev.lovelace.loveessential.module.AchievementService(this, main, store, lang, love);
+    favorites = new dev.lovelace.loveessential.module.AchievementFavorites(this, store, achievements);
     secrets = new dev.lovelace.loveessential.module.Secrets(this, achievements);
     revive.secrets(secrets);
     profiles =
@@ -408,6 +410,8 @@ public class LoveEssentialPlugin extends JavaPlugin {
     menus.display(displayPrefs);
     menus.joinQuit(joinQuit);
     menus.achievements(achievements);
+    menus.favorites(favorites);
+    profiles.favorites(favorites);
     content = new dev.lovelace.loveessential.content.ContentLibrary(this, main, store, lang, love);
     starter =
         new dev.lovelace.loveessential.content.StarterItems(this, main, store, lang, love, content);
@@ -543,6 +547,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     displayPrefs.start();
     joinQuit.start();
     achievements.start();
+    favorites.start();
     // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
     // Registered only now: a plugin that asks earlier gets "no such provider" (a warning at worst), not a
     // provider that answers "no such NPC" while the data is still loading.
@@ -894,6 +899,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
       if (revive != null) closeSafely("revive", revive::close);
       if (displayPrefs != null) closeSafely("displayPrefs", displayPrefs::close);
       if (joinQuit != null) closeSafely("joinQuit", joinQuit::close);
+      if (favorites != null) closeSafely("favorites", favorites::close);
       if (achievements != null) closeSafely("achievements", achievements::close);
       if (extensions != null) closeSafely("extensions", extensions::close);
       if (contentMenus != null) closeSafely("contentMenus", contentMenus::close);
