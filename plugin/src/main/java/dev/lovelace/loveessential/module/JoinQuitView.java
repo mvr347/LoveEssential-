@@ -7,25 +7,22 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * What the join/quit menu shows: one header button cycles through filters and a sort order, so the menu has a
- * single control for both (owner request 2026-11-12). No server types, so it is tested on its own.
+ * What the join/quit menu shows: a filter button and a separate sort button, as in the clan lists (owner request
+ * 2026-11-12). No server types, so it is tested on its own.
  */
 public final class JoinQuitView {
   private JoinQuitView() {}
 
-  public enum Mode {
-    /** Catalogue order, nothing hidden. */
+  public enum Filter {
     ALL("all"),
     /** Only what the player can pick right now. */
     AVAILABLE("available"),
     /** Only what is still locked (for example behind an achievement). */
-    LOCKED("locked"),
-    /** Everything, sorted by name. */
-    NAME("name");
+    LOCKED("locked");
 
     private final String id;
 
-    Mode(String id) {
+    Filter(String id) {
       this.id = id;
     }
 
@@ -35,12 +32,29 @@ public final class JoinQuitView {
     }
   }
 
+  public enum Sort {
+    /** Catalogue order. */
+    CATALOG("catalog"),
+    NAME("name");
+
+    private final String id;
+
+    Sort(String id) {
+      this.id = id;
+    }
+
+    /** Suffix of the {@code joinquit.sort-<id>} text. */
+    public String id() {
+      return id;
+    }
+  }
+
   public static <T> List<T> apply(
-      Mode mode, List<T> catalogue, Predicate<T> open, Function<T, String> name) {
+      Filter filter, Sort sort, List<T> catalogue, Predicate<T> open, Function<T, String> name) {
     var out = new ArrayList<T>();
     for (T style : catalogue) {
       boolean allowed = open.test(style);
-      switch (mode) {
+      switch (filter) {
         case AVAILABLE -> {
           if (allowed) out.add(style);
         }
@@ -50,7 +64,8 @@ public final class JoinQuitView {
         default -> out.add(style);
       }
     }
-    if (mode == Mode.NAME) out.sort(Comparator.comparing(s -> name.apply(s).toLowerCase(java.util.Locale.ROOT)));
+    if (sort == Sort.NAME)
+      out.sort(Comparator.comparing(s -> name.apply(s).toLowerCase(java.util.Locale.ROOT)));
     return out;
   }
 }
