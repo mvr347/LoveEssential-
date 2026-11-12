@@ -348,6 +348,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
    * Six owner choices: clan and suffix in chat, TAB and nametags, for every viewer.
    */
   public void displayMenu(Player p) {
+    // Whoever opens this menu (the command or a section switch): preferences still loading read as "all shown" and
+    // clicks would not be saved, so the menu waits until they are loaded.
+    if (!displayPrefs.loaded(p.getUniqueId())) throw new IllegalArgumentException("errors.starting");
     var m = menu(p, "display.gui-title", Map.of(), player -> plugin.module("display"));
     m.root = true;
     var id = p.getUniqueId();
