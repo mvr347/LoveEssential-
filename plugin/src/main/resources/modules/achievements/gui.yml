@@ -29,6 +29,17 @@ messages:
     filter-other: '    <gray><name> <dark_gray>(<owned>/<total>)'
     filter-next: '<green>ЛКМ <dark_gray>— <gray>следующий раздел'
     filter-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий раздел'
+    sort: '<gold>Сортировка <dark_gray>| <yellow><name>'
+    sort-lore: <dark_gray>Переключатель порядка
+    sort-options: '<dark_gray>▪ <gray>Порядок:'
+    sort-current: '  <green>▶ <name>'
+    sort-other: '    <gray><name>'
+    sort-next: '<green>ЛКМ <dark_gray>— <gray>следующий порядок'
+    sort-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий порядок'
+    sort-default: По умолчанию
+    sort-rarity: По редкости
+    sort-name: По названию
+    sort-owned: Сначала полученные
     hidden-name: '<gray>? ? ?'
     tile-done: '<green>✔ <white><name>'
     tile-todo: '<gray><name>'

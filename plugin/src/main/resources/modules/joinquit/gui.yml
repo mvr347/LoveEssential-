@@ -31,7 +31,7 @@ messages:
     status-open: '<gray>Можно выбрать'
     status-locked: '<red>Недоступно: этот вариант выдаётся отдельно'
     status-achievement: '<red>Откроется за достижение: <white><achievement>'
-    filter: '<gold>Фильтр и сортировка <dark_gray>| <yellow><name>'
+    filter: '<gold>Фильтр <dark_gray>| <yellow><name>'
     filter-lore: <dark_gray>Переключатель
     filter-options: '<dark_gray>▪ <gray>Варианты:'
     filter-current: '  <green>▶ <name>'
@@ -41,7 +41,15 @@ messages:
     filter-all: Все
     filter-available: Доступные
     filter-locked: Недоступные
-    filter-name: По названию
+    sort: '<gold>Сортировка <dark_gray>| <yellow><name>'
+    sort-lore: <dark_gray>Переключатель порядка
+    sort-options: '<dark_gray>▪ <gray>Порядок:'
+    sort-current: '  <green>▶ <name>'
+    sort-other: '    <gray><name>'
+    sort-next: '<green>ЛКМ <dark_gray>— <gray>следующий порядок'
+    sort-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий порядок'
+    sort-catalog: По порядку
+    sort-name: По названию
     silent-on: '<green>Тихий вход и выход <dark_gray>| <white>включён'
     silent-off: '<gray>Тихий вход и выход <dark_gray>| <white>выключен'
     silent-lore:

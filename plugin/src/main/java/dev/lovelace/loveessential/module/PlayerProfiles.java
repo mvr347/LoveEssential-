@@ -1471,13 +1471,19 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
    * player's profile shows only what they pinned. A player with no achievements gets no slots at all.
    */
   private void drawFavorites(Menu m, Player target, boolean own) {
+    // The header holds the favourite slots and nothing else: whatever else sits in slots 1-8 is cleared first, so
+    // a settings button (or any other control) can never share the header with them.
+    for (int slot : FAVORITE_HEADER_CLEAR) {
+      m.inventory.setItem(slot, null);
+      m.actions.remove(slot);
+    }
     if (favorites == null || !favorites.hasAny(target.getUniqueId())) return;
     var ids = favorites.of(target.getUniqueId());
-    int count = own ? AchievementFavorites.MAX : ids.size();
-    if (count == 0) return;
     var config = plugin.getConfig();
-    for (int i = 0; i < count; i++) {
-      int slot = MenuStyle.headerSlot(i, count);
+    // Always three slots, centred (gui_gen table for three controls): pinned ones show the achievement, the rest are
+    // empty slots (yours invites you to pin something, another player's simply shows it is empty).
+    for (int i = 0; i < AchievementFavorites.MAX; i++) {
+      int slot = favoriteSlot(i);
       var def = i < ids.size() ? favorites.def(ids.get(i)) : java.util.Optional.<AchievementCatalog.Def>empty();
       if (def.isEmpty()) {
         m.inventory.setItem(
@@ -1485,9 +1491,11 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
             MenuStyle.head(
                 config.getString("achievements.state-heads.favorite-empty", FAVORITE_EMPTY),
                 lang.render("achievements.favorite-empty"),
-                lang.lines("achievements.favorite-empty-lore").stream()
-                    .map(l -> lang.renderText(l, Map.of()))
-                    .toList()));
+                own
+                    ? lang.lines("achievements.favorite-empty-lore").stream()
+                        .map(l -> lang.renderText(l, Map.of()))
+                        .toList()
+                    : List.of()));
       } else {
         var d = def.get();
         var rarity = lang.render("achievements.rarity-" + d.rarity().name().toLowerCase(java.util.Locale.ROOT));
@@ -1512,6 +1520,14 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       }
       if (own) m.actions.put(slot, () -> Bukkit.dispatchCommand(m.viewer, "loveessential:achievements"));
     }
+  }
+
+  /** Header slots 1-8 that belong to the favourites row; cleared before it is drawn. */
+  private static final int[] FAVORITE_HEADER_CLEAR = {1, 2, 3, 4, 5, 6, 7, 8};
+
+  /** Slot of favourite {@code index}: three controls centred on the gui_gen table. */
+  static int favoriteSlot(int index) {
+    return MenuStyle.headerSlot(index, AchievementFavorites.MAX);
   }
 
   private void drawProfile(Menu m, Player target) {
