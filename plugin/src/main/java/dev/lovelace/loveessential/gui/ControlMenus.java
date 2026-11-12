@@ -392,6 +392,17 @@ public final class ControlMenus implements Listener, AutoCloseable {
         .serialize(component);
   }
 
+  /** Back of the join/quit menu: the opener's command when another plugin opened it, else the nickname menu. */
+  private void joinQuitBackAction(Player p) {
+    String back = joinQuitBack.getOrDefault(p.getUniqueId(), "");
+    if (back.isBlank()) nicknameAgain(p);
+    else {
+      // Opened by another plugin: going back completes the way, this menu must not stay as a parent.
+      MenuStyle.forget(p);
+      Bukkit.dispatchCommand(p, back);
+    }
+  }
+
   /** Opens the join/quit menu as a child of another plugin's menu; Back runs {@code back} (blank = nickname menu). */
   public void joinQuitMenu(Player p, String back) {
     if (back == null || back.isBlank()) joinQuitBack.remove(p.getUniqueId());
@@ -402,6 +413,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
   /** The player's choice of join and quit message from the administrator's catalogue (a child of the nickname menu). */
   public void joinQuitMenu(Player p, int page) {
     var m = menu(p, "joinquit.gui-title", Map.of(), player -> plugin.module("joinquit"));
+    // Back must exist however the menu was reached and however often it is redrawn (a filter or quiet-mode click
+    // opens it again): opened by a command (from the marks menu) it has no parent route, and without m.back the
+    // standard layout draws no Back button at all.
+    m.back = () -> joinQuitBackAction(p);
     var mode =
         joinQuitMode.getOrDefault(
             p.getUniqueId(), dev.lovelace.loveessential.module.JoinQuitView.Mode.ALL);
@@ -492,22 +507,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
                                 if (p.isOnline()) joinQuitMenu(p, shown);
                               })));
     }
-    navigation(
-        m,
-        p,
-        shown,
-        catalog.size(),
-        capacity,
-        target -> joinQuitMenu(p, target),
-        () -> {
-          String back = joinQuitBack.getOrDefault(p.getUniqueId(), "");
-          if (back.isBlank()) nicknameAgain(p);
-          else {
-            // Opened by another plugin: going back completes the way, this menu must not stay as a parent.
-            MenuStyle.forget(p);
-            Bukkit.dispatchCommand(p, back);
-          }
-        });
+    navigation(m, p, shown, catalog.size(), capacity, target -> joinQuitMenu(p, target), m.back);
     MenuStyle.open(p, m.inventory);
   }
 
@@ -681,7 +681,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
       return config.getString("achievements.state-heads.special-done", ACH_SPECIAL_DONE);
     if (def.hidden() || def.category().equals("secret"))
       return config.getString("achievements.state-heads.secret-done", ACH_SECRET_DONE);
-    return config.getString("achievements.rarity-heads." + def.rarity().name(), "");
+    String key = "achievements.rarity-heads." + def.rarity().name();
+    return dev.lovelace.loveessential.module.TextureUpgrades.upgrade(key, config.getString(key, ""));
   }
 
   /** The achievements, one category or all of them; a child of nothing (opened by the command or from the profile). */
