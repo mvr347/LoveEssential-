@@ -234,6 +234,21 @@ public final class ControlMenus implements Listener, AutoCloseable {
   private static final String DISPLAY_TOGGLE_ON =
       "9b5871c72987266e15f1be49b1ec334ef6b618e9653fb78e918abd39563dbb93";
 
+  // Owner textures (2026-11-12): a join/quit message that is not available to the player.
+  private static final String JOINQUIT_UNAVAILABLE =
+      "c618731e063379aebf82f1d64c419c90d7f0c1648c548e9b6151b1baba66d723";
+  // Heads shared by the nickname menu and the header of the join/quit menu.
+  private static final String NICK_LABEL_TEXTURE =
+      "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=";
+  private static final String NICK_SUFFIXES_TEXTURE =
+      "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ==";
+
+  /** The join/quit menu's filter/sort choice and its return command, per player. */
+  private final Map<UUID, dev.lovelace.loveessential.module.JoinQuitView.Mode> joinQuitMode =
+      new java.util.concurrent.ConcurrentHashMap<>();
+
+  private final Map<UUID, String> joinQuitBack = new java.util.concurrent.ConcurrentHashMap<>();
+
   /** Swaps the icon of an already placed tile for a textured head, keeping its name and lore. */
   private void retexture(Menu m, int slot, String texture) {
     var old = m.inventory.getItem(slot);
@@ -372,10 +387,27 @@ public final class ControlMenus implements Listener, AutoCloseable {
     this.joinQuit = styles;
   }
 
+  private static String plain(Component component) {
+    return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+        .serialize(component);
+  }
+
+  /** Opens the join/quit menu as a child of another plugin's menu; Back runs {@code back} (blank = nickname menu). */
+  public void joinQuitMenu(Player p, String back) {
+    if (back == null || back.isBlank()) joinQuitBack.remove(p.getUniqueId());
+    else joinQuitBack.put(p.getUniqueId(), back);
+    joinQuitMenu(p, 0);
+  }
+
   /** The player's choice of join and quit message from the administrator's catalogue (a child of the nickname menu). */
   public void joinQuitMenu(Player p, int page) {
     var m = menu(p, "joinquit.gui-title", Map.of(), player -> plugin.module("joinquit"));
-    var catalog = joinQuit.catalog();
+    var mode =
+        joinQuitMode.getOrDefault(
+            p.getUniqueId(), dev.lovelace.loveessential.module.JoinQuitView.Mode.ALL);
+    var catalog =
+        dev.lovelace.loveessential.module.JoinQuitView.apply(
+            mode, joinQuit.catalog(), style -> joinQuit.allowed(p, style), style -> style.name());
     var current = joinQuit.chosen(p);
     int capacity = MenuStyle.CONTENT.length;
     int pages = Math.max(1, (catalog.size() + capacity - 1) / capacity);
@@ -431,11 +463,15 @@ public final class ControlMenus implements Listener, AutoCloseable {
                               if (error == null) joinQuitMenu(p, shown);
                             }));
           });
+      // A message the player cannot use shows the owner's "unavailable" head instead of the style's icon.
+      if (!open) retexture(m, slot, JOINQUIT_UNAVAILABLE);
     }
-    // Administrators only: enter and leave without a message (gui_gen: a single header control sits on slot 4).
+    joinQuitHeader(m, p, mode);
+    // Administrators only: enter and leave without a message. An extra footer button (gui_gen): code slot 50 is the
+    // one in front of Back once standard() has placed the footer, like "reset colour" in the nickname menu.
     if (p.hasPermission(dev.lovelace.loveessential.module.JoinQuitStyles.SILENT_PERMISSION)) {
       boolean quiet = joinQuit.silent(p);
-      int slot = MenuStyle.headerSlot(0, 1);
+      int slot = 50;
       m.inventory.setItem(
           slot,
           MenuStyle.head(
@@ -456,8 +492,105 @@ public final class ControlMenus implements Listener, AutoCloseable {
                                 if (p.isOnline()) joinQuitMenu(p, shown);
                               })));
     }
-    navigation(m, p, shown, catalog.size(), capacity, target -> joinQuitMenu(p, target), () -> nicknameAgain(p));
+    navigation(
+        m,
+        p,
+        shown,
+        catalog.size(),
+        capacity,
+        target -> joinQuitMenu(p, target),
+        () -> {
+          String back = joinQuitBack.getOrDefault(p.getUniqueId(), "");
+          if (back.isBlank()) nicknameAgain(p);
+          else {
+            // Opened by another plugin: going back completes the way, this menu must not stay as a parent.
+            MenuStyle.forget(p);
+            Bukkit.dispatchCommand(p, back);
+          }
+        });
     MenuStyle.open(p, m.inventory);
+  }
+
+  /**
+   * Header controls of the join/quit menu (gui_gen table, centred by their number): nickname, who sees what,
+   * marks, and the one filter/sort button.
+   */
+  private void joinQuitHeader(
+      Menu m, Player p, dev.lovelace.loveessential.module.JoinQuitView.Mode mode) {
+    int controls = 4;
+    int nickSlot = MenuStyle.headerSlot(0, controls);
+    int displaySlot = MenuStyle.headerSlot(1, controls);
+    int marksSlot = MenuStyle.headerSlot(2, controls);
+    int filterSlot = MenuStyle.headerSlot(3, controls);
+    m.inventory.setItem(
+        nickSlot,
+        MenuStyle.head(
+            NICK_LABEL_TEXTURE,
+            lang.render("nick.label"),
+            lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
+    m.actions.put(nickSlot, click -> MenuStyle.action(p, () -> nicknameAgain(p)));
+    m.inventory.setItem(
+        displaySlot,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.display", ""),
+            lang.render("profile-menu.display"),
+            lang.lines("profile-menu.display-lore").stream()
+                .map(l -> lang.renderText(l, Map.of()))
+                .toList()));
+    m.actions.put(
+        displaySlot, click -> MenuStyle.action(p, () -> Bukkit.dispatchCommand(p, "loveessential:display")));
+    var suffixCommand = Bukkit.getPluginCommand("lovesubnames:suffixes");
+    boolean catalogue = suffixCommand != null && suffixCommand.getPlugin().isEnabled()
+        && suffixCommand.getPlugin().getName().equalsIgnoreCase("LoveSubnames");
+    var marksLore =
+        new ArrayList<>(
+            lang.lines("nick.suffixes-lore").stream()
+                .map(l -> lang.renderText(l, Map.of("suffix", currentSuffix(p))))
+                .toList());
+    if (!catalogue) marksLore.add(lang.render("profile-menu.integration-unavailable"));
+    m.inventory.setItem(
+        marksSlot, MenuStyle.head(NICK_SUFFIXES_TEXTURE, lang.render("nick.suffixes"), marksLore));
+    if (catalogue)
+      m.actions.put(
+          marksSlot,
+          click -> {
+            MenuStyle.external(p);
+            p.closeInventory();
+            Bukkit.dispatchCommand(p, "lovesubnames:suffixes loveessential:nick joinquit");
+          });
+    var modes = dev.lovelace.loveessential.module.JoinQuitView.Mode.values();
+    var lore = new ArrayList<Component>();
+    lore.add(lang.render("joinquit.filter-lore"));
+    lore.add(Component.empty());
+    lore.add(lang.render("joinquit.filter-options"));
+    for (var option : modes)
+      lore.add(
+          lang.renderText(
+              lang.text(option == mode ? "joinquit.filter-current" : "joinquit.filter-other"),
+              Map.of("name", plain(lang.render("joinquit.filter-" + option.id())))));
+    lore.add(Component.empty());
+    lore.add(lang.render("gui.separator"));
+    lore.add(lang.render("joinquit.filter-next"));
+    lore.add(lang.render("joinquit.filter-previous"));
+    m.inventory.setItem(
+        filterSlot,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.filter", ""),
+            lang.renderText(
+                lang.text("joinquit.filter"),
+                Map.of("name", plain(lang.render("joinquit.filter-" + mode.id())))),
+            lore));
+    m.actions.put(
+        filterSlot,
+        click -> {
+          int now = mode.ordinal();
+          int next =
+              click == ClickType.RIGHT
+                  ? dev.lovelace.loveessential.module.StatCycle.previous(now, modes.length)
+                  : dev.lovelace.loveessential.module.StatCycle.next(now, modes.length);
+          joinQuitMode.put(p.getUniqueId(), modes[next]);
+          joinQuitMenu(p, 0);
+        });
   }
 
   private dev.lovelace.loveessential.module.AchievementService achievements;
@@ -2140,7 +2273,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     m.inventory.setItem(
         labelSlot,
         MenuStyle.head(
-            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=",
+            NICK_LABEL_TEXTURE,
             lang.render("nick.label"),
             lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
     // The tags and marks other players see: LoveEssential's own /display menu, opened as a child of this one.
@@ -2167,7 +2300,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     m.inventory.setItem(
         suffixSlot,
         MenuStyle.head(
-            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ==",
+            NICK_SUFFIXES_TEXTURE,
             lang.render("nick.suffixes"),
             suffixLore));
     if (joinQuitButton) {
@@ -2180,7 +2313,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               lang.lines("nick.joinquit-lore").stream()
                   .map(l -> lang.renderText(l, Map.of("current", joinQuit.chosen(p).name())))
                   .toList()));
-      m.actions.put(slot, click -> MenuStyle.action(p, () -> joinQuitMenu(p, 0)));
+      m.actions.put(slot, click -> MenuStyle.action(p, () -> joinQuitMenu(p, "")));
     }
     if (catalogue)
       m.actions.put(
@@ -2712,6 +2845,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
     direct.remove(e.getPlayer().getUniqueId());
     dispatching.remove(e.getPlayer().getUniqueId());
     nicknameBack.remove(e.getPlayer().getUniqueId());
+    joinQuitBack.remove(e.getPlayer().getUniqueId());
+    joinQuitMode.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {

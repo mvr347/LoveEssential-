@@ -67,6 +67,8 @@ class TabDisplayTest {
     plugin.getConfig().set("tab.groups._DEFAULT_.customtabname", "<player>");
     plugin.getConfig().set("tab.groups._DEFAULT_.tagprefix", "[<clan>] ");
     plugin.getConfig().set("tab.groups._DEFAULT_.tagsuffix", " <clan>");
+    // The shipped default decorates <clan> with an emoji and brackets; these tests check hiding, not decoration.
+    plugin.getConfig().set("tab.display.clan.format", "%tag%");
     // The shipped default adds " <suffix><afk>"; keep the expected strings exact.
     plugin.getConfig().set("tab.groups._DEFAULT_.tabsuffix", "");
   }

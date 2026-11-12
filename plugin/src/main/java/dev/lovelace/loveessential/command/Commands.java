@@ -282,7 +282,18 @@ public final class Commands implements CommandExecutor, TabCompleter {
       if (cmd.equals("nick")) {
         plugin.requireAccess("nickname", p);
         if (args.length == 0) menus.direct(p, () -> menus.nickname(p));
-        else if (args.length >= 2 && args[0].equalsIgnoreCase("return")) {
+        else if (args[0].equalsIgnoreCase("joinquit")) {
+          // "/le nick joinquit [return <command>]": the join/quit menu, optionally opened by another plugin
+          // (LoveSubnames' marks menu); Back then runs <command> (checked to exist).
+          plugin.requireAccess("joinquit", p);
+          String back =
+              args.length >= 3 && args[1].equalsIgnoreCase("return")
+                  ? String.join(" ", slice(args, 2)).strip()
+                  : "";
+          boolean usable =
+              !back.isBlank() && Bukkit.getCommandMap().getCommand(back.split(" ", 2)[0]) != null;
+          menus.direct(p, () -> menus.joinQuitMenu(p, usable ? back : ""));
+        } else if (args.length >= 2 && args[0].equalsIgnoreCase("return")) {
           // "/le nick return <command>": opened by another plugin; Back runs <command> (checked to exist).
           String back = String.join(" ", slice(args, 1)).strip();
           boolean usable = Bukkit.getCommandMap().getCommand(back.split(" ", 2)[0]) != null;
