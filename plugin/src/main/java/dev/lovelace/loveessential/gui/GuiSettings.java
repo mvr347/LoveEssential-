@@ -222,7 +222,8 @@ public final class GuiSettings {
     var callbacks = (Map<Integer, Object>) (Map<?, ?>) layout.guiActions();
     var buttons = new ArrayList<ItemStack>();
     var handlers = new ArrayList<Object>();
-    for (int slot = 1; slot < 9; slot++) {
+    boolean fixedHeader = keepsHeader(layout.guiId());
+    for (int slot = 1; slot < 9 && !fixedHeader; slot++) {
       var item = inventory.getItem(slot);
       if (item != null && !item.getType().name().endsWith("STAINED_GLASS_PANE")) {
         buttons.add(item);
@@ -301,7 +302,17 @@ public final class GuiSettings {
 
   /** Menus that must keep their 54 slots whatever a filter leaves in them. */
   static boolean keepsSize(String id) {
-    return id.equals("achievements.gui-title") || id.equals("joinquit.gui-title");
+    return id.equals("achievements.gui-title")
+        || id.equals("joinquit.gui-title")
+        || id.equals("display.gui-title");
+  }
+
+  /**
+   * Menus whose header buttons sit on fixed slots (the personalization sections): {@code standard()} must not
+   * re-centre them by their number, or the sections would move from menu to menu.
+   */
+  static boolean keepsHeader(String id) {
+    return id.equals("nick.title") || id.equals("joinquit.gui-title") || id.equals("display.gui-title");
   }
 
   public Inventory compact(Inventory inventory, GuiLayout layout) {

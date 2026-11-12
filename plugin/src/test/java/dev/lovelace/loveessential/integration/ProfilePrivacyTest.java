@@ -849,7 +849,7 @@ class ProfilePrivacyTest {
   }
 
   @Test
-  void suffixCatalogueFromPersonalizationReturnsToNicknameDespiteForeignAliases() throws Exception {
+  void suffixCatalogueFromPersonalizationReturnsToTheProfileDespiteForeignAliases() throws Exception {
     neighbor("LoveSubnames", "suffixes");
     var foreign = neighbor("DeluxeMenus", "suffixes", "display");
     for (String alias : List.of("suffixes", "display"))
@@ -863,7 +863,8 @@ class ProfilePrivacyTest {
     command(viewer, "loveessential:profile");
     click(viewer, named(viewer, "Персонализация"));
     click(viewer, named(viewer, "Пометки"));
-    assertEquals("LoveSubnames:suffixes:Owner:loveessential:nick", calls.getLast());
+    // The personalization sections are siblings: Back from the catalogue leads to the profile, not to the nick menu.
+    assertEquals("LoveSubnames:suffixes:Owner:loveessential:profile", calls.getLast());
     command(viewer, "loveessential:profile");
     assertEquals(27, viewer.getOpenInventory().getTopInventory().getSize());
     click(viewer, named(viewer, "Персонализация"));

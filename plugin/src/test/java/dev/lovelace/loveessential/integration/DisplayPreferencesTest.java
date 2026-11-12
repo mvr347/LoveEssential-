@@ -187,7 +187,8 @@ class DisplayPreferencesTest {
     assertInstanceOf(GuiLayout.class, top.getHolder());
     assertEquals(List.of(), GuiRules.violations(top, false));
     assertEquals(List.of(), GuiRules.unresolvedText(top));
-    assertTrue(java.util.Set.of(27, 36).contains(top.getSize()), "size " + top.getSize());
+    // The display menu has a filter and a sort button and a fixed grid, so it keeps its 54 slots.
+    assertEquals(54, top.getSize());
 
     // First tile of the work zone is the clan tag on chat; a click hides it.
     int tile = firstTile(top);

@@ -22,6 +22,25 @@ messages:
     - '<gray>Изменения действуют для всех игроков.</gray>'
     - '<dark_gray>─────────────────────</dark_gray>'
     - '<gray>Выберите клан или пометку ниже.</gray>'
+    filter: '<gold>Фильтр <dark_gray>| <yellow><name>'
+    filter-lore: <dark_gray>Переключатель
+    filter-options: '<dark_gray>▪ <gray>Варианты:'
+    filter-current: '  <green>▶ <name>'
+    filter-other: '    <gray><name>'
+    filter-next: '<green>ЛКМ <dark_gray>— <gray>следующий вариант'
+    filter-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий вариант'
+    filter-all: Все
+    filter-on: Показано
+    filter-off: Скрыто
+    sort: '<gold>Сортировка <dark_gray>| <yellow><name>'
+    sort-lore: <dark_gray>Переключатель порядка
+    sort-options: '<dark_gray>▪ <gray>Порядок:'
+    sort-current: '  <green>▶ <name>'
+    sort-other: '    <gray><name>'
+    sort-next: '<green>ЛКМ <dark_gray>— <gray>следующий порядок'
+    sort-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий порядок'
+    sort-element: По тегам
+    sort-surface: По местам
     usage: '<yellow>/display <gray><clan|suffix> <chat|tab|nametag> [on|off] — ваши клан и пометка для всех игроков; без аргументов открывается меню'
     changed-on: '<gray><scope>: <white><element> <gray>— <white><surface>: <green>показано'
     changed-off: '<gray><scope>: <white><element> <gray>— <white><surface>: <red>скрыто'
