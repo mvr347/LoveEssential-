@@ -42,4 +42,18 @@ class TextureUpgradesTest {
         "f97e2c8b8276276e38deca8850872d59ecc9c1f38f2adce40858edb9e634d7ba",
         TextureUpgrades.upgrade("profile.gui.textures.profile-menu.achievements", base64(old)));
   }
+
+  @Test
+  void theOldLegendaryAndTodoHeadsAreReplaced() {
+    assertEquals(
+        "27da07fc0e4ae101cd3d6b6080b04aa75381ef8074e02ed5397594f49b71cb0c",
+        TextureUpgrades.upgrade(
+            "achievements.rarity-heads.LEGENDARY",
+            base64("ee30480ed2834f5b7cc81dcb1dc7e4766792430c49dad4dbcd10a93c5e1457bc")));
+    assertEquals(
+        "93a5c336794f33e551bb9677c1120a51d3c0131f005890ceb0208d0a699a993d",
+        TextureUpgrades.upgrade(
+            "achievements.state-heads.todo",
+            base64("df1365ecf11bdfaf15dab2ea80f1359d274ec6d425257be29095dd2c300e992e")));
+  }
 }

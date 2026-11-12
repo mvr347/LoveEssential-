@@ -22,6 +22,10 @@ public final class TextureUpgrades {
           Map.of("163e6646f1c0d41fd3bf5584a1ce044f5c46d598258db46216117859f57af197", "990c5c465bc3b8e5ebf60342fa1e9eccb12563c5ff05abb7a643159478150002"),
           "achievements.rarity-heads.EPIC",
           Map.of("f97012ed6a92b05ea0f194950748544e075baa28781ca373d1b27e28c26953c", "770cacd5973980c1ec4e2164102b50d64d70b3fedfbc4a0f73127b8006cbbf9b"),
+          "achievements.rarity-heads.LEGENDARY",
+          Map.of("ee30480ed2834f5b7cc81dcb1dc7e4766792430c49dad4dbcd10a93c5e1457bc", "27da07fc0e4ae101cd3d6b6080b04aa75381ef8074e02ed5397594f49b71cb0c"),
+          "achievements.state-heads.todo",
+          Map.of("df1365ecf11bdfaf15dab2ea80f1359d274ec6d425257be29095dd2c300e992e", "93a5c336794f33e551bb9677c1120a51d3c0131f005890ceb0208d0a699a993d"),
           "profile.gui.textures.profile-menu.achievements",
           Map.of("ee30480ed2834f5b7cc81dcb1dc7e4766792430c49dad4dbcd10a93c5e1457bc", "f97e2c8b8276276e38deca8850872d59ecc9c1f38f2adce40858edb9e634d7ba"));
 

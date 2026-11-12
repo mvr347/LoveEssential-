@@ -68,7 +68,13 @@ public final class GuiRules {
     // Header controls: only slots 2-7, centered for their count.
     var controls = new ArrayList<Integer>();
     for (int slot = 2; slot <= 7; slot++) if (!glass(inventory.getItem(slot))) controls.add(slot);
-    if (!controls.equals(controlSlots(controls.size())))
+    // The personalization menus keep their four sections (and filter and sort) on FIXED slots, the same in every
+    // one of them (owner request 2026-11-12), so their controls are not centred by their number.
+    boolean fixedHeader =
+        inventory.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout fixed
+            && java.util.Set.of("nick.title", "joinquit.gui-title", "display.gui-title")
+                .contains(fixed.guiId());
+    if (!fixedHeader && !controls.equals(controlSlots(controls.size())))
       out.add("header controls at " + controls + ", expected " + controlSlots(controls.size()));
     // Work zone: no glass, empty side walls (except pagination on 54).
     int start = row1 ? 18 : 9;
@@ -87,7 +93,8 @@ public final class GuiRules {
     if (!name(inventory.getItem(size - 1)).contains("Закрыть"))
       out.add("slot " + (size - 1) + " must be Close");
     boolean back = name(inventory.getItem(size - 2)).contains("Назад");
-    if (back && Boolean.FALSE.equals(hasParent)) out.add("Back shown in a root menu");
+    // The personalization menus are siblings under the profile: Back (to the profile) is shown even when opened as a root.
+    if (back && Boolean.FALSE.equals(hasParent) && !fixedHeader) out.add("Back shown in a root menu");
     if (!back && Boolean.TRUE.equals(hasParent)) out.add("Back missing although the menu has a parent");
     if (!back && !glass(inventory.getItem(size - 2))) out.add("slot " + (size - 2) + " must be Back or glass");
     if (rows < 3) out.add("menu too small");
