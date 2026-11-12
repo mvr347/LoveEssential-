@@ -638,7 +638,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
 
   /**
    * The categories shown as header controls: those of the config that the catalogue uses. The special one is
-   * left out until the player owns a special achievement. gui_gen allows six header controls, one of them «all».
+   * left out until the player owns a special achievement. They are the options of the one filter button.
    */
   private List<String> achievementCategories(Map<String, Long> unlocked) {
     var config = plugin.getConfig().getConfigurationSection("achievements.categories");
@@ -650,7 +650,26 @@ public final class ControlMenus implements Listener, AutoCloseable {
     if (config != null)
       for (String id : config.getKeys(false))
         if (used.contains(id) && (!id.equals(SPECIAL_CATEGORY) || specialSeen)) result.add(id);
-    return result.size() > 6 ? List.copyOf(result.subList(0, 6)) : List.copyOf(result);
+    return List.copyOf(result);
+  }
+
+  private String categoryName(String category) {
+    return category.equals(ALL_CATEGORIES)
+        ? plainText(lang.render("achievements.category-all"))
+        : plugin.getConfig().getString("achievements.categories." + category + ".name", category);
+  }
+
+  /** Achievements the player can see in a category (or in all), those they own or all of them. */
+  private long categoryCount(
+      dev.lovelace.loveessential.module.AchievementCatalog catalog,
+      Map<String, Long> unlocked,
+      String category,
+      boolean ownedOnly) {
+    return catalog.all().stream()
+        .filter(d -> visibleTo(d, unlocked))
+        .filter(d -> category.equals(ALL_CATEGORIES) || d.category().equals(category))
+        .filter(d -> !ownedOnly || unlocked.containsKey(d.id()))
+        .count();
   }
 
   private String achievementTexture(
@@ -683,45 +702,45 @@ public final class ControlMenus implements Listener, AutoCloseable {
     int shown = Math.max(0, Math.min(page, pages - 1));
     int from = shown * capacity;
     int to = Math.min(defs.size(), from + capacity);
-    // Header controls: «all» and the categories, centred by their number.
-    var controls = new ArrayList<String>();
-    // Six categories fill the whole header: «all» gives way (the player can still open each category).
-    if (categories.size() < 6) controls.add(ALL_CATEGORIES);
-    controls.addAll(categories);
-    for (int i = 0; i < controls.size(); i++) {
-      String control = controls.get(i);
-      int slot = MenuStyle.headerSlot(i, controls.size());
-      boolean current = control.equals(shownCategory);
-      long owned =
-          catalog.all().stream()
-              .filter(d -> visibleTo(d, unlocked))
-              .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
-              .filter(d -> unlocked.containsKey(d.id()))
-              .count();
-      long total =
-          catalog.all().stream()
-              .filter(d -> visibleTo(d, unlocked))
-              .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
-              .count();
-      var name =
-          control.equals(ALL_CATEGORIES)
-              ? lang.render("achievements.category-all")
-              : Component.text(plugin.getConfig().getString("achievements.categories." + control + ".name", control));
-      var title =
+    // One header control, a filter: it steps through «all» and the categories (LMB next, RMB previous).
+    var options = new ArrayList<String>();
+    options.add(ALL_CATEGORIES);
+    options.addAll(categories);
+    int index = Math.max(0, options.indexOf(shownCategory));
+    var filterLore = new ArrayList<Component>();
+    filterLore.add(lang.render("achievements.filter-lore"));
+    filterLore.add(Component.empty());
+    filterLore.add(lang.render("achievements.filter-options"));
+    for (int i = 0; i < options.size(); i++) {
+      String option = options.get(i);
+      filterLore.add(
           lang.renderText(
-              lang.text(current ? "achievements.category-current" : "achievements.category"),
-              Map.of("name", plainText(name)));
-      var lore =
-          lang.lines("achievements.category-lore").stream()
-              .map(line -> lang.renderText(line, Map.of("owned", "" + owned, "total", "" + total)))
-              .toList();
-      String texture =
-          control.equals(ALL_CATEGORIES)
-              ? plugin.getConfig().getString("achievements.all-texture", "")
-              : plugin.getConfig().getString("achievements.categories." + control + ".texture", "");
-      m.inventory.setItem(slot, MenuStyle.head(texture, title, lore));
-      m.actions.put(slot, click -> achievementsMenu(p, control, 0));
+              lang.text(i == index ? "achievements.filter-current" : "achievements.filter-other"),
+              Map.of(
+                  "name", categoryName(option),
+                  "owned", "" + categoryCount(catalog, unlocked, option, true),
+                  "total", "" + categoryCount(catalog, unlocked, option, false))));
     }
+    filterLore.add(Component.empty());
+    filterLore.add(lang.render("gui.separator"));
+    filterLore.add(lang.render("achievements.filter-next"));
+    filterLore.add(lang.render("achievements.filter-previous"));
+    int filterSlot = MenuStyle.headerSlot(0, 1);
+    m.inventory.setItem(
+        filterSlot,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.filter", ""),
+            lang.renderText(lang.text("achievements.filter"), Map.of("name", categoryName(shownCategory))),
+            filterLore));
+    m.actions.put(
+        filterSlot,
+        click -> {
+          int next =
+              click == ClickType.RIGHT
+                  ? dev.lovelace.loveessential.module.StatCycle.previous(index, options.size())
+                  : dev.lovelace.loveessential.module.StatCycle.next(index, options.size());
+          achievementsMenu(p, options.get(next), 0);
+        });
     for (int i = from; i < to; i++) {
       var def = defs.get(i);
       int slot = MenuStyle.slot(i - from, to - from);

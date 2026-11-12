@@ -22,6 +22,13 @@ messages:
     - ''
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>показать этот раздел
+    filter: '<gold>Раздел <dark_gray>| <yellow><name>'
+    filter-lore: <dark_gray>Переключатель разделов
+    filter-options: '<dark_gray>▪ <gray>Разделы:'
+    filter-current: '  <green>▶ <name> <dark_gray>(<white><owned><dark_gray>/<white><total><dark_gray>)'
+    filter-other: '    <gray><name> <dark_gray>(<owned>/<total>)'
+    filter-next: '<green>ЛКМ <dark_gray>— <gray>следующий раздел'
+    filter-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий раздел'
     hidden-name: '<gray>? ? ?'
     tile-done: '<green>✔ <white><name>'
     tile-todo: '<gray><name>'

@@ -36,7 +36,7 @@ state-heads:
   favorite-full: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=
   received: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGYxMzY1ZWNmMTFiZGZhZjE1ZGFiMmVhODBmMTM1OWQyNzRlYzZkNDI1MjU3YmUyOTA5NWRkMmMzMDBlOTkyZSJ9fX0=
 all-texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2ZhNGRkYTZkMTlhMWZlMmQ5ODhkNjVkZWM1MzQyOTUwNTMwODE2NmM5MDY3YjY4YTQ3NzBjYTVjNDM2Y2Y5NCJ9fX0=
-# Категории (кнопки в шапке меню, не больше пяти: ещё одна кнопка «Все» добавляется сама). Порядок как в файле.
+# Категории: варианты единственной кнопки-фильтра в шапке меню (вместе с «Все»), без ограничения числа. Порядок как в файле.
 categories:
   hunt:
     name: Охота
@@ -50,10 +50,9 @@ categories:
   play:
     name: Жизнь на сервере
     texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGQ5MDUyNjlhY2NhYjI0YjExOTI0ZWJhOGJkOTI5OTFiOGQ4NWNlNDI3NjAyN2ExNjM2YzkzMWI2ZDA2Yzg5ZSJ9fX0=
-  # 2026-11-12: особая категория (супер-редкие ачивки и ачивки за события). Кнопка и сами записи не видны,
+  # 2026-11-12: особая категория (супер-редкие ачивки и ачивки за события). Раздел в фильтре и сами записи не видны,
   # пока игрок не получил хотя бы одну особую ачивку: «просто так» их не найти. Чтобы завести такую ачивку, укажите
-  # category: special в каталоге ниже (hidden: true не нужен, видимостью управляет категория). Шесть категорий занимают
-  # всю шапку (gui_gen: шесть кнопок), поэтому кнопка «Все» тогда убирается.
+  # category: special в каталоге ниже (hidden: true не нужен, видимостью управляет категория).
   special:
     name: Особые
     texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg5ZmZjNGU2NjgzN2NiY2Q0NTc4MjM0NjgxOTY0ODc4MmM5YWYwNTY3Y2FmMDRlZTFiYTkxY2JiODFlOTViMyJ9fX0=
