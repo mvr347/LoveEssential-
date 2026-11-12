@@ -234,6 +234,21 @@ public final class ControlMenus implements Listener, AutoCloseable {
   private static final String DISPLAY_TOGGLE_ON =
       "9b5871c72987266e15f1be49b1ec334ef6b618e9653fb78e918abd39563dbb93";
 
+  // Owner textures (2026-11-12): a join/quit message that is not available to the player.
+  private static final String JOINQUIT_UNAVAILABLE =
+      "c618731e063379aebf82f1d64c419c90d7f0c1648c548e9b6151b1baba66d723";
+  // Heads shared by the nickname menu and the header of the join/quit menu.
+  private static final String NICK_LABEL_TEXTURE =
+      "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=";
+  private static final String NICK_SUFFIXES_TEXTURE =
+      "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ==";
+
+  /** The join/quit menu's filter/sort choice and its return command, per player. */
+  private final Map<UUID, dev.lovelace.loveessential.module.JoinQuitView.Mode> joinQuitMode =
+      new java.util.concurrent.ConcurrentHashMap<>();
+
+  private final Map<UUID, String> joinQuitBack = new java.util.concurrent.ConcurrentHashMap<>();
+
   /** Swaps the icon of an already placed tile for a textured head, keeping its name and lore. */
   private void retexture(Menu m, int slot, String texture) {
     var old = m.inventory.getItem(slot);
@@ -372,10 +387,27 @@ public final class ControlMenus implements Listener, AutoCloseable {
     this.joinQuit = styles;
   }
 
+  private static String plain(Component component) {
+    return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+        .serialize(component);
+  }
+
+  /** Opens the join/quit menu as a child of another plugin's menu; Back runs {@code back} (blank = nickname menu). */
+  public void joinQuitMenu(Player p, String back) {
+    if (back == null || back.isBlank()) joinQuitBack.remove(p.getUniqueId());
+    else joinQuitBack.put(p.getUniqueId(), back);
+    joinQuitMenu(p, 0);
+  }
+
   /** The player's choice of join and quit message from the administrator's catalogue (a child of the nickname menu). */
   public void joinQuitMenu(Player p, int page) {
     var m = menu(p, "joinquit.gui-title", Map.of(), player -> plugin.module("joinquit"));
-    var catalog = joinQuit.catalog();
+    var mode =
+        joinQuitMode.getOrDefault(
+            p.getUniqueId(), dev.lovelace.loveessential.module.JoinQuitView.Mode.ALL);
+    var catalog =
+        dev.lovelace.loveessential.module.JoinQuitView.apply(
+            mode, joinQuit.catalog(), style -> joinQuit.allowed(p, style), style -> style.name());
     var current = joinQuit.chosen(p);
     int capacity = MenuStyle.CONTENT.length;
     int pages = Math.max(1, (catalog.size() + capacity - 1) / capacity);
@@ -431,11 +463,15 @@ public final class ControlMenus implements Listener, AutoCloseable {
                               if (error == null) joinQuitMenu(p, shown);
                             }));
           });
+      // A message the player cannot use shows the owner's "unavailable" head instead of the style's icon.
+      if (!open) retexture(m, slot, JOINQUIT_UNAVAILABLE);
     }
-    // Administrators only: enter and leave without a message (gui_gen: a single header control sits on slot 4).
+    joinQuitHeader(m, p, mode);
+    // Administrators only: enter and leave without a message. An extra footer button (gui_gen): code slot 50 is the
+    // one in front of Back once standard() has placed the footer, like "reset colour" in the nickname menu.
     if (p.hasPermission(dev.lovelace.loveessential.module.JoinQuitStyles.SILENT_PERMISSION)) {
       boolean quiet = joinQuit.silent(p);
-      int slot = MenuStyle.headerSlot(0, 1);
+      int slot = 50;
       m.inventory.setItem(
           slot,
           MenuStyle.head(
@@ -456,8 +492,105 @@ public final class ControlMenus implements Listener, AutoCloseable {
                                 if (p.isOnline()) joinQuitMenu(p, shown);
                               })));
     }
-    navigation(m, p, shown, catalog.size(), capacity, target -> joinQuitMenu(p, target), () -> nicknameAgain(p));
+    navigation(
+        m,
+        p,
+        shown,
+        catalog.size(),
+        capacity,
+        target -> joinQuitMenu(p, target),
+        () -> {
+          String back = joinQuitBack.getOrDefault(p.getUniqueId(), "");
+          if (back.isBlank()) nicknameAgain(p);
+          else {
+            // Opened by another plugin: going back completes the way, this menu must not stay as a parent.
+            MenuStyle.forget(p);
+            Bukkit.dispatchCommand(p, back);
+          }
+        });
     MenuStyle.open(p, m.inventory);
+  }
+
+  /**
+   * Header controls of the join/quit menu (gui_gen table, centred by their number): nickname, who sees what,
+   * marks, and the one filter/sort button.
+   */
+  private void joinQuitHeader(
+      Menu m, Player p, dev.lovelace.loveessential.module.JoinQuitView.Mode mode) {
+    int controls = 4;
+    int nickSlot = MenuStyle.headerSlot(0, controls);
+    int displaySlot = MenuStyle.headerSlot(1, controls);
+    int marksSlot = MenuStyle.headerSlot(2, controls);
+    int filterSlot = MenuStyle.headerSlot(3, controls);
+    m.inventory.setItem(
+        nickSlot,
+        MenuStyle.head(
+            NICK_LABEL_TEXTURE,
+            lang.render("nick.label"),
+            lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
+    m.actions.put(nickSlot, click -> MenuStyle.action(p, () -> nicknameAgain(p)));
+    m.inventory.setItem(
+        displaySlot,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.display", ""),
+            lang.render("profile-menu.display"),
+            lang.lines("profile-menu.display-lore").stream()
+                .map(l -> lang.renderText(l, Map.of()))
+                .toList()));
+    m.actions.put(
+        displaySlot, click -> MenuStyle.action(p, () -> Bukkit.dispatchCommand(p, "loveessential:display")));
+    var suffixCommand = Bukkit.getPluginCommand("lovesubnames:suffixes");
+    boolean catalogue = suffixCommand != null && suffixCommand.getPlugin().isEnabled()
+        && suffixCommand.getPlugin().getName().equalsIgnoreCase("LoveSubnames");
+    var marksLore =
+        new ArrayList<>(
+            lang.lines("nick.suffixes-lore").stream()
+                .map(l -> lang.renderText(l, Map.of("suffix", currentSuffix(p))))
+                .toList());
+    if (!catalogue) marksLore.add(lang.render("profile-menu.integration-unavailable"));
+    m.inventory.setItem(
+        marksSlot, MenuStyle.head(NICK_SUFFIXES_TEXTURE, lang.render("nick.suffixes"), marksLore));
+    if (catalogue)
+      m.actions.put(
+          marksSlot,
+          click -> {
+            MenuStyle.external(p);
+            p.closeInventory();
+            Bukkit.dispatchCommand(p, "lovesubnames:suffixes loveessential:nick joinquit");
+          });
+    var modes = dev.lovelace.loveessential.module.JoinQuitView.Mode.values();
+    var lore = new ArrayList<Component>();
+    lore.add(lang.render("joinquit.filter-lore"));
+    lore.add(Component.empty());
+    lore.add(lang.render("joinquit.filter-options"));
+    for (var option : modes)
+      lore.add(
+          lang.renderText(
+              lang.text(option == mode ? "joinquit.filter-current" : "joinquit.filter-other"),
+              Map.of("name", plain(lang.render("joinquit.filter-" + option.id())))));
+    lore.add(Component.empty());
+    lore.add(lang.render("gui.separator"));
+    lore.add(lang.render("joinquit.filter-next"));
+    lore.add(lang.render("joinquit.filter-previous"));
+    m.inventory.setItem(
+        filterSlot,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.filter", ""),
+            lang.renderText(
+                lang.text("joinquit.filter"),
+                Map.of("name", plain(lang.render("joinquit.filter-" + mode.id())))),
+            lore));
+    m.actions.put(
+        filterSlot,
+        click -> {
+          int now = mode.ordinal();
+          int next =
+              click == ClickType.RIGHT
+                  ? dev.lovelace.loveessential.module.StatCycle.previous(now, modes.length)
+                  : dev.lovelace.loveessential.module.StatCycle.next(now, modes.length);
+          joinQuitMode.put(p.getUniqueId(), modes[next]);
+          joinQuitMenu(p, 0);
+        });
   }
 
   private dev.lovelace.loveessential.module.AchievementService achievements;
@@ -478,15 +611,77 @@ public final class ControlMenus implements Listener, AutoCloseable {
     };
   }
 
-  /** The categories shown as header controls: those of the config that the catalogue uses, at most five. */
-  private List<String> achievementCategories() {
+  /** Category of event-only, super-rare achievements: invisible (button and entries) until the player owns one. */
+  static final String SPECIAL_CATEGORY = "special";
+
+  // Owner textures (2026-11-12) for achievement tiles by state; the config may override each one.
+  private static final String ACH_TODO =
+      "df1365ecf11bdfaf15dab2ea80f1359d274ec6d425257be29095dd2c300e992e";
+  private static final String ACH_SECRET_DONE =
+      "c2df944b47420a37dfa8232f74a6e57bc35beb27edb608d60f04710e4f2378dd";
+  private static final String ACH_SPECIAL_DONE =
+      "c89ffc4e66837cbcd45782346819648782c9af0567caf04ee1ba91cbb81e95b3";
+  private static final String ACH_RECEIVED =
+      "df1365ecf11bdfaf15dab2ea80f1359d274ec6d425257be29095dd2c300e992e";
+
+  private dev.lovelace.loveessential.module.AchievementFavorites favorites;
+
+  public void favorites(dev.lovelace.loveessential.module.AchievementFavorites service) {
+    this.favorites = service;
+  }
+
+  /** Whether the player sees this entry: special achievements stay invisible until they are unlocked. */
+  private static boolean visibleTo(
+      dev.lovelace.loveessential.module.AchievementCatalog.Def def, Map<String, Long> unlocked) {
+    return !def.category().equals(SPECIAL_CATEGORY) || unlocked.containsKey(def.id());
+  }
+
+  /**
+   * The categories shown as header controls: those of the config that the catalogue uses. The special one is
+   * left out until the player owns a special achievement. They are the options of the one filter button.
+   */
+  private List<String> achievementCategories(Map<String, Long> unlocked) {
     var config = plugin.getConfig().getConfigurationSection("achievements.categories");
     var used = new java.util.HashSet<>(achievements.catalog().categories());
+    boolean specialSeen =
+        achievements.catalog().all().stream()
+            .anyMatch(d -> d.category().equals(SPECIAL_CATEGORY) && unlocked.containsKey(d.id()));
     var result = new ArrayList<String>();
     if (config != null)
-      for (String id : config.getKeys(false)) if (used.contains(id)) result.add(id);
-    // gui_gen: at most six header controls, one of them is «all».
-    return result.size() > 5 ? List.copyOf(result.subList(0, 5)) : List.copyOf(result);
+      for (String id : config.getKeys(false))
+        if (used.contains(id) && (!id.equals(SPECIAL_CATEGORY) || specialSeen)) result.add(id);
+    return List.copyOf(result);
+  }
+
+  private String categoryName(String category) {
+    return category.equals(ALL_CATEGORIES)
+        ? plainText(lang.render("achievements.category-all"))
+        : plugin.getConfig().getString("achievements.categories." + category + ".name", category);
+  }
+
+  /** Achievements the player can see in a category (or in all), those they own or all of them. */
+  private long categoryCount(
+      dev.lovelace.loveessential.module.AchievementCatalog catalog,
+      Map<String, Long> unlocked,
+      String category,
+      boolean ownedOnly) {
+    return catalog.all().stream()
+        .filter(d -> visibleTo(d, unlocked))
+        .filter(d -> category.equals(ALL_CATEGORIES) || d.category().equals(category))
+        .filter(d -> !ownedOnly || unlocked.containsKey(d.id()))
+        .count();
+  }
+
+  private String achievementTexture(
+      dev.lovelace.loveessential.module.AchievementCatalog.Def def, boolean done) {
+    var config = plugin.getConfig();
+    if (!done) return config.getString("achievements.state-heads.todo", ACH_TODO);
+    if (!def.icon().isBlank()) return def.icon();
+    if (def.category().equals(SPECIAL_CATEGORY))
+      return config.getString("achievements.state-heads.special-done", ACH_SPECIAL_DONE);
+    if (def.hidden() || def.category().equals("secret"))
+      return config.getString("achievements.state-heads.secret-done", ACH_SECRET_DONE);
+    return config.getString("achievements.rarity-heads." + def.rarity().name(), "");
   }
 
   /** The achievements, one category or all of them; a child of nothing (opened by the command or from the profile). */
@@ -495,10 +690,11 @@ public final class ControlMenus implements Listener, AutoCloseable {
     var id = p.getUniqueId();
     var catalog = achievements.catalog();
     var unlocked = achievements.unlockedAt(id);
-    var categories = achievementCategories();
+    var categories = achievementCategories(unlocked);
     String shownCategory = categories.contains(category) ? category : ALL_CATEGORIES;
     var defs =
         catalog.all().stream()
+            .filter(d -> visibleTo(d, unlocked))
             .filter(d -> shownCategory.equals(ALL_CATEGORIES) || d.category().equals(shownCategory))
             .toList();
     int capacity = MenuStyle.CONTENT.length;
@@ -506,42 +702,45 @@ public final class ControlMenus implements Listener, AutoCloseable {
     int shown = Math.max(0, Math.min(page, pages - 1));
     int from = shown * capacity;
     int to = Math.min(defs.size(), from + capacity);
-    // Header controls: «all» and the categories, centred by their number.
-    var controls = new ArrayList<String>();
-    controls.add(ALL_CATEGORIES);
-    controls.addAll(categories);
-    for (int i = 0; i < controls.size(); i++) {
-      String control = controls.get(i);
-      int slot = MenuStyle.headerSlot(i, controls.size());
-      boolean current = control.equals(shownCategory);
-      long owned =
-          catalog.all().stream()
-              .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
-              .filter(d -> unlocked.containsKey(d.id()))
-              .count();
-      long total =
-          catalog.all().stream()
-              .filter(d -> control.equals(ALL_CATEGORIES) || d.category().equals(control))
-              .count();
-      var name =
-          control.equals(ALL_CATEGORIES)
-              ? lang.render("achievements.category-all")
-              : Component.text(plugin.getConfig().getString("achievements.categories." + control + ".name", control));
-      var title =
+    // One header control, a filter: it steps through «all» and the categories (LMB next, RMB previous).
+    var options = new ArrayList<String>();
+    options.add(ALL_CATEGORIES);
+    options.addAll(categories);
+    int index = Math.max(0, options.indexOf(shownCategory));
+    var filterLore = new ArrayList<Component>();
+    filterLore.add(lang.render("achievements.filter-lore"));
+    filterLore.add(Component.empty());
+    filterLore.add(lang.render("achievements.filter-options"));
+    for (int i = 0; i < options.size(); i++) {
+      String option = options.get(i);
+      filterLore.add(
           lang.renderText(
-              lang.text(current ? "achievements.category-current" : "achievements.category"),
-              Map.of("name", plainText(name)));
-      var lore =
-          lang.lines("achievements.category-lore").stream()
-              .map(line -> lang.renderText(line, Map.of("owned", "" + owned, "total", "" + total)))
-              .toList();
-      String texture =
-          control.equals(ALL_CATEGORIES)
-              ? plugin.getConfig().getString("achievements.all-texture", "")
-              : plugin.getConfig().getString("achievements.categories." + control + ".texture", "");
-      m.inventory.setItem(slot, MenuStyle.head(texture, title, lore));
-      m.actions.put(slot, click -> achievementsMenu(p, control, 0));
+              lang.text(i == index ? "achievements.filter-current" : "achievements.filter-other"),
+              Map.of(
+                  "name", categoryName(option),
+                  "owned", "" + categoryCount(catalog, unlocked, option, true),
+                  "total", "" + categoryCount(catalog, unlocked, option, false))));
     }
+    filterLore.add(Component.empty());
+    filterLore.add(lang.render("gui.separator"));
+    filterLore.add(lang.render("achievements.filter-next"));
+    filterLore.add(lang.render("achievements.filter-previous"));
+    int filterSlot = MenuStyle.headerSlot(0, 1);
+    m.inventory.setItem(
+        filterSlot,
+        MenuStyle.head(
+            plugin.getConfig().getString("profile.gui.textures.profile-menu.filter", ""),
+            lang.renderText(lang.text("achievements.filter"), Map.of("name", categoryName(shownCategory))),
+            filterLore));
+    m.actions.put(
+        filterSlot,
+        click -> {
+          int next =
+              click == ClickType.RIGHT
+                  ? dev.lovelace.loveessential.module.StatCycle.previous(index, options.size())
+                  : dev.lovelace.loveessential.module.StatCycle.next(index, options.size());
+          achievementsMenu(p, options.get(next), 0);
+        });
     for (int i = from; i < to; i++) {
       var def = defs.get(i);
       int slot = MenuStyle.slot(i - from, to - from);
@@ -556,14 +755,41 @@ public final class ControlMenus implements Listener, AutoCloseable {
                   Map.of("name", def.name()));
       if (!covered && done) title = title.color(color);
       var lore = achievementLore(def, id, unlocked.get(def.id()), covered);
-      String texture =
-          !def.icon().isBlank()
-              ? def.icon()
-              : plugin.getConfig().getString("achievements.rarity-heads." + def.rarity().name(), "");
+      String texture = achievementTexture(def, done);
+      if (done && favorites != null) {
+        boolean pinned = favorites.isFavorite(id, def.id());
+        lore = new ArrayList<>(lore);
+        lore.add(Component.empty());
+        lore.add(lang.render("gui.separator"));
+        lore.add(lang.render(pinned ? "achievements.tile-favorite-remove" : "achievements.tile-favorite-add"));
+      }
       m.inventory.setItem(slot, MenuStyle.head(texture, title, lore));
-      m.actions.put(slot, click -> {});
+      m.actions.put(
+          slot,
+          click -> {
+            if (!done || favorites == null || click != ClickType.RIGHT) return;
+            favorites
+                .toggle(p, def.id())
+                .whenComplete(
+                    (result, error) ->
+                        main.execute(
+                            () -> {
+                              if (!p.isOnline()) return;
+                              if (error == null)
+                                p.sendMessage(
+                                    lang.renderText(
+                                        lang.text(
+                                            switch (result) {
+                                              case ADDED -> "achievements.favorite-added";
+                                              case REMOVED -> "achievements.favorite-removed";
+                                              case FULL -> "achievements.favorite-full";
+                                            }),
+                                        Map.of("name", def.name())));
+                              achievementsMenu(p, shownCategory, shown);
+                            }));
+          });
     }
-    long total = catalog.all().size();
+    long total = catalog.all().stream().filter(d -> visibleTo(d, unlocked)).count();
     long owned = catalog.all().stream().filter(d -> unlocked.containsKey(d.id())).count();
     int filled = dev.lovelace.loveessential.module.SecretRules.filled((int) owned, (int) total);
     tile(
@@ -575,6 +801,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
         Map.of("owned", "" + owned, "total", "" + total),
         Map.of("bar", progressBar(filled)),
         c -> {});
+    retexture(m, 50, plugin.getConfig().getString("achievements.state-heads.received", ACH_RECEIVED));
     navigation(
         m, p, shown, defs.size(), capacity, target -> achievementsMenu(p, shownCategory, target), () -> {});
     MenuStyle.open(p, m.inventory);
@@ -2140,7 +2367,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     m.inventory.setItem(
         labelSlot,
         MenuStyle.head(
-            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTA3Y2FhMWM5ZjNiNzEzZTc0ZjFhYmQ5YjkxMDc5MTBkYWFiYThiNTNkOWQxMDM3NmIyZDgyN2Y1NDNiZWUzOSJ9fX0=",
+            NICK_LABEL_TEXTURE,
             lang.render("nick.label"),
             lang.lines("nick.label-lore").stream().map(l -> lang.renderText(l, Map.of())).toList()));
     // The tags and marks other players see: LoveEssential's own /display menu, opened as a child of this one.
@@ -2167,7 +2394,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     m.inventory.setItem(
         suffixSlot,
         MenuStyle.head(
-            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWFlODVmNzRmOGUyYzA1NGI3ODFhMjlmYTliMjU5MzRiYTYzYmI3OWYxZGU4YTk1YjQzNmQ5YmZkY2FmNGNkIn19fQ==",
+            NICK_SUFFIXES_TEXTURE,
             lang.render("nick.suffixes"),
             suffixLore));
     if (joinQuitButton) {
@@ -2180,7 +2407,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
               lang.lines("nick.joinquit-lore").stream()
                   .map(l -> lang.renderText(l, Map.of("current", joinQuit.chosen(p).name())))
                   .toList()));
-      m.actions.put(slot, click -> MenuStyle.action(p, () -> joinQuitMenu(p, 0)));
+      m.actions.put(slot, click -> MenuStyle.action(p, () -> joinQuitMenu(p, "")));
     }
     if (catalogue)
       m.actions.put(
@@ -2712,6 +2939,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
     direct.remove(e.getPlayer().getUniqueId());
     dispatching.remove(e.getPlayer().getUniqueId());
     nicknameBack.remove(e.getPlayer().getUniqueId());
+    joinQuitBack.remove(e.getPlayer().getUniqueId());
+    joinQuitMode.remove(e.getPlayer().getUniqueId());
   }
 
   public void close() {

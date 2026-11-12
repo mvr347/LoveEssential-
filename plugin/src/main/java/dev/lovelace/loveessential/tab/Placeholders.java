@@ -222,6 +222,14 @@ public final class Placeholders {
     };
   }
 
+  /** {@code display.clan.format} of the tab section; {@code %tag%} when it is not set. */
+  private String clanFormat() {
+    var tabSection = tab.get();
+    return tabSection == null
+        ? ClanFormat.DEFAULT
+        : tabSection.getString("display.clan.format", ClanFormat.DEFAULT);
+  }
+
   /** Server time shifted by {@code placeholders.time-offset} hours; a bad format falls back to the default. */
   private String now(String key, String pattern, java.time.format.DateTimeFormatter fallback) {
     var tabSection = tab.get();
@@ -398,7 +406,7 @@ public final class Placeholders {
             Map.entry("max_players", () -> Integer.toString(Bukkit.getMaxPlayers())),
             Map.entry("ping", () -> Integer.toString(target.getPing())),
             Map.entry(
-                "clan",
+                "clan_tag",
                 () ->
                     hidden.contains(DisplayPrefs.Element.CLAN_TAG)
                         ? ""
@@ -427,6 +435,14 @@ public final class Placeholders {
             (args, context) ->
                 Tag.inserting(
                     afk.test(target) ? lang.render("tab.status.afk") : Component.empty())));
+    b.resolver(
+        TagResolver.resolver(
+            "clan",
+            (args, context) ->
+                Tag.inserting(
+                    hidden.contains(DisplayPrefs.Element.CLAN_TAG)
+                        ? Component.empty()
+                        : ClanFormat.apply(mm, clanFormat(), love.clan(target).orElse("")))));
     b.resolver(
         TagResolver.resolver(
             "suffix",

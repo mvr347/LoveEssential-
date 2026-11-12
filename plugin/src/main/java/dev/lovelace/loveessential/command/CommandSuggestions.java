@@ -163,6 +163,7 @@ public final class CommandSuggestions {
         var out = new ArrayList<>(List.of("set", "reset"));
         out.add("color");
         out.add("gradient");
+        if (offset == 0 && plugin.module("joinquit")) out.add("joinquit");
         if (offset == 0 && sender.hasPermission("loveessential.nick.others")) out.add("player");
         return out;
       }

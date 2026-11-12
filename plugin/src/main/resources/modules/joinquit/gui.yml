@@ -31,6 +31,17 @@ messages:
     status-open: '<gray>Можно выбрать'
     status-locked: '<red>Недоступно: этот вариант выдаётся отдельно'
     status-achievement: '<red>Откроется за достижение: <white><achievement>'
+    filter: '<gold>Фильтр и сортировка <dark_gray>| <yellow><name>'
+    filter-lore: <dark_gray>Переключатель
+    filter-options: '<dark_gray>▪ <gray>Варианты:'
+    filter-current: '  <green>▶ <name>'
+    filter-other: '    <gray><name>'
+    filter-next: '<green>ЛКМ <dark_gray>— <gray>следующий вариант'
+    filter-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий вариант'
+    filter-all: Все
+    filter-available: Доступные
+    filter-locked: Недоступные
+    filter-name: По названию
     silent-on: '<green>Тихий вход и выход <dark_gray>| <white>включён'
     silent-off: '<gray>Тихий вход и выход <dark_gray>| <white>выключен'
     silent-lore:

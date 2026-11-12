@@ -527,7 +527,7 @@ scoreboards:
     # До 15 строк; длина строки не ограничена. Пустая строка даёт отступ.
     lines:
     - '<gray>Путник: <white><player>'
-    - '<gray>Клан: <white><clan>'
+    - '<gray>Клан: <white><clan_tag>'
     - '<gray>Репутация: <white><reputation>'
     - '<gray>Игроков: <white><visible_online>'
 messages:

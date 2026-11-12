@@ -20,12 +20,23 @@ access:
 broadcast-rarity: LEGENDARY
 # Головы по редкости для плиток меню, если у ачивки нет своей головы (icon). Текстуры в формате base64.
 rarity-heads:
-  COMMON: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTUyODhkZGM5MTFhNzVmNzdjM2E1ZDMzNjM2NWE4ZjhiMTM5ZmE1MzkzMGI0YjZlZTEzOTg3NWM4MGNlMzY2YyJ9fX0=
-  RARE: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTYzZTY2NDZmMWMwZDQxZmQzYmY1NTg0YTFjZTA0NGY1YzQ2ZDU5ODI1OGRiNDYyMTYxMTc4NTlmNTdhZjE5NyJ9fX0=
-  EPIC: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk3MDEyZWQ2YTkyYjA1ZWEwZjE5NDk1MDc0ODU0NGUwNzViYWEyODc4MWNhMzczZDFiMjdlMjhjMjY5NTNjIn19fQ==
+  COMMON: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjViNWE5OTU5Y2MyZGU0MzIwMzA0ZThlMGEyNmFhZWRkMTFmYjc5YjZhNjliMmRlOGI4OWRjZWMyZDgwZWIxZCJ9fX0=
+  RARE: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTkwYzVjNDY1YmMzYjhlNWViZjYwMzQyZmExZTllY2NiMTI1NjNjNWZmMDVhYmI3YTY0MzE1OTQ3ODE1MDAwMiJ9fX0=
+  EPIC: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzcwY2FjZDU5NzM5ODBjMWVjNGUyMTY0MTAyYjUwZDY0ZDcwYjNmZWRmYmM0YTBmNzMxMjdiODAwNmNiYmY5YiJ9fX0=
   LEGENDARY: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZWUzMDQ4MGVkMjgzNGY1YjdjYzgxZGNiMWRjN2U0NzY2NzkyNDMwYzQ5ZGFkNGRiY2QxMGE5M2M1ZTE0NTdiYyJ9fX0=
+# 2026-11-12: головы по СОСТОЯНИЮ плитки: todo - ещё не получено (у любой ачивки, включая скрытые), secret-done - получена
+# скрытая, special-done - получена особая, received - плитка-счётчик «Получено достижений». Раньше голова зависела только
+# от редкости, и невыполненная ачивка выглядела как выполненная. Получено обычной ачивки - голова редкости из rarity-heads
+# выше (у LEGENDARY владелец текстуру не присылал, осталась прежняя). Ключ не указан - берётся текстура по умолчанию из плагина.
+state-heads:
+  todo: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGYxMzY1ZWNmMTFiZGZhZjE1ZGFiMmVhODBmMTM1OWQyNzRlYzZkNDI1MjU3YmUyOTA5NWRkMmMzMDBlOTkyZSJ9fX0=
+  secret-done: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzJkZjk0NGI0NzQyMGEzN2RmYTgyMzJmNzRhNmU1N2JjMzViZWIyN2VkYjYwOGQ2MGYwNDcxMGU0ZjIzNzhkZCJ9fX0=
+  special-done: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg5ZmZjNGU2NjgzN2NiY2Q0NTc4MjM0NjgxOTY0ODc4MmM5YWYwNTY3Y2FmMDRlZTFiYTkxY2JiODFlOTViMyJ9fX0=
+  favorite-empty: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjhkZGY4M2VhN2YwOGE3MmE1MmFjMjFkYzc0MDBhMDYxN2FjMmNiZTIxYTMxNzA0OGY0MmU3ZjI0OTk0NDgwZSJ9fX0=
+  favorite-full: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGE2ZDJmNDcxYjU0MDQ3MTQ4YjM1NTI1NWM3ZjU1NmUyMTg3ZmQ0ZTgzMzhiMTExZGJmM2FkY2QyODUwYzQ5OCJ9fX0=
+  received: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGYxMzY1ZWNmMTFiZGZhZjE1ZGFiMmVhODBmMTM1OWQyNzRlYzZkNDI1MjU3YmUyOTA5NWRkMmMzMDBlOTkyZSJ9fX0=
 all-texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2ZhNGRkYTZkMTlhMWZlMmQ5ODhkNjVkZWM1MzQyOTUwNTMwODE2NmM5MDY3YjY4YTQ3NzBjYTVjNDM2Y2Y5NCJ9fX0=
-# Категории (кнопки в шапке меню, не больше пяти: ещё одна кнопка «Все» добавляется сама). Порядок как в файле.
+# Категории: варианты единственной кнопки-фильтра в шапке меню (вместе с «Все»), без ограничения числа. Порядок как в файле.
 categories:
   hunt:
     name: Охота
@@ -39,6 +50,12 @@ categories:
   play:
     name: Жизнь на сервере
     texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGQ5MDUyNjlhY2NhYjI0YjExOTI0ZWJhOGJkOTI5OTFiOGQ4NWNlNDI3NjAyN2ExNjM2YzkzMWI2ZDA2Yzg5ZSJ9fX0=
+  # 2026-11-12: особая категория (супер-редкие ачивки и ачивки за события). Раздел в фильтре и сами записи не видны,
+  # пока игрок не получил хотя бы одну особую ачивку: «просто так» их не найти. Чтобы завести такую ачивку, укажите
+  # category: special в каталоге ниже (hidden: true не нужен, видимостью управляет категория).
+  special:
+    name: Особые
+    texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg5ZmZjNGU2NjgzN2NiY2Q0NTc4MjM0NjgxOTY0ODc4MmM5YWYwNTY3Y2FmMDRlZTFiYTkxY2JiODFlOTViMyJ9fX0=
   secret:
     name: Скрытые
     texture: eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmE5NGNiMjVkZTYyOGNhMzU5YjJmNmVhNWE4ODY4Y2JlMjY1OTVlZWRiMmJmZmI3NTA5NjdhZDFlZTE4NTAifX19

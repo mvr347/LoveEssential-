@@ -22,6 +22,13 @@ messages:
     - ''
     - <dark_gray><st>─────────────────────</st>
     - <green>ЛКМ <dark_gray>— <gray>показать этот раздел
+    filter: '<gold>Раздел <dark_gray>| <yellow><name>'
+    filter-lore: <dark_gray>Переключатель разделов
+    filter-options: '<dark_gray>▪ <gray>Разделы:'
+    filter-current: '  <green>▶ <name> <dark_gray>(<white><owned><dark_gray>/<white><total><dark_gray>)'
+    filter-other: '    <gray><name> <dark_gray>(<owned>/<total>)'
+    filter-next: '<green>ЛКМ <dark_gray>— <gray>следующий раздел'
+    filter-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий раздел'
     hidden-name: '<gray>? ? ?'
     tile-done: '<green>✔ <white><name>'
     tile-todo: '<gray><name>'
@@ -48,6 +55,28 @@ messages:
     - '<dark_gray>▪ <gray>Награда:'
     - '  <gold><reward>'
     - ''
+    tile-favorite-add: '<green>ПКМ <dark_gray>— <gray>показать в профиле'
+    tile-favorite-remove: '<red>ПКМ <dark_gray>— <gray>убрать из профиля'
+    favorite-added: '<green>«<white><name></white><green>» теперь видно в вашем профиле.'
+    favorite-removed: '<gray>«<white><name></white><gray>» убрано из профиля.'
+    favorite-full: '<red>В профиле можно закрепить не больше трёх достижений. Уберите одно (ПКМ по нему).'
+    favorite-empty: '<gray>Любимое достижение <dark_gray>| <white>пусто'
+    favorite-empty-lore:
+    - <dark_gray>Витрина профиля
+    - ''
+    - '  <gray>Откройте достижения и нажмите ПКМ'
+    - '  <gray>на полученное, чтобы закрепить его'
+    - '  <gray>здесь: его увидят все, кто откроет'
+    - '  <gray>ваш профиль.'
+    - ''
+    - <dark_gray><st>─────────────────────</st>
+    - <green>ЛКМ <dark_gray>— <gray>открыть достижения
+    favorite-open: '<green>ЛКМ <dark_gray>— <gray>открыть достижения'
+    favorite-full-name: '<gold>★ <name>'
+    favorite-full-lore:
+    - '<dark_gray>Любимое достижение · <rarity>'
+    - ''
+    - '  <gray><description>'
     status-done: '<green>Получено: <white><date>'
     status-todo: '<red>Ещё не получено'
     rarity-common: '<white>Обычная'
