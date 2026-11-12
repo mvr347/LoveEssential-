@@ -1281,7 +1281,10 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   private ItemStack icon(String key, Material fallback, Component title, List<Component> lore) {
-    String texture = plugin.getConfig().getString("profile.gui.textures." + key, "");
+    String texture =
+        TextureUpgrades.upgrade(
+            "profile.gui.textures." + key,
+            plugin.getConfig().getString("profile.gui.textures." + key, ""));
     return texture.isBlank()
         ? MenuStyle.item(fallback, title, lore)
         : MenuStyle.head(texture, title, lore);
