@@ -748,6 +748,7 @@ public final class ModuleConfigs {
                 "groups",
                 "placeholders",
                 "catalog",
+                "styles",
                 "presets",
                 "users",
                 "worlds",
@@ -757,6 +758,7 @@ public final class ModuleConfigs {
                 "header-footer.profiles")
             .stream()
             .filter(target::contains)
+            .filter(key -> !key.equals("styles") || target.getBoolean("content-editor-owned", false))
             .toList();
     for (String key : defaults.getKeys(true)) {
       if (preserve.stream().anyMatch(root -> key.startsWith(root + "."))) continue;

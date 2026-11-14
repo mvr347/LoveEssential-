@@ -19,6 +19,13 @@ public final class ConditionEngine {
             love.economy()
                 .map(e -> verdict(e.has(p, Long.parseLong(a.get("amount")))))
                 .orElse(Verdict.UNAVAILABLE));
+    register("npc-disposition", (p, a) -> {
+      var levels = love.service(dev.lovelace.lovecore.api.social.BehaviorLevels.class);
+      var mood = levels.map(v -> dev.lovelace.loveessential.npc.NpcDisposition.of(
+          v.politenessLevel(p.getUniqueId()), v.playstyleLevel(p.getUniqueId())))
+          .orElse(dev.lovelace.loveessential.npc.NpcDisposition.NEUTRAL);
+      return verdict(mood.key().equals(required(a, "value")));
+    });
     register("permission", (p, a) -> verdict(p.hasPermission(required(a, "value"))));
     register("world", (p, a) -> verdict(p.getWorld().getName().equals(required(a, "value"))));
     register(

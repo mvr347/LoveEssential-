@@ -110,6 +110,7 @@ public final class NpcService implements Listener, AutoCloseable {
 
   private static final class Capture {
     final Live live;
+    final int generation;
     final NpcDefinition definition;
     final World world;
     final PathSearch.Cell start, target;
@@ -121,6 +122,7 @@ public final class NpcService implements Listener, AutoCloseable {
 
     Capture(Live live, NpcDefinition definition, Location destination, int radius) {
       this.live = live;
+      generation = live.movementGeneration;
       this.definition = definition;
       var at = live.entity.getLocation();
       world = at.getWorld();
@@ -172,6 +174,8 @@ public final class NpcService implements Listener, AutoCloseable {
     List<PathSearch.Cell> path = List.of();
     int pathIndex;
     Location last;
+    NpcRoutine.State routine;
+    int movementGeneration;
 
     Live(String key, NpcDefinition n, UUID viewer, LivingEntity e, boolean preview) {
       this.key = key;
@@ -718,7 +722,15 @@ public final class NpcService implements Listener, AutoCloseable {
     }
   }
 
+  private NpcRoutine.State routine(NpcDefinition n) {
+    var world = Bukkit.getWorld(n.spawn().world());
+    return NpcRoutine.state(world == null ? 0 : world.getTime(),
+        (int) n.number("work-from", 0), (int) n.number("work-to", 12000),
+        n.option("off-duty", "away").equals("walk"));
+  }
+
   private boolean scheduled(NpcDefinition n) {
+    if (n.flag("routine-enabled", false) && routine(n) == NpcRoutine.State.AWAY) return false;
     if (!n.flag("enabled-hours", false)) return true;
     var world = Bukkit.getWorld(n.spawn().world());
     if (world == null) return false;
@@ -734,7 +746,7 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   public boolean accessible(Player p, NpcDefinition n) {
-    return visible(p, n)
+    return scheduled(n) && visible(p, n)
         && conditions.test(p, n.access()) == Verdict.ALLOW
         && p.getWorld().getUID().equals(n.spawn().world());
   }
@@ -757,16 +769,33 @@ public final class NpcService implements Listener, AutoCloseable {
   }
 
   private void move(Live l, NpcDefinition n) {
+    NpcRoutine.State state = n.flag("routine-enabled", false) ? routine(n) : null;
+    if (state != l.routine) {
+      l.routine = state;
+      l.movementGeneration++;
+      l.wait = 0;
+      l.finished = false;
+      l.path = List.of();
+      l.pathIndex = 0;
+    }
     if (l.wait > 0) {
       l.wait--;
       return;
     }
     if (l.finished) return;
     var points = n.route().points();
-    boolean follow = n.option("movement", "route").equals("follow");
+    String movement = state == null ? n.option("movement", "route")
+        : state == NpcRoutine.State.WORK ? "home" : "route";
+    boolean follow = movement.equals("follow");
     Location destination;
     Route.Point point = null;
-    if (follow) {
+    if (movement.equals("home")) {
+      destination = n.spawn().location();
+      if (destination.distanceSquared(l.entity.getLocation()) <= .64) {
+        l.entity.setRotation(destination.getYaw(), destination.getPitch());
+        return;
+      }
+    } else if (follow) {
       Player p =
           !n.option("follow-player", "").isBlank()
               ? Bukkit.getPlayerExact(n.option("follow-player", ""))
@@ -782,7 +811,7 @@ public final class NpcService implements Listener, AutoCloseable {
       if (destination.distanceSquared(l.entity.getLocation())
           <= Math.pow(n.number("follow-distance", 3), 2)) return;
     } else {
-      if (points.isEmpty() || n.option("movement", "route").equals("stationary")) return;
+      if (points.isEmpty() || movement.equals("stationary")) return;
       point = points.get(Math.min(l.point, points.size() - 1));
       destination = point.position().location();
       if (!destination.getWorld().equals(l.entity.getWorld())) return;
@@ -869,7 +898,7 @@ public final class NpcService implements Listener, AutoCloseable {
     long deadline = System.nanoTime() + budget;
     while (!captures.isEmpty() && System.nanoTime() < deadline) {
       var c = captures.peek();
-      if (live.get(c.live.key) != c.live || !c.live.entity.isValid()) {
+      if (live.get(c.live.key) != c.live || !c.live.entity.isValid() || c.generation != c.live.movementGeneration) {
         captures.remove();
         c.live.planning = false;
         pathSlots.release();
@@ -915,7 +944,7 @@ public final class NpcService implements Listener, AutoCloseable {
                   main.execute(
                       () -> {
                         c.live.planning = false;
-                        if (live.get(c.live.key) != c.live || !c.live.entity.isValid()) return;
+                        if (live.get(c.live.key) != c.live || !c.live.entity.isValid() || c.generation != c.live.movementGeneration) return;
                         c.live.path = result;
                         c.live.pathIndex = Math.min(1, result.size());
                         if (result.size() < 2) {
@@ -1032,6 +1061,7 @@ public final class NpcService implements Listener, AutoCloseable {
                 ? NpcInteractEvent.Click.LEFT
                 : NpcInteractEvent.Click.RIGHT,
             e);
+    if (n.flag("pause-on-interact", true)) instance.pauseUntil = tick + 200;
     Bukkit.getPluginManager().callEvent(event);
     if (event.isCancelled()) return;
     String soundName = n.option("interaction-sound", "");
@@ -1046,7 +1076,6 @@ public final class NpcService implements Listener, AutoCloseable {
         plugin.getLogger().warning(lang.text("logs.npc-sound-failed") + " [" + n.id() + "]");
       }
     }
-    if (n.flag("pause-on-interact", true)) instance.pauseUntil = tick + 200;
     love.stat(p, "essential.npc.interactions", 1);
     for (var hook :
         hooks.entrySet().stream()
