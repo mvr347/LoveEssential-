@@ -139,6 +139,9 @@ public final class ModuleConfigs {
             && expandStatisticsProfile(gui, guiDefaults)
             && Files.exists(guiFile(id)))
           backup(guiFile(id), ".pre-profile-area-20261102.bak");
+        if (id.equals("profile") && migrateStatisticsTitle(gui, guiDefaults)
+            && Files.exists(guiFile(id)))
+          backup(guiFile(id), ".pre-stat-background.bak");
         fillIn("modules/" + id + "/gui.yml", gui, guiDefaults);
         repairMappedLines(gui);
         String beforeDisplay = id.equals("display") ? gui.saveToString() : null;
@@ -530,6 +533,14 @@ public final class ModuleConfigs {
     String path = "menus.profile-menu-statistics.profile-info.slots";
     if (!Objects.equals(gui.get(path), List.of(9, 10, 11, 18, 19, 20, 27, 28, 29))) return false;
     gui.set(path, defaults.getIntegerList(path));
+    return true;
+  }
+
+  /** Enable the shipped artwork only for the old default title; keep custom titles intact. */
+  static boolean migrateStatisticsTitle(YamlConfiguration gui, YamlConfiguration defaults) {
+    String path = STATISTICS + ".title";
+    if (!Objects.equals(gui.getString(path), "<gold>Статистика")) return false;
+    gui.set(path, defaults.getString(path));
     return true;
   }
 

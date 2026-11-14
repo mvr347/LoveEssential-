@@ -51,9 +51,13 @@ public final class GuiSettings {
 
   public net.kyori.adventure.text.Component title(String id, Map<String, String> vars) {
     String inline = plugin.getConfig().getString(path(id) + ".title", "");
+    String resolved = ItemsAdderFonts.resolve(inline);
+    if (resolved.equals(inline) && (inline.contains("%img_") || inline.contains("%ia_"))) {
+      resolved = plugin.getConfig().getString(path(id) + ".fallback-title", inline);
+    }
     return inline.isBlank()
         ? lang.render(plugin.getConfig().getString(path(id) + ".title-key", id), vars)
-        : lang.renderText(ItemsAdderFonts.resolve(inline), vars);
+        : lang.renderText(resolved, vars);
   }
 
   /** Menus drawn over a custom background set {@code frame: false}: no glass, the artwork shows through. */

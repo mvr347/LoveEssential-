@@ -74,6 +74,16 @@ class MenuTextTest {
   }
 
   @Test
+  void shippedStatisticsTitleUsesArtworkWhenAvailableAndTextWithoutItemsAdder() throws Exception {
+    var gui = new GuiSettings(plugin, new Lang(plugin));
+    Component title = gui.title("profile-menu-statistics", Map.of());
+    assertEquals("Статистика", PlainTextComponentSerializer.plainText().serialize(title));
+    MockBukkit.createMockPlugin("ItemsAdder");
+    title = gui.title("profile-menu-statistics", Map.of());
+    assertEquals("\uF808\uE020", PlainTextComponentSerializer.plainText().serialize(title));
+  }
+
+  @Test
   void itemsAdderLegacyGlyphsRenderInStatisticsTitle() throws Exception {
     MockBukkit.createMockPlugin("ItemsAdder");
     var gui = new GuiSettings(plugin, new Lang(plugin));

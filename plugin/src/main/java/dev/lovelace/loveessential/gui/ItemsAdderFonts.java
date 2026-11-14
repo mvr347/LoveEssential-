@@ -26,14 +26,17 @@ public final class ItemsAdderFonts {
     // The glyph is white-tinted by the client; any colour tag around it would stain the artwork.
     try {
       // FontImages is a package in the ItemsAdder API; the entry point is its FontImageWrapper class.
-      var fonts = Class.forName("dev.lone.itemsadder.api.FontImages.FontImageWrapper");
+      var owner = Bukkit.getPluginManager().getPlugin("ItemsAdder");
+      var fonts = Class.forName("dev.lone.itemsadder.api.FontImages.FontImageWrapper", true,
+          owner.getClass().getClassLoader());
       var replace = fonts.getMethod("replaceFontImages", String.class);
       var tokens = TOKEN.matcher(text);
       var out = new StringBuilder();
       int from = 0;
       while (tokens.find()) {
-        Object result = replace.invoke(null, ":" + tokens.group(1) + ":");
-        if (!(result instanceof String resolved)) return text;
+        String token = ":" + tokens.group(1) + ":";
+        Object result = replace.invoke(null, token);
+        if (!(result instanceof String resolved) || resolved.equals(token)) return text;
         out.append(text, from, tokens.start());
         // Only external glyphs use legacy syntax; keep the surrounding MiniMessage unchanged.
         out.append(MINI.serialize(LegacyComponentSerializer.legacySection().deserialize(resolved)));
