@@ -23,7 +23,7 @@ public final class NpcValidator {
           "enabled-hours",
           "personal",
           "baby",
-          "line-of-sight");
+          "line-of-sight", "routine-enabled");
   public static final Map<String, double[]> NUMERIC_OPTIONS =
       Map.ofEntries(
           Map.entry("activation-range", new double[] {4, 192}),
@@ -33,6 +33,8 @@ public final class NpcValidator {
           Map.entry("scale", new double[] {.1, 8}),
           Map.entry("cooldown-ms", new double[] {100, 3600000}),
           Map.entry("stuck-ticks", new double[] {20, 1200}),
+          Map.entry("work-from", new double[] {0, 23999}),
+          Map.entry("work-to", new double[] {0, 23999}),
           Map.entry("hour-from", new double[] {0, 23999}),
           Map.entry("hour-to", new double[] {0, 23999}),
           Map.entry("follow-distance", new double[] {1, 32}),
@@ -70,7 +72,7 @@ public final class NpcValidator {
                 "follow-player",
                 "description-key",
                 "interaction-mode",
-                "interaction-sound")
+                "interaction-sound", "off-duty", "dialog-friendly", "dialog-fearful", "dialog-skeptical")
             .contains(k);
   }
 
@@ -87,6 +89,7 @@ public final class NpcValidator {
       }
     }
     return switch (k) {
+      case "off-duty" -> Set.of("walk", "away").contains(v);
       case "movement" -> Set.of("route", "follow", "stationary").contains(v);
       case "interaction-mode" -> Set.of("RIGHT_CLICK", "LEFT_CLICK", "BOTH").contains(v);
       case "interaction-sound" -> {
@@ -138,6 +141,10 @@ public final class NpcValidator {
             (k, v) -> {
               if (!validOption(k, v)) errors.add("validation.option");
             });
+    for (String key : List.of("dialog-friendly", "dialog-fearful", "dialog-skeptical")) {
+      String node = n.option(key, "");
+      if (!node.isEmpty() && !n.dialog().nodes().containsKey(node)) errors.add("validation.dialog");
+    }
     check(n.visibility(), errors, 0);
     check(n.access(), errors, 0);
     actions(n.actions(), errors);

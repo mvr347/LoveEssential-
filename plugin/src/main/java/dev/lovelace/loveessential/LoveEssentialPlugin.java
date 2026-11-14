@@ -659,6 +659,32 @@ public class LoveEssentialPlugin extends JavaPlugin {
                     }));
   }
 
+  /** Reload definitions used by the content editor while retaining all player records. */
+  public void validateContentDefinitions(String kind, java.util.Map<String,Object> definitions) {
+    if (!Bukkit.isPrimaryThread()) throw new IllegalStateException("Main thread required");
+    var yaml = new org.bukkit.configuration.file.YamlConfiguration();
+    var root = yaml.createSection("entries", definitions);
+    if (kind.equals("achievements")) {
+      var errors = new java.util.ArrayList<String>();
+      dev.lovelace.loveessential.module.AchievementCatalog.parse(root, errors::add);
+      if (!errors.isEmpty()) throw new IllegalArgumentException(String.join("; ", errors));
+    } else if (kind.equals("joinquit")) {
+      for (String id : root.getKeys(false)) {
+        var entry=root.getConfigurationSection(id);
+        org.bukkit.Material.valueOf(entry.getString("icon", "PAPER"));
+        net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(entry.getString("join", ""));
+        net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(entry.getString("quit", ""));
+      }
+    } else throw new IllegalArgumentException("Unsupported catalogue");
+  }
+
+  public CompletableFuture<Void> reloadContentDefinitions() {
+    return reloadSettings().thenCompose(v -> main.<Void>call(() -> {
+      achievements.reload();
+      return null;
+    }));
+  }
+
   public CompletableFuture<Void> reloadSettings() {
     return changeSettings(configFiles::load);
   }

@@ -21,7 +21,7 @@ public final class NpcOptions {
           "follow-player",
           "description-key",
           "interaction-mode",
-          "interaction-sound");
+          "interaction-sound", "off-duty", "dialog-friendly", "dialog-fearful", "dialog-skeptical");
   public static final Set<String> EQUIPMENT =
       Set.of("main-hand", "off-hand", "helmet", "chestplate", "leggings", "boots");
   private static final Map<String, String> DEFAULTS =
@@ -41,6 +41,9 @@ public final class NpcOptions {
           Map.entry("scale", "1"),
           Map.entry("cooldown-ms", "500"),
           Map.entry("stuck-ticks", "100"),
+          Map.entry("work-from", "0"),
+          Map.entry("work-to", "12000"),
+          Map.entry("off-duty", "away"),
           Map.entry("hour-from", "0"),
           Map.entry("hour-to", "23999"),
           Map.entry("follow-distance", "3"),
@@ -86,6 +89,7 @@ public final class NpcOptions {
               .toList();
       case "type" -> config.getStringList("npc.allowed-types");
       case "pose" -> Arrays.stream(org.bukkit.entity.Pose.values()).map(Enum::name).toList();
+      case "off-duty" -> List.of("walk", "away");
       case "movement" -> List.of("route", "follow", "stationary");
       case "interaction-mode" -> List.of("RIGHT_CLICK", "LEFT_CLICK", "BOTH");
       case "stuck-policy" -> List.of("PAUSE", "SKIP", "RETURN_HOME");

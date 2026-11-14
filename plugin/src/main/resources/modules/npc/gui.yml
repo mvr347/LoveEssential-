@@ -185,6 +185,13 @@ menus:
           dialog-condition: <gold>Условие ответа
           dialog-actions: <gold>Действия ответа
           actions: <gold>Действия по клику
+          routine-enabled: <gold>Распорядок дня
+          work-from: <gold>Начало смены, тики
+          work-to: <gold>Конец смены, тики
+          off-duty: <gold>После смены — прогулка или уход
+          dialog-friendly: <gold>Диалог для доброжелательного игрока
+          dialog-fearful: <gold>Диалог при страхе перед игроком
+          dialog-skeptical: <gold>Диалог при недоверии
           enabled-hours: <gold>Работа по игровому времени
           hour-from: <gold>Начало, тики
           hour-to: <gold>Окончание, тики
@@ -207,6 +214,7 @@ menus:
           authenticated: <gold>Авторизация
           permission: <gold>Право доступа
           world: <gold>Мир
+          npc-disposition: <gold>Отношение NPC к игроку
           reputation: <gold>Минимальная репутация
           clan: <gold>Клан
           territory: <gold>Доступная территория
@@ -328,6 +336,13 @@ menus:
           dialog-condition: <gray>Условие доступности конкретного ответа в диалоге.
           dialog-actions: <gray>Действия, которые выполняются после выбора ответа.
           actions: <gray>Любые назначенные действия по клику. Один NPC может сочетать меню, сообщения, оплату и диалог.
+          routine-enabled: <gray>На смене NPC стоит у своей точки, после смены гуляет или уходит.
+          work-from: <gray>Начало смены в тиках мира. Поддерживается ночная смена.
+          work-to: <gray>Конец смены не включается. Равные начало и конец означают работу весь день.
+          off-duty: <gray>walk использует маршрут NPC, away скрывает его до следующей смены.
+          dialog-friendly: <gray>ID узла диалога для игрока с хорошей репутацией.
+          dialog-fearful: <gray>ID узла диалога для агрессивного игрока.
+          dialog-skeptical: <gray>ID узла диалога для игрока с плохой вежливостью.
           enabled-hours: <gray>Показывать NPC только в выбранные часы игрового мира.
           hour-from: '<gray>Начало работы в тиках мира: 0 — утро, 12000 — закат, 18000 — полночь.'
           hour-to: '<gray>Конец работы в тиках мира: 0–23999. Можно задать интервал через полночь.'

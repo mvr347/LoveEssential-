@@ -164,6 +164,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
   private static final List<String> CONDITION_TYPES =
       List.of(
           "authenticated",
+          "npc-disposition",
           "balance",
           "permission",
           "world",
@@ -272,6 +273,10 @@ public final class NpcWizard implements Listener, AutoCloseable {
       "look-at",
       "look-range",
       "pause-on-interact",
+      "routine-enabled",
+      "work-from",
+      "work-to",
+      "off-duty",
       "stuck-policy",
       "activation-range",
       "follow-player",
@@ -292,6 +297,9 @@ public final class NpcWizard implements Listener, AutoCloseable {
       "dialog-node",
       "dialog-answer",
       "dialog-start",
+      "dialog-friendly",
+      "dialog-fearful",
+      "dialog-skeptical",
       "dialog-condition",
       "dialog-actions",
       "actions"
@@ -1504,7 +1512,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
   private void buildCondition(Player p, String field, String type) {
     List<String> parameters =
         switch (type) {
-          case "permission", "world", "clan", "weather" -> List.of("value");
+          case "permission", "world", "clan", "weather", "npc-disposition" -> List.of("value");
           case "balance" -> List.of("amount");
           case "reputation" -> List.of("min");
           case "item" -> List.of("material", "amount");

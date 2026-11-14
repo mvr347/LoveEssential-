@@ -66,7 +66,12 @@ public final class DialogService implements Listener, AutoCloseable {
   }
 
   public void open(Player p, NpcDefinition npc) {
-    var s = new Session(npc, npc.dialog().start());
+    var levels = love.service(dev.lovelace.lovecore.api.social.BehaviorLevels.class);
+    var mood = levels.map(v -> NpcDisposition.of(v.politenessLevel(p.getUniqueId()),
+        v.playstyleLevel(p.getUniqueId()))).orElse(NpcDisposition.NEUTRAL);
+    String start = npc.option("dialog-" + mood.key(), npc.dialog().start());
+    if (!npc.dialog().nodes().containsKey(start)) start = npc.dialog().start();
+    var s = new Session(npc, start);
     sessions.put(p.getUniqueId(), s);
     render(p, npc, s);
   }
