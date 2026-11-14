@@ -436,6 +436,17 @@ navigation:
   close:
     texture: 3ed1aba73f639f4bc42bd48196c715197be2712c3b962c97ebf9e9ed8efa025
 messages:
+  wizard:
+    quick:
+      current: <green>Открытый раздел
+      section: <yellow>Нажмите, чтобы сразу открыть раздел
+      preview: <aqua>Предпросмотр NPC
+      here: <gold>Переместить к себе
+      rename: <gold>Изменить имя
+      disable: <yellow>Выключить NPC в черновике
+      enable: <green>Включить NPC в черновике
+      save: <green>Сохранить черновик
+      cycle: '<gray>ЛКМ: следующее; ПКМ: предыдущее; Shift: весь список.'
   npc-command:
     prompt: <yellow>Введите команду с / или без него. Сейчас она будет сохранена как действие NPC, а не выполнена. Для выхода нажмите кнопку отмены ниже.
     invalid: <red>Введите одну непустую команду, например spawn. Переносы строк и управляющие символы запрещены.
