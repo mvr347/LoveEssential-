@@ -396,12 +396,13 @@ public final class Gameplay implements Listener, AutoCloseable {
           return;
         }
         lastSkin.put(p.getUniqueId(), now);
+        Object request = skinRequests.begin(p.getUniqueId());
         var profile = Bukkit.createProfile(skin);
         ((LoveEssentialPlugin) plugin).async(
-                () -> lookupSkin(profile, skin))
+                () -> lookupSkin(profile, skin, reset))
             .whenComplete(
                 (lookup, failure) ->
-                    main.execute(() -> applyLookup(p, skin, reset, lookup, failure)));
+                    main.execute(() -> applyLookup(p, skin, reset, lookup, failure, request)));
       }
       case "profile" ->
           lang.send(
@@ -575,42 +576,32 @@ public final class Gameplay implements Listener, AutoCloseable {
 
   private static final long SKIN_COOLDOWN_MS = 10_000;
   private final Map<UUID, Long> lastSkin = new ConcurrentHashMap<>();
+  private final SkinRequests skinRequests = new SkinRequests();
 
   private record SkinLookup(com.destroystokyo.paper.profile.PlayerProfile profile, boolean ok) {}
 
   private final java.net.http.HttpClient mojang = java.net.http.HttpClient.newHttpClient();
 
-  /**
-   * Paper's lookup first; with {@code online-mode=false} it knows only accounts the server has seen,
-   * so a profile without textures is asked from Mojang directly.
-   */
-  private SkinLookup lookupSkin(com.destroystokyo.paper.profile.PlayerProfile profile, String name) {
-    boolean ok = false;
-    try {
-      ok = profile.complete();
-    } catch (RuntimeException ignored) {
-      // The direct lookup below decides.
-    }
-    if (ok && profile.getProperties().stream().anyMatch(property -> property.getName().equals("textures")))
-      return new SkinLookup(profile, true);
+  /** Resolve the real account by name, never a cached offline UUID or another player's chosen skin. */
+  private SkinLookup lookupSkin(com.destroystokyo.paper.profile.PlayerProfile profile, String name, boolean reset) {
     try {
       var textures = MojangSkins.fetch(mojang, name);
       if (textures.isPresent()) {
         profile.setProperty(new ProfileProperty("textures", textures.get().value(), textures.get().signature()));
         return new SkinLookup(profile, true);
       }
-      return new SkinLookup(profile, ok);
+      return new SkinLookup(profile, reset);
     } catch (java.io.IOException e) {
-      return new SkinLookup(profile, ok);
+      return new SkinLookup(profile, false);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return new SkinLookup(profile, ok);
+      return new SkinLookup(profile, false);
     }
   }
 
   private void applyLookup(
-      Player p, String skin, boolean reset, SkinLookup lookup, Throwable failure) {
-    if (!p.isOnline()) return;
+      Player p, String skin, boolean reset, SkinLookup lookup, Throwable failure, Object request) {
+    if (!p.isOnline() || !skinRequests.current(p.getUniqueId(), request)) return;
     // A failed or rate-limited lookup says nothing about the skin; leave everything as it is.
     // The cooldown stays: a failed lookup is still a request to Mojang.
     if (failure != null || lookup == null || !lookup.ok()) {
@@ -639,6 +630,7 @@ public final class Gameplay implements Listener, AutoCloseable {
             (v, error) ->
                 main.execute(
                     () -> {
+                      if (!p.isOnline() || !skinRequests.current(p.getUniqueId(), request)) return;
                       if (error != null) {
                         lang.send(p, "errors.storage");
                         return;
@@ -696,13 +688,14 @@ public final class Gameplay implements Listener, AutoCloseable {
   /** A chosen skin is persisted as signed textures, so it survives a relog without a Mojang call. */
   private void applySavedSkin(Player p) {
     if (!enabled.test("skin")) return;
+    Object request = skinRequests.begin(p.getUniqueId());
     store
         .profile(p.getUniqueId(), SKIN_KEY)
         .thenAccept(
             saved ->
                 main.execute(
                     () -> {
-                      if (!p.isOnline()) return;
+                      if (!p.isOnline() || !skinRequests.current(p.getUniqueId(), request)) return;
                       // Older installs stored just the name here; that carries no textures.
                       var parts = saved.orElse("").split("\n", -1);
                       if (parts.length == 3 && !parts[1].isBlank())
@@ -750,6 +743,7 @@ public final class Gameplay implements Listener, AutoCloseable {
     afkReported.remove(p.getUniqueId());
     manualAfk.remove(p.getUniqueId());
     lastSkin.remove(p.getUniqueId());
+    skinRequests.forget(p.getUniqueId());
     teleport.forget(p);
   }
 
@@ -780,6 +774,7 @@ public final class Gameplay implements Listener, AutoCloseable {
   }
 
   public void close() {
+    skinRequests.clear();
     if (task != null) task.cancel();
     if (nightTask != null) nightTask.cancel();
     HandlerList.unregisterAll(this);

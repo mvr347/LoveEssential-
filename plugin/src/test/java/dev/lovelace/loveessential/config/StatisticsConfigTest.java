@@ -29,6 +29,19 @@ class StatisticsConfigTest {
   }
 
   @Test
+  void statisticsArtworkReplacesOnlyTheOldDefaultTitle() throws Exception {
+    var defaults = resource("modules/profile/gui.yml");
+    var installed = new YamlConfiguration();
+    installed.set(STATS + ".title", "<gold>Статистика");
+    assertTrue(ModuleConfigs.migrateStatisticsTitle(installed, defaults));
+    assertEquals("<white>%img_offset_-8%%img_stats_menu%", installed.getString(STATS + ".title"));
+    assertFalse(ModuleConfigs.migrateStatisticsTitle(installed, defaults));
+    installed.set(STATS + ".title", "<white>custom artwork");
+    assertFalse(ModuleConfigs.migrateStatisticsTitle(installed, defaults));
+    assertEquals("<white>custom artwork", installed.getString(STATS + ".title"));
+  }
+
+  @Test
   void expandingThePortraitPreservesCustomLayoutsAndOtherSettings() throws Exception {
     String path = STATS + ".profile-info.slots";
     var defaults = resource("modules/profile/gui.yml");

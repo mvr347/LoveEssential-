@@ -13,6 +13,13 @@ class MojangSkinsTest {
   }
 
   @Test
+  void rejectsMalformedAccountIdsAndUnsignedOrEmptyTextures() {
+    assertTrue(MojangSkins.parseId("{\"id\":\"../../wrong\"}").isEmpty());
+    assertTrue(MojangSkins.parseTextures("{\"properties\":[{\"name\":\"textures\",\"value\":\"VAL\"}]}").isEmpty());
+    assertTrue(MojangSkins.parseTextures("{\"properties\":[{\"name\":\"textures\",\"value\":\"\",\"signature\":\"SIG\"}]}").isEmpty());
+  }
+
+  @Test
   void picksTheTexturesPropertyWithItsSignature() {
     var json = "{\"id\":\"x\",\"properties\":[{\"name\":\"other\",\"value\":\"a\"},{\"name\":\"textures\",\"value\":\"VAL\",\"signature\":\"SIG\"}]}";
     var textures = MojangSkins.parseTextures(json).orElseThrow();

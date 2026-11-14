@@ -10,6 +10,9 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * Skin textures straight from Mojang. Paper's {@code PlayerProfile#complete} only knows accounts
@@ -20,30 +23,69 @@ final class MojangSkins {
   record Textures(String value, String signature) {}
 
   private static final Duration TIMEOUT = Duration.ofSeconds(8);
+  private record Cached(Optional<Textures> textures, long expiresAt) {}
+  private static final Map<String, Cached> CACHE = new LinkedHashMap<>();
+  private static long retryAt;
 
   private MojangSkins() {}
 
   /** Textures of the account called {@code name}; empty when there is no such account or no skin. */
-  static Optional<Textures> fetch(HttpClient client, String name) throws IOException, InterruptedException {
+  static synchronized Optional<Textures> fetch(HttpClient client, String name) throws IOException, InterruptedException {
+    String key = name.toLowerCase(Locale.ROOT);
+    long now = System.currentTimeMillis();
+    CACHE.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
+    Cached cached = CACHE.get(key);
+    if (cached != null) return cached.textures();
+    if (now < retryAt) throw new IOException("Mojang skin requests are cooling down after HTTP 429");
+    Optional<Textures> textures = fetchUncached(client, name);
+    if (CACHE.size() >= 1_000) CACHE.remove(CACHE.keySet().iterator().next());
+    CACHE.put(key, new Cached(textures, System.currentTimeMillis() + (textures.isPresent() ? 600_000 : 60_000)));
+    return textures;
+  }
+
+  private static Optional<Textures> fetchUncached(HttpClient client, String name) throws IOException, InterruptedException {
     var byName =
         client.send(
             request("https://api.mojang.com/users/profiles/minecraft/" + URLEncoder.encode(name, StandardCharsets.UTF_8)),
             HttpResponse.BodyHandlers.ofString());
     if (byName.statusCode() != 200) {
+      throttle(byName);
       if (byName.statusCode() == 204 || byName.statusCode() == 404) return Optional.empty();
       throw new IOException("Mojang answered " + byName.statusCode());
     }
     var id = parseId(byName.body());
-    if (id.isEmpty()) return Optional.empty();
+    if (id.isEmpty()) throw new IOException("Mojang returned an invalid account profile");
     var profile =
         client.send(
             request("https://sessionserver.mojang.com/session/minecraft/profile/" + id.get() + "?unsigned=false"),
             HttpResponse.BodyHandlers.ofString());
     if (profile.statusCode() != 200) {
+      throttle(profile);
       if (profile.statusCode() == 204 || profile.statusCode() == 404) return Optional.empty();
       throw new IOException("Mojang answered " + profile.statusCode());
     }
-    return parseTextures(profile.body());
+    try {
+      var properties = JsonParser.parseString(profile.body()).getAsJsonObject().getAsJsonArray("properties");
+      if (properties == null) throw new IOException("Mojang returned an invalid textures profile");
+      var textures = parseTextures(profile.body());
+      if (textures.isEmpty()) {
+        for (var element : properties)
+          if ("textures".equals(element.getAsJsonObject().get("name").getAsString()))
+            throw new IOException("Mojang returned unsigned or empty textures");
+      }
+      return textures;
+    } catch (RuntimeException malformed) {
+      throw new IOException("Mojang returned an invalid textures profile", malformed);
+    }
+  }
+
+  private static void throttle(HttpResponse<?> response) {
+    if (response.statusCode() != 429) return;
+    long seconds = 60;
+    try {
+      seconds = Long.parseLong(response.headers().firstValue("Retry-After").orElse("60"));
+    } catch (NumberFormatException ignored) {}
+    retryAt = System.currentTimeMillis() + Math.clamp(seconds, 60, 600) * 1_000;
   }
 
   private static HttpRequest request(String url) {
@@ -54,7 +96,9 @@ final class MojangSkins {
   static Optional<String> parseId(String json) {
     try {
       var object = JsonParser.parseString(json).getAsJsonObject();
-      return object.has("id") ? Optional.of(object.get("id").getAsString()) : Optional.empty();
+      if (!object.has("id")) return Optional.empty();
+      String id = object.get("id").getAsString();
+      return id.matches("[a-fA-F0-9]{32}") ? Optional.of(id) : Optional.empty();
     } catch (RuntimeException e) {
       return Optional.empty();
     }
@@ -69,7 +113,9 @@ final class MojangSkins {
         var property = element.getAsJsonObject();
         if (!"textures".equals(property.get("name").getAsString())) continue;
         String signature = property.has("signature") ? property.get("signature").getAsString() : "";
-        return Optional.of(new Textures(property.get("value").getAsString(), signature));
+        String value = property.get("value").getAsString();
+        if (value.isBlank() || signature.isBlank()) return Optional.empty();
+        return Optional.of(new Textures(value, signature));
       }
     } catch (RuntimeException e) {
       return Optional.empty();
