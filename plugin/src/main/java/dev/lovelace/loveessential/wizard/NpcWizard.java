@@ -1680,11 +1680,33 @@ public final class NpcWizard implements Listener, AutoCloseable {
                     "step", Integer.toString(step + 1), "total", Integer.toString(LAST_STEP + 1))));
     holder.inventory = inv;
     MenuStyle.frame(inv);
-    int discardSlot = MenuStyle.slot(FIELDS[step].length, FIELDS[step].length + 1);
+    int total = FIELDS[step].length + 6;
+    int discardSlot = MenuStyle.slot(FIELDS[step].length + 5, total);
     inv.setItem(discardSlot, button(Material.BARRIER, "common.discard"));
     holder.routes.put(discardSlot, 3);
-    inv.setItem(6, button(Material.BOOK, "wizard.sections-title"));
+    for (int section = 0; section <= LAST_STEP && section < 8; section++) {
+      final int target = section;
+      var tab = button(section == step ? Material.LIME_STAINED_GLASS_PANE : Material.BOOK,
+          "wizard.sections." + section);
+      var tabMeta = tab.getItemMeta();
+      tabMeta.lore(List.of(lang.render(section == step ? "wizard.quick.current" : "wizard.quick.section")));
+      tab.setItemMeta(tabMeta);
+      inv.setItem(section + 1, tab);
+      holder.routes.put(section + 1, (Runnable) () -> page(p, target));
+    }
     inv.setItem(0, button(Material.PLAYER_HEAD, "wizard.sections." + step));
+    int quick = FIELDS[step].length;
+    inv.setItem(MenuStyle.slot(quick, total), button(Material.ENDER_EYE, "wizard.quick.preview"));
+    holder.routes.put(MenuStyle.slot(quick, total), (Runnable) () -> preview(p));
+    inv.setItem(MenuStyle.slot(quick + 1, total), button(Material.COMPASS, "wizard.quick.here"));
+    holder.routes.put(MenuStyle.slot(quick + 1, total), (Runnable) () -> { spawnHere(p); show(p); });
+    inv.setItem(MenuStyle.slot(quick + 2, total), button(Material.NAME_TAG, "wizard.quick.rename"));
+    holder.routes.put(MenuStyle.slot(quick + 2, total), (Runnable) () -> askField(p, "name"));
+    inv.setItem(MenuStyle.slot(quick + 3, total), button(w.draft.npc().enabled() ? Material.LEVER : Material.REDSTONE_TORCH,
+        w.draft.npc().enabled() ? "wizard.quick.disable" : "wizard.quick.enable"));
+    holder.routes.put(MenuStyle.slot(quick + 3, total), (Runnable) () -> { set(p, "enabled", Boolean.toString(!require(p).draft.npc().enabled())); show(p); });
+    inv.setItem(MenuStyle.slot(quick + 4, total), button(Material.WRITABLE_BOOK, "wizard.quick.save"));
+    holder.routes.put(MenuStyle.slot(quick + 4, total), (Runnable) () -> save(p));
     inv.setItem(50, button(Material.LIME_CONCRETE, "common.publish"));
     inv.setItem(51, button(Material.ARROW, "common.back"));
     inv.setItem(52, button(Material.BARRIER, "gui.close"));
@@ -1708,7 +1730,9 @@ public final class NpcWizard implements Listener, AutoCloseable {
           lang.render(
               NpcValidator.BOOLEAN_OPTIONS.contains(key) || key.equals("enabled")
                   ? "gui.click.switch"
-                  : "gui.click.edit"));
+                  : !NpcOptions.choices(key, plugin.getConfig()).isEmpty()
+                      && NpcOptions.choices(key, plugin.getConfig()).size() <= 12
+                      ? "wizard.quick.cycle" : "gui.click.edit"));
       if (NpcValidator.NUMERIC_OPTIONS.containsKey(key))
         lore.add(lang.render("settings-help.npc-number-shortcuts"));
       meta.lore(lore);
@@ -1721,7 +1745,7 @@ public final class NpcWizard implements Listener, AutoCloseable {
               .toList());
       item.setItemMeta(meta);
       int from = MenuStyle.slot(i, FIELDS[step].length);
-      int to = MenuStyle.slot(i, FIELDS[step].length + 1);
+      int to = MenuStyle.slot(i, total);
       inv.setItem(to, item);
       holder.routes.put(to, from);
     }
@@ -2045,8 +2069,14 @@ public final class NpcWizard implements Listener, AutoCloseable {
                   show(p);
                   return;
                 }
-                if (!NpcOptions.choices(key, plugin.getConfig()).isEmpty()) {
-                  choices(p, key, 0);
+                var options = NpcOptions.choices(key, plugin.getConfig());
+                if (!options.isEmpty()) {
+                  if (options.size() <= 12 && !e.getClick().isShiftClick()) {
+                    int current = options.indexOf(fieldValue(require(p), key));
+                    int next = Math.floorMod(current + (e.getClick().isRightClick() ? -1 : 1), options.size());
+                    set(p, key, options.get(next));
+                    show(p);
+                  } else choices(p, key, 0);
                   return;
                 }
                 switch (key) {
