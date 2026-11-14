@@ -169,6 +169,17 @@ public class LoveEssentialPlugin extends JavaPlugin {
 
   public CompletableFuture<Void> editSetting(
       String module, String path, Object expected, Object value) {
+    if (module.equals("worlds") && (path.equals("entry") || path.startsWith("entry."))) {
+      try {
+        var candidate = new org.bukkit.configuration.file.YamlConfiguration();
+        candidate.loadFromString(getConfig().saveToString());
+        candidate.set("worlds." + path, value);
+        candidate.loadFromString(candidate.saveToString());
+        dev.lovelace.loveessential.world.WorldEntry.validateAvailable(candidate);
+      } catch (Exception error) {
+        return CompletableFuture.failedFuture(error);
+      }
+    }
     return changeSettings(() -> configFiles.update(module, path, expected, value));
   }
 
@@ -196,7 +207,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
             candidate ->
                 main.<Void>call(
                     () -> {
+                      dev.lovelace.loveessential.world.WorldEntry.validateAvailable(candidate);
                       settings = candidate;
+                      if (extensions != null) extensions.worlds.entry.refreshSnapshot();
                       return null;
                     }));
   }
@@ -653,7 +666,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
                       gameplay.applyVanish();
                       if (name.equals("nickname")) nicknames.refresh();
                       if (name.equals("crafting")) content.refresh();
-                      if (name.equals("scoreboard")) extensions.refresh();
+                      if (name.equals("scoreboard") || name.equals("worlds")) extensions.refresh();
                       if (name.equals("rtp") && !value) gameplay.randomTeleport().clearQueue();
                       return null;
                     }));
@@ -711,7 +724,9 @@ public class LoveEssentialPlugin extends JavaPlugin {
             candidate ->
                 main.<Void>call(
                     () -> {
+                      dev.lovelace.loveessential.world.WorldEntry.validateAvailable(candidate);
                       settings = candidate;
+                      if (extensions != null) extensions.worlds.entry.refreshSnapshot();
                       return null;
                     }))
         .thenCompose(v -> store.list("module", Boolean.class))
@@ -750,6 +765,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     bounded(config, "storage.backup-keep", 1, 1000);
     bounded(config, "crafting.max-recipes", 1, 10000);
     bounded(config, "worlds.max-worlds", 1, 256);
+    dev.lovelace.loveessential.world.WorldAccessPolicy.read(config);
     bounded(config, "scenarios.max-rules", 1, 10000);
     bounded(config, "scenarios.max-steps", 1, 128);
     bounded(config, "scenarios.max-starts-per-minute", 1, 10000);
