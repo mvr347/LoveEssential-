@@ -86,6 +86,7 @@ public final class Extensions implements AutoCloseable {
   }
 
   public void refresh() {
+    worlds.entry.refresh();
     windows.refreshMotd();
     scoreboard.refresh();
   }

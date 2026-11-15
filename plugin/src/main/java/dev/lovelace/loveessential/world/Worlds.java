@@ -61,6 +61,7 @@ public final class Worlds implements Listener, AutoCloseable {
   private final Map<String, SqliteStore.Document<Definition>> definitions =
       new ConcurrentHashMap<>();
   private final Set<String> busy = new HashSet<>();
+  public final WorldEntry entry;
 
   public Worlds(
       LoveEssentialPlugin plugin,
@@ -76,6 +77,13 @@ public final class Worlds implements Listener, AutoCloseable {
     this.love = love;
     this.ui = ui;
     teleport = new TeleportService(plugin, main, store, lang, love);
+    entry = new WorldEntry(plugin, lang, (player, world) -> {
+      var d = definitions.get(world.getName());
+      return d == null || d.value().permission().isBlank() || player.hasPermission(d.value().permission());
+    }, world -> {
+      var d = definitions.get(world.getName());
+      return d == null || d.value().permission().isBlank();
+    });
     Bukkit.getPluginManager().registerEvents(this, plugin);
   }
 
@@ -90,7 +98,7 @@ public final class Worlds implements Listener, AutoCloseable {
                       Bukkit.getOnlinePlayers().forEach(this::restore);
                       if (plugin.module("worlds"))
                         for (var d : saved)
-                          if (d.value().autoload())
+                          if (d.value().autoload() && entry.allowed(d.value().name(), d.value().environment()))
                             try {
                               loadWorld(d.value());
                             } catch (RuntimeException e) {
@@ -103,6 +111,7 @@ public final class Worlds implements Listener, AutoCloseable {
                                           + "] "
                                           + e.getClass().getSimpleName());
                             }
+                      entry.refresh();
                       return null;
                     }));
   }
@@ -162,7 +171,10 @@ public final class Worlds implements Listener, AutoCloseable {
         || !love.authenticated(p)
         || !p.hasPermission("loveessential.worlds.teleport"))
       throw new IllegalArgumentException("errors.permission");
+    var loaded = Bukkit.getWorld(world);
     var d = definitions.get(world);
+    if (loaded != null) entry.require(world, loaded.getEnvironment().name());
+    else if (d != null) entry.require(world, d.value().environment());
     if (d != null && !d.value().permission().isBlank() && !p.hasPermission(d.value().permission()))
       throw new IllegalArgumentException("errors.access");
   }
@@ -220,6 +232,7 @@ public final class Worlds implements Listener, AutoCloseable {
     name(name);
     var d = new Definition(name, env, type, seed, structures, true, "", null, Options.defaults());
     validate(d);
+    entry.require(name, d.environment());
     if (!imported && Bukkit.getWorld(name) != null)
       throw new IllegalArgumentException("worlds.exists");
     if (definitions.keySet().stream().anyMatch(existing -> existing.equalsIgnoreCase(name)))
@@ -264,6 +277,7 @@ public final class Worlds implements Listener, AutoCloseable {
   private World loadWorld(Definition d) {
     MainThread.require();
     validate(d);
+    entry.require(d.name(), d.environment());
     World world = Bukkit.getWorld(d.name());
     if (world == null) {
       world =
@@ -370,6 +384,7 @@ public final class Worlds implements Listener, AutoCloseable {
                 main.call(
                     () -> {
                       definitions.put(d.name(), new SqliteStore.Document<>(d.name(), rev, d));
+                      entry.refreshSnapshot();
                       var w = Bukkit.getWorld(d.name());
                       if (w != null) apply(w, d);
                       return null;
@@ -400,6 +415,7 @@ public final class Worlds implements Listener, AutoCloseable {
 
   public void command(Player p, String[] args) {
     if (!plugin.module("worlds")) throw new IllegalArgumentException("errors.module-disabled");
+    if (entry.control(p, args, names())) return;
     if (args.length == 0 || args[0].equals("list")) {
       menu(p, 0);
       return;
@@ -410,6 +426,7 @@ public final class Worlds implements Listener, AutoCloseable {
     }
     if (!admin(p)) throw new IllegalArgumentException("errors.permission");
     switch (args[0]) {
+      case "settings" -> entry.settings(p, ui, () -> menu(p, 0));
       case "create", "import" -> {
         if (args.length < 2) {
           creation(p, args[0].equals("import"));
@@ -473,8 +490,11 @@ public final class Worlds implements Listener, AutoCloseable {
     if (!plugin.module("worlds")) return List.of();
     if (args.length == 1)
       return admin(p)
-          ? List.of("list", "create", "import", "load", "unload", "tp", "edit", "info", "setspawn")
+          ? List.of("list", "create", "import", "load", "unload", "tp", "edit", "info", "setspawn",
+              "enable", "disable", "portals", "status", "settings")
           : List.of("list", "tp");
+    var controls = entry.suggestions(p, args, names());
+    if (!controls.isEmpty()) return controls;
     if (args.length == 2 && Set.of("load", "unload", "tp", "edit", "info").contains(args[0]))
       return names();
     if (args.length == 3 && Set.of("create", "import").contains(args[0]))
@@ -485,7 +505,7 @@ public final class Worlds implements Listener, AutoCloseable {
   public void menu(Player p, int page) {
     if (!p.hasPermission("loveessential.worlds.teleport") && !admin(p))
       throw new IllegalArgumentException("errors.permission");
-    var names = names();
+    var names = names().stream().filter(name -> admin(p) || entryAllowed(name)).toList();
     int start = Math.max(0, page) * 16;
     var buttons = new ArrayList<NativeDialogs.Button>();
     for (String name :
@@ -500,12 +520,13 @@ public final class Worlds implements Listener, AutoCloseable {
                       name,
                       "state",
                       lang.text(
-                          Bukkit.getWorld(name) == null ? "worlds.unloaded" : "worlds.loaded"))),
+                          !entryAllowed(name) ? "worlds.closed" : Bukkit.getWorld(name) == null ? "worlds.unloaded" : "worlds.loaded"))),
               v -> {
                 if (admin(p)) edit(p, name);
                 else teleport(p, name);
               }));
     if (admin(p)) {
+      buttons.add(ui.button("settings", "worlds.access-title", v -> entry.settings(p, ui, () -> menu(p, page))));
       buttons.add(ui.button("create", "worlds.create", v -> creation(p, false)));
       buttons.add(ui.button("import", "worlds.import", v -> creation(p, true)));
     }
@@ -521,6 +542,18 @@ public final class Worlds implements Listener, AutoCloseable {
         who ->
             plugin.module("worlds")
                 && (who.hasPermission("loveessential.worlds.teleport") || admin(who)));
+  }
+
+  private boolean entryAllowed(String name) {
+    var world = Bukkit.getWorld(name);
+    if (world != null) return entry.allowed(world);
+    var doc = definitions.get(name);
+    return doc == null || entry.allowed(name, doc.value().environment());
+  }
+
+  public void console(org.bukkit.command.CommandSender sender, String[] args) {
+    if (!plugin.module("worlds")) throw new IllegalArgumentException("errors.module-disabled");
+    if (!entry.control(sender, args, names())) throw new IllegalArgumentException("worlds.usage");
   }
 
   private void creation(Player p, boolean imported) {
@@ -620,6 +653,7 @@ public final class Worlds implements Listener, AutoCloseable {
                           p.getUniqueId().toString()),
                       () -> edit(p, name));
                 }),
+            ui.button("access", "worlds.access-title", v -> entry.settings(p, ui, () -> edit(p, name))),
             ui.button("advanced", "worlds.advanced", v -> advanced(p, doc)),
             ui.button("tp", "worlds.teleport", v -> teleport(p, name)),
             ui.button(
@@ -790,7 +824,7 @@ public final class Worlds implements Listener, AutoCloseable {
     var d = definitions.get(e.getPlayer().getWorld().getName());
     if (d != null && !d.value().options().respawnWorld().isBlank()) {
       var w = Bukkit.getWorld(d.value().options().respawnWorld());
-      if (w != null) {
+      if (w != null && entry.allowed(w)) {
         var target = definitions.get(w.getName());
         if (target == null
             || target.value().permission().isBlank()
@@ -803,6 +837,7 @@ public final class Worlds implements Listener, AutoCloseable {
   @Override
   public void close() {
     HandlerList.unregisterAll(this);
+    entry.close();
     busy.clear();
   }
 }

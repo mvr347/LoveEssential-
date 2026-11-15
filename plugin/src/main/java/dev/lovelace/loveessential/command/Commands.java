@@ -255,6 +255,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
         }
         return true;
       }
+      if (cmd.equals("worlds") && !(sender instanceof Player)) {
+        extensions.worlds.console(sender, args);
+        return true;
+      }
       if (cmd.equals("calamity") && !(sender instanceof Player)) {
         extensions.calamities.command(sender, args);
         return true;
@@ -917,8 +921,15 @@ public final class Commands implements CommandExecutor, TabCompleter {
   @Override
   public List<String> onTabComplete(
       CommandSender sender, Command cmd, String alias, String[] args) {
+    if (!plugin.ready()) return List.of();
     var candidates =
-        sender instanceof Player p && Extensions.COMMANDS.contains(cmd.getName())
+        cmd.getName().equals("worlds") && !(sender instanceof Player)
+            ? args.length <= 1 ? List.of("enable", "disable", "portals", "status")
+                : extensions.worlds.entry.suggestions(sender, args, extensions.worlds.names())
+            : cmd.getName().equals("loveessential") && args.length > 1 && args[0].equalsIgnoreCase("worlds") && !(sender instanceof Player)
+                ? args.length == 2 ? List.of("enable", "disable", "portals", "status")
+                    : extensions.worlds.entry.suggestions(sender, slice(args, 1), extensions.worlds.names())
+                : sender instanceof Player p && Extensions.COMMANDS.contains(cmd.getName())
             ? extensions.suggestions(p, cmd.getName(), args)
             : cmd.getName().equals("loveessential")
                     && args.length > 1

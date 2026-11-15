@@ -52,7 +52,22 @@ messages:
     exists: <red>Папка уже существует. Для готового мира используйте импорт.
     limit: <red>Достигнут лимит управляемых миров.
     cannot-unload: <red>Нельзя выгрузить основной мир или мир с игроками.
-    usage: <yellow>/le worlds [list|create|import|load|unload|tp|edit|info|setspawn] [мир]
+    usage: '<yellow>/le worlds [settings|status|enable|disable|portals|list|create|import|load|unload|tp|edit|info|setspawn] [мир или nether/end] [on/off]'
+    closed: вход закрыт
+    access-title: <gold>Доступ к мирам и измерениям
+    access-help: <gray>Отключение закрывает измерение для всех игроков и переводит находящихся внутри в запасной мир. Обычные порталы можно выключить отдельно. Папки миров сохраняются.
+    nether: <gold>Разрешить Незер (все миры NETHER)
+    end: <gold>Разрешить Энд (все миры THE_END)
+    nether-portals: <gold>Разрешить обычные порталы Незера
+    end-portals: <gold>Разрешить порталы и врата Энда
+    fallback: <gold>Запасной мир (пусто — автоматически)
+    disabled-worlds: <gold>Закрытые миры через запятую
+    disabled: <red>Вход в этот мир или использование портала отключены администратором.
+    relocated: <yellow>Этот мир закрыт. Вы перемещены в <world>.
+    relocation-failed: <red>Мир закрыт. Не удалось переместить вас в запасной мир. Повторите вход или обратитесь к администратору.
+    invalid-access: <red>Настройки доступа к мирам имеют неверный тип или имя мира.
+    invalid-fallback: <red>Нужен загруженный разрешённый запасной мир. Нельзя закрыть все миры.
+    access-status: '<gold>Незер: <nether>; Энд: <end>. Порталы Незера: <nether_portals>; Энда: <end_portals>. Закрытые миры: <disabled>. Запасной мир: <fallback>.'
     rule: <gold>Правило
     rule-value: <gold>Значение
     rules-help: <gray>Выберите правило и задайте true/false или целое число, в зависимости от его типа.
