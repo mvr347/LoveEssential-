@@ -63,7 +63,9 @@ public final class GuiRules {
     if (row1)
       for (int slot = 9; slot < 18; slot++)
         if (!glass(inventory.getItem(slot))) out.add("row1 slot " + slot + " is not glass");
-    for (int slot : new int[] {1, 8})
+    boolean npcTabs = inventory.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout npc
+        && npc.guiId().equals("gui.wizard-title");
+    for (int slot : npcTabs ? new int[] {8} : new int[] {1, 8})
       if (!glass(inventory.getItem(slot))) out.add("header slot " + slot + " must be glass");
     // Header controls: only slots 2-7, centered for their count.
     var controls = new ArrayList<Integer>();
@@ -74,7 +76,7 @@ public final class GuiRules {
         inventory.getHolder() instanceof dev.lovelace.loveessential.gui.GuiLayout fixed
             && java.util.Set.of("nick.title", "joinquit.gui-title", "display.gui-title")
                 .contains(fixed.guiId());
-    if (!fixedHeader && !controls.equals(controlSlots(controls.size())))
+    if (!fixedHeader && !npcTabs && !controls.equals(controlSlots(controls.size())))
       out.add("header controls at " + controls + ", expected " + controlSlots(controls.size()));
     // Work zone: no glass, empty side walls (except pagination on 54).
     int start = row1 ? 18 : 9;

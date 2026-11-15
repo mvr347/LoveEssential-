@@ -293,7 +293,7 @@ class PluginLifecycleTest {
                     .equals("gui.wizard-title"));
     server.dispatchCommand(p, "npc set id menu_guard");
     assertLayout(p);
-    click(p, itemNamed(p, "Тип сущности")); // entity picker
+    click(p, itemNamed(p, "Тип сущности"), org.bukkit.event.inventory.ClickType.SHIFT_LEFT); // full entity picker
     assertLayout(p);
     click(p, itemNamed(p, "Житель")); // VILLAGER
     server.dispatchCommand(p, "le npc publish");
@@ -1188,6 +1188,46 @@ class PluginLifecycleTest {
     assertTrue(
         regular.getOpenInventory().getTopInventory() == null
             || regular.getOpenInventory().getTopInventory().getSize() != 54);
+  }
+
+  @Test
+  void npcEditorTabsAndQuickActionsEditTheSameDraftWithoutASectionPicker() throws Exception {
+    var p = admin();
+    server.dispatchCommand(p, "npc create quick_editor");
+    waitFor(() -> p.getOpenInventory().getTopInventory() != null
+        && p.getOpenInventory().getTopInventory().getSize() >= 27);
+    click(p, itemNamed(p, "Поведение"));
+    assertLayout(p);
+    int movement = itemNamed(p, "Движение:");
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    assertTrue(p.getOpenInventory().getTopInventory().getItem(movement).getItemMeta().lore()
+        .stream().map(plain::serialize).anyMatch(line -> line.contains("Shift")));
+    click(p, movement);
+    click(p, itemNamed(p, "Движение:"), org.bukkit.event.inventory.ClickType.RIGHT);
+    click(p, itemNamed(p, "Движение:"), org.bukkit.event.inventory.ClickType.SHIFT_LEFT);
+    click(p, itemNamed(p, "Стоять на месте"));
+    click(p, itemNamed(p, "Расписание и физика"));
+    assertLayout(p);
+    assertTrue(itemNamed(p, "Коллизия") >= 0);
+    click(p, itemNamed(p, "Диалоги"));
+    assertTrue(itemNamed(p, "Действия по клику") >= 0);
+    p.teleport(p.getLocation().add(12, 0, 8));
+    server.dispatchCommand(p, "npc page 6");
+    click(p, itemNamed(p, "Переместить к себе"));
+    click(p, itemNamed(p, "Выключить NPC в черновике"));
+    assertTrue(itemNamed(p, "Включить NPC в черновике") >= 0);
+    click(p, itemNamed(p, "Включить NPC в черновике"));
+    click(p, itemNamed(p, "Изменить имя"));
+    ChatInput.submit(server, p, "<gold>Быстрый редактор");
+    assertTrue(itemNamed(p, "Сохранить черновик") >= 0);
+    server.dispatchCommand(p, "npc publish");
+    var api = Bukkit.getServicesManager().load(LoveEssentialService.class);
+    waitFor(() -> api.npc("quick_editor").isPresent());
+    var npc = api.npc("quick_editor").orElseThrow();
+    assertEquals(p.getLocation().getX(), npc.spawn().x());
+    assertTrue(npc.enabled());
+    assertEquals("stationary", npc.settings().get("movement"));
+    assertEquals("<gold>Быстрый редактор", internal("lang", dev.lovelace.loveessential.lang.Lang.class).text(npc.nameKey()));
   }
 
   @Test
