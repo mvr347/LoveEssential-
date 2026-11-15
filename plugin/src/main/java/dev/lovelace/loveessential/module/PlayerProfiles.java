@@ -54,10 +54,34 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
   }
 
   public void reportCommand(Player p, String name) {
-    Player target = messages.target(p, name);
-    if (!canView(p, target)) throw new IllegalArgumentException("profile-menu.hidden");
-    reports.create(
-        p, target.getUniqueId(), target.getName(), () -> access(p) && canView(p, target));
+    MainThread.require();
+    if (Bukkit.getPlayerExact(name) != null) {
+      Player target = messages.target(p, name);
+      if (!canView(p, target)) throw new IllegalArgumentException("profile-menu.hidden");
+      reports.create(p, target.getUniqueId(), target.getName(), () -> access(p) && canView(p, target));
+      return;
+    }
+    var target = Bukkit.getOfflinePlayerIfCached(name);
+    if (target == null || !target.hasPlayedBefore()) {
+      messages.target(p, name); // keep the normal unknown-player error, without a network lookup
+      return;
+    }
+    if (!access(p)) throw new IllegalArgumentException("errors.permission");
+    UUID request = UUID.randomUUID(), id = target.getUniqueId();
+    requests.put(p.getUniqueId(), request);
+    var previous = p.getOpenInventory().getTopInventory();
+    privacy.offline(id).whenComplete((preferences, error) -> main.execute(() -> {
+      if (!request.equals(requests.get(p.getUniqueId())) || !p.isOnline() || !access(p)
+          || p.getOpenInventory().getTopInventory() != previous) return;
+      requests.remove(p.getUniqueId());
+      if (error != null) { lang.send(p, "errors.storage"); return; }
+      BooleanSupplier visible = () -> {
+        Player online = Bukkit.getPlayer(id);
+        return access(p) && (online == null ? preferences.profileVisible() : canView(p, online));
+      };
+      if (!visible.getAsBoolean()) { lang.send(p, "profile-menu.hidden"); return; }
+      reports.create(p, id, target.getName() == null ? name : target.getName(), visible);
+    }));
   }
 
   private BukkitTask task;
