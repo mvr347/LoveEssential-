@@ -577,6 +577,26 @@ class ProfilePrivacyTest {
   }
 
   @Test
+  void reportsCanTargetKnownOfflinePlayersAndStillRespectTheirPrivacy() throws Exception {
+    var forms = new java.util.concurrent.ConcurrentHashMap<UUID, dev.lovelace.loveessential.dialog.NativeDialogs.Form>();
+    internal("extensions", dev.lovelace.loveessential.Extensions.class).ui.presenter((who, form) -> forms.put(who.getUniqueId(), form));
+    var viewer = player("Viewer");
+    var target = player("Target");
+    target.disconnect();
+    command(viewer, "report Target");
+    waitFor(() -> forms.containsKey(viewer.getUniqueId()));
+    var form = forms.remove(viewer.getUniqueId());
+    assertTrue(form.fields().stream().anyMatch(field -> field.id().equals("reason")));
+    var hidden = player("Hidden");
+    await(profiles.privacy().change(hidden, old -> new ProfilePrivacy.Preferences(false, old.activityVisible())));
+    hidden.disconnect();
+    command(viewer, "report Hidden");
+    await(profiles.privacy().offline(hidden.getUniqueId()));
+    server.getScheduler().performTicks(3);
+    assertFalse(forms.containsKey(viewer.getUniqueId()));
+  }
+
+  @Test
   void personalMessageIsTypedInADialogAndSentAsMsg() throws Exception {
     var forms = new java.util.concurrent.ConcurrentHashMap<UUID, dev.lovelace.loveessential.dialog.NativeDialogs.Form>();
     internal("extensions", dev.lovelace.loveessential.Extensions.class)
