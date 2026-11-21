@@ -14,7 +14,6 @@ public final class ExternalTab {
   public static final List<String> DEFAULTS =
       List.of(
           "TAB",
-          "CMI",
           "TabList",
           "TabPlus",
           "AnimatedTab",
