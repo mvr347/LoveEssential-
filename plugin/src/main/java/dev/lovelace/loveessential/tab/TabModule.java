@@ -270,7 +270,7 @@ public final class TabModule implements Listener, AutoCloseable {
     var names = plugin.getConfig().getStringList("tab.external-plugins");
     return ExternalTab.deferred(
         ExternalTab.Mode.parse(plugin.getConfig().getString("tab.mode", "auto")),
-        names.isEmpty() ? ExternalTab.DEFAULTS : names,
+        ExternalTab.effective(names),
         name -> Bukkit.getPluginManager().isPluginEnabled(name));
   }
 
@@ -283,7 +283,7 @@ public final class TabModule implements Listener, AutoCloseable {
       var names = plugin.getConfig().getStringList("tab.external-plugins");
       String who =
           ExternalTab.found(
-              names.isEmpty() ? ExternalTab.DEFAULTS : names,
+              ExternalTab.effective(names),
               name -> Bukkit.getPluginManager().isPluginEnabled(name));
       plugin
           .getLogger()

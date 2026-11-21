@@ -34,4 +34,13 @@ class ExternalTabTest {
     assertEquals("TabList", ExternalTab.found(List.of("TAB", "TabList"), Set.of("TabList")::contains));
     assertNull(ExternalTab.found(List.of("TAB"), n -> false));
   }
+
+  @Test
+  void previouslyGeneratedListWithCmiIsMigratedButCustomListsAreKept() {
+    var legacy = new java.util.ArrayList<>(ExternalTab.DEFAULTS);
+    legacy.add(1, "CMI");
+    assertEquals(ExternalTab.DEFAULTS, ExternalTab.effective(legacy));
+    assertEquals(ExternalTab.DEFAULTS, ExternalTab.effective(List.of()));
+    assertEquals(List.of("TAB", "CMI"), ExternalTab.effective(List.of("TAB", "CMI")));
+  }
 }
