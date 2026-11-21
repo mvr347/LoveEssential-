@@ -76,7 +76,6 @@ public final class DeluxeCombatAddon extends Addon {
       config.addDefault("duels.prevent-downed", true);
       config.addDefault("protection.auth", true);
       config.addDefault("protection.vanish", true);
-      config.addDefault("revive.prefer-reviveme-if-installed", false);
       config.addDefault("revive.native-combat-logout", true);
       config.options().copyDefaults(true);
       if (!Files.exists(file)) { Files.createDirectories(file.getParent()); config.save(file.toFile()); }
@@ -85,9 +84,6 @@ public final class DeluxeCombatAddon extends Addon {
       Bukkit.getServicesManager().register(CombatState.class, bridge, owner, ServicePriority.Highest);
       listen(new Events());
       hookDowned("LoveEssential", "dev.lovelace.loveessential.api.revive.DownedEvent", "getDowned", "getCause");
-      if (!Bukkit.getPluginManager().isPluginEnabled("LoveEssential")
-          || config.getBoolean("revive.prefer-reviveme-if-installed", false))
-        hookDowned("ReviveMe", "net.kokoricraft.reviveme.events.PlayerDownedEvent", "getPlayer", "getEnemy");
       hookEssentialCompletion();
       sync();
       tasks.add(Bukkit.getScheduler().runTaskTimer(owner, this::syncSafely, 1, Math.clamp(config.getInt("sync-period-ticks", 1), 1, 20)));
@@ -178,9 +174,7 @@ public final class DeluxeCombatAddon extends Addon {
         Player p = (Player) getPlayer.invoke(event);
         if (p == null) return;
         if (event instanceof Cancellable c && !c.isCancelled()
-            && (config.getBoolean("duels.prevent-downed", true) && inDuel(p)
-                || pluginName.equals("LoveEssential") && config.getBoolean("revive.prefer-reviveme-if-installed", false)
-                    && Bukkit.getPluginManager().isPluginEnabled("ReviveMe"))) c.setCancelled(true);
+            && config.getBoolean("duels.prevent-downed", true) && inDuel(p)) c.setCancelled(true);
       } catch (ReflectiveOperationException failure) { throw new EventException(failure); }
     }, owner, true);
     Bukkit.getPluginManager().registerEvent(type, listener, EventPriority.MONITOR, (unused, event) -> {
@@ -192,7 +186,7 @@ public final class DeluxeCombatAddon extends Addon {
         // The downed event precedes installation of its state. Validate it after all listeners.
         long expected = generation;
         Bukkit.getScheduler().runTask(owner, () -> {
-          if (generation != expected || !running || p == null || !p.isOnline() || !downed(p, pluginName) || excluded(p)) return;
+          if (generation != expected || !running || p == null || !p.isOnline() || !downed(p) || excluded(p)) return;
           if (attacker != null && !attacker.equals(p)) fallAttackers.put(p.getUniqueId(), attacker.getUniqueId());
           int seconds = Math.clamp(config.getInt("downed.tag-seconds", 15), 0, 3600);
           if (seconds == 0 || attacker == null || !attacker.isOnline() || excluded(attacker) || attacker.equals(p)) return;
@@ -237,15 +231,9 @@ public final class DeluxeCombatAddon extends Addon {
     api.tag(p, attacker, duration);
   }
 
-  private boolean downed(Player p, String provider) {
-    if (provider.equals("LoveEssential")) return LoveCore.provider(DownedOracle.class, "loveessential")
-        .map(o -> o.downed(p.getUniqueId())).orElse(false);
-    Plugin plugin = Bukkit.getPluginManager().getPlugin("ReviveMe");
-    if (plugin == null || !plugin.isEnabled()) return false;
-    try {
-      Class<?> apiClass = Class.forName("net.kokoricraft.reviveme.api.ReviveMeAPI", true, plugin.getClass().getClassLoader());
-      return Boolean.TRUE.equals(apiClass.getMethod("hasDowned", Player.class).invoke(null, p));
-    } catch (ReflectiveOperationException failure) { throw new IllegalStateException("Несовместимый API ReviveMe", failure); }
+  /** Whether the player lies downed in LoveEssential's revive module (the only downed provider). */
+  private boolean downed(Player p) {
+    return LoveCore.loveEssential(DownedOracle.class).map(o -> o.downed(p.getUniqueId())).orElse(false);
   }
 
   private static Player attacker(EntityDamageByEntityEvent e) {

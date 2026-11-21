@@ -14,6 +14,19 @@ public final class ExternalTab {
   public static final List<String> DEFAULTS =
       List.of(
           "TAB",
+          "TabList",
+          "TabPlus",
+          "AnimatedTab",
+          "NametagEdit",
+          "TitleManager",
+          "SimpleTabList",
+          "FeatherBoard",
+          "AnimatedScoreboard");
+
+  /** The list generated before CMI support was removed; a config still holding it exactly is migrated. */
+  private static final List<String> LEGACY_DEFAULTS_WITH_CMI =
+      List.of(
+          "TAB",
           "CMI",
           "TabList",
           "TabPlus",
@@ -23,6 +36,16 @@ public final class ExternalTab {
           "SimpleTabList",
           "FeatherBoard",
           "AnimatedScoreboard");
+
+  /**
+   * The list to use for a configured one: empty means the defaults, and the previously generated default list
+   * (the one with CMI) is read as the current defaults, so upgraded servers stop deferring to CMI. A list the
+   * admin edited is kept as is.
+   */
+  public static List<String> effective(List<String> configured) {
+    if (configured == null || configured.isEmpty() || configured.equals(LEGACY_DEFAULTS_WITH_CMI)) return DEFAULTS;
+    return configured;
+  }
 
   private ExternalTab() {}
 
