@@ -99,6 +99,10 @@ links:
     plugin: LoveTrades
     command: trade toggle
     permission: ''
+  questboard:
+    plugin: LoveContracts
+    command: contracts questboard
+    permission: ''
 # Тексты переключателей меню настроек (2026-11-01): слова для шаблонов switch-* в gui.yml. Один набор на
 # переключатель: так «Грамматика | Включено» и «Тихий режим | Выключен» читаются одинаково, а смысл
 # (категория, функция, действие) меняется только здесь, без правки шаблонов. Цвета тегами MiniMessage.
@@ -153,6 +157,16 @@ switch-texts:
     status-off: <red>Заблокировано
     action-off: заблокировать запросы
     action-on: разрешить запросы
+  questboard:
+    name: Табло поручений
+    category: Интерфейс
+    function: Показывать активное поручение на боковом табло.
+    'on': <green>Включено
+    'off': <gray>Выключено
+    status-on: <green>Активно
+    status-off: <gray>Отключено
+    action-off: скрыть табло поручений
+    action-on: показывать табло поручений
   visibility:
     name: Видимость профиля
     category: Приватность

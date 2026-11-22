@@ -1362,6 +1362,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
           case "mentions" -> "lovechat_mentions_disabled";
           case "clan-invites" -> "clans_invites_enabled";
           case "player-trades" -> "lovetrades_requests_enabled";
+          case "questboard" -> "lovecontracts_questboard_enabled";
           case "channel", "channel-local" -> "lovechat_channel";
           default -> "";
         };
@@ -1746,6 +1747,8 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
               slot ->
                   link(m, slot, "activities", "profile-menu.activities",
                       "profile-menu.settings-activities-lore", Material.JIGSAW, p, true));
+        if (linkAvailable("questboard", p))
+          draws.add(slot -> drawSwitch(m, p, slot, "questboard", "questboard"));
       }
     }
     return draws;
@@ -1934,7 +1937,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
 
   /** Switches drawn in the reference style: state in the title, a check or a cross, the opposite action. */
   private static final Set<String> SWITCHES =
-      Set.of("grammar", "silent", "mentions", "clan-invites", "player-trades");
+      Set.of("grammar", "silent", "mentions", "clan-invites", "player-trades", "questboard");
 
   private String switchToken(String id) {
     return switch (id) {
@@ -1942,6 +1945,7 @@ public final class PlayerProfiles implements Listener, AutoCloseable {
       case "silent" -> "lovechat_silent_mode";
       case "mentions" -> "lovechat_mentions_disabled";
       case "clan-invites" -> "clans_invites_enabled";
+      case "questboard" -> "lovecontracts_questboard_enabled";
       default -> "lovetrades_requests_enabled";
     };
   }

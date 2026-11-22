@@ -474,6 +474,31 @@ placeholders:
     category: craft
 
   # ── Активности ──
+  quest_active:
+    display-name: '&aТекущее поручение'
+    lore:
+      - '&7Активное поручение LoveContracts на личном табло'
+      - '&8Shift+ЛКМ — сменить формат'
+    category: activities
+    requirement:
+      placeholder: '%lovecontracts_quest_active%'
+      equals: 'yes'
+      reason: '&7Нет активного поручения'
+    variants:
+      - name: 'Название и прогресс'
+        template: '&a▸ &7поручение &f%lovecontracts_quest_name% &7(%lovecontracts_quest_progress%)'
+      - name: 'Цель'
+        template: '&a▸ &7цель: &f%lovecontracts_quest_goal%'
+      - name: 'Срок'
+        template: '&a▸ &7осталось: &f%lovecontracts_quest_time_left%'
+
+  quest_count:
+    display-name: '&aАктивные поручения'
+    template: '&7активных поручений &a▸ &f%lovecontracts_quest_count%'
+    lore:
+      - '&7Сколько поручений сейчас выполняется'
+    category: activities
+
   contract_active:
     display-name: '&aАктивный контракт'
     template: '&a▸ &7исполняет &f%lovecontracts_active_name% &7%lovecontracts_active_progress%'
@@ -555,5 +580,5 @@ messages:
     lines: <gold>Строки (до 15)
     legacy-conflict: <red>Другой плагин держит табло LoveTweaks; модуль scoreboard не может его перехватить.
 
-# Однократное добавление новых строк; удалённый после обновления билет не восстанавливается.
-catalog-version: 1
+# 2026-11-22: версия 2 — добавлены строки текущих поручений (quest_active, quest_count).
+catalog-version: 2
