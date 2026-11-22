@@ -40,6 +40,13 @@ public final class NpcCommandSelection implements Listener {
       if (existing.isPresent()) return existing.get();
       clear(player);
     }
+    // nothing selected: the NPC the player is looking at counts, so /npc info, tp, move... work on a glance
+    try {
+      var looked = npcs.lookedAt(player, 8).flatMap(npcs::get);
+      if (looked.isPresent()) return looked.get();
+    } catch (RuntimeException rayUnavailable) {
+      // the view-ray lookup is a convenience; without it the player is simply asked to select an NPC
+    }
     throw new IllegalArgumentException("npc.none-selected");
   }
 

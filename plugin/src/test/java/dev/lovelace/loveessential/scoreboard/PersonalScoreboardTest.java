@@ -29,7 +29,7 @@ class PersonalScoreboardTest {
             new ServerMock() {
               @Override
               public String getBukkitVersion() {
-                return "26.2-R0.1-SNAPSHOT";
+                return "26.3-R0.1-SNAPSHOT";
               }
             });
     server.addSimpleWorld("world");

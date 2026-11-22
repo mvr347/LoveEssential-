@@ -512,20 +512,25 @@ messages:
     tab: <gray>/le tab — редактор строк, групп, плейсхолдеров и оформления собственного TAB.
     overview: <gold>LoveEssential <dark_gray>· <gray>/le help — доступные команды
     npc-commands:
-    - <gold>Редактор NPC
-    - <gray>/npc create — создать NPC через мастер
-    - <gray>/npc import citizens [номер|all] — перенести NPC из plugins/Citizens/saves.yml
+    - <gold>NPC <dark_gray>· <gray>[номер] можно не указывать: берётся выбранный NPC или тот, на кого вы смотрите
+    - <gold>Поиск
+    - <gray>/npc list [все|вкл|выкл|рядом [радиус]|мир <имя>] [страница] — список в чате; /npc list без параметров открывает меню
+    - <gray>/npc near [радиус] — NPC поблизости, ближайшие первыми
     - <gray>/npc sel [номер] — выбрать по взгляду или номеру; /npc deselect — снять выбор
     - <gray>/npc info [номер] — информация и кнопки действий
-    - <gray>/npc edit|skin|schedule|enable|disable|debug|export [номер] — выбранный NPC или явный номер
-    - <gray>/npc rename <имя> — переименовать выбранного; &-цвета работают
-    - <gray>/npc clone [номер] — копия выбранного или указанного NPC с новым автоматическим ID
+    - <gray>/npc tp [номер] — телепортироваться к NPC
+    - <gold>Правка
+    - <gray>/npc create — создать NPC через мастер; /npc clone [номер] — копия
+    - <gray>/npc rename [номер] <имя> — переименовать; &-цвета работают
+    - <gray>/npc move [номер] — переставить NPC на ваше место
+    - <gray>/npc edit|skin|schedule|enable|disable|debug|export [номер] — по номеру или выбранный NPC
     - <gray>/npc delete [номер] — запрос удаления; подтвердите или отмените кнопкой в чате
-    - <gray>/npc set <параметр> <значение>; /npc here
+    - <gray>/npc set <параметр> <значение>; /npc here; /npc page <шаг>
     - <gray>/npc path add|mode|point|remove|move|record|tool|show|undo|redo
     - <gray>/npc dialog node|answer|start|answer-condition|answer-actions
     - <gray>/npc save; /npc publish; /npc preview
-    - <gray>/le npc — список, создание и удаление через меню
+    - <gray>/npc import citizens [номер|all] — перенести NPC из plugins/Citizens/saves.yml
+    - <gray>/le npc — меню: список, создание и удаление
     tab-settings: '<gray>Настройки собственного TAB: modules/tab/tab.yml; /le tab — меню настройки.'
     player: <gold>LoveEssential <dark_gray>· <gray>/профиль · /спавн · /дом · /msg <имя> <текст>
     admin: <gold>LoveEssential <dark_gray>· <gray>/le — модули · /le npc · /le portals · /le tab · /le scoreboard edit
@@ -543,6 +548,20 @@ messages:
     state-enabled: Включён
     state-disabled: Выключен
     deselected: '<gray>Выбор NPC снят.'
+    # 2026-11-22: чат-список /npc list <фильтр> [страница] и /npc near [радиус]: меню неудобно, когда NPC много, а нужен ближайший или в одном мире.
+    filter:
+      all: все
+      enabled: включённые
+      disabled: выключенные
+      near: рядом
+      world: в мире
+    list-header: '<gold>NPC <dark_gray>· <gray>фильтр: <white><filter> <dark_gray>· <gray>найдено <white><count> <dark_gray>· <gray>страница <white><page><dark_gray>/<white><pages>'
+    list-line: '<gold>№<id> <name> <dark_gray>· <gray><world> <x> <y> <z> <dark_gray>· <gray><state> <dark_gray>· <gray><distance> '
+    info-details: '<gray>Тип <white><type> <dark_gray>· <gray>мир <white><world> <x> <y> <z> <dark_gray>· <gray>точек маршрута <white><points> <dark_gray>· <gray>узлов диалога <white><nodes> <dark_gray>· <gray>ревизия <white><revision>'
+    list-empty: '<yellow>Подходящих NPC нет.'
+    teleported: '<green>Вы рядом с NPC №<id>.'
+    moved: '<green>NPC перемещён на ваше место.'
+    usage: '<yellow>Использование: <usage>'
     none-selected: "<yellow>Сначала выберите NPC: посмотрите на него и нажмите <click:run_command:'/npc sel'>[Выбрать]</click> <gray>или откройте <click:run_command:'/npc list'>[Список]</click>."
     none-targeted: '<red>Посмотрите на NPC или укажите его: /npc sel <id>'
     rename-usage: '<yellow>Выберите NPC (/npc sel) и введите: /npc rename <имя>, например /npc rename &eБанкир'
@@ -559,6 +578,14 @@ messages:
     delete-cancelled: '<gray>Удаление NPC отменено.'
     deleted: '<green>NPC удалён. Его выбор сброшен.'
     buttons:
+      info: '<gray>[Инфо] '
+      info-hover: '<gray>Показать сведения и кнопки действий этого NPC.'
+      tp: '<aqua>[ТП] '
+      tp-hover: '<gray>Телепортироваться к этому NPC.'
+      page-prev: '<gray>[← Назад] '
+      page-prev-hover: '<gray>Предыдущая страница списка.'
+      page-next: '<gray>[Дальше →] '
+      page-next-hover: '<gray>Следующая страница списка.'
       edit: '<gold>[Изменить] '
       edit-hover: '<gray>Открыть редактор этого NPC.'
       rename: '<yellow>[Переименовать] '

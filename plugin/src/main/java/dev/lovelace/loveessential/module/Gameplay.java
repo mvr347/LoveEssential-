@@ -37,6 +37,11 @@ public final class Gameplay implements Listener, AutoCloseable {
   private final LoveBridge love;
   private final Predicate<String> enabled;
   private final TeleportService teleport;
+
+  /** The shared teleport gate (combat, authentication, delay), for commands that move a player to a place. */
+  public TeleportService teleportService() {
+    return teleport;
+  }
   private final Map<String, SqliteStore.Document<Place>> places = new HashMap<>();
   // PlaceholderAPI expansions can be queried from async chat threads, so these are concurrent.
   private final Set<UUID> vanished = ConcurrentHashMap.newKeySet(),

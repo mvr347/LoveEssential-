@@ -1,6 +1,6 @@
 # Love Integration — аддон DeluxeCombat
 
-Отдельный нативный аддон DeluxeCombat для Paper/Purpur 26.2+ / Java 25.
+Отдельный нативный аддон DeluxeCombat для Paper/Purpur 26.3+ / Java 25.
 Он не заменяет DeluxeCombat и не запускает вторую систему наказаний или дропов.
 Исходники находятся в репозитории LoveEssential, итоговый JAR независим от его JAR.
 

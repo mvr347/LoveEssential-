@@ -38,6 +38,9 @@ public final class CommandSuggestions {
           Map.entry("schedule", "edit"),
           Map.entry("skin", "edit"),
           Map.entry("list", "view"),
+          Map.entry("near", "view"),
+          Map.entry("tp", "teleport"),
+          Map.entry("move", "edit"),
           Map.entry("debug", "debug"),
           Map.entry("select", "view"),
           Map.entry("sel", "view"),
@@ -71,6 +74,9 @@ public final class CommandSuggestions {
           Map.entry("экспорт", "export"),
           Map.entry("импорт", "import"),
           Map.entry("переименовать", "rename"),
+          Map.entry("рядом", "near"),
+          Map.entry("тп", "tp"),
+          Map.entry("переместить", "move"),
           Map.entry("включить", "enable"),
           Map.entry("выключить", "disable"));
 
@@ -209,7 +215,9 @@ public final class CommandSuggestions {
                   "clone",
                   "export",
                   "schedule",
-                  "skin")
+                  "skin",
+                  "tp",
+                  "move")
               .contains(op)) {
         var result = new ArrayList<>(ids());
         if (op.equals("delete")) result.addAll(List.of("confirm", "cancel"));
@@ -225,6 +233,23 @@ public final class CommandSuggestions {
       if (op.equals("delete") && args.length == 3 && npcs.get(npcs.resolve(args[1])).isPresent())
         return List.of("confirm");
       if (op.equals("page") && args.length == 2) return List.of("1", "2", "3", "4", "5", "6", "7");
+      if (op.equals("list") && args.length == 2) return List.of("all", "on", "off", "near", "world");
+      if (op.equals("list") && args.length == 3 && args[1].equalsIgnoreCase("near")) return List.of("16", "32", "64", "128");
+      if (op.equals("list") && args.length == 3 && args[1].equalsIgnoreCase("world"))
+        return Bukkit.getWorlds().stream().map(org.bukkit.World::getName).toList();
+      if (op.equals("near") && args.length == 2) return List.of("16", "32", "64", "128");
+      if (op.equals("rename") && args.length == 2) return ids();
+      if (op.equals("import") && args.length == 2) {
+        var result = new ArrayList<String>(List.of("citizens"));
+        var exports = plugin.getDataFolder().toPath().resolve("exports");
+        try (var files = java.nio.file.Files.list(exports)) {
+          files.map(f -> f.getFileName().toString()).filter(n -> n.endsWith(".json"))
+              .map(n -> n.substring(0, n.length() - 5)).sorted().forEach(result::add);
+        } catch (java.io.IOException | RuntimeException noExports) {
+          // no exports yet: only the citizens importer is offered
+        }
+        return result;
+      }
       if (op.equals("path")) {
         if (args.length == 2)
           return List.of(

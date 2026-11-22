@@ -2,7 +2,7 @@
 
 [Главная](../README.md) · [Команды](COMMANDS.md) · [Права](PERMISSIONS.md)
 
-Требования: Paper/Purpur 26.2+, Java 25 и LoveCore. Конфигурация модулей — `modules/<имя>/<имя>.yml` для worlds, scenarios, dialogs и scoreboard. Определения и состояния хранятся в SQLite; собственные тексты — в локальных секциях `messages` конфигов модулей и `gui.yml`. Главное `/le` управляет только модулями. `/le guide` отложен и не регистрируется.
+Требования: Paper/Purpur 26.3+, Java 25 и LoveCore. Конфигурация модулей — `modules/<имя>/<имя>.yml` для worlds, scenarios, dialogs и scoreboard. Определения и состояния хранятся в SQLite; собственные тексты — в локальных секциях `messages` конфигов модулей и `gui.yml`. Главное `/le` управляет только модулями. `/le guide` отложен и не регистрируется.
 
 ## Управление мирами
 
