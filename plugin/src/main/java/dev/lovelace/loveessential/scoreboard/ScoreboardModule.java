@@ -55,6 +55,7 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
   private final Map<UUID, View> views = new HashMap<>();
   private final Map<Scoreboard, List<Component>> drawn = new IdentityHashMap<>();
   private final Set<Scoreboard> rendered = Collections.newSetFromMap(new IdentityHashMap<>());
+  private final Set<String> foreignObjectivesLogged = new HashSet<>();
   private final TweaksScoreboardBridge bridge;
   private final dev.lovelace.loveessential.tab.TabSettings tabSettings;
   private dev.lovelace.loveessential.dialog.NativeDialogs ui;
@@ -318,7 +319,12 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
       return;
     }
     var existing = board.getObjective(DisplaySlot.SIDEBAR);
-    if (existing != null && !existing.getName().equals(OBJECTIVE)) return;
+    if (existing != null && !existing.getName().equals(OBJECTIVE)) {
+      if (foreignObjectivesLogged.add(existing.getName())) {
+        plugin.getLogger().warning("Scoreboard sidebar slot is occupied by foreign objective: " + existing.getName());
+      }
+      return;
+    }
     var value = content.get();
     Objective obj = board.getObjective(OBJECTIVE);
     if (obj == null) {
@@ -326,6 +332,15 @@ public final class ScoreboardModule implements Listener, AutoCloseable {
       obj.setDisplaySlot(DisplaySlot.SIDEBAR);
       obj.numberFormat(NumberFormat.blank());
       // A recreated objective has no scores, so the lines must be written again.
+      drawn.remove(board);
+    } else if (existing == null
+        || obj.getDisplaySlot() != DisplaySlot.SIDEBAR
+        || (!value.lines().isEmpty()
+            && (!obj.getScore(ENTRY_PREFIX + 0).isScoreSet()
+                || obj.getScore(ENTRY_PREFIX + 0).getScore() <= 0))) {
+      // External /scoreboard commands can clear the display slot or reset scores while keeping the objective.
+      obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+      obj.numberFormat(NumberFormat.blank());
       drawn.remove(board);
     }
     obj.displayName(value.title());
