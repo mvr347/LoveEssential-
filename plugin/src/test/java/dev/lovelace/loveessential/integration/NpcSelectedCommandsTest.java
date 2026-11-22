@@ -282,4 +282,70 @@ class NpcSelectedCommandsTest {
       throw new AssertionError(e);
     }
   }
+
+  static String plain(List<Component> messages) {
+    return messages.stream().map(PlainTextComponentSerializer.plainText()::serialize).reduce("", (a, b) -> a + "\n" + b);
+  }
+
+  @Test
+  void chatListShowsEveryNpcWithItsOwnButtonsAndFiltersByState() throws Exception {
+    drain(admin);
+    server.dispatchCommand(admin, "npc list all");
+    var all = drain(admin);
+    String text = plain(all);
+    assertTrue(text.contains("№" + npcs.number(first.id())), text);
+    assertTrue(text.contains("№" + npcs.number(second.id())), text);
+    assertTrue(commands(all).contains("/npc tp " + npcs.number(first.id())), commands(all).toString());
+    assertTrue(commands(all).contains("/npc info " + npcs.number(second.id())));
+
+    server.dispatchCommand(admin, "npc disable " + npcs.number(first.id()));
+    waitFor(() -> !npcs.get(first.id()).orElseThrow().enabled());
+    drain(admin);
+    server.dispatchCommand(admin, "npc list off");
+    String off = plain(drain(admin));
+    assertTrue(off.contains("№" + npcs.number(first.id())), off);
+    assertFalse(off.contains("№" + npcs.number(second.id())), off);
+  }
+
+  @Test
+  void nearListsNpcsAroundThePlayerAndWrongFiltersGetAnErrorNotAStackTrace() throws Exception {
+    drain(admin);
+    server.dispatchCommand(admin, "npc near 20");
+    String text = plain(drain(admin));
+    assertTrue(text.contains("№" + npcs.number(first.id())), text);
+    server.dispatchCommand(admin, "npc list nonsense");
+    assertFalse(plain(drain(admin)).isBlank(), "a wrong filter must answer with a message");
+  }
+
+  @Test
+  void renameCanAddressAnNpcByNumberWithoutSelectingIt() throws Exception {
+    drain(admin);
+    server.dispatchCommand(admin, "npc rename " + npcs.number(second.id()) + " &eБанкир Иван");
+    waitFor(() -> npcs.get(second.id()).orElseThrow().nameKey().contains("Банкир Иван"));
+    assertTrue(npcs.get(first.id()).orElseThrow().nameKey().contains("Страж"), "the other NPC keeps its name");
+  }
+
+  @Test
+  void moveBringsTheNpcToThePlayerAndNeedsTheEditRight() throws Exception {
+    admin.teleport(new org.bukkit.Location(admin.getWorld(), 120, 70, 130));
+    drain(admin);
+    server.dispatchCommand(admin, "npc move " + npcs.number(first.id()));
+    waitFor(() -> npcs.get(first.id()).orElseThrow().spawn().x() == 120);
+    assertEquals(130, npcs.get(first.id()).orElseThrow().spawn().z());
+    var guest = server.addPlayer("Guest");
+    guest.teleport(new org.bukkit.Location(guest.getWorld(), 500, 70, 500));
+    server.dispatchCommand(guest, "npc move " + npcs.number(second.id()));
+    assertNotEquals(500.0, npcs.get(second.id()).orElseThrow().spawn().x(), "a player without npc.edit cannot move an NPC");
+  }
+
+  @Test
+  void brokenArgumentsGetAUsageLineInsteadOfAnException() throws Exception {
+    drain(admin);
+    server.dispatchCommand(admin, "npc set");
+    assertTrue(plain(drain(admin)).contains("/npc set"));
+    server.dispatchCommand(admin, "npc page x");
+    assertTrue(plain(drain(admin)).contains("/npc page"));
+    server.dispatchCommand(admin, "npc import onlyone");
+    assertTrue(plain(drain(admin)).contains("/npc import"));
+  }
 }

@@ -209,6 +209,7 @@ permissions:
       loveessential.npc.path: true
       loveessential.npc.dialog: true
       loveessential.npc.debug: true
+      loveessential.npc.teleport: true
       loveessential.vanish: true
       loveessential.vanish.see: true
       loveessential.vanish.gui: true
@@ -250,6 +251,8 @@ permissions:
   loveessential.npc.dialog:
     default: op
   loveessential.npc.debug:
+    default: op
+  loveessential.npc.teleport:
     default: op
   loveessential.vanish:
     default: op

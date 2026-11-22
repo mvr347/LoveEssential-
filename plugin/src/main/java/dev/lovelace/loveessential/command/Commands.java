@@ -415,9 +415,21 @@ public final class Commands implements CommandExecutor, TabCompleter {
         else wizard.createNew(p, null);
       }
       case "edit", "изменить" -> wizard.edit(p, npcSelection.target(p, args.length > 1 ? args[1] : null).id());
-      case "set", "настроить" -> wizard.set(p, args[1], String.join(" ", slice(args, 2)));
+      case "set", "настроить" -> {
+        if (args.length < 3) {
+          usage(p, "/npc set <параметр> <значение>");
+          return;
+        }
+        wizard.set(p, args[1], String.join(" ", slice(args, 2)));
+      }
       case "here", "сюда" -> wizard.spawnHere(p);
-      case "page", "шаг" -> wizard.page(p, Integer.parseInt(args[1]) - 1);
+      case "page", "шаг" -> {
+        if (args.length < 2 || !args[1].matches("[0-9]{1,2}")) {
+          usage(p, "/npc page <номер шага>");
+          return;
+        }
+        wizard.page(p, Integer.parseInt(args[1]) - 1);
+      }
       case "save", "сохранить" -> wizard.save(p);
       case "discard", "отмена" -> wizard.discard(p);
       case "publish", "опубликовать" -> wizard.publish(p);
@@ -478,6 +490,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
           importCitizens(p, args);
           return;
         }
+        if (args.length < 3) {
+          usage(p, "/npc import <имя файла из exports> <новый id>  или  /npc import citizens [номер|all]");
+          return;
+        }
         String source = args[1], newId = args[2];
         if (!source.matches("[a-z0-9_-]{1,48}"))
           throw new IllegalArgumentException("validation.id");
@@ -512,7 +528,27 @@ public final class Commands implements CommandExecutor, TabCompleter {
       case "skin", "скин" -> wizard.edit(p, npcSelection.target(p, args.length > 1 ? args[1] : null).id(), 1);
       case "list", "список" -> {
         permission(p, "view");
-        menus.direct(p, () -> menus.npcList(p, 0));
+        // bare /npc list opens the menu; with a filter or a page it prints a list in the chat
+        if (args.length == 1) menus.direct(p, () -> menus.npcList(p, 0));
+        else npcChatList(p, NpcCommandLogic.parseList(slice(args, 1)));
+      }
+      case "near", "рядом" -> {
+        permission(p, "view");
+        String[] words = new String[args.length];
+        words[0] = "near";
+        System.arraycopy(args, 1, words, 1, args.length - 1);
+        npcChatList(p, NpcCommandLogic.parseList(words));
+      }
+      case "tp", "тп" -> {
+        permission(p, "teleport");
+        npcTeleport(p, npcSelection.target(p, args.length > 1 ? args[1] : null));
+      }
+      case "move", "переместить" -> {
+        permission(p, "edit");
+        var n = npcSelection.target(p, args.length > 1 ? args[1] : null);
+        if (!love.territorialAccess(p, p.getLocation())) throw new IllegalArgumentException("errors.territory");
+        var moved = n.withSpawn(Position.of(p.getLocation()));
+        complete(p, npcs.save(moved, n.revision(), p.getUniqueId().toString()), "npc.moved");
       }
       case "debug", "отладка" -> {
         permission(p, "debug");
@@ -544,9 +580,10 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       case "rename", "переименовать" -> {
         permission(p, "edit");
-        if (args.length < 2) throw new IllegalArgumentException("npc.rename-usage");
-        var n = npcSelection.target(p, null);
-        String text = String.join(" ", slice(args, 1)).strip();
+        // /npc rename [number] <name>: a leading NPC number or id addresses that NPC, otherwise the selection (or the NPC looked at)
+        var parsed = NpcCommandLogic.parseRename(slice(args, 1), ref -> npcs.get(npcs.resolve(ref)).isPresent());
+        var n = npcSelection.target(p, parsed.ref());
+        String text = parsed.name();
         if (text.isEmpty() || text.length() > 256) throw new IllegalArgumentException("npc.rename-usage");
         // "&eБанкир" is read like "<yellow>Банкир"; the name is kept inline, so it shows at once.
         String named = dev.lovelace.loveessential.tab.TabSyntax.legacy(text);
@@ -599,6 +636,103 @@ public final class Commands implements CommandExecutor, TabCompleter {
     }
   }
 
+  private void usage(Player p, String usage) {
+    lang.send(p, "npc.usage", Map.of("usage", usage));
+  }
+
+  /** The chat form of {@code /npc list}: the NPCs a filter selects, eight to a page, each with its own buttons. */
+  private void npcChatList(Player p, NpcCommandLogic.Query query) {
+    var rows = new ArrayList<NpcCommandLogic.Row>();
+    var plain = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    for (var n : npcs.all()) {
+      int number = npcs.number(n.id());
+      if (number <= 0) continue;
+      var s = n.spawn();
+      rows.add(new NpcCommandLogic.Row(n.id(), number, plain.serialize(lang.render(n.nameKey())), n.enabled(), s.world(), s.x(), s.y(), s.z()));
+    }
+    var here = p.getLocation();
+    UUID worldId = null;
+    if (query.kind() == NpcCommandLogic.Kind.WORLD) {
+      var world = Bukkit.getWorld(query.worldName());
+      if (world == null) throw new IllegalArgumentException("errors.not-found");
+      worldId = world.getUID();
+    }
+    var selected = NpcCommandLogic.select(rows, query, worldId, here.getWorld().getUID(), here.getX(), here.getY(), here.getZ());
+    int pages = NpcCommandLogic.pages(selected.size());
+    int page = Math.min(query.page(), pages);
+    String filter = lang.text("npc.filter." + query.kind().name().toLowerCase(Locale.ROOT));
+    p.sendMessage(lang.renderText(lang.text("npc.list-header"),
+        Map.of("filter", filter + (query.kind() == NpcCommandLogic.Kind.NEAR ? " " + (int) query.radius() + " м" : "")
+                + (query.kind() == NpcCommandLogic.Kind.WORLD ? " " + query.worldName() : ""),
+            "count", Integer.toString(selected.size()), "page", Integer.toString(page), "pages", Integer.toString(pages)),
+        Map.of()));
+    if (selected.isEmpty()) {
+      lang.send(p, "npc.list-empty");
+      return;
+    }
+    for (var row : NpcCommandLogic.page(selected, page)) {
+      var npc = npcs.get(row.id()).orElse(null);
+      if (npc == null) continue;
+      var world = Bukkit.getWorld(row.world());
+      double away = NpcCommandLogic.distance(row, here.getWorld().getUID(), here.getX(), here.getY(), here.getZ());
+      var variables = new HashMap<String, String>();
+      variables.put("id", Integer.toString(row.number()));
+      variables.put("world", world == null ? "?" : world.getName());
+      variables.put("x", Integer.toString((int) Math.floor(row.x())));
+      variables.put("y", Integer.toString((int) Math.floor(row.y())));
+      variables.put("z", Integer.toString((int) Math.floor(row.z())));
+      variables.put("state", lang.text(row.enabled() ? "npc.state-enabled" : "npc.state-disabled"));
+      variables.put("distance", away < 0 ? "—" : (int) Math.round(away) + " м");
+      var line = lang.renderText(lang.text("npc.list-line"), variables, Map.of("name", lang.render(npc.nameKey())));
+      line = line.append(npcButton("npc.buttons.info", "/npc info " + row.number(), false));
+      if (p.hasPermission("loveessential.npc.teleport")) line = line.append(npcButton("npc.buttons.tp", "/npc tp " + row.number(), false));
+      if (p.hasPermission("loveessential.npc.edit")) line = line.append(npcButton("npc.buttons.edit", "/npc edit " + row.number(), false));
+      p.sendMessage(line);
+    }
+    if (pages > 1) {
+      var nav = net.kyori.adventure.text.Component.empty();
+      if (page > 1) nav = nav.append(npcButton("npc.buttons.page-prev", listCommand(query, page - 1), false));
+      if (page < pages) nav = nav.append(npcButton("npc.buttons.page-next", listCommand(query, page + 1), false));
+      p.sendMessage(nav);
+    }
+  }
+
+  /** The command that shows {@code page} of the same list, for the page buttons. */
+  private static String listCommand(NpcCommandLogic.Query query, int page) {
+    return "/npc list "
+        + switch (query.kind()) {
+          case ALL -> "all";
+          case ENABLED -> "on";
+          case DISABLED -> "off";
+          case NEAR -> "near " + (int) query.radius();
+          case WORLD -> "world " + query.worldName();
+        }
+        + " " + page;
+  }
+
+  /** Brings the player next to the NPC, facing it; stands on the NPC's own spot when there is no free place in front of it. */
+  private void npcTeleport(Player p, NpcDefinition npc) {
+    var entity = npcs.entity(npc.id());
+    var base = entity.map(e -> Position.of(e.getLocation())).orElse(npc.spawn());
+    var destination = base;
+    try {
+      var loc = base.location();
+      var forward = loc.getDirection().setY(0);
+      if (forward.lengthSquared() > 1e-6) {
+        var front = loc.clone().add(forward.normalize().multiply(1.5));
+        front.setYaw(loc.getYaw() + 180f);
+        front.setPitch(0f);
+        if (front.getBlock().isPassable() && front.clone().add(0, 1, 0).getBlock().isPassable()
+            && !front.clone().add(0, -1, 0).getBlock().isPassable()) destination = Position.of(front);
+      }
+    } catch (IllegalStateException worldUnavailable) {
+      throw new IllegalArgumentException("worlds.not-loaded");
+    }
+    gameplay.teleportService().teleport(p, destination, arrived -> {
+      if (arrived) lang.send(p, "npc.teleported", npcVariables(npc));
+    });
+  }
+
   private Map<String, String> npcVariables(NpcDefinition npc) {
     return Map.of(
         "id", Integer.toString(npcs.number(npc.id())),
@@ -616,6 +750,19 @@ public final class Commands implements CommandExecutor, TabCompleter {
   private void npcSummary(Player player, NpcDefinition npc, String title) {
     var variables = npcVariables(npc);
     player.sendMessage(lang.renderText(lang.text(title), variables, Map.of("name", lang.render(npc.nameKey()))));
+    // where it stands and how much is set up: enough to tell NPCs apart without opening the editor
+    var spawn = npc.spawn();
+    var world = Bukkit.getWorld(spawn.world());
+    var details = new HashMap<String, String>();
+    details.put("type", npc.entityType());
+    details.put("world", world == null ? "?" : world.getName());
+    details.put("x", Integer.toString((int) Math.floor(spawn.x())));
+    details.put("y", Integer.toString((int) Math.floor(spawn.y())));
+    details.put("z", Integer.toString((int) Math.floor(spawn.z())));
+    details.put("points", Integer.toString(npc.route() == null ? 0 : npc.route().points().size()));
+    details.put("nodes", Integer.toString(npc.dialog() == null ? 0 : npc.dialog().nodes().size()));
+    details.put("revision", Long.toString(npc.revision()));
+    player.sendMessage(lang.renderText(lang.text("npc.info-details"), details, Map.of()));
     var buttons = net.kyori.adventure.text.Component.empty();
     String number = variables.get("id");
     if (player.hasPermission("loveessential.npc.edit")) {
