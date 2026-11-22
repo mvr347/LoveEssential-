@@ -1,7 +1,7 @@
 name: LoveEssential
 version: ${project.version}
 main: dev.lovelace.loveessential.LoveEssentialPlugin
-api-version: '26.2'
+api-version: '26.3'
 authors:
 - Lovelace
 depend:
