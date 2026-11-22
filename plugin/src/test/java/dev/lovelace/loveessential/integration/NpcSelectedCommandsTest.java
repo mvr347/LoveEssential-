@@ -390,4 +390,40 @@ class NpcSelectedCommandsTest {
     clickSlot(org.bukkit.event.inventory.ClickType.SHIFT_RIGHT, 19);
     waitFor(() -> npcs.get(target.id()).orElseThrow().enabled() != target.enabled());
   }
+
+  @Test
+  void newCreatesAPublishedNpcWithNameSkinAndTypeInOneCommand() throws Exception {
+    admin.teleport(new org.bukkit.Location(admin.getWorld(), 40, 70, 50));
+    var before = new java.util.HashSet<String>();
+    npcs.all().forEach(n -> before.add(n.id()));
+    drain(admin);
+    server.dispatchCommand(admin, "npc new &eБанкир Иван --skin Notch --type villager");
+    waitFor(() -> npcs.all().size() == before.size() + 1);
+    var made = npcs.all().stream().filter(n -> !before.contains(n.id())).findFirst().orElseThrow();
+    assertTrue(made.enabled(), "a quick NPC is published at once");
+    assertEquals("VILLAGER", made.entityType());
+    assertEquals("Notch", made.settings().get("skin"));
+    assertTrue(made.nameKey().startsWith("@inline:") && made.nameKey().contains("Банкир Иван"), made.nameKey());
+    assertEquals(40, made.spawn().x(), 1.0);
+    assertEquals(50, made.spawn().z(), 1.0);
+    assertTrue(npcSelectedAfter(made), "the new NPC is selected for the next command");
+  }
+
+  boolean npcSelectedAfter(NpcDefinition npc) {
+    drain(admin);
+    server.dispatchCommand(admin, "npc info");
+    return plain(drain(admin)).contains("№" + npcs.number(npc.id()));
+  }
+
+  @Test
+  void newRejectsAnUnknownTypeAndNeedsTheCreateRight() throws Exception {
+    int count = npcs.all().size();
+    drain(admin);
+    server.dispatchCommand(admin, "npc new Имя --type NOT_A_TYPE");
+    assertFalse(plain(drain(admin)).isBlank(), "an unknown type must be answered");
+    var guest = server.addPlayer("Visitor");
+    server.dispatchCommand(guest, "npc new Имя");
+    server.getScheduler().performTicks(5);
+    assertEquals(count, npcs.all().size());
+  }
 }

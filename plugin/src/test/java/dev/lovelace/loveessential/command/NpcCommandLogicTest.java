@@ -119,4 +119,25 @@ class NpcCommandLogicTest {
     var error = assertThrows(IllegalArgumentException.class, () -> NpcCommandLogic.parseRename(new String[0], s -> false));
     assertEquals("npc.rename-usage", error.getMessage());
   }
+
+  @Test
+  void newTakesTheNameAndOptionalFlagsAnywhere() {
+    var plain = NpcCommandLogic.parseNew(new String[] {"&eБанкир", "Иван"});
+    assertEquals("&eБанкир Иван", plain.name());
+    assertNull(plain.skin());
+    assertNull(plain.type());
+    var flags = NpcCommandLogic.parseNew(new String[] {"--skin", "Notch", "Страж", "--type", "villager", "Ворот"});
+    assertEquals("Страж Ворот", flags.name());
+    assertEquals("Notch", flags.skin());
+    assertEquals("villager", flags.type());
+    assertEquals("Mojang", NpcCommandLogic.parseNew(new String[] {"Имя", "--скин", "Mojang"}).skin());
+  }
+
+  @Test
+  void newWithoutANameOrWithADanglingFlagIsAUsageError() {
+    for (var words : List.of(new String[0], new String[] {"--skin", "Notch"}, new String[] {"Имя", "--skin"}, new String[] {"Имя", "--type"})) {
+      var error = assertThrows(IllegalArgumentException.class, () -> NpcCommandLogic.parseNew(words));
+      assertEquals("npc.new-usage", error.getMessage());
+    }
+  }
 }
