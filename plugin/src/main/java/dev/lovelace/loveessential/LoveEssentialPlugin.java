@@ -561,7 +561,7 @@ public class LoveEssentialPlugin extends JavaPlugin {
     joinQuit.start();
     achievements.start();
     favorites.start();
-    // Other plugins pick these by name in their config (LoveCore.provider), next to Citizens/CMI.
+    // Other plugins pick these by name in their config (LoveCore.loveEssential).
     // Registered only now: a plugin that asks earlier gets "no such provider" (a warning at worst), not a
     // provider that answers "no such NPC" while the data is still loading.
     npcProvider = new dev.lovelace.loveessential.npc.LoveEssentialNpcProvider(this, main, npcs, gameplay.holograms());

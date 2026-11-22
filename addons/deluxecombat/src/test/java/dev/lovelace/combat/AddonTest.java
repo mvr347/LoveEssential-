@@ -155,22 +155,12 @@ class AddonTest {
     server.getScheduler().performTicks(2);
     assertEquals(0, api.tags);
   }
-  @Test void unusedReviveMeDoesNotOverrideLoveEssentialOrRequireItsApi() {
+  @Test void aReviveMePluginIsIgnoredAndNeverOverridesLoveEssential() {
     MockBukkit.createMockPlugin("ReviveMe");
     addon.unregister(); addon.register();
     server.getScheduler().performOneTick();
     assertNotSame(upstream, state());
     assertFalse(fall().isCancelled());
-  }
-  @Test void prefersExternalReviveMeOnlyWhenExplicitlyConfigured() throws Exception {
-    var settings = DeluxeCombatAddon.class.getDeclaredField("config");
-    settings.setAccessible(true);
-    ((org.bukkit.configuration.file.YamlConfiguration) settings.get(addon))
-        .set("revive.prefer-reviveme-if-installed", true);
-    MockBukkit.createMockPlugin("ReviveMe");
-    assertTrue(fall().isCancelled());
-    server.getScheduler().performTicks(2);
-    assertEquals(0, api.tags);
   }
   @Test void deniesDamageForUnauthenticatedPlayersAndRemovesTheirTag() {
     server.getServicesManager().register(AuthOracle.class, id -> !id.equals(victim.getUniqueId()), dc, ServicePriority.Normal);

@@ -32,7 +32,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  * LoveCore {@link NpcProvider} over LoveEssential NPCs. A plugin that picks {@code loveessential}
- * in its config gets the same calls and the same click/spawn events as with Citizens.
+ * in its config gets the same calls and the same click/spawn events.
  *
  * <p>NPCs created through the contract are ordinary definitions with an owner of all zeros and an
  * {@code ext-} id; their name, skin, marks and hologram live in the definition's settings, so they

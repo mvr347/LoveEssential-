@@ -10,7 +10,7 @@ class ExternalTabTest {
   @Test
   void autoStaysPassiveOnlyWhenAListedPluginIsEnabled() {
     assertFalse(ExternalTab.deferred(ExternalTab.Mode.AUTO, ExternalTab.DEFAULTS, n -> false));
-    assertTrue(ExternalTab.deferred(ExternalTab.Mode.AUTO, ExternalTab.DEFAULTS, Set.of("CMI")::contains));
+    assertTrue(ExternalTab.deferred(ExternalTab.Mode.AUTO, ExternalTab.DEFAULTS, Set.of("TabList")::contains));
     assertTrue(ExternalTab.deferred(ExternalTab.Mode.AUTO, ExternalTab.DEFAULTS, Set.of("TAB")::contains));
     assertFalse(ExternalTab.deferred(ExternalTab.Mode.AUTO, List.of("TAB"), Set.of("Essentials")::contains));
   }
@@ -31,7 +31,16 @@ class ExternalTabTest {
 
   @Test
   void foundNamesTheFirstEnabledPlugin() {
-    assertEquals("CMI", ExternalTab.found(List.of("TAB", "CMI"), Set.of("CMI")::contains));
+    assertEquals("TabList", ExternalTab.found(List.of("TAB", "TabList"), Set.of("TabList")::contains));
     assertNull(ExternalTab.found(List.of("TAB"), n -> false));
+  }
+
+  @Test
+  void previouslyGeneratedListWithCmiIsMigratedButCustomListsAreKept() {
+    var legacy = new java.util.ArrayList<>(ExternalTab.DEFAULTS);
+    legacy.add(1, "CMI");
+    assertEquals(ExternalTab.DEFAULTS, ExternalTab.effective(legacy));
+    assertEquals(ExternalTab.DEFAULTS, ExternalTab.effective(List.of()));
+    assertEquals(List.of("TAB", "CMI"), ExternalTab.effective(List.of("TAB", "CMI")));
   }
 }

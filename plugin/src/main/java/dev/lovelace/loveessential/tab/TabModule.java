@@ -263,14 +263,14 @@ public final class TabModule implements Listener, AutoCloseable {
   private boolean wasDeferred;
 
   /**
-   * True while another plugin (TAB, CMI, ...) owns the player list, name tags and sidebar; then
+   * True while another plugin (TAB, ...) owns the player list, name tags and sidebar; then
    * this module and the scoreboard stay passive. {@code tab.mode}: auto (default), on, off.
    */
   public boolean deferred() {
     var names = plugin.getConfig().getStringList("tab.external-plugins");
     return ExternalTab.deferred(
         ExternalTab.Mode.parse(plugin.getConfig().getString("tab.mode", "auto")),
-        names.isEmpty() ? ExternalTab.DEFAULTS : names,
+        ExternalTab.effective(names),
         name -> Bukkit.getPluginManager().isPluginEnabled(name));
   }
 
@@ -283,7 +283,7 @@ public final class TabModule implements Listener, AutoCloseable {
       var names = plugin.getConfig().getStringList("tab.external-plugins");
       String who =
           ExternalTab.found(
-              names.isEmpty() ? ExternalTab.DEFAULTS : names,
+              ExternalTab.effective(names),
               name -> Bukkit.getPluginManager().isPluginEnabled(name));
       plugin
           .getLogger()
