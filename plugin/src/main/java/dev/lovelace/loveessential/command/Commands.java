@@ -612,25 +612,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         permission(p, "publish");
         var n = npcSelection.target(p, args.length > 1 ? args[1] : null);
         boolean value = Set.of("enable", "включить").contains(op);
-        npcUpdated(
-            p,
-            npcs.save(
-                new NpcDefinition(
-                    n.id(),
-                    n.revision(),
-                    n.owner(),
-                    n.nameKey(),
-                    n.entityType(),
-                    n.spawn(),
-                    n.settings(),
-                    n.visibility(),
-                    n.access(),
-                    n.route(),
-                    n.dialog(),
-                    n.actions(),
-                    value),
-                n.revision(),
-                p.getUniqueId().toString()));
+        npcUpdated(p, npcs.save(n.withEnabled(value), n.revision(), p.getUniqueId().toString()));
       }
       default -> lang.send(p, "help.npc-commands");
     }
@@ -647,7 +629,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
     for (var n : npcs.all()) {
       int number = npcs.number(n.id());
       if (number <= 0) continue;
-      var s = n.spawn();
+      // where it is now (it may walk a route or follow a player), not where it was placed
+      var s = npcs.livePosition(n, p);
       rows.add(new NpcCommandLogic.Row(n.id(), number, plain.serialize(lang.render(n.nameKey())), n.enabled(), s.world(), s.x(), s.y(), s.z()));
     }
     var here = p.getLocation();
@@ -710,25 +693,9 @@ public final class Commands implements CommandExecutor, TabCompleter {
         + " " + page;
   }
 
-  /** Brings the player next to the NPC, facing it; stands on the NPC's own spot when there is no free place in front of it. */
+  /** Brings the player next to the NPC, facing it. */
   private void npcTeleport(Player p, NpcDefinition npc) {
-    var entity = npcs.entity(npc.id());
-    var base = entity.map(e -> Position.of(e.getLocation())).orElse(npc.spawn());
-    var destination = base;
-    try {
-      var loc = base.location();
-      var forward = loc.getDirection().setY(0);
-      if (forward.lengthSquared() > 1e-6) {
-        var front = loc.clone().add(forward.normalize().multiply(1.5));
-        front.setYaw(loc.getYaw() + 180f);
-        front.setPitch(0f);
-        if (front.getBlock().isPassable() && front.clone().add(0, 1, 0).getBlock().isPassable()
-            && !front.clone().add(0, -1, 0).getBlock().isPassable()) destination = Position.of(front);
-      }
-    } catch (IllegalStateException worldUnavailable) {
-      throw new IllegalArgumentException("worlds.not-loaded");
-    }
-    gameplay.teleportService().teleport(p, destination, arrived -> {
+    gameplay.teleportService().teleport(p, npcs.approach(p, npc), arrived -> {
       if (arrived) lang.send(p, "npc.teleported", npcVariables(npc));
     });
   }

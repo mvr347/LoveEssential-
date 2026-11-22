@@ -348,4 +348,46 @@ class NpcSelectedCommandsTest {
     server.dispatchCommand(admin, "npc import onlyone");
     assertTrue(plain(drain(admin)).contains("/npc import"));
   }
+
+  void clickSlot(org.bukkit.event.inventory.ClickType type, int slot) {
+    server.getPluginManager().callEvent(new org.bukkit.event.inventory.InventoryClickEvent(
+        admin.getOpenInventory(), org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER, slot, type,
+        org.bukkit.event.inventory.InventoryAction.PICKUP_ALL));
+    server.getScheduler().performTicks(2);
+  }
+
+  @Test
+  void theNpcListShowsCardsInTheWorkZoneAndFollowsTheLayoutStandard() throws Exception {
+    server.dispatchCommand(admin, "le npc");
+    server.getScheduler().performTicks(2);
+    var inventory = admin.getOpenInventory().getTopInventory();
+    assertEquals(54, inventory.getSize());
+    var violations = new ArrayList<>(dev.lovelace.loveessential.gui.GuiRules.violations(inventory, false));
+    violations.addAll(dev.lovelace.loveessential.gui.GuiRules.unresolvedText(inventory));
+    assertTrue(violations.isEmpty(), violations.toString());
+    // two NPCs: two cards in the first work-zone slots, named with their number and no middle dot
+    var first = PlainTextComponentSerializer.plainText().serialize(inventory.getItem(19).getItemMeta().displayName());
+    assertTrue(first.startsWith("№"), first);
+    assertFalse(first.contains("·"), first);
+    assertNotNull(inventory.getItem(20));
+  }
+
+  @Test
+  void rightClickOnACardOpensItsActionsAndShiftRightTogglesIt() throws Exception {
+    server.dispatchCommand(admin, "le npc");
+    server.getScheduler().performTicks(2);
+    clickSlot(org.bukkit.event.inventory.ClickType.RIGHT, 19);
+    var inventory = admin.getOpenInventory().getTopInventory();
+    var holder = (dev.lovelace.loveessential.gui.GuiLayout) inventory.getHolder();
+    assertEquals("gui.npc-actions", holder.guiId());
+    var violations = new ArrayList<>(dev.lovelace.loveessential.gui.GuiRules.violations(inventory, true));
+    violations.addAll(dev.lovelace.loveessential.gui.GuiRules.unresolvedText(inventory));
+    assertTrue(violations.isEmpty(), violations.toString());
+
+    server.dispatchCommand(admin, "le npc");
+    server.getScheduler().performTicks(2);
+    var target = npcs.all().stream().min(java.util.Comparator.comparingInt(n -> npcs.number(n.id()))).orElseThrow();
+    clickSlot(org.bukkit.event.inventory.ClickType.SHIFT_RIGHT, 19);
+    waitFor(() -> npcs.get(target.id()).orElseThrow().enabled() != target.enabled());
+  }
 }

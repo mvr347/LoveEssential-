@@ -558,6 +558,42 @@ messages:
     list-header: '<gold>NPC <dark_gray>· <gray>фильтр: <white><filter> <dark_gray>· <gray>найдено <white><count> <dark_gray>· <gray>страница <white><page><dark_gray>/<white><pages>'
     list-line: '<gold>№<id> <name> <dark_gray>· <gray><world> <x> <y> <z> <dark_gray>· <gray><state> <dark_gray>· <gray><distance> '
     info-details: '<gray>Тип <white><type> <dark_gray>· <gray>мир <white><world> <x> <y> <z> <dark_gray>· <gray>точек маршрута <white><points> <dark_gray>· <gray>узлов диалога <white><nodes> <dark_gray>· <gray>ревизия <white><revision>'
+    # 2026-11-22: меню списка NPC (/le npc): карточки с кликами ЛКМ/ПКМ/Shift, фильтр и сортировка в шапке по gui_gen v2.1.
+    card-place: '<gray>Мир <white><world> <x> <y> <z>'
+    card-parts: '<gray>Тип <white><type><gray>, точек маршрута <white><points><gray>, реплик <white><nodes>'
+    card-click-edit: '<green>ЛКМ <dark_gray>— <gray>настройки'
+    card-click-actions: '<gold>ПКМ <dark_gray>— <gray>действия'
+    card-click-tp: '<aqua>Shift+ЛКМ <dark_gray>— <gray>телепорт к NPC'
+    card-click-toggle: '<aqua>Shift+ПКМ <dark_gray>— <gray>включить или выключить'
+    rename-prompt: '<yellow>Введите новое имя NPC <gray>[нажмите, чтобы вставить команду]'
+    action-tp: <gold>Телепорт к NPC
+    action-move: <gold>Переставить сюда
+    action-rename: <gold>Переименовать
+    action-clone: <gold>Копия NPC
+    action-enable: <green>Включить NPC
+    action-disable: <gold>Выключить NPC
+    action-delete: <red>Удалить NPC
+    list-filter: '<gold>Фильтр <dark_gray>| <yellow><name>'
+    list-filter-lore: <dark_gray>Какие NPC показывать
+    list-filter-options: '<dark_gray>▪ <gray>Варианты:'
+    list-filter-current: '  <green>▶ <name>'
+    list-filter-other: '    <gray><name>'
+    list-filter-next: '<green>ЛКМ <dark_gray>— <gray>следующий вариант'
+    list-filter-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий вариант'
+    list-filter-all: Все
+    list-filter-enabled: Включённые
+    list-filter-disabled: Выключенные
+    list-filter-world: В моём мире
+    list-sort: '<gold>Сортировка <dark_gray>| <yellow><name>'
+    list-sort-lore: <dark_gray>Порядок карточек
+    list-sort-options: '<dark_gray>▪ <gray>Порядок:'
+    list-sort-current: '  <green>▶ <name>'
+    list-sort-other: '    <gray><name>'
+    list-sort-next: '<green>ЛКМ <dark_gray>— <gray>следующий порядок'
+    list-sort-previous: '<green>ПКМ <dark_gray>— <gray>предыдущий порядок'
+    list-sort-number: По номеру
+    list-sort-name: По имени
+    list-sort-distance: По расстоянию
     list-empty: '<yellow>Подходящих NPC нет.'
     teleported: '<green>Вы рядом с NPC №<id>.'
     moved: '<green>NPC перемещён на ваше место.'
@@ -662,6 +698,7 @@ messages:
     dialog-npc: <gold>Диалог NPC
     schedule-npc: <gold>Расписание NPC
     debug-npc: <gold>Диагностика NPC
+    npc-actions: '<gold>NPC <dark_gray>| <yellow>№<id>'
     npc-id: '<gray>Номер NPC: <white><id>'
     pos1: <gold>Первая точка портала
     destination: <gold>Назначение — текущая позиция

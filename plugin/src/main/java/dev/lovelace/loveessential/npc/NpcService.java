@@ -409,6 +409,38 @@ public final class NpcService implements Listener, AutoCloseable {
    * view ray, so an invisible entity of a hologram or a hitbox in front cannot hide it the way it
    * hides it from {@code Player#getTargetEntity}; falls back to that call for NPCs of other plugins.
    */
+  /**
+   * Where the NPC is right now for {@code viewer}: its live body (the personal instance of that viewer included), or the
+   * stored spawn when it is not spawned. The spawn is only the home of an NPC that walks a route or follows a player.
+   */
+  public Position livePosition(NpcDefinition npc, Player viewer) {
+    return entity(npc.id(), viewer).map(e -> Position.of(e.getLocation())).orElse(npc.spawn());
+  }
+
+  /**
+   * Where a player should stand to meet the NPC: 1.5 blocks in front of it, facing it, when that spot has free space and a
+   * floor; otherwise the NPC's own spot. Uses the live body when the NPC walks, the stored spawn otherwise.
+   * A personal NPC exists per viewer, so the lookup is made for {@code viewer}.
+   */
+  public Position approach(Player viewer, NpcDefinition npc) {
+    var base = livePosition(npc, viewer);
+    try {
+      var loc = base.location();
+      var forward = loc.getDirection().setY(0);
+      if (forward.lengthSquared() > 1e-6) {
+        var front = loc.clone().add(forward.normalize().multiply(1.5));
+        front.setYaw(loc.getYaw() + 180f);
+        front.setPitch(0f);
+        if (front.getBlock().isPassable()
+            && front.clone().add(0, 1, 0).getBlock().isPassable()
+            && !front.clone().add(0, -1, 0).getBlock().isPassable()) return Position.of(front);
+      }
+    } catch (IllegalStateException worldUnavailable) {
+      throw new IllegalArgumentException("worlds.not-loaded");
+    }
+    return base;
+  }
+
   public Optional<String> lookedAt(Player player, double range) {
     var eye = player.getEyeLocation();
     var from = eye.toVector();
