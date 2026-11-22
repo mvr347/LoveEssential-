@@ -532,6 +532,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
         if (args.length == 1) menus.direct(p, () -> menus.npcList(p, 0));
         else npcChatList(p, NpcCommandLogic.parseList(slice(args, 1)));
       }
+      case "new", "новый" -> npcQuickCreate(p, NpcCommandLogic.parseNew(slice(args, 1)));
       case "near", "рядом" -> {
         permission(p, "view");
         String[] words = new String[args.length];
@@ -616,6 +617,39 @@ public final class Commands implements CommandExecutor, TabCompleter {
       }
       default -> lang.send(p, "help.npc-commands");
     }
+  }
+
+  /**
+   * {@code /npc new}: a published NPC where the player stands, in one command. The id is generated, the name may carry colour
+   * codes, the skin and type are optional; dialogue and click actions are added afterwards in the editor.
+   */
+  private void npcQuickCreate(Player p, NpcCommandLogic.NewNpc spec) {
+    permission(p, "create");
+    permission(p, "publish");
+    if (!love.territorialAccess(p, p.getLocation())) throw new IllegalArgumentException("errors.territory");
+    String type = spec.type() == null ? "MANNEQUIN" : spec.type().toUpperCase(Locale.ROOT);
+    if (!plugin.getConfig().getStringList("npc.allowed-types").contains(type))
+      throw new IllegalArgumentException("validation.entity");
+    var base = dev.lovelace.loveessential.wizard.NpcDraft.create(p.getUniqueId(), Position.of(p.getLocation())).npc();
+    var settings = new HashMap<>(base.settings());
+    if (spec.skin() != null) settings.put("skin", spec.skin());
+    String named = dev.lovelace.loveessential.tab.TabSyntax.legacy(spec.name());
+    var created = new NpcDefinition(base.id(), 0, base.owner(), "@inline:" + named, type, base.spawn(), settings,
+        base.visibility(), base.access(), base.route(), base.dialog(), base.actions(), true);
+    var errors = npcs.validator(lang::contains).validate(created, plugin.getConfig().getInt("npc.max-route-points", 128));
+    if (!errors.isEmpty()) {
+      errors.forEach(key -> lang.send(p, key));
+      return;
+    }
+    npcs.save(created, 0, p.getUniqueId().toString()).whenComplete((saved, error) -> main.execute(() -> {
+      if (!p.isOnline()) return;
+      if (error != null) {
+        lang.error(p, error);
+        return;
+      }
+      npcSelection.select(p, saved);
+      npcSummary(p, saved, "npc.created");
+    }));
   }
 
   private void usage(Player p, String usage) {

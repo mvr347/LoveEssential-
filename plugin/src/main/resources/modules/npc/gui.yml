@@ -520,6 +520,7 @@ messages:
     - <gray>/npc info [номер] — информация и кнопки действий
     - <gray>/npc tp [номер] — телепортироваться к NPC
     - <gold>Правка
+    - <gray>/npc new <имя> [--skin <ник>] [--type <тип>] — создать и сразу опубликовать NPC на вашем месте
     - <gray>/npc create — создать NPC через мастер; /npc clone [номер] — копия
     - <gray>/npc rename [номер] <имя> — переименовать; &-цвета работают
     - <gray>/npc move [номер] — переставить NPC на ваше место
@@ -594,6 +595,8 @@ messages:
     list-sort-number: По номеру
     list-sort-name: По имени
     list-sort-distance: По расстоянию
+    created: '<green>NPC создан <white><name> <dark_gray>· <gray>№<id> · <state>. <gray>Диалоги и действия по клику — в редакторе.'
+    new-usage: '<yellow>Использование: /npc new <имя> [--skin <ник>] [--type <тип>], например /npc new &eБанкир --skin Notch'
     list-empty: '<yellow>Подходящих NPC нет.'
     teleported: '<green>Вы рядом с NPC №<id>.'
     moved: '<green>NPC перемещён на ваше место.'

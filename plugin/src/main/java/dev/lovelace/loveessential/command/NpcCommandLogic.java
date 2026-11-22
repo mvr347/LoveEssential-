@@ -150,4 +150,33 @@ public final class NpcCommandLogic {
     }
     return new Rename(null, String.join(" ", words).strip());
   }
+
+  /** What {@code /npc new} asks for: the name (colour codes allowed), an optional skin and an optional entity type. */
+  public record NewNpc(String name, String skin, String type) {}
+
+  /**
+   * Parses {@code /npc new <name...> [--skin <player>] [--type <TYPE>]}. The flags may stand anywhere; every other word is
+   * part of the name. A flag without a value, or no name at all, is an error.
+   */
+  public static NewNpc parseNew(String[] words) {
+    var name = new java.util.ArrayList<String>();
+    String skin = null, type = null;
+    for (int i = 0; i < words.length; i++) {
+      String word = words[i];
+      String flag = word.toLowerCase(Locale.ROOT);
+      boolean isSkin = flag.equals("--skin") || flag.equals("--скин");
+      boolean isType = flag.equals("--type") || flag.equals("--тип");
+      if (isSkin || isType) {
+        if (i + 1 >= words.length) throw new IllegalArgumentException("npc.new-usage");
+        String value = words[++i];
+        if (isSkin) skin = value;
+        else type = value;
+      } else {
+        name.add(word);
+      }
+    }
+    String joined = String.join(" ", name).strip();
+    if (joined.isEmpty() || joined.length() > 256) throw new IllegalArgumentException("npc.new-usage");
+    return new NewNpc(joined, skin, type);
+  }
 }

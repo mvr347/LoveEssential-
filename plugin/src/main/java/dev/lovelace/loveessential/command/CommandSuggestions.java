@@ -39,6 +39,7 @@ public final class CommandSuggestions {
           Map.entry("skin", "edit"),
           Map.entry("list", "view"),
           Map.entry("near", "view"),
+          Map.entry("new", "create"),
           Map.entry("tp", "teleport"),
           Map.entry("move", "edit"),
           Map.entry("debug", "debug"),
@@ -75,6 +76,7 @@ public final class CommandSuggestions {
           Map.entry("импорт", "import"),
           Map.entry("переименовать", "rename"),
           Map.entry("рядом", "near"),
+          Map.entry("новый", "new"),
           Map.entry("тп", "tp"),
           Map.entry("переместить", "move"),
           Map.entry("включить", "enable"),
@@ -237,6 +239,13 @@ public final class CommandSuggestions {
       if (op.equals("list") && args.length == 3 && args[1].equalsIgnoreCase("near")) return List.of("16", "32", "64", "128");
       if (op.equals("list") && args.length == 3 && args[1].equalsIgnoreCase("world"))
         return Bukkit.getWorlds().stream().map(org.bukkit.World::getName).toList();
+      if (op.equals("new")) {
+        String previous = args.length >= 2 ? args[args.length - 2].toLowerCase(Locale.ROOT) : "";
+        if (previous.equals("--type") || previous.equals("--тип"))
+          return plugin.getConfig().getStringList("npc.allowed-types");
+        if (previous.equals("--skin") || previous.equals("--скин")) return players(sender);
+        return List.of("--skin", "--type");
+      }
       if (op.equals("near") && args.length == 2) return List.of("16", "32", "64", "128");
       if (op.equals("rename") && args.length == 2) return ids();
       if (op.equals("import") && args.length == 2) {
