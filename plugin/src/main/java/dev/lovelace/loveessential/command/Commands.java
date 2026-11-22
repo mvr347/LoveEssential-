@@ -629,7 +629,8 @@ public final class Commands implements CommandExecutor, TabCompleter {
     for (var n : npcs.all()) {
       int number = npcs.number(n.id());
       if (number <= 0) continue;
-      var s = n.spawn();
+      // where it is now (it may walk a route or follow a player), not where it was placed
+      var s = npcs.livePosition(n, p);
       rows.add(new NpcCommandLogic.Row(n.id(), number, plain.serialize(lang.render(n.nameKey())), n.enabled(), s.world(), s.x(), s.y(), s.z()));
     }
     var here = p.getLocation();
@@ -694,7 +695,7 @@ public final class Commands implements CommandExecutor, TabCompleter {
 
   /** Brings the player next to the NPC, facing it. */
   private void npcTeleport(Player p, NpcDefinition npc) {
-    gameplay.teleportService().teleport(p, npcs.approach(npc), arrived -> {
+    gameplay.teleportService().teleport(p, npcs.approach(p, npc), arrived -> {
       if (arrived) lang.send(p, "npc.teleported", npcVariables(npc));
     });
   }

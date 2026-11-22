@@ -302,7 +302,9 @@ class PluginLifecycleTest {
     assertEquals("VILLAGER", api.npc("menu_guard").orElseThrow().entityType());
     assertTrue(suggestions(p, "loveessential", "npc", "delete", "").contains("1"));
     server.dispatchCommand(p, "le npc");
+    // right click opens the NPC's actions; deletion is one of them and still asks for a confirmation
     click(p, itemNamed(p, "№1"), org.bukkit.event.inventory.ClickType.RIGHT);
+    click(p, itemNamed(p, "Удалить NPC"));
     assertTrue(api.npc("menu_guard").isPresent(), "opening confirmation must not delete anything");
     String target =
         net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()

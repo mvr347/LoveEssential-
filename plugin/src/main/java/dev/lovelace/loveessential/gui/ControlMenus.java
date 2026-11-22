@@ -1718,10 +1718,10 @@ public final class ControlMenus implements Listener, AutoCloseable {
       case ALL -> true;
       case ENABLED -> n.enabled();
       case DISABLED -> !n.enabled();
-      case WORLD -> n.spawn().world().equals(here.getWorld().getUID());
+      case WORLD -> npcs.livePosition(n, p).world().equals(here.getWorld().getUID());
     }).toList());
     java.util.function.ToDoubleFunction<NpcDefinition> away = n -> {
-      var s0 = n.spawn();
+      var s0 = npcs.livePosition(n, p);
       if (!s0.world().equals(here.getWorld().getUID())) return Double.MAX_VALUE;
       double dx = s0.x() - here.getX(), dy = s0.y() - here.getY(), dz = s0.z() - here.getZ();
       return dx * dx + dy * dy + dz * dz;
@@ -1780,7 +1780,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     for (int i = from; i < to; i++) {
       var n = list.get(i);
       int number = npcs.number(n.id());
-      var spawn = n.spawn();
+      var spawn = npcs.livePosition(n, p);
       var world = Bukkit.getWorld(spawn.world());
       var details = new HashMap<String, String>();
       details.put("type", n.entityType());
@@ -1795,7 +1795,8 @@ public final class ControlMenus implements Listener, AutoCloseable {
       lore.add(lang.renderText(lang.text("npc.card-place"), details));
       lore.add(lang.renderText(lang.text("npc.card-parts"), details));
       lore.add(lang.render("gui.separator"));
-      lore.add(lang.render("npc.card-click-edit"));
+      // a player who may only view the list is not offered the editor
+      if (canEdit) lore.add(lang.render("npc.card-click-edit"));
       lore.add(lang.render("npc.card-click-actions"));
       if (p.hasPermission("loveessential.npc.teleport")) lore.add(lang.render("npc.card-click-tp"));
       if (p.hasPermission("loveessential.npc.publish")) lore.add(lang.render("npc.card-click-toggle"));
@@ -1809,7 +1810,9 @@ public final class ControlMenus implements Listener, AutoCloseable {
           lore,
           click -> {
             switch (click) {
-              case LEFT -> wizard.edit(p, n.id());
+              case LEFT -> {
+                if (canEdit) wizard.edit(p, n.id());
+              }
               case RIGHT -> npcActions(p, n.id(), pageNow);
               case SHIFT_LEFT -> npcTeleportFromMenu(p, n);
               case SHIFT_RIGHT -> npcToggle(p, n, () -> npcList(p, pageNow));
@@ -1824,7 +1827,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
   private void npcTeleportFromMenu(Player p, NpcDefinition n) {
     if (!p.hasPermission("loveessential.npc.teleport")) throw new IllegalArgumentException("errors.permission");
     p.closeInventory();
-    gameplay.teleportService().teleport(p, npcs.approach(n), arrived -> {
+    gameplay.teleportService().teleport(p, npcs.approach(p, n), arrived -> {
       if (arrived) lang.send(p, "npc.teleported", Map.of("id", Integer.toString(npcs.number(n.id()))));
     });
   }
@@ -1843,6 +1846,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
     }
     var n = found.get();
     int number = npcs.number(n.id());
+    boolean mayEdit = p.hasPermission("loveessential.npc.edit");
     var m = menu(p, "gui.npc-actions", Map.of("id", Integer.toString(number)), this::npcView);
     var back = (Runnable) () -> npcList(p, returnPage);
     var slots = new ArrayList<Object[]>();
@@ -1883,7 +1887,7 @@ public final class ControlMenus implements Listener, AutoCloseable {
       var click = (Consumer<ClickType>) slots.get(i)[2];
       put(m, MenuStyle.headerSlot(i, slots.size()), (Material) slots.get(i)[0], (String) slots.get(i)[1], "gui.click.run", click);
     }
-    var spawn = n.spawn();
+    var spawn = npcs.livePosition(n, p);
     var world = Bukkit.getWorld(spawn.world());
     var details = new HashMap<String, String>();
     details.put("type", n.entityType());
@@ -1893,19 +1897,22 @@ public final class ControlMenus implements Listener, AutoCloseable {
     details.put("z", Integer.toString((int) Math.floor(spawn.z())));
     details.put("points", Integer.toString(n.route() == null ? 0 : n.route().points().size()));
     details.put("nodes", Integer.toString(n.dialog() == null ? 0 : n.dialog().nodes().size()));
+    var cardLore = new ArrayList<Component>(List.of(
+        lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"),
+        lang.renderText(lang.text("npc.card-place"), details),
+        lang.renderText(lang.text("npc.card-parts"), details)));
+    if (mayEdit) {
+      cardLore.add(lang.render("gui.separator"));
+      cardLore.add(lang.render("npc.card-click-edit"));
+    }
     entry(
         m,
         22,
         Material.PLAYER_HEAD,
         Component.text("№" + number + " ", net.kyori.adventure.text.format.NamedTextColor.GRAY).append(lang.render(n.nameKey())),
-        List.of(
-            lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"),
-            lang.renderText(lang.text("npc.card-place"), details),
-            lang.renderText(lang.text("npc.card-parts"), details),
-            lang.render("gui.separator"),
-            lang.render("npc.card-click-edit")),
+        cardLore,
         click -> {
-          if (click == ClickType.LEFT) wizard.edit(p, n.id());
+          if (click == ClickType.LEFT && mayEdit) wizard.edit(p, n.id());
         });
     put(m, 51, Material.ARROW, "common.back", "gui.click.open", c -> back.run());
     put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());

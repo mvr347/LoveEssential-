@@ -410,11 +410,20 @@ public final class NpcService implements Listener, AutoCloseable {
    * hides it from {@code Player#getTargetEntity}; falls back to that call for NPCs of other plugins.
    */
   /**
+   * Where the NPC is right now for {@code viewer}: its live body (the personal instance of that viewer included), or the
+   * stored spawn when it is not spawned. The spawn is only the home of an NPC that walks a route or follows a player.
+   */
+  public Position livePosition(NpcDefinition npc, Player viewer) {
+    return entity(npc.id(), viewer).map(e -> Position.of(e.getLocation())).orElse(npc.spawn());
+  }
+
+  /**
    * Where a player should stand to meet the NPC: 1.5 blocks in front of it, facing it, when that spot has free space and a
    * floor; otherwise the NPC's own spot. Uses the live body when the NPC walks, the stored spawn otherwise.
+   * A personal NPC exists per viewer, so the lookup is made for {@code viewer}.
    */
-  public Position approach(NpcDefinition npc) {
-    var base = entity(npc.id()).map(e -> Position.of(e.getLocation())).orElse(npc.spawn());
+  public Position approach(Player viewer, NpcDefinition npc) {
+    var base = livePosition(npc, viewer);
     try {
       var loc = base.location();
       var forward = loc.getDirection().setY(0);
