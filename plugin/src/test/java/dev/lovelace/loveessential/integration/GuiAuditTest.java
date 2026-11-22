@@ -371,18 +371,23 @@ class GuiAuditTest {
   }
 
   @Test
-  void emptyNpcListCreatesInTheWorkAreaAndDirectOpenHasNoBack() {
+  void emptyNpcListHasItsControlsInTheHeaderAndDirectOpenHasNoBack() {
     var player = admin();
     server.dispatchCommand(player, "le npc");
     var inventory = player.getOpenInventory().getTopInventory();
-    assertEquals(27, inventory.getSize());
-    assertTrue(name(player, 13).contains("Создать"));
-    assertFalse(name(player, 25).contains("Назад"));
-    assertTrue(name(player, 26).contains("Закрыть"));
+    // The list keeps its 54 slots: create, filter and sort sit in the header (three controls: slots 2, 4, 6).
+    assertEquals(54, inventory.getSize());
+    assertTrue(name(player, 2).contains("Создать"), name(player, 2));
+    assertTrue(name(player, 4).contains("Фильтр"), name(player, 4));
+    assertTrue(name(player, 6).contains("Сортировка"), name(player, 6));
+    assertFalse(name(player, 52).contains("Назад"));
+    assertTrue(name(player, 53).contains("Закрыть"));
     assertTrue(
-        inventory.getItem(13).getItemMeta().lore().stream()
+        inventory.getItem(2).getItemMeta().lore().stream()
             .map(PlainTextComponentSerializer.plainText()::serialize)
             .anyMatch(line -> line.contains("автоматически")));
+    assertTrue(dev.lovelace.loveessential.gui.GuiRules.violations(inventory, false).isEmpty(),
+        dev.lovelace.loveessential.gui.GuiRules.violations(inventory, false).toString());
   }
 
   @Test

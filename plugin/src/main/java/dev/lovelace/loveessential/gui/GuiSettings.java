@@ -307,6 +307,7 @@ public final class GuiSettings {
   /** Menus that must keep their 54 slots whatever a filter leaves in them. */
   static boolean keepsSize(String id) {
     return id.equals("gui.wizard-title")
+        || id.equals("gui.npcs")
         || id.equals("achievements.gui-title")
         || id.equals("joinquit.gui-title")
         || id.equals("display.gui-title");
@@ -317,7 +318,7 @@ public final class GuiSettings {
    * re-centre them by their number, or the sections would move from menu to menu.
    */
   static boolean keepsHeader(String id) {
-    return id.equals("gui.wizard-title") || id.equals("nick.title") || id.equals("joinquit.gui-title") || id.equals("display.gui-title");
+    return id.equals("gui.wizard-title") || id.equals("gui.npcs") || id.equals("nick.title") || id.equals("joinquit.gui-title") || id.equals("display.gui-title");
   }
 
   public Inventory compact(Inventory inventory, GuiLayout layout) {

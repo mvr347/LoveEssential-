@@ -111,6 +111,23 @@ public record NpcDefinition(
         enabled);
   }
 
+  public NpcDefinition withEnabled(boolean value) {
+    return new NpcDefinition(
+        id,
+        revision,
+        owner,
+        nameKey,
+        entityType,
+        spawn,
+        settings,
+        visibility,
+        access,
+        route,
+        dialog,
+        actions,
+        value);
+  }
+
   public NpcDefinition withSpawn(Position position) {
     return new NpcDefinition(
         id,

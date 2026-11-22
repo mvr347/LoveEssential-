@@ -1,6 +1,8 @@
 package dev.lovelace.loveessential.gui;
 
 import dev.lovelace.loveessential.*;
+import dev.lovelace.loveessential.api.NpcDefinition;
+import dev.lovelace.loveessential.api.Position;
 import dev.lovelace.loveessential.config.ModuleConfigs;
 import dev.lovelace.loveessential.integration.LoveBridge;
 import dev.lovelace.loveessential.lang.Lang;
@@ -1690,53 +1692,223 @@ public final class ControlMenus implements Listener, AutoCloseable {
     complete(p, plugin.editSetting(module, path, expected, value), back, true);
   }
 
+  /** Which NPCs the list shows and in which order; kept per player so a page change or a return keeps the choice. */
+  private enum NpcFilter {
+    ALL,
+    ENABLED,
+    DISABLED,
+    WORLD
+  }
+
+  private enum NpcSort {
+    NUMBER,
+    NAME,
+    DISTANCE
+  }
+
+  private final Map<UUID, NpcFilter> npcFilter = new HashMap<>();
+  private final Map<UUID, NpcSort> npcSort = new HashMap<>();
+
   public void npcList(Player p, int page) {
     var m = menu(p, "gui.npcs", Map.of(), this::npcView);
-    var list =
-        npcs.all().stream().sorted(Comparator.comparingInt(npc -> npcs.number(npc.id()))).toList();
-    int actual = Math.clamp(page, 0, Math.max(0, (list.size() - 1) / 20));
-    int count = Math.min(20, list.size() - actual * 20);
-    for (int i = actual * 20; i < actual * 20 + count; i++) {
+    var filter = npcFilter.getOrDefault(p.getUniqueId(), NpcFilter.ALL);
+    var sort = npcSort.getOrDefault(p.getUniqueId(), NpcSort.NUMBER);
+    var here = p.getLocation();
+    var list = new ArrayList<>(npcs.all().stream().filter(n -> switch (filter) {
+      case ALL -> true;
+      case ENABLED -> n.enabled();
+      case DISABLED -> !n.enabled();
+      case WORLD -> n.spawn().world().equals(here.getWorld().getUID());
+    }).toList());
+    java.util.function.ToDoubleFunction<NpcDefinition> away = n -> {
+      var s0 = n.spawn();
+      if (!s0.world().equals(here.getWorld().getUID())) return Double.MAX_VALUE;
+      double dx = s0.x() - here.getX(), dy = s0.y() - here.getY(), dz = s0.z() - here.getZ();
+      return dx * dx + dy * dy + dz * dz;
+    };
+    var byNumber = Comparator.comparingInt((NpcDefinition n) -> npcs.number(n.id()));
+    list.sort(switch (sort) {
+      case NUMBER -> byNumber;
+      case NAME -> Comparator.comparing((NpcDefinition n) -> plainText(lang.render(n.nameKey())).toLowerCase(Locale.ROOT)).thenComparing(byNumber);
+      case DISTANCE -> Comparator.comparingDouble(away).thenComparing(byNumber);
+    });
+    int capacity = MenuStyle.CONTENT.length;
+    int actual = Math.clamp(page, 0, Math.max(0, (list.size() - 1) / capacity));
+    int from = actual * capacity;
+    int to = Math.min(list.size(), from + capacity);
+    boolean canEdit = p.hasPermission("loveessential.npc.edit");
+    boolean canCreate = canEdit && p.hasPermission("loveessential.npc.create");
+    // Header controls, centred for their count: create, the draft (only while there is one), filter and sort.
+    boolean draft = canEdit && wizard.editing(p);
+    int controls = 3 + (draft ? 1 : 0);
+    int next = 0;
+    int create = MenuStyle.headerSlot(next++, controls);
+    put(m, create, Material.LIME_DYE, "gui.create-npc", "gui.create-npc-help", c -> wizard.createNew(p, null));
+    if (!canCreate) locked(m, create);
+    if (draft) put(m, MenuStyle.headerSlot(next++, controls), Material.WRITABLE_BOOK, "gui.resume", "gui.click.open", c -> wizard.open(p));
+    var filters = NpcFilter.values();
+    var filterOptions = new ArrayList<Map<String, String>>();
+    for (var f : filters) filterOptions.add(Map.of("name", f.name().toLowerCase(Locale.ROOT)));
+    cycleButton(
+        m,
+        MenuStyle.headerSlot(next++, controls),
+        plugin.getConfig().getString("profile.gui.textures.profile-menu.filter", ""),
+        "npc",
+        "list-filter",
+        filterOptions,
+        filter.ordinal(),
+        index -> {
+          npcFilter.put(p.getUniqueId(), filters[index]);
+          npcList(p, 0);
+        });
+    var sorts = NpcSort.values();
+    var sortOptions = new ArrayList<Map<String, String>>();
+    for (var o : sorts) sortOptions.add(Map.of("name", o.name().toLowerCase(Locale.ROOT)));
+    cycleButton(
+        m,
+        MenuStyle.headerSlot(next, controls),
+        SORT_TEXTURE,
+        "npc",
+        "list-sort",
+        sortOptions,
+        sort.ordinal(),
+        index -> {
+          npcSort.put(p.getUniqueId(), sorts[index]);
+          npcList(p, 0);
+        });
+    // A fixed grid: cards keep their slots when a filter leaves fewer of them.
+    for (int i = from; i < to; i++) {
       var n = list.get(i);
+      int number = npcs.number(n.id());
+      var spawn = n.spawn();
+      var world = Bukkit.getWorld(spawn.world());
+      var details = new HashMap<String, String>();
+      details.put("type", n.entityType());
+      details.put("world", world == null ? "?" : world.getName());
+      details.put("x", Integer.toString((int) Math.floor(spawn.x())));
+      details.put("y", Integer.toString((int) Math.floor(spawn.y())));
+      details.put("z", Integer.toString((int) Math.floor(spawn.z())));
+      details.put("points", Integer.toString(n.route() == null ? 0 : n.route().points().size()));
+      details.put("nodes", Integer.toString(n.dialog() == null ? 0 : n.dialog().nodes().size()));
+      var lore = new ArrayList<Component>();
+      lore.add(lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"));
+      lore.add(lang.renderText(lang.text("npc.card-place"), details));
+      lore.add(lang.renderText(lang.text("npc.card-parts"), details));
+      lore.add(lang.render("gui.separator"));
+      lore.add(lang.render("npc.card-click-edit"));
+      lore.add(lang.render("npc.card-click-actions"));
+      if (p.hasPermission("loveessential.npc.teleport")) lore.add(lang.render("npc.card-click-tp"));
+      if (p.hasPermission("loveessential.npc.publish")) lore.add(lang.render("npc.card-click-toggle"));
+      int pageNow = actual;
       entry(
           m,
-          MenuStyle.slot(i % 20, count + 1),
+          MenuStyle.CONTENT[i - from],
           Material.PLAYER_HEAD,
-          lang.render(n.nameKey())
-              .append(
-                  Component.text(
-                      " · №" + npcs.number(n.id()),
-                      net.kyori.adventure.text.format.NamedTextColor.GRAY)),
-          List.of(
-              lang.render("gui.npc-id", Map.of("id", "" + npcs.number(n.id()))),
-              lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"),
-              lang.render("gui.separator"),
-              lang.render("gui.npc-list-edit"),
-              lang.render("gui.npc-list-delete")),
+          Component.text("№" + number + " ", net.kyori.adventure.text.format.NamedTextColor.GRAY)
+              .append(lang.render(n.nameKey())),
+          lore,
           click -> {
-            if (click == ClickType.LEFT) wizard.edit(p, n.id());
-            else if (click == ClickType.RIGHT)
-              confirm(
-                  p,
-                  "gui.delete-npc",
-                  () ->
-                      complete(
-                          p,
-                          npcs.delete(n.id(), n.revision(), p.getUniqueId().toString()),
-                          () -> npcList(p, actual),
-                          false),
-                  () -> npcList(p, actual),
-                  who -> plugin.module("npc") && who.hasPermission("loveessential.npc.delete"),
-                  "№" + npcs.number(n.id()));
+            switch (click) {
+              case LEFT -> wizard.edit(p, n.id());
+              case RIGHT -> npcActions(p, n.id(), pageNow);
+              case SHIFT_LEFT -> npcTeleportFromMenu(p, n);
+              case SHIFT_RIGHT -> npcToggle(p, n, () -> npcList(p, pageNow));
+              default -> {}
+            }
           });
     }
-    navigation(m, p, actual, list.size(), 20, n -> npcList(p, n), () -> home(p));
-    put(m, 50, Material.WRITABLE_BOOK, "gui.resume", "gui.click.open", c -> wizard.open(p));
-    int create = MenuStyle.slot(count, count + 1);
-    put(m, create, Material.LIME_DYE, "gui.create-npc", "gui.create-npc-help", c -> wizard.createNew(p, null));
-    if (!p.hasPermission("loveessential.npc.create") || !p.hasPermission("loveessential.npc.edit"))
-      locked(m, create);
-    if (!p.hasPermission("loveessential.npc.edit")) locked(m, 50);
+    navigation(m, p, actual, list.size(), capacity, n -> npcList(p, n), () -> home(p));
+    MenuStyle.open(p, m.inventory);
+  }
+
+  private void npcTeleportFromMenu(Player p, NpcDefinition n) {
+    if (!p.hasPermission("loveessential.npc.teleport")) throw new IllegalArgumentException("errors.permission");
+    p.closeInventory();
+    gameplay.teleportService().teleport(p, npcs.approach(n), arrived -> {
+      if (arrived) lang.send(p, "npc.teleported", Map.of("id", Integer.toString(npcs.number(n.id()))));
+    });
+  }
+
+  private void npcToggle(Player p, NpcDefinition n, Runnable back) {
+    if (!p.hasPermission("loveessential.npc.publish")) throw new IllegalArgumentException("errors.permission");
+    complete(p, npcs.save(n.withEnabled(!n.enabled()), n.revision(), p.getUniqueId().toString()), back, false);
+  }
+
+  /** What can be done with one NPC, one click away from the list: the card of the NPC and its action buttons in the header. */
+  private void npcActions(Player p, String id, int returnPage) {
+    var found = npcs.get(id);
+    if (found.isEmpty()) {
+      npcList(p, returnPage);
+      return;
+    }
+    var n = found.get();
+    int number = npcs.number(n.id());
+    var m = menu(p, "gui.npc-actions", Map.of("id", Integer.toString(number)), this::npcView);
+    var back = (Runnable) () -> npcList(p, returnPage);
+    var slots = new ArrayList<Object[]>();
+    boolean edit = p.hasPermission("loveessential.npc.edit");
+    if (p.hasPermission("loveessential.npc.teleport"))
+      slots.add(new Object[] {Material.ENDER_PEARL, "npc.action-tp", (Consumer<ClickType>) c -> npcTeleportFromMenu(p, n)});
+    if (edit) {
+      slots.add(new Object[] {Material.COMPASS, "npc.action-move", (Consumer<ClickType>) c -> {
+        if (!love.territorialAccess(p, p.getLocation())) throw new IllegalArgumentException("errors.territory");
+        complete(p, npcs.save(n.withSpawn(Position.of(p.getLocation())), n.revision(), p.getUniqueId().toString()),
+            () -> npcActions(p, id, returnPage), false);
+      }});
+      slots.add(new Object[] {Material.NAME_TAG, "npc.action-rename", (Consumer<ClickType>) c -> {
+        p.closeInventory();
+        p.sendMessage(lang.render("npc.rename-prompt").clickEvent(
+            net.kyori.adventure.text.event.ClickEvent.suggestCommand("/npc rename " + number + " ")));
+      }});
+    }
+    if (p.hasPermission("loveessential.npc.create"))
+      slots.add(new Object[] {Material.PAPER, "npc.action-clone", (Consumer<ClickType>) c -> {
+        String newId = dev.lovelace.loveessential.wizard.NpcDraft.create(p.getUniqueId(), Position.of(p.getLocation())).npc().id();
+        wizard.imported(p, dev.lovelace.loveessential.npc.NpcBundle.export(n, lang).draft(newId, p.getUniqueId()));
+      }});
+    if (p.hasPermission("loveessential.npc.publish"))
+      slots.add(new Object[] {n.enabled() ? Material.RED_DYE : Material.LIME_DYE,
+          n.enabled() ? "npc.action-disable" : "npc.action-enable",
+          (Consumer<ClickType>) c -> npcToggle(p, n, () -> npcActions(p, id, returnPage))});
+    if (p.hasPermission("loveessential.npc.delete"))
+      slots.add(new Object[] {Material.TNT, "npc.action-delete", (Consumer<ClickType>) c -> confirm(
+          p,
+          "gui.delete-npc",
+          () -> complete(p, npcs.delete(n.id(), n.revision(), p.getUniqueId().toString()), () -> npcList(p, returnPage), false),
+          () -> npcActions(p, id, returnPage),
+          who -> plugin.module("npc") && who.hasPermission("loveessential.npc.delete"),
+          "№" + number)});
+    for (int i = 0; i < slots.size(); i++) {
+      @SuppressWarnings("unchecked")
+      var click = (Consumer<ClickType>) slots.get(i)[2];
+      put(m, MenuStyle.headerSlot(i, slots.size()), (Material) slots.get(i)[0], (String) slots.get(i)[1], "gui.click.run", click);
+    }
+    var spawn = n.spawn();
+    var world = Bukkit.getWorld(spawn.world());
+    var details = new HashMap<String, String>();
+    details.put("type", n.entityType());
+    details.put("world", world == null ? "?" : world.getName());
+    details.put("x", Integer.toString((int) Math.floor(spawn.x())));
+    details.put("y", Integer.toString((int) Math.floor(spawn.y())));
+    details.put("z", Integer.toString((int) Math.floor(spawn.z())));
+    details.put("points", Integer.toString(n.route() == null ? 0 : n.route().points().size()));
+    details.put("nodes", Integer.toString(n.dialog() == null ? 0 : n.dialog().nodes().size()));
+    entry(
+        m,
+        22,
+        Material.PLAYER_HEAD,
+        Component.text("№" + number + " ", net.kyori.adventure.text.format.NamedTextColor.GRAY).append(lang.render(n.nameKey())),
+        List.of(
+            lang.render(n.enabled() ? "gui.enabled" : "gui.disabled"),
+            lang.renderText(lang.text("npc.card-place"), details),
+            lang.renderText(lang.text("npc.card-parts"), details),
+            lang.render("gui.separator"),
+            lang.render("npc.card-click-edit")),
+        click -> {
+          if (click == ClickType.LEFT) wizard.edit(p, n.id());
+        });
+    put(m, 51, Material.ARROW, "common.back", "gui.click.open", c -> back.run());
+    put(m, 52, Material.BARRIER, "gui.close", "gui.click.close", c -> p.closeInventory());
     MenuStyle.open(p, m.inventory);
   }
 

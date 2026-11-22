@@ -3515,6 +3515,66 @@ bindings:
   file: gui.yml
   key: common.replace-draft
   path: messages.common.replace-draft
+- module: npc
+  file: gui.yml
+  key: wizard.fields.routine-enabled
+  path: menus.gui-wizard-title.labels.wizard.fields.routine-enabled
+- module: npc
+  file: gui.yml
+  key: wizard.fields.work-from
+  path: menus.gui-wizard-title.labels.wizard.fields.work-from
+- module: npc
+  file: gui.yml
+  key: wizard.fields.work-to
+  path: menus.gui-wizard-title.labels.wizard.fields.work-to
+- module: npc
+  file: gui.yml
+  key: wizard.fields.off-duty
+  path: menus.gui-wizard-title.labels.wizard.fields.off-duty
+- module: npc
+  file: gui.yml
+  key: wizard.fields.dialog-friendly
+  path: menus.gui-wizard-title.labels.wizard.fields.dialog-friendly
+- module: npc
+  file: gui.yml
+  key: wizard.fields.dialog-fearful
+  path: menus.gui-wizard-title.labels.wizard.fields.dialog-fearful
+- module: npc
+  file: gui.yml
+  key: wizard.fields.dialog-skeptical
+  path: menus.gui-wizard-title.labels.wizard.fields.dialog-skeptical
+- module: npc
+  file: gui.yml
+  key: wizard.conditions.npc-disposition
+  path: menus.gui-wizard-title.labels.wizard.conditions.npc-disposition
+- module: npc
+  file: gui.yml
+  key: npc-help.fields.routine-enabled
+  path: menus.gui-wizard-title.labels.npc-help.fields.routine-enabled
+- module: npc
+  file: gui.yml
+  key: npc-help.fields.work-from
+  path: menus.gui-wizard-title.labels.npc-help.fields.work-from
+- module: npc
+  file: gui.yml
+  key: npc-help.fields.work-to
+  path: menus.gui-wizard-title.labels.npc-help.fields.work-to
+- module: npc
+  file: gui.yml
+  key: npc-help.fields.off-duty
+  path: menus.gui-wizard-title.labels.npc-help.fields.off-duty
+- module: npc
+  file: gui.yml
+  key: npc-help.fields.dialog-friendly
+  path: menus.gui-wizard-title.labels.npc-help.fields.dialog-friendly
+- module: npc
+  file: gui.yml
+  key: npc-help.fields.dialog-fearful
+  path: menus.gui-wizard-title.labels.npc-help.fields.dialog-fearful
+- module: npc
+  file: gui.yml
+  key: npc-help.fields.dialog-skeptical
+  path: menus.gui-wizard-title.labels.npc-help.fields.dialog-skeptical
 aliases:
 - module: profile
   file: profile.yml
