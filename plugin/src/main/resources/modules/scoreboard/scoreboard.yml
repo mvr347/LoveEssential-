@@ -510,6 +510,30 @@ placeholders:
       equals: 'true'
       reason: '&7Нужен активный контракт'
 
+  # 2026-11-24: поручения (квесты) отдельными строками. Данные берутся из памяти LoveContracts, так что запрос
+  # раз в секунду на главном потоке безопасен. Показываются только при активном поручении.
+  quest_goal:
+    display-name: '&aЦель поручения'
+    template: '&7цель &a▸ &f%lovecontracts_quest_goal%'
+    lore:
+      - '&7Что нужно сделать в текущем поручении'
+    category: activities
+    requirement:
+      placeholder: '%lovecontracts_quest_active%'
+      equals: 'yes'
+      reason: '&7Нужно активное поручение'
+
+  quest_time_left:
+    display-name: '&eВремя поручения'
+    template: '&7осталось &e▸ &f%lovecontracts_quest_time_left%'
+    lore:
+      - '&7Сколько времени осталось на поручение'
+    category: activities
+    requirement:
+      placeholder: '%lovecontracts_quest_active%'
+      equals: 'yes'
+      reason: '&7Нужно активное поручение'
+
   contracts_done:
     display-name: '&aВыполнено контрактов'
     template: '&7исполнил &a▸ &f%lovecontracts_total_completed% &7контрактов'
