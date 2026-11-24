@@ -163,6 +163,9 @@ public final class ModuleConfigs {
         if (id.equals("scoreboard")
             && migrateHuntPass(module, moduleDefaults)
             && Files.exists(configFile(id))) backup(configFile(id), ".pre-hunter-pass.bak");
+        if (id.equals("scoreboard")
+            && migrateQuestRows(module, moduleDefaults)
+            && Files.exists(configFile(id))) backup(configFile(id), ".pre-quest-rows.bak");
         var defaultsTexts = moduleDefaults.getConfigurationSection("texts");
         if (!Files.exists(configFile(id)) && defaultsTexts != null)
           for (String key : defaultsTexts.getKeys(true))
@@ -717,6 +720,38 @@ public final class ModuleConfigs {
       added = true;
     }
     module.set("catalog-version", 1);
+    return added;
+  }
+
+  /** Rows added to the scoreboard catalog for quests; catalog-version 2 added the first two, 3 the last two. */
+  private static final List<String> QUEST_ROWS_V2 = List.of("quest_active", "quest_count");
+
+  private static final List<String> QUEST_ROWS_V3 = List.of("quest_goal", "quest_time_left");
+
+  /**
+   * Add the quest rows to a catalog installed before them, once. The shipped file keeps the whole
+   * {@code placeholders} subtree of an existing server, so new rows never arrive by themselves. A server that
+   * already is at version 2 only gets the rows of version 3, so a row an administrator removed after version 2
+   * is not brought back; rows that exist, or a removed {@code activities} category, are left alone.
+   */
+  static boolean migrateQuestRows(YamlConfiguration module, YamlConfiguration defaults) {
+    int version = module.getInt("catalog-version", 0);
+    if (version >= 3) return false;
+    boolean added = false;
+    if (module.isConfigurationSection("placeholders")
+        && module.isConfigurationSection("categories.activities")) {
+      var rows = new java.util.ArrayList<String>();
+      if (version < 2) rows.addAll(QUEST_ROWS_V2);
+      rows.addAll(QUEST_ROWS_V3);
+      for (String row : rows) {
+        var shipped = defaults.getConfigurationSection("placeholders." + row);
+        if (shipped != null && !module.contains("placeholders." + row)) {
+          module.createSection("placeholders." + row, (Map<String, Object>) snapshot(shipped));
+          added = true;
+        }
+      }
+    }
+    module.set("catalog-version", 3);
     return added;
   }
 
