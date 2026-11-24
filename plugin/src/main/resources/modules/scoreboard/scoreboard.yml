@@ -605,4 +605,7 @@ messages:
     legacy-conflict: <red>Другой плагин держит табло LoveTweaks; модуль scoreboard не может его перехватить.
 
 # 2026-11-22: версия 2 — добавлены строки текущих поручений (quest_active, quest_count).
-catalog-version: 2
+# 2026-11-24: версия 3 — добавлены цель и время поручения (quest_goal, quest_time_left). На уже настроенном
+# сервере каталог placeholders не обновляется сам, поэтому недостающие строки один раз дописывает миграция
+# (ModuleConfigs.migrateQuestRows), не трогая ваши строки и не возвращая удалённые.
+catalog-version: 3
